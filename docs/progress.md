@@ -36,3 +36,15 @@ Cần test trên AutoCAD: mục "Phase 1b" trong `docs/test-log.md`, quan trọn
 Cloud: `npm test` 42/42, `dotnet test` 34/34, build plugin ✅.
 
 Cần test trên AutoCAD: mục "Phase 1c" trong `docs/test-log.md` và kịch bản nghiệm thu 3, 4, 5.
+
+## Phase 1d — ghi chú 7.2, block 7.3, style, view 7.7 ✅ code xong
+
+Đã làm:
+- Ghi chú: TEXT (justify, style, width factor), MTEXT (xuống dòng, wrap), 8 loại dim (linear tự chọn ngang/dọc như DIMLINEAR, aligned, angular 3 điểm / 2 line, radial, diameter, ordinate, continue, baseline theo DIMDLI), multileader, bảng (title tùy chọn, bỏ merge dòng đầu).
+- Block: define_block (deep clone vào block, base point = gốc, attribute definition, mặc định thay bằng block reference), insert_block (scale, rotation, attribute, nhiều vị trí), list_block_defs, get/set attributes, set_dynamic_props (đổi đơn vị góc sang độ, liệt kê allowed values).
+- Style: create_text_style (TrueType cho tiếng Việt hoặc SHX), create_dim_style (từ biến dim hiện hành + mặc định hệ mét, mũi tên archtick/oblique..., DIMSCALE), set_current_styles, list_styles (thêm).
+- View: zoom_extents / zoom_window (đặt view qua ViewTableRecord), regen, save_drawing (QSAVE/SaveAs khi có path), purge_unused (lặp tới khi hết), undo_last_turn (gửi một U, chỉ khi lượt hiện tại chưa sửa gì).
+
+Cloud: 72 tool, `npm test` 42/42 (khớp 1-1 với handler C#), build plugin ✅. Các API AutoCAD dùng ở phase này (dim, mleader, table, dynamic block) chỉ kiểm chứng được ở mức biên dịch.
+
+Cần test trên AutoCAD: mục "Phase 1d" trong `docs/test-log.md`, kịch bản nghiệm thu 2 và 6.

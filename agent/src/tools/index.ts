@@ -1,11 +1,15 @@
 import { createSdkMcpServer } from '@anthropic-ai/claude-agent-sdk';
 import type { AnyTool, ToolBridge } from './common.js';
+import { annotationTools } from './annotation.js';
 import { batchTools } from './batch.js';
+import { blockTools } from './blocks.js';
 import { drawTools } from './draw.js';
 import { layerTools } from './layers.js';
 import { modifyTools } from './modify.js';
 import { queryTools } from './query.js';
+import { styleTools } from './styles.js';
 import { systemTools } from './system.js';
+import { viewTools } from './view.js';
 
 export const MCP_SERVER_NAME = 'claudecad';
 
@@ -17,6 +21,10 @@ export function buildTools(bridge: ToolBridge): AnyTool[] {
     ...drawTools(bridge),
     ...layerTools(bridge),
     ...modifyTools(bridge),
+    ...annotationTools(bridge),
+    ...blockTools(bridge),
+    ...styleTools(bridge),
+    ...viewTools(bridge),
     ...systemTools(bridge),
   ];
 }

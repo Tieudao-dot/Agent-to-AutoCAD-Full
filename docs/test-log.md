@@ -47,6 +47,13 @@ Trạng thái: ⬜ chưa chạy · ✅ đạt · ❌ không đạt · ⚠️ đ�
 | 1c | Chốt xác nhận: xóa theo layer → Claude hỏi trước; trả lời "không" → không xóa; "đồng ý" → xóa | ⬜ chưa chạy | |
 | 1c | Sửa > 20 đối tượng khi chưa xác nhận → sidecar chặn (log `confirmation gate blocked`), Claude hỏi lại | ⬜ chưa chạy | |
 | 1c | erase_entities > 1000 handle → `TOO_MANY_ENTITIES` | ⬜ chưa chạy | |
+| 1d | Mặt bằng có dim + text + block cửa (kịch bản 2) | ⬜ chưa chạy | |
+| 1d | add_text các kiểu justify; add_mtext xuống dòng; tiếng Việt có dấu hiển thị đúng với style Arial | ⬜ chưa chạy | |
+| 1d | Dim: linear (auto ngang/dọc), aligned, angular (3 điểm và 2 line), radial, diameter, ordinate, continue, baseline | ⬜ chưa chạy | |
+| 1d | create_dim_style 1:100 (chữ 2.5, archtick) → dim hiển thị đúng kích thước in | ⬜ chưa chạy | |
+| 1d | add_mleader, add_table (có/không title; dòng đầu không bị merge khi không có title) | ⬜ chưa chạy | |
+| 1d | define_block (thay bằng insert, có attribute), insert_block (attribute, nhiều vị trí), list_block_defs, get/set attributes, set_dynamic_props trên một dynamic block có sẵn | ⬜ chưa chạy | |
+| 1d | zoom_extents, zoom_window; save_drawing chỉ khi yêu cầu; purge_unused; undo_last_turn | ⬜ chưa chạy | |
 
 ## Đã kiểm chứng tự động trên cloud (Linux)
 
@@ -57,5 +64,6 @@ Trạng thái: ⬜ chưa chạy · ✅ đạt · ❌ không đạt · ⚠️ đ�
 | 2026-11-05 | `dotnet build` plugin net48 với reference AutoCAD.NET 24.1.51000 | ✅ 0 warning |
 | 2026-11-05 | `dotnet test plugin/ClaudeCAD.Core.Tests` — JsonCodec, Params | ✅ 16/16 |
 | 2026-11-05 | Phase 1b: `npm test` 38/38 (thêm: danh mục tool TS khớp handler C#, mọi schema chuyển được sang JSON Schema, schema nhận ví dụ spec, giới hạn 500 call/batch) | ✅ |
+| 2026-11-05 | Phase 1d: 72 tool; `npm test` 42/42 (danh mục 72 tool khớp handler C#, schema hợp lệ); `dotnet build` plugin 0 warning | ✅ |
 | 2026-11-05 | Phase 1c: `npm test` 42/42 (thêm chốt xác nhận: đếm đối tượng bị ảnh hưởng kể cả trong batch, nhận diện câu xác nhận/từ chối tiếng Việt); `dotnet test` 34/34 (thêm giao điểm, fillet, chamfer); build plugin | ✅ |
 | 2026-11-05 | Phase 1b: `dotnet test` 29/29 (thêm Geometry: hình chữ nhật, đa giác, cung 3 điểm, revcloud, lineweight, hướng) ; `dotnet build` plugin | ✅ |

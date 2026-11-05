@@ -24,6 +24,11 @@ namespace ClaudeCAD.Plugin.Drawing
             // phase 1c
             RegisterQuery(d);
             RegisterModify(d);
+            // phase 1d
+            RegisterAnnotation(d);
+            RegisterBlocks(d);
+            RegisterStyles(d);
+            RegisterView(d, host);
         }
 
         private static void RegisterSystem(ToolDispatcher d, ITurnHost host)

@@ -133,6 +133,16 @@ Tool mới: `list_entities`, `count_entities`, `get_entity`, `find_text`, `measu
 - Offset ("offset đường này 220 vào trong"), fillet/chamfer hai line, join, explode, mirror (text vẫn đọc xuôi).
 - Chốt cứng: bất kỳ lượt nào xóa/sửa > 20 đối tượng mà tin nhắn của cậu không phải câu xác nhận → sidecar từ chối, Claude phải hỏi lại. `erase_entities` > 1000 handle → plugin trả `TOO_MANY_ENTITIES`.
 
+### Phase 1d — ghi chú, kích thước, block, style, view
+
+Tool mới: `add_text`, `add_mtext`, `add_dim_linear`, `add_dim_aligned`, `add_dim_angular`, `add_dim_radial`, `add_dim_diameter`, `add_dim_ordinate`, `add_dim_continue`, `add_dim_baseline`, `add_mleader`, `add_table`, `define_block`, `insert_block`, `list_block_defs`, `get_block_attributes`, `set_block_attributes`, `set_dynamic_props`, `create_text_style`, `create_dim_style`, `set_current_styles`, `list_styles`, `zoom_extents`, `zoom_window`, `regen`, `save_drawing`, `purge_unused`, `undo_last_turn`.
+
+- "Vẽ mặt bằng phòng 4x6m, tường 220, cửa đi 900 ở cạnh dài, ghi kích thước" (kịch bản 2) → tường hai nét, cửa có cánh + cung mở (thường được định nghĩa thành block), dim đủ bốn phía, text tên phòng.
+- "Tạo dim style tỷ lệ 1:100, chữ 2.5, mũi tên gạch chéo" → `create_dim_style` scale 100, arrow archtick; dim mới dùng style đó.
+- Kịch bản 6: vẽ một cái ghế, "định nghĩa thành block GHE" → "Chèn block GHE thành dãy 3 hàng 8 cột giãn cách 600x900".
+- "Lập bảng thống kê cửa" → `add_table`. "Ghi chú ống D110 vào đường này" → `add_mleader`.
+- "Hoàn tác lượt trước" → `undo_last_turn` (gửi một lệnh U). `save_drawing` / `purge_unused` chỉ chạy khi cậu yêu cầu rõ.
+
 ## 5. Đóng gói bundle (autoloader)
 
 Xem [`bundle/README.md`](bundle/README.md) (thêm ở phase sau): tạo `ClaudeCAD.bundle` đặt vào `%AppData%\Autodesk\ApplicationPlugins` để AutoCAD tự nạp, không cần NETLOAD.
