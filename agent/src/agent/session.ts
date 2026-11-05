@@ -59,6 +59,7 @@ export class AgentSession {
   private textBlockOpen = false;
   private sessionId?: string;
   private initInfo = '';
+  private lastUser = '';
 
   constructor(private readonly cfg: SessionConfig) {}
 
@@ -68,6 +69,11 @@ export class AgentSession {
 
   get currentSessionId(): string | undefined {
     return this.sessionId;
+  }
+
+  /** Text of the user message of the current/last turn (used by the confirmation gate). */
+  get lastUserText(): string {
+    return this.lastUser;
   }
 
   get info(): string {
@@ -134,6 +140,7 @@ export class AgentSession {
     }
     this.turnActive = true;
     this.cancelRequested = false;
+    this.lastUser = text;
     const content = drawing ? `[Bản vẽ đang mở: ${drawing}]\n${text}` : text;
     this.input!.push({
       type: 'user',

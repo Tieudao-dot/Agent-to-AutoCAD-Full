@@ -25,3 +25,14 @@ Cần test trên AutoCAD: mục "Phase 1a" trong `docs/test-log.md` (NETLOAD, pa
 Cloud: `npm test` 38/38 (có test đối chiếu tên tool sidecar ↔ handler C#), `dotnet test` 29/29, build plugin ✅.
 
 Cần test trên AutoCAD: mục "Phase 1b" trong `docs/test-log.md`, quan trọng nhất là **một lệnh U hoàn tác cả lượt** và **batch 200 line < 2 s**.
+
+## Phase 1c — đọc/truy vấn 7.6, sửa 7.5, chốt xác nhận ✅ code xong
+
+Đã làm:
+- Plugin: `list_entities` (lọc types + layers wildcard + màu hiệu dụng + cửa sổ inside/crossing, limit mặc định 200, offset, tóm tắt gọn), `count_entities`, `get_entity` (đầy đủ hình học, attribute, dim), `find_text` (TEXT/MTEXT/attribute/dim override/mleader/ô bảng), `measure_distance`, `measure_area` (m²), `get_bounding_box`.
+- Sửa: move/copy (nhiều vị trí, deep clone giữ attribute)/rotate/scale/mirror (giữ text đọc xuôi theo MIRRTEXT)/offset (chọn phía theo side_point)/array_rect/array_polar/fillet & chamfer hai LINE/explode/join (line, arc, polyline)/erase (chốt cứng 1000)/set_entity_props/edit_text (thay toàn bộ hoặc find→replace, đổi chiều cao)/edit_polyline.
+- Chốt xác nhận hai tầng: (1) system prompt quy tắc 6; (2) sidecar chặn cứng mọi call xóa/sửa > 20 đối tượng có sẵn (kể cả cộng dồn trong `batch_execute`) nếu tin nhắn hiện tại của người dùng không phải câu xác nhận.
+
+Cloud: `npm test` 42/42, `dotnet test` 34/34, build plugin ✅.
+
+Cần test trên AutoCAD: mục "Phase 1c" trong `docs/test-log.md` và kịch bản nghiệm thu 3, 4, 5.

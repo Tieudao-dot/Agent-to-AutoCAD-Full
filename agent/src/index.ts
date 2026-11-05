@@ -9,6 +9,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { parseArgs } from 'node:util';
+import { confirmationError } from './agent/confirmation.js';
 import { AgentSession } from './agent/session.js';
 import { connectPipe } from './ipc/connection.js';
 import { DEFAULT_TOOL_TIMEOUT_MS } from './ipc/protocol.js';
@@ -51,12 +52,21 @@ async function main(): Promise<void> {
     return conn.send(msg);
   }, timeoutMs);
 
+  // eslint-disable-next-line prefer-const
+  let session: AgentSession;
   const bridge: ToolBridge = {
-    call: (tool, params) => rpc.call(tool, params),
+    call: async (tool, params) => {
+      const block = confirmationError(tool, params, session?.lastUserText);
+      if (block) {
+        log(`confirmation gate blocked ${tool}`);
+        return { id: 'local', ok: false, error: { code: 'INVALID_PARAMS', message: block } };
+      }
+      return rpc.call(tool, params);
+    },
     status: (tool, state) => conn.send({ type: 'tool_status', tool, state }),
   };
 
-  const session = new AgentSession({
+  session = new AgentSession({
     emit: (m) => conn.send(m),
     bridge,
     version: VERSION,

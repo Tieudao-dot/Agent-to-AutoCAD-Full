@@ -187,5 +187,87 @@ namespace ClaudeCAD.Plugin.Core
             }
             throw ToolException.Invalid("give 'direction' as a vector [dx, dy] or 'angle' in degrees.");
         }
+
+        /// <summary>Intersection of two infinite 2D lines (a1-b1) and (a2-b2); null if parallel.</summary>
+        public static double[] IntersectLines(double[] a1, double[] b1, double[] a2, double[] b2)
+        {
+            double d1x = b1[0] - a1[0], d1y = b1[1] - a1[1], d2x = b2[0] - a2[0], d2y = b2[1] - a2[1];
+            double den = d1x * d2y - d1y * d2x;
+            if (Math.Abs(den) < 1e-12 * Math.Max(1, Math.Abs(d1x * d1x + d1y * d1y) * Math.Abs(d2x * d2x + d2y * d2y))) return null;
+            double t = ((a2[0] - a1[0]) * d2y - (a2[1] - a1[1]) * d2x) / den;
+            return P(a1[0] + t * d1x, a1[1] + t * d1y, a1.Length > 2 ? a1[2] : 0);
+        }
+
+        /// <summary>Result of a two-line corner operation: both lines rewritten, plus an optional arc or chamfer segment.</summary>
+        public sealed class CornerResult
+        {
+            public double[] Line1Start, Line1End, Line2Start, Line2End;
+            public double[] ArcCenter;
+            public double ArcRadius, ArcStart, ArcEnd; // radians, CCW from start to end
+            public double[] ChamferStart, ChamferEnd;
+        }
+
+        private static (double[] p, double[] far1, double[] far2, double[] u1, double[] u2, double theta) Corner(double[] a1, double[] b1, double[] a2, double[] b2, string tool)
+        {
+            var p = IntersectLines(a1, b1, a2, b2);
+            if (p == null) throw ToolException.Invalid($"{tool}: the two lines are parallel; there is no corner.");
+            // keep, on each line, the end farther from the corner
+            var far1 = Dist(a1, p) >= Dist(b1, p) ? a1 : b1;
+            var far2 = Dist(a2, p) >= Dist(b2, p) ? a2 : b2;
+            double l1 = Dist(far1, p), l2 = Dist(far2, p);
+            if (l1 < Eps || l2 < Eps) throw ToolException.Invalid($"{tool}: a line ends exactly at the corner on both sides; nothing to trim.");
+            var u1 = new[] { (far1[0] - p[0]) / l1, (far1[1] - p[1]) / l1 };
+            var u2 = new[] { (far2[0] - p[0]) / l2, (far2[1] - p[1]) / l2 };
+            double cos = Math.Max(-1, Math.Min(1, u1[0] * u2[0] + u1[1] * u2[1]));
+            double theta = Math.Acos(cos);
+            if (theta < 1e-6 || Math.PI - theta < 1e-6) throw ToolException.Invalid($"{tool}: the lines are collinear.");
+            return (p, far1, far2, u1, u2, theta);
+        }
+
+        /// <summary>Fillet between two lines (radius 0 = sharp corner by trim/extend).</summary>
+        public static CornerResult FilletLines(double[] a1, double[] b1, double[] a2, double[] b2, double radius)
+        {
+            if (radius < 0) throw ToolException.Invalid("fillet_entities: 'radius' must be >= 0.");
+            var (p, far1, far2, u1, u2, theta) = Corner(a1, b1, a2, b2, "fillet_entities");
+            var r = new CornerResult { Line1Start = far1, Line2Start = far2 };
+            if (radius < Eps)
+            {
+                r.Line1End = p;
+                r.Line2End = p;
+                return r;
+            }
+            double t = radius / Math.Tan(theta / 2);
+            if (t > Dist(far1, p) + Eps || t > Dist(far2, p) + Eps)
+                throw ToolException.Invalid($"fillet_entities: radius {radius} is too large for these lines (needs {t:0.##} mm of line on each side of the corner).");
+            var t1 = P(p[0] + u1[0] * t, p[1] + u1[1] * t, p[2]);
+            var t2 = P(p[0] + u2[0] * t, p[1] + u2[1] * t, p[2]);
+            double wx = u1[0] + u2[0], wy = u1[1] + u2[1], wl = Math.Sqrt(wx * wx + wy * wy);
+            double cd = radius / Math.Sin(theta / 2);
+            var c = P(p[0] + wx / wl * cd, p[1] + wy / wl * cd, p[2]);
+            double s = NormalizeRad(Math.Atan2(t1[1] - c[1], t1[0] - c[0]));
+            double e = NormalizeRad(Math.Atan2(t2[1] - c[1], t2[0] - c[0]));
+            if (NormalizeRad(e - s) > Math.PI) { var tmp = s; s = e; e = tmp; } // the fillet arc is always the short one
+            r.Line1End = t1;
+            r.Line2End = t2;
+            r.ArcCenter = c;
+            r.ArcRadius = radius;
+            r.ArcStart = s;
+            r.ArcEnd = e;
+            return r;
+        }
+
+        /// <summary>Chamfer between two lines at distances d1 (line 1) and d2 (line 2) from the corner.</summary>
+        public static CornerResult ChamferLines(double[] a1, double[] b1, double[] a2, double[] b2, double d1, double d2)
+        {
+            if (d1 < 0 || d2 < 0) throw ToolException.Invalid("chamfer_entities: distances must be >= 0.");
+            var (p, far1, far2, u1, u2, _) = Corner(a1, b1, a2, b2, "chamfer_entities");
+            if (d1 > Dist(far1, p) + Eps || d2 > Dist(far2, p) + Eps)
+                throw ToolException.Invalid("chamfer_entities: a chamfer distance is longer than the line.");
+            var c1 = P(p[0] + u1[0] * d1, p[1] + u1[1] * d1, p[2]);
+            var c2 = P(p[0] + u2[0] * d2, p[1] + u2[1] * d2, p[2]);
+            var r = new CornerResult { Line1Start = far1, Line1End = c1, Line2Start = far2, Line2End = c2 };
+            if (d1 > Eps || d2 > Eps) { r.ChamferStart = c1; r.ChamferEnd = c2; }
+            return r;
+        }
     }
 }

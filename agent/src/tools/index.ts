@@ -3,6 +3,7 @@ import type { AnyTool, ToolBridge } from './common.js';
 import { batchTools } from './batch.js';
 import { drawTools } from './draw.js';
 import { layerTools } from './layers.js';
+import { modifyTools } from './modify.js';
 import { queryTools } from './query.js';
 import { systemTools } from './system.js';
 
@@ -15,6 +16,7 @@ export function buildTools(bridge: ToolBridge): AnyTool[] {
     ...batchTools(bridge),
     ...drawTools(bridge),
     ...layerTools(bridge),
+    ...modifyTools(bridge),
     ...systemTools(bridge),
   ];
 }

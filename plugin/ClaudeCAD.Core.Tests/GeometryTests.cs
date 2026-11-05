@@ -98,5 +98,49 @@ namespace ClaudeCAD.Core.Tests
             Near(0, a[0]); Near(1, a[1]);
             Assert.Throws<ToolException>(() => Geometry.Direction(null, null));
         }
+
+        [Fact]
+        public void IntersectionOfPerpendicularLines()
+        {
+            var p = Geometry.IntersectLines(Geometry.P(0, 0), Geometry.P(1000, 0), Geometry.P(500, -100), Geometry.P(500, 300));
+            Near(500, p[0]); Near(0, p[1]);
+            Assert.Null(Geometry.IntersectLines(Geometry.P(0, 0), Geometry.P(1, 0), Geometry.P(0, 1), Geometry.P(1, 1)));
+        }
+
+        [Fact]
+        public void FilletRightAngleCorner()
+        {
+            // L-shape: horizontal (0,0)-(1000,0) and vertical (1000,0)-(1000,1000), radius 200
+            var r = Geometry.FilletLines(Geometry.P(0, 0), Geometry.P(1000, 0), Geometry.P(1000, 0), Geometry.P(1000, 1000), 200);
+            Near(0, r.Line1Start[0]); Near(800, r.Line1End[0]); Near(0, r.Line1End[1]);
+            Near(1000, r.Line2End[0]); Near(200, r.Line2End[1]);
+            Near(800, r.ArcCenter[0]); Near(200, r.ArcCenter[1]); Near(200, r.ArcRadius);
+            // short quarter arc from 270° to 360°
+            Near(Math.PI / 2, Geometry.NormalizeRad(r.ArcEnd - r.ArcStart));
+            Near(3 * Math.PI / 2, r.ArcStart);
+        }
+
+        [Fact]
+        public void FilletZeroRadiusExtendsToCorner()
+        {
+            var r = Geometry.FilletLines(Geometry.P(0, 0), Geometry.P(900, 0), Geometry.P(1000, 100), Geometry.P(1000, 1000), 0);
+            Near(1000, r.Line1End[0]); Near(0, r.Line1End[1]);
+            Near(1000, r.Line2End[0]); Near(0, r.Line2End[1]);
+            Assert.Null(r.ArcCenter);
+        }
+
+        [Fact]
+        public void FilletRadiusTooLargeRejected()
+        {
+            Assert.Throws<ToolException>(() => Geometry.FilletLines(Geometry.P(0, 0), Geometry.P(100, 0), Geometry.P(100, 0), Geometry.P(100, 100), 500));
+        }
+
+        [Fact]
+        public void ChamferAtDistances()
+        {
+            var r = Geometry.ChamferLines(Geometry.P(0, 0), Geometry.P(1000, 0), Geometry.P(1000, 0), Geometry.P(1000, 1000), 100, 50);
+            Near(900, r.ChamferStart[0]); Near(0, r.ChamferStart[1]);
+            Near(1000, r.ChamferEnd[0]); Near(50, r.ChamferEnd[1]);
+        }
     }
 }

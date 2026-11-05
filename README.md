@@ -122,6 +122,17 @@ Tool mới: `draw_line`, `draw_polyline`, `draw_circle`, `draw_arc`, `draw_ellip
 - "Vẽ 200 đoạn thẳng song song cách nhau 100" → trong log plugin tìm dòng `tool batch_execute ok in N ms`, N < 2000.
 - Khóa một layer rồi bảo Claude vẽ lên layer đó → Claude nhận lỗi `LOCKED` và hỏi lại cậu.
 
+### Phase 1c — đọc/truy vấn, sửa đổi, chốt xác nhận
+
+Tool mới: `list_entities`, `count_entities`, `get_entity`, `find_text`, `measure_distance`, `measure_area`, `get_bounding_box`, `move_entities`, `copy_entities`, `rotate_entities`, `scale_entities`, `mirror_entities`, `offset_entity`, `array_rect`, `array_polar`, `fillet_entities`, `chamfer_entities`, `explode_entities`, `join_entities`, `erase_entities`, `set_entity_props`, `edit_text`, `edit_polyline`.
+
+- Chuẩn bị: vài TEXT/MTEXT cao 250 (lệnh TEXT) → "Đổi hết text cao 250 thành 300" → mọi text 250 thành 300, text khác giữ nguyên.
+- Kịch bản 3: có các text "WC", "WC 1", "Phòng WC" → "Tìm tất cả text chứa 'WC' và đổi thành 'VỆ SINH'".
+- Kịch bản 4: tạo layer A-TEMP có vài đối tượng → "Xóa toàn bộ đối tượng trên layer A-TEMP" → Claude báo số lượng và hỏi; trả lời "đồng ý" mới xóa. Trả lời "không" → không xóa.
+- Kịch bản 5: vài polyline kín màu đỏ → "Đo diện tích polyline tô màu đỏ lớn nhất" → đúng m².
+- Offset ("offset đường này 220 vào trong"), fillet/chamfer hai line, join, explode, mirror (text vẫn đọc xuôi).
+- Chốt cứng: bất kỳ lượt nào xóa/sửa > 20 đối tượng mà tin nhắn của cậu không phải câu xác nhận → sidecar từ chối, Claude phải hỏi lại. `erase_entities` > 1000 handle → plugin trả `TOO_MANY_ENTITIES`.
+
 ## 5. Đóng gói bundle (autoloader)
 
 Xem [`bundle/README.md`](bundle/README.md) (thêm ở phase sau): tạo `ClaudeCAD.bundle` đặt vào `%AppData%\Autodesk\ApplicationPlugins` để AutoCAD tự nạp, không cần NETLOAD.

@@ -42,3 +42,13 @@
 ## JSON trong plugin
 
 - Tự viết `JsonCodec` (parser/serializer nhỏ) thay vì Newtonsoft.Json: AutoCAD và các plugin khác nạp bản Newtonsoft riêng → dễ xung đột phiên bản trong acad.exe. Có unit test (`plugin/ClaudeCAD.Core.Tests`).
+
+## Chốt xác nhận thao tác phá hủy
+
+- Tầng 1 (spec §9): system prompt bắt Claude báo số lượng + hỏi trước khi xóa theo điều kiện lọc hoặc sửa > 20 đối tượng.
+- Tầng 2 (thêm, `agent/src/agent/confirmation.ts`): trước khi forward, sidecar đếm số đối tượng có sẵn mà call sẽ sửa/xóa (cộng dồn trong `batch_execute`). Nếu > 20 và tin nhắn của người dùng ở lượt hiện tại không phải câu xác nhận ngắn ("đồng ý", "ok", "có, xóa đi"...), call bị trả lỗi `INVALID_PARAMS` "Confirmation required..." mà không chạm tới bản vẽ.
+- Tầng 3 (spec §10): plugin từ chối `erase_entities` > 1000 handle (`TOO_MANY_ENTITIES`).
+
+## Fillet / chamfer
+
+- v1 hỗ trợ hai LINE (đúng như lệnh FILLET/CHAMFER với hai đường thẳng): mỗi line giữ đầu xa góc hơn. Toán học nằm trong `Core/Geometry.cs` (có unit test). Polyline: explode trước hoặc vẽ lại bằng bulge.
