@@ -229,8 +229,18 @@ describe('AgentSession', () => {
     assert.ok(fs.existsSync(path.join(plugin.path, '.claude-plugin', 'plugin.json')));
     assert.ok(fs.existsSync(path.join(plugin.path, 'skills', 've-test', 'SKILL.md')));
     assert.equal(fs.existsSync(path.join(plugin.path, 'skills', 'not-a-skill')), false);
-    assert.equal(calls.options.skills, 'all');
+    assert.deepEqual(calls.options.skills, ['claudecad-skills:ve-test']);
     assert.ok(plugin.path.startsWith(workDir));
     s.close();
+  });
+});
+
+describe('system prompt (spec §9)', async () => {
+  const { SYSTEM_PROMPT } = await import('../src/agent/systemPrompt.js');
+  it('covers the ten behaviour rules', () => {
+    for (const needle of [
+      'Vietnamese', 'millimetres', 'get_drawing_info', 'list_layers', 'batch_execute', 'Never guess handles',
+      'Cậu có đồng ý không?', 'save_drawing', 'purge_unused', 'U once', 'at most 2 times', 'ask one short question', 'skill',
+    ]) assert.ok(SYSTEM_PROMPT.includes(needle), needle);
   });
 });

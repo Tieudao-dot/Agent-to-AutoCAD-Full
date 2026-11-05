@@ -54,6 +54,10 @@ Trạng thái: ⬜ chưa chạy · ✅ đạt · ❌ không đạt · ⚠️ đ�
 | 1d | add_mleader, add_table (có/không title; dòng đầu không bị merge khi không có title) | ⬜ chưa chạy | |
 | 1d | define_block (thay bằng insert, có attribute), insert_block (attribute, nhiều vị trí), list_block_defs, get/set attributes, set_dynamic_props trên một dynamic block có sẵn | ⬜ chưa chạy | |
 | 1d | zoom_extents, zoom_window; save_drawing chỉ khi yêu cầu; purge_unused; undo_last_turn | ⬜ chưa chạy | |
+| 1e | Palette tạo phiên → log sidecar có `skills loaded: ve-ha-tang, ve-kien-truc, ve-mep` | ⬜ chưa chạy | |
+| 1e | Kịch bản 10 (skill tự áp dụng) | ⬜ chưa chạy | |
+| 1e | Sửa SKILL.md + New → chuẩn mới được áp dụng | ⬜ chưa chạy | |
+| 1e | Bundle: copy `ClaudeCAD.bundle` vào ApplicationPlugins → AutoCAD tự nạp, `CLAUDECHAT` chạy không cần NETLOAD | ⬜ chưa chạy | |
 
 ## Đã kiểm chứng tự động trên cloud (Linux)
 
@@ -64,6 +68,11 @@ Trạng thái: ⬜ chưa chạy · ✅ đạt · ❌ không đạt · ⚠️ đ�
 | 2026-11-05 | `dotnet build` plugin net48 với reference AutoCAD.NET 24.1.51000 | ✅ 0 warning |
 | 2026-11-05 | `dotnet test plugin/ClaudeCAD.Core.Tests` — JsonCodec, Params | ✅ 16/16 |
 | 2026-11-05 | Phase 1b: `npm test` 38/38 (thêm: danh mục tool TS khớp handler C#, mọi schema chuyển được sang JSON Schema, schema nhận ví dụ spec, giới hạn 500 call/batch) | ✅ |
+| 2026-11-05 | Phase 1e: `npm test` 56/56 (thêm: 3 skill đúng chuẩn Agent Skills, có "Quy trình chuẩn bị", chỉ nhắc tool có thật, JSON ví dụ hợp lệ; system prompt đủ 10 quy tắc) | ✅ |
+| 2026-11-05 | Phase 1e: **Agent SDK thật** trên Linux với plugin giả: init chỉ có `Read`, `Skill` + 72 tool `mcp__claudecad__*`, MCP server `claudecad` connected, `permissionMode: dontAsk`, 3 skill nạp qua plugin `claudecad-skills`; Claude gọi `ping` và stream tiếng Việt, `turn_end` đúng | ✅ |
+| 2026-11-05 | Dry run kịch bản 2 (bản vẽ giả lập): Claude gọi get_drawing_info → list_layers → list_styles → **một** batch 30 call (tạo layer/style theo skill, tường, cửa, dim 4 phía, text) → zoom_extents; layer A-WALL/A-DOOR/A-DIM/A-TEXT; chữ 350/250 đúng skill | ✅ (mô phỏng) |
+| 2026-11-05 | Dry run kịch bản 4: "Xóa toàn bộ đối tượng trên layer A-TEMP" → count_entities, báo 30 đối tượng, hỏi xác nhận, dừng lượt; "đồng ý" → list_entities + erase_entities | ✅ (mô phỏng) |
+| 2026-11-05 | `node bundle/make-bundle.mjs` trên Linux → bundle có dll, agent + node_modules win32-x64 (gồm `claude-agent-sdk-win32-x64`), skills, PackageContents.xml hợp lệ | ✅ |
 | 2026-11-05 | Phase 1d: 72 tool; `npm test` 42/42 (danh mục 72 tool khớp handler C#, schema hợp lệ); `dotnet build` plugin 0 warning | ✅ |
 | 2026-11-05 | Phase 1c: `npm test` 42/42 (thêm chốt xác nhận: đếm đối tượng bị ảnh hưởng kể cả trong batch, nhận diện câu xác nhận/từ chối tiếng Việt); `dotnet test` 34/34 (thêm giao điểm, fillet, chamfer); build plugin | ✅ |
 | 2026-11-05 | Phase 1b: `dotnet test` 29/29 (thêm Geometry: hình chữ nhật, đa giác, cung 3 điểm, revcloud, lineweight, hướng) ; `dotnet build` plugin | ✅ |

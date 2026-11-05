@@ -48,3 +48,16 @@ Cần test trên AutoCAD: mục "Phase 1c" trong `docs/test-log.md` và kịch b
 Cloud: 72 tool, `npm test` 42/42 (khớp 1-1 với handler C#), build plugin ✅. Các API AutoCAD dùng ở phase này (dim, mleader, table, dynamic block) chỉ kiểm chứng được ở mức biên dịch.
 
 Cần test trên AutoCAD: mục "Phase 1d" trong `docs/test-log.md`, kịch bản nghiệm thu 2 và 6.
+
+## Phase 1e — hệ thống skill, 3 skill mẫu, system prompt hoàn chỉnh ✅ code xong
+
+Đã làm:
+- 3 skill mẫu (`skills/ve-kien-truc`, `ve-mep`, `ve-ha-tang`): frontmatter `name` + `description` viết kỹ để Claude tự nạp đúng lúc, mục "Quy trình chuẩn bị", bảng layer chuẩn, quy cách (tường 220/110, cửa, chữ/dim theo tỷ lệ in, tuyến MEP, block ký hiệu, lý trình, cao độ, đổi trục VN-2000, bảng tọa độ), ví dụ `batch_execute` hoàn chỉnh (kịch bản 2).
+- Sidecar nạp skill qua plugin cục bộ được dựng lại mỗi phiên (`skills` chỉ gồm skill ClaudeCAD). Thêm skill = tạo thư mục + bấm New.
+- System prompt đủ 10 quy tắc §9 + phần chuẩn vẽ/skill + gợi ý hình học.
+- Bundle autoloader: `bundle/PackageContents.xml` (R24.1, Win64) + `bundle/make-bundle.mjs` (chạy được trên Linux, tải node_modules cho win32-x64).
+- Công cụ `npm run dry-run`: Claude thật + bản vẽ giả lập để kiểm tra hành vi agent không cần AutoCAD.
+
+Cloud: `npm test` 56/56; Agent SDK thật khởi tạo đúng cấu hình (chỉ Read/Skill + 72 tool, 3 skill); dry run kịch bản 2 và 4 đúng hành vi; bundle tạo được.
+
+Cần test trên AutoCAD: mục "Phase 1e" trong `docs/test-log.md`, kịch bản nghiệm thu 10, và toàn bộ 10 kịch bản §12 trên AutoCAD 2022 thật.

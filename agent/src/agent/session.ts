@@ -9,7 +9,7 @@ import type { SidecarToPlugin } from '../ipc/protocol.js';
 import type { ToolBridge } from '../tools/common.js';
 import { MCP_SERVER_NAME, createCadServer } from '../tools/index.js';
 import { InputQueue } from './inputQueue.js';
-import { prepareSkillsPlugin } from './skills.js';
+import { SKILLS_PLUGIN_NAME, prepareSkillsPlugin } from './skills.js';
 import { SYSTEM_PROMPT } from './systemPrompt.js';
 
 export type QueryFn = typeof sdkQuery;
@@ -103,7 +103,8 @@ export class AgentSession {
       // Isolation: ignore ~/.claude settings, CLAUDE.md, project MCP configs.
       settingSources: [],
       plugins: plugin ? [{ type: 'local', path: plugin.pluginDir, skipMcpDiscovery: true }] : [],
-      skills: 'all',
+      // Only the ClaudeCAD skills — not whatever else is installed for Claude Code on this machine.
+      skills: plugin ? plugin.skills.map((s) => `${SKILLS_PLUGIN_NAME}:${s}`) : [],
       includePartialMessages: true,
       persistSession: true,
       stderr: (data) => this.cfg.log(`[claude] ${data.trimEnd()}`),
