@@ -14,6 +14,7 @@
     <Compile Include="..\ClaudeCAD.Plugin\Core\Params.cs" Link="Core\Params.cs" />
     <Compile Include="..\ClaudeCAD.Plugin\Core\ToolException.cs" Link="Core\ToolException.cs" />
     <Compile Include="..\ClaudeCAD.Plugin\Core\Geometry.cs" Link="Core\Geometry.cs" />
+    <Compile Include="..\ClaudeCAD.Plugin\Core\UpdateLogic.cs" Link="Core\UpdateLogic.cs" />
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.11.1" />

@@ -88,6 +88,20 @@ namespace ClaudeCAD.Plugin
             }
         }
 
+        /// <summary>Phase 3: download and stage a newer ClaudeCAD bundle (installed when AutoCAD closes).</summary>
+        [CommandMethod("CLAUDECHATUPDATE", CommandFlags.Session)]
+        public void Update()
+        {
+            try
+            {
+                PluginApp.Controller.RunUpdate();
+            }
+            catch (System.Exception ex)
+            {
+                Logger.Error("CLAUDECHATUPDATE failed", ex);
+            }
+        }
+
         /// <summary>Opens the log folder in Explorer.</summary>
         [CommandMethod("CLAUDECHATLOG", CommandFlags.Session)]
         public void OpenLog()

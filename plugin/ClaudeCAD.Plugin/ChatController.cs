@@ -68,8 +68,25 @@ namespace ClaudeCAD.Plugin
             {
                 _started = true;
                 _ipc.Start();
+                UpdateService.CheckInBackground(msg => Ui.AddNote(msg)); // phase 3: daily update check
             }
             _sidecar.EnsureStarted();
+        }
+
+        /// <summary>CLAUDECHATUPDATE: check now and stage the update if there is one.</summary>
+        public void RunUpdate()
+        {
+            _palette.Show();
+            Ui.AddNote("Đang kiểm tra cập nhật...");
+            UpdateService.DownloadAndStageAsync().ContinueWith(t =>
+            {
+                if (t.Exception != null)
+                {
+                    Logger.Error("update failed", t.Exception.GetBaseException());
+                    Ui.AddNote("Cập nhật thất bại: " + t.Exception.GetBaseException().Message, true);
+                }
+                else Ui.AddNote(t.Result);
+            });
         }
 
         public void RestartSidecar()

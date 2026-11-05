@@ -5,13 +5,19 @@
  *   bundle/out/ClaudeCAD.bundle/
  *     PackageContents.xml
  *     Contents/
- *       ClaudeCAD.Plugin.dll         (built plugin)
+ *       ClaudeCAD.Plugin.dll         (AutoCAD 2022-2024 build, net48)
+ *       2025/ClaudeCAD.Plugin.dll    (AutoCAD 2025 build, net8.0-windows)
+ *       update-config.json           (only with --update-url)
  *       README.md
  *       agent/                       (dist + package.json + production node_modules for win32-x64)
  *       skills/                      (user-editable skills)
  *
  * Usage (from the repo root, after building plugin and agent):
- *   node bundle/make-bundle.mjs [--dll <path>] [--out <dir>] [--skip-npm]
+ *   node bundle/make-bundle.mjs [--dll <path>] [--dll2025 <path>] [--out <dir>] [--skip-npm]
+ *                               [--update-url <https://.../latest.json>] [--zip] [--download-url <https://.../ClaudeCAD-x.y.z.zip>]
+ *
+ * --zip also writes bundle/out/ClaudeCAD-<version>.zip and latest.json (the update
+ * manifest read by CLAUDECHATUPDATE: version, url, sha256).
  *
  * Works on Windows and on Linux/macOS: node_modules are installed with
  * --os=win32 --cpu=x64 so the Windows binary of the Agent SDK is included.
@@ -27,12 +33,18 @@ const repo = path.resolve(here, '..');
 const { values } = parseArgs({
   options: {
     dll: { type: 'string' },
+    dll2025: { type: 'string' },
     out: { type: 'string' },
     'skip-npm': { type: 'boolean' },
+    'update-url': { type: 'string' },
+    zip: { type: 'boolean' },
+    'download-url': { type: 'string' },
   },
 });
 
 const dll = path.resolve(values.dll ?? path.join(repo, 'plugin', 'ClaudeCAD.Plugin', 'bin', 'Release', 'ClaudeCAD.Plugin.dll'));
+const dll2025 = path.resolve(values.dll2025 ?? path.join(repo, 'plugin', 'ClaudeCAD.Plugin', 'bin', 'Release', 'acad2025', 'ClaudeCAD.Plugin.dll'));
+const version = JSON.parse(fs.readFileSync(path.join(repo, 'agent', 'package.json'), 'utf8')).version;
 const outRoot = path.resolve(values.out ?? path.join(here, 'out'));
 const bundle = path.join(outRoot, 'ClaudeCAD.bundle');
 const contents = path.join(bundle, 'Contents');
@@ -49,10 +61,25 @@ if (!fs.existsSync(agentDist)) fail('agent/dist/index.js not found; run "npm run
 fs.rmSync(bundle, { recursive: true, force: true });
 fs.mkdirSync(contents, { recursive: true });
 
-fs.copyFileSync(path.join(here, 'PackageContents.xml'), path.join(bundle, 'PackageContents.xml'));
-fs.copyFileSync(dll, path.join(contents, 'ClaudeCAD.Plugin.dll'));
-const pdb = dll.replace(/\.dll$/i, '.pdb');
-if (fs.existsSync(pdb)) fs.copyFileSync(pdb, path.join(contents, 'ClaudeCAD.Plugin.pdb'));
+// manifest with the release version stamped in
+const manifest = fs
+  .readFileSync(path.join(here, 'PackageContents.xml'), 'utf8')
+  .replace(/AppVersion="[^"]*"/, `AppVersion="${version}"`)
+  .replace(/(<ComponentEntry[\s\S]*?)Version="[^"]*"/g, `$1Version="${version}"`);
+fs.writeFileSync(path.join(bundle, 'PackageContents.xml'), manifest, 'utf8');
+
+function copyDll(src, destDir) {
+  fs.mkdirSync(destDir, { recursive: true });
+  fs.copyFileSync(src, path.join(destDir, 'ClaudeCAD.Plugin.dll'));
+  const pdb = src.replace(/\.dll$/i, '.pdb');
+  if (fs.existsSync(pdb)) fs.copyFileSync(pdb, path.join(destDir, 'ClaudeCAD.Plugin.pdb'));
+}
+copyDll(dll, contents);
+if (fs.existsSync(dll2025)) copyDll(dll2025, path.join(contents, '2025'));
+else console.warn(`make-bundle: AutoCAD 2025 build not found (${dll2025}); the bundle will only load in AutoCAD 2022-2024.`);
+if (values['update-url']) {
+  fs.writeFileSync(path.join(contents, 'update-config.json'), JSON.stringify({ manifest_url: values['update-url'] }, null, 2), 'utf8');
+}
 fs.copyFileSync(path.join(repo, 'README.md'), path.join(contents, 'README.md'));
 
 // skills (only folders with SKILL.md + the README)
@@ -76,5 +103,21 @@ if (!values['skip-npm']) {
   if (!fs.existsSync(winBin)) fail('the win32-x64 Claude Code binary package was not installed (npm too old? needs npm >= 9)');
 }
 
-console.log(`make-bundle: done → ${bundle}`);
-console.log('Install: copy ClaudeCAD.bundle to %AppData%\\Autodesk\\ApplicationPlugins and restart AutoCAD 2022.');
+if (values.zip) {
+  const zipName = `ClaudeCAD-${version}.zip`;
+  const zipPath = path.join(outRoot, zipName);
+  fs.rmSync(zipPath, { force: true });
+  if (process.platform === 'win32') {
+    execFileSync('powershell', ['-NoProfile', '-Command', `Compress-Archive -Path '${bundle}' -DestinationPath '${zipPath}'`], { stdio: 'inherit' });
+  } else {
+    execFileSync('zip', ['-qr', zipPath, 'ClaudeCAD.bundle'], { cwd: outRoot, stdio: 'inherit' });
+  }
+  const { createHash } = await import('node:crypto');
+  const sha256 = createHash('sha256').update(fs.readFileSync(zipPath)).digest('hex');
+  const url = values['download-url'] ?? zipName;
+  fs.writeFileSync(path.join(outRoot, 'latest.json'), JSON.stringify({ version, url, sha256, notes: '' }, null, 2), 'utf8');
+  console.log(`make-bundle: ${zipPath} (sha256 ${sha256}) + latest.json`);
+}
+
+console.log(`make-bundle: done → ${bundle} (version ${version})`);
+console.log('Install: copy ClaudeCAD.bundle to %AppData%\\Autodesk\\ApplicationPlugins and restart AutoCAD (2022-2025).');
