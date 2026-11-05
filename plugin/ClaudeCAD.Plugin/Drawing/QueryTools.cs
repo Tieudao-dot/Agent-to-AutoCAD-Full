@@ -221,8 +221,11 @@ namespace ClaudeCAD.Plugin.Drawing
                     case MText mt when Matches(mt.Text):
                         Hit(mt, "MTEXT", mt.Text, mt.Location);
                         break;
-                    case MLeader ml when ml.ContentType == ContentType.MTextContent && ml.MText != null && Matches(ml.MText.Text):
-                        Hit(ml, "MULTILEADER", ml.MText.Text, ml.MText.Location);
+                    case MLeader ml when ml.ContentType == ContentType.MTextContent:
+                        using (var mt = ml.MText)
+                        {
+                            if (mt != null && Matches(mt.Text)) Hit(ml, "MULTILEADER", mt.Text, mt.Location);
+                        }
                         break;
                     case Dimension dim when Matches(dim.DimensionText):
                         Hit(dim, "DIMENSION", dim.DimensionText, dim.TextPosition);
@@ -247,7 +250,9 @@ namespace ClaudeCAD.Plugin.Drawing
                         foreach (ObjectId aid in br.AttributeCollection)
                         {
                             if (!(ctx.Tr.GetObject(aid, OpenMode.ForRead) is AttributeReference ar)) continue;
-                            string s = ar.IsMTextAttribute ? ar.MTextAttribute.Text : ar.TextString;
+                            string s;
+                            if (ar.IsMTextAttribute) { using (var m = ar.MTextAttribute) s = m.Text; }
+                            else s = ar.TextString;
                             if (Matches(s)) Hit(ar, "ATTRIBUTE", s, ar.Position, br.Handle.ToString(), ar.Tag);
                         }
                         break;

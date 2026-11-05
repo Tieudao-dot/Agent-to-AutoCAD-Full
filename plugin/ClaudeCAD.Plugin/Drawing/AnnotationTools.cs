@@ -78,7 +78,7 @@ namespace ClaudeCAD.Plugin.Drawing
                 t.Justify = just;
                 t.AlignmentPoint = pos;
             }
-            var id = Acad.Add(ctx, t, p);
+            var id = Acad.Add(ctx, t, p, defaults: false);
             if (just != AttachmentPoint.BaseLeft) t.AdjustAlignment(ctx.Db);
             return Acad.Handles(id);
         }
@@ -96,7 +96,7 @@ namespace ClaudeCAD.Plugin.Drawing
             mt.Attachment = ParseJustify(p.Str("justify", p.Str("attachment", null)), AttachmentPoint.TopLeft);
             mt.Rotation = Geometry.DegToRad(p.Num("rotation", 0));
             mt.Contents = p.Str("text").Replace("\r\n", "\\P").Replace("\n", "\\P");
-            return Acad.Handles(Acad.Add(ctx, mt, p));
+            return Acad.Handles(Acad.Add(ctx, mt, p, defaults: false));
         }
 
         // ------------------------------------------------------------------ dimensions
@@ -268,9 +268,9 @@ namespace ClaudeCAD.Plugin.Drawing
                 Dimension d;
                 if (aligned) d = new AlignedDimension(a1, next, curDl, "", styleId);
                 else d = new RotatedDimension(rot, a1, next, curDl, "", styleId);
-                var id = Acad.Add(ctx, d, null);
+                d.SetDatabaseDefaults(ctx.Db);
                 d.SetPropertiesFrom(baseDim);
-                Acad.ApplyCommon(ctx, d, p);
+                var id = Acad.Add(ctx, d, p, defaults: false, owner: baseDim.BlockId);
                 d.DimensionStyle = styleId;
                 d.RecomputeDimensionBlock(true);
                 ids.Add(id);
@@ -310,7 +310,7 @@ namespace ClaudeCAD.Plugin.Drawing
             int idx = ml.AddLeaderLine(textPt);
             ml.AddFirstVertex(idx, arrow);
             if (p.Has("arrow_size")) ml.ArrowSize = p.Positive("arrow_size");
-            return Acad.Handles(Acad.Add(ctx, ml, p));
+            return Acad.Handles(Acad.Add(ctx, ml, p, defaults: false));
         }
 
         private static object AddTable(ToolContext ctx, Params p)
@@ -356,7 +356,7 @@ namespace ClaudeCAD.Plugin.Drawing
                     if (p.Has("alignment")) cell.Alignment = ParseCellAlignment(p.Str("alignment"));
                 }
             }
-            var id = Acad.Add(ctx, tb, p);
+            var id = Acad.Add(ctx, tb, p, defaults: false);
             tb.GenerateLayout();
             var res = Acad.Handles(id);
             res["rows"] = rows + titleRows;

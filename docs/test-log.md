@@ -66,6 +66,11 @@ Trạng thái: ⬜ chưa chạy · ✅ đạt · ❌ không đạt · ⚠️ đ�
 | 2 | trim_entities: line/arc/polyline/circle với 1 và nhiều cạnh cắt, đúng mảnh bị bỏ | ⬜ chưa chạy | |
 | 2 | extend_entities: line/arc/polyline tới biên, auto/start/end/both | ⬜ chưa chạy | |
 | 2 | insert_block với dynamic_props, get_dynamic_props (allowed values), reset_dynamic_block | ⬜ chưa chạy | |
+| 3 | `install.ps1`: máy chưa có Node → báo + đề nghị winget; có Node → cài bundle; chạy lại sau khi sửa skill → skill giữ nguyên; `-Uninstall` | ⬜ chưa chạy | |
+| 3 | `ClaudeCAD-Setup-<v>.exe` cài/gỡ, cảnh báo thiếu Node / chưa đăng nhập | ⬜ chưa chạy | |
+| 3 | AutoCAD 2023 và 2024 nạp bản net48; AutoCAD 2025 nạp `Contents\2025` (net8); smoke 1a trên mỗi bản | ⬜ chưa chạy | |
+| 3 | Cập nhật: đặt `CLAUDECAD_UPDATE_URL` tới latest.json có version cao hơn → palette báo; `CLAUDECHATUPDATE` tải, kiểm SHA-256; đóng AutoCAD → bundle được thay, skill đã sửa còn nguyên | ⬜ chưa chạy | |
+| 3 | latest.json sai SHA-256 → hủy, không đụng bundle | ⬜ chưa chạy | |
 
 ## Đã kiểm chứng tự động trên cloud (Linux)
 
@@ -76,6 +81,7 @@ Trạng thái: ⬜ chưa chạy · ✅ đạt · ❌ không đạt · ⚠️ đ�
 | 2026-11-05 | `dotnet build` plugin net48 với reference AutoCAD.NET 24.1.51000 | ✅ 0 warning |
 | 2026-11-05 | `dotnet test plugin/ClaudeCAD.Core.Tests` — JsonCodec, Params | ✅ 16/16 |
 | 2026-11-05 | Phase 1b: `npm test` 38/38 (thêm: danh mục tool TS khớp handler C#, mọi schema chuyển được sang JSON Schema, schema nhận ví dụ spec, giới hạn 500 call/batch) | ✅ |
+| 2026-11-05 | Phase 3: `npm test` 58/58 (thêm: phiên bản thống nhất 4 nơi, manifest đúng dll theo series); `dotnet test` 43/43 (thêm UpdateLogic); build **net48 + net8.0-windows** (AutoCAD.NET 24.1.51000 và 25.0.1) 0 warning; `make-bundle --zip` tạo bundle 2 dll + zip + latest.json | ✅ |
 | 2026-11-05 | Phase 2: 89 tool; `npm test` 56/56 (danh mục khớp handler C#); `dotnet test` 35/35 (thêm ExtensionTarget); build plugin 0 warning | ✅ |
 | 2026-11-05 | Phase 1e: `npm test` 56/56 (thêm: 3 skill đúng chuẩn Agent Skills, có "Quy trình chuẩn bị", chỉ nhắc tool có thật, JSON ví dụ hợp lệ; system prompt đủ 10 quy tắc) | ✅ |
 | 2026-11-05 | Phase 1e: **Agent SDK thật** trên Linux với plugin giả: init chỉ có `Read`, `Skill` + 72 tool `mcp__claudecad__*`, MCP server `claudecad` connected, `permissionMode: dontAsk`, 3 skill nạp qua plugin `claudecad-skills`; Claude gọi `ping` và stream tiếng Việt, `turn_end` đúng | ✅ |

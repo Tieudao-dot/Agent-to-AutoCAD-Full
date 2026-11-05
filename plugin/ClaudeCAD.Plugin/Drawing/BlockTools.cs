@@ -229,7 +229,8 @@ namespace ClaudeCAD.Plugin.Drawing
             foreach (ObjectId aid in br.AttributeCollection)
             {
                 if (!(ctx.Tr.GetObject(aid, OpenMode.ForRead) is AttributeReference ar)) continue;
-                atts[ar.Tag] = ar.IsMTextAttribute ? ar.MTextAttribute.Text : ar.TextString;
+                if (ar.IsMTextAttribute) { using (var m = ar.MTextAttribute) atts[ar.Tag] = m.Text; }
+                else atts[ar.Tag] = ar.TextString;
                 attHandles[ar.Tag] = ar.Handle.ToString();
             }
             var r = new Dictionary<string, object>
@@ -252,7 +253,9 @@ namespace ClaudeCAD.Plugin.Drawing
                 var d = new Dictionary<string, object>
                 {
                     ["name"] = prop.PropertyName,
-                    ["value"] = prop.Value is Point3d pt ? (object)Acad.J(pt) : prop.Value,
+                    ["value"] = prop.Value is Point3d pt ? (object)Acad.J(pt)
+                        : prop.UnitsType == DynamicBlockReferencePropertyUnitsType.Angular && prop.Value is double rad ? Acad.Deg(rad)
+                        : prop.Value,
                     ["read_only"] = prop.ReadOnly,
                     ["units"] = prop.UnitsType.ToString(),
                 };
@@ -278,9 +281,11 @@ namespace ClaudeCAD.Plugin.Drawing
                 var text = Convert.ToString(values[key], CultureInfo.InvariantCulture);
                 if (ar.IsMTextAttribute)
                 {
-                    var m = ar.MTextAttribute;
-                    m.Contents = text.Replace("\n", "\\P");
-                    ar.MTextAttribute = m;
+                    using (var m = ar.MTextAttribute)
+                    {
+                        m.Contents = text.Replace("\n", "\\P");
+                        ar.MTextAttribute = m;
+                    }
                 }
                 else ar.TextString = text;
                 done.Add(ar.Tag);

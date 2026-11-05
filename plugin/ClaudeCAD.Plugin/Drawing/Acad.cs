@@ -147,16 +147,24 @@ namespace ClaudeCAD.Plugin.Drawing
             if (p.Has("linetype_scale")) ent.LinetypeScale = p.Positive("linetype_scale");
         }
 
-        /// <summary>Appends a new entity to model space with default + common properties.</summary>
-        public static ObjectId Add(ToolContext ctx, Entity ent, Params p)
+        /// <summary>
+        /// Appends a new entity with default + common properties.
+        /// defaults=false: the caller already called SetDatabaseDefaults / SetPropertiesFrom
+        /// (styles, heights, source properties must not be reset).
+        /// owner: target block (e.g. the space of a source entity); default = model space
+        /// or the paper space named by the "layout" parameter.
+        /// </summary>
+        public static ObjectId Add(ToolContext ctx, Entity ent, Params p, bool defaults = true, ObjectId owner = default)
         {
             ctx.RequireWritable("add entity");
-            ent.SetDatabaseDefaults(ctx.Db);
+            if (defaults) ent.SetDatabaseDefaults(ctx.Db);
             if (p != null) ApplyCommon(ctx, ent, p);
             var ltr = (LayerTableRecord)ctx.Tr.GetObject(ent.LayerId, OpenMode.ForRead);
             if (ltr.IsLocked)
                 throw new ToolException(ErrorCodes.Locked, $"Layer '{ltr.Name}' is locked; cannot draw on it. Use another layer or ask the user to unlock it.");
-            var space = p != null && p.Has("layout") ? ctx.SpaceFor(p.Str("layout", null)) : ctx.ModelSpace;
+            BlockTableRecord space;
+            if (!owner.IsNull) space = (BlockTableRecord)ctx.Tr.GetObject(owner, OpenMode.ForWrite);
+            else space = p != null && p.Has("layout") ? ctx.SpaceFor(p.Str("layout", null)) : ctx.ModelSpace;
             var id = space.AppendEntity(ent);
             ctx.Tr.AddNewlyCreatedDBObject(ent, true);
             return id;

@@ -71,3 +71,18 @@ Cần test trên AutoCAD: mục "Phase 1e" trong `docs/test-log.md`, kịch bả
 Cloud: 89 tool; `npm test` 56/56; `dotnet test` 35/35; build plugin ✅. API AutoCAD của phase này mới kiểm chứng ở mức biên dịch.
 
 Cần test trên AutoCAD: mục "Phase 2" trong `docs/test-log.md`.
+
+## Phase 3 — installer kèm kiểm tra Node, cập nhật tự động, AutoCAD 2023–2025 ✅ code xong
+
+(Ngoài spec v1, làm theo yêu cầu bổ sung; thiết kế ở `docs/phase3-design.md`.)
+
+Đã làm:
+- Multi-target `net48` (AutoCAD 2022–2024, R24.1–R24.3) + `net8.0-windows` (AutoCAD 2025, R25.0); `PackageContents.xml` hai component chọn dll theo series.
+- `installer/install.ps1` (kiểm tra Node >= 18, winget, copy giữ skill người dùng, kiểm tra đăng nhập Claude, gỡ) và `installer/ClaudeCAD.iss` (Setup.exe).
+- Cập nhật tự động: manifest `latest.json` (version/url/sha256), kiểm tra mỗi ngày, `CLAUDECHATUPDATE` tải + kiểm SHA-256 + áp dụng sau khi AutoCAD đóng.
+- CI GitHub Actions trên Windows: test sidecar với named pipe thật, test lõi C#, build cả hai target, bundle + zip + Setup.exe + latest.json; tag `v*` → GitHub Release.
+- Phiên bản 0.3.0 thống nhất (có test).
+
+Cloud: `npm test` 58/58, `dotnet test` 43/43, build hai target ✅, bundle + zip ✅.
+
+Cần test: mục "Phase 3" trong `docs/test-log.md` (installer, AutoCAD 2023/2024/2025, luồng cập nhật).

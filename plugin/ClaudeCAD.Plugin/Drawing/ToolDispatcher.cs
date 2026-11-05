@@ -23,14 +23,17 @@ namespace ClaudeCAD.Plugin.Drawing
         public bool NoTransaction { get; }
         /// <summary>Not allowed inside batch_execute.</summary>
         public bool BatchForbidden { get; }
+        /// <summary>Runs without a document or turn (diagnostics); the handler receives ctx = null.</summary>
+        public bool NoDocument { get; }
 
-        public ToolDef(string name, bool writes, ToolHandler handler, bool noTransaction = false, bool batchForbidden = false)
+        public ToolDef(string name, bool writes, ToolHandler handler, bool noTransaction = false, bool batchForbidden = false, bool noDocument = false)
         {
             Name = name;
             Writes = writes;
             Handler = handler;
-            NoTransaction = noTransaction;
-            BatchForbidden = batchForbidden || noTransaction;
+            NoTransaction = noTransaction || noDocument;
+            BatchForbidden = batchForbidden || noTransaction || noDocument;
+            NoDocument = noDocument;
         }
     }
 
@@ -167,6 +170,7 @@ namespace ClaudeCAD.Plugin.Drawing
 
         private object ExecuteOnMain(ToolDef def, Params p)
         {
+            if (def.NoDocument) return def.Handler(null, p);
             var doc = _host.ResolveDocument();
             bool writes = def.Writes || (def.Name == "batch_execute" && BatchWrites(p));
 

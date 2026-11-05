@@ -52,3 +52,19 @@
 ## Fillet / chamfer
 
 - v1 hỗ trợ hai LINE (đúng như lệnh FILLET/CHAMFER với hai đường thẳng): mỗi line giữ đầu xa góc hơn. Toán học nằm trong `Core/Geometry.cs` (có unit test). Polyline: explode trước hoặc vẽ lại bằng bulge.
+
+## Rà soát độc lập (sau phase 3)
+
+Một lượt review riêng phần plugin C# (không chạy được AutoCAD nên đọc theo API doc) đã tìm và sửa:
+
+1. Tool call đến trễ sau khi lượt kết thúc (Stop sau 10 s, timeout 30 s, mất kết nối) có thể mở undo group mới không bao giờ đóng → nay `ResolveDocument` từ chối mọi call khi không có lượt đang chạy.
+2. `Acad.Add` gọi lại `SetDatabaseDefaults` làm mất style/chiều cao đã đặt (MText, MLeader, Table, Wipeout, DBText) → thêm `defaults: false`.
+3. Không regen sau khi đóng băng/tắt layer trong batch → cờ `NeedsRegen` cộng dồn, batch không xóa cờ.
+4. `batch_execute` chỉ đọc vẫn khóa document và mở undo group rỗng → dispatcher quyết định theo các call con.
+5. Góc của dynamic block đọc ra radian nhưng ghi vào bằng độ → đọc ra cũng đổi sang độ.
+6. Kiểm tra layer khóa sai layer cho offset/fillet/chamfer/join/dim nối tiếp → copy thuộc tính nguồn trước khi thêm.
+7. Explode / copy đưa đối tượng ở paper space về model space → giữ nguyên không gian nguồn.
+8. Handler nút bấm trên palette có thể ném exception vào AutoCAD → bọc try/catch.
+9. Bản sao MText tạm (MLeader.MText, MTextAttribute) không được dispose → `using`.
+
+Thêm: `ping` chạy được cả khi chưa mở bản vẽ; giới hạn 3 lần tự khởi động lại sidecar không còn bị reset khi gửi tin nhắn.

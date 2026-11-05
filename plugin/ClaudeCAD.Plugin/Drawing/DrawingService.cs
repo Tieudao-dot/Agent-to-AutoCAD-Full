@@ -38,14 +38,18 @@ namespace ClaudeCAD.Plugin.Drawing
         private static void RegisterSystem(ToolDispatcher d, ITurnHost host)
         {
             // Phase 1a: two-way IPC check. Read-only, no document required.
-            d.Register(new ToolDef("ping", false, (ctx, p) => new Dictionary<string, object>
+            d.Register(new ToolDef("ping", false, (ctx, p) =>
             {
-                ["pong"] = true,
-                ["echo"] = p.Get("message"),
-                ["plugin_version"] = PluginVersion,
-                ["acad_version"] = AcApp.Version.ToString(),
-                ["drawing"] = ctx.Doc != null ? System.IO.Path.GetFileName(ctx.Doc.Name) : null,
-            }));
+                var doc = AcApp.DocumentManager.MdiActiveDocument;
+                return new Dictionary<string, object>
+                {
+                    ["pong"] = true,
+                    ["echo"] = p.Get("message"),
+                    ["plugin_version"] = PluginVersion,
+                    ["acad_version"] = AcApp.Version.ToString(),
+                    ["drawing"] = doc != null ? System.IO.Path.GetFileName(doc.Name) : null,
+                };
+            }, noDocument: true));
         }
     }
 }

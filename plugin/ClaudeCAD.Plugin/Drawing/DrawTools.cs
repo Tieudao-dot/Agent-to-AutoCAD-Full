@@ -207,7 +207,7 @@ namespace ClaudeCAD.Plugin.Drawing
             var w = new Wipeout();
             w.SetDatabaseDefaults(ctx.Db);
             w.SetFrom(col, Vector3d.ZAxis);
-            return Acad.Handles(Acad.Add(ctx, w, p));
+            return Acad.Handles(Acad.Add(ctx, w, p, defaults: false));
         }
 
         private static object DrawRevcloud(ToolContext ctx, Params p)

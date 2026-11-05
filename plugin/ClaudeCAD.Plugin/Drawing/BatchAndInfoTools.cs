@@ -13,7 +13,8 @@ namespace ClaudeCAD.Plugin.Drawing
     {
         private static void RegisterBatchAndInfo(ToolDispatcher d)
         {
-            d.Register("batch_execute", true, BatchExecute);
+            // writes=false: the dispatcher decides from the sub-calls (a read-only batch needs no lock / undo group)
+            d.Register("batch_execute", false, BatchExecute);
             d.Register("get_drawing_info", false, GetDrawingInfo);
         }
 
@@ -40,7 +41,6 @@ namespace ClaudeCAD.Plugin.Drawing
                 else failed++;
                 compact.Add(r);
             }
-            ctx.NeedsRegen = false;
             return new Dictionary<string, object>
             {
                 ["ok_count"] = ok,

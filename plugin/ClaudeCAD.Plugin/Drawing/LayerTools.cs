@@ -63,13 +63,14 @@ namespace ClaudeCAD.Plugin.Drawing
             var plottable = p.BoolOpt("plottable");
             if (plottable.HasValue) ltr.IsPlottable = plottable.Value;
             var on = p.BoolOpt("on");
-            if (on.HasValue) ltr.IsOff = !on.Value;
+            if (on.HasValue) { ltr.IsOff = !on.Value; ctx.NeedsRegen = true; }
             var frozen = p.BoolOpt("frozen");
             if (frozen.HasValue)
             {
                 if (frozen.Value && ctx.Db.Clayer == ltr.ObjectId)
                     throw ToolException.Invalid($"Layer '{ltr.Name}' is the current layer and cannot be frozen. Call set_current_layer to switch to another layer first.");
                 ltr.IsFrozen = frozen.Value;
+                ctx.NeedsRegen = true;
             }
             var locked = p.BoolOpt("locked");
             if (locked.HasValue) ltr.IsLocked = locked.Value;
@@ -143,7 +144,7 @@ namespace ClaudeCAD.Plugin.Drawing
             ApplyLayerProps(ctx, ltr, p);
             var r = LayerInfo(ctx, ltr);
             r["handles"] = new List<object> { Acad.H(id) };
-            ctx.NeedsRegen = p.Has("frozen") || p.Has("on");
+            ctx.NeedsRegen |= p.Has("frozen") || p.Has("on");
             return r;
         }
 

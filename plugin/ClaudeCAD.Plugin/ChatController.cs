@@ -49,9 +49,9 @@ namespace ClaudeCAD.Plugin
             _sidecar.StateChanged += OnSidecarState;
 
             var ui = _palette.Control;
-            ui.SendRequested += SendUserMessage;
-            ui.StopRequested += Cancel;
-            ui.NewChatRequested += NewChat;
+            ui.SendRequested += text => Guard("send", () => SendUserMessage(text));
+            ui.StopRequested += () => Guard("stop", Cancel);
+            ui.NewChatRequested += () => Guard("new chat", NewChat);
 
             var dm = AcApp.DocumentManager;
             dm.DocumentToBeDestroyed += OnDocumentToBeDestroyed;
@@ -185,6 +185,8 @@ namespace ClaudeCAD.Plugin
         {
             lock (_gate)
             {
+                if (!_busy)
+                    throw new FatalToolException("This chat turn has already ended (stopped, timed out or disconnected). Do not continue; wait for the user's next message.");
                 if (_turnInvalidReason != null) throw new FatalToolException(_turnInvalidReason);
                 var active = AcApp.DocumentManager.MdiActiveDocument;
                 if (_turnDoc == null) _turnDoc = active;
@@ -315,6 +317,19 @@ namespace ClaudeCAD.Plugin
             {
                 _ipc.Send(new Dictionary<string, object> { ["type"] = "cancel" });
                 Ui.AddNote("Cậu đã chuyển sang bản vẽ khác giữa lượt — đã dừng lượt để an toàn.", true);
+            }
+        }
+
+        private void Guard(string what, Action a)
+        {
+            try
+            {
+                a();
+            }
+            catch (Exception ex)
+            {
+                Logger.Error("palette action failed: " + what, ex);
+                try { Ui.AddNote($"Lỗi nội bộ ({what}): {ex.Message}. Xem log bằng lệnh CLAUDECHATLOG.", true); } catch { }
             }
         }
 

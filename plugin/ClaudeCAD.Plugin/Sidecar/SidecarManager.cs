@@ -42,7 +42,7 @@ namespace ClaudeCAD.Plugin.Sidecar
         {
             get
             {
-                lock (_gate) return _proc != null && !_proc.HasExited;
+                lock (_gate) return _proc != null && !SafeHasExited(_proc);
             }
         }
 
@@ -51,9 +51,9 @@ namespace ClaudeCAD.Plugin.Sidecar
         {
             lock (_gate)
             {
-                if (_proc != null && !_proc.HasExited) return;
+                if (_proc != null && !SafeHasExited(_proc)) return;
+                if (State == SidecarState.Failed || State == SidecarState.Restarting) return; // New / CLAUDECHATRESTART resets
                 _stopping = false;
-                _restarts = 0;
                 StartLocked(SidecarState.Starting);
             }
         }
@@ -71,10 +71,25 @@ namespace ClaudeCAD.Plugin.Sidecar
             }
         }
 
+        private static bool SafeHasExited(Process p)
+        {
+            try { return p.HasExited; } catch { return true; }
+        }
+
         private void StartLocked(SidecarState state)
         {
-            var node = PluginPaths.NodeExecutable;
-            var entry = PluginPaths.AgentEntry;
+            string node, entry;
+            try
+            {
+                node = PluginPaths.NodeExecutable;
+                entry = PluginPaths.AgentEntry;
+            }
+            catch (Exception ex)
+            {
+                Logger.Error("resolving sidecar paths failed", ex);
+                SetState(SidecarState.Failed, "Không xác định được đường dẫn node/agent: " + ex.Message);
+                return;
+            }
             if (node == null)
             {
                 SetState(SidecarState.Failed,
@@ -88,7 +103,8 @@ namespace ClaudeCAD.Plugin.Sidecar
                 return;
             }
 
-            var skills = PluginPaths.SkillsDirectory;
+            string skills = null;
+            try { skills = PluginPaths.SkillsDirectory; } catch (Exception ex) { Logger.Warn("skills dir: " + ex.Message); }
             var args = new StringBuilder();
             args.Append(Quote(entry)).Append(" --pipe ").Append(Quote(_pipeName));
             if (skills != null) args.Append(" --skills ").Append(Quote(skills));

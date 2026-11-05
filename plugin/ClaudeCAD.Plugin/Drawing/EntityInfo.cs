@@ -98,7 +98,9 @@ namespace ClaudeCAD.Plugin.Drawing
                     d["direction"] = Acad.J(r.UnitDir);
                     break;
                 case MLeader ml:
-                    if (ml.ContentType == ContentType.MTextContent && ml.MText != null) d["text"] = Params.Truncate(ml.MText.Text, TextPreview);
+                    if (ml.ContentType == ContentType.MTextContent)
+                        using (var mt = ml.MText)
+                            if (mt != null) d["text"] = Params.Truncate(mt.Text, TextPreview);
                     break;
                 case Spline sp:
                     d["fit_points"] = sp.NumFitPoints;
@@ -175,7 +177,9 @@ namespace ClaudeCAD.Plugin.Drawing
                     foreach (ObjectId aid in br.AttributeCollection)
                     {
                         var ar = ctx.Tr.GetObject(aid, OpenMode.ForRead) as AttributeReference;
-                        if (ar != null) atts[ar.Tag] = ar.IsMTextAttribute ? ar.MTextAttribute.Contents : ar.TextString;
+                        if (ar == null) continue;
+                        if (ar.IsMTextAttribute) { using (var m = ar.MTextAttribute) atts[ar.Tag] = m.Contents; }
+                        else atts[ar.Tag] = ar.TextString;
                     }
                     if (atts.Count > 0) d["attributes"] = atts;
                     d["scale"] = new List<object> { Acad.R(br.ScaleFactors.X), Acad.R(br.ScaleFactors.Y), Acad.R(br.ScaleFactors.Z) };

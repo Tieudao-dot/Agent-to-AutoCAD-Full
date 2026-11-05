@@ -101,7 +101,8 @@ namespace ClaudeCAD.Plugin.Drawing
             var ids = new ObjectIdCollection();
             foreach (var h in handles) ids.Add(Acad.IdFromHandle(ctx.Db, h));
             var map = new IdMapping();
-            ctx.Db.DeepCloneObjects(ids, ctx.ModelSpace.ObjectId, map, false);
+            var ownerId = ((Entity)ctx.Tr.GetObject(ids[0], OpenMode.ForRead)).BlockId;
+            ctx.Db.DeepCloneObjects(ids, ownerId, map, false);
             var result = new List<ObjectId>();
             foreach (ObjectId src in ids)
             {
@@ -236,8 +237,8 @@ namespace ClaudeCAD.Plugin.Drawing
             foreach (DBObject o in best)
             {
                 var e = (Entity)o;
-                ids.Add(Acad.Add(ctx, e, null));
                 e.SetPropertiesFrom(ent);
+                ids.Add(Acad.Add(ctx, e, null, defaults: false, owner: ent.BlockId));
             }
             return Acad.Handles(ids);
         }
@@ -269,8 +270,9 @@ namespace ClaudeCAD.Plugin.Drawing
             if (r.ArcCenter != null)
             {
                 var arc = new Arc(Acad.P3(r.ArcCenter), Vector3d.ZAxis, r.ArcRadius, r.ArcStart, r.ArcEnd);
-                var id = Acad.Add(ctx, arc, null);
+                arc.SetDatabaseDefaults(ctx.Db);
                 arc.SetPropertiesFrom(l1);
+                var id = Acad.Add(ctx, arc, null, defaults: false, owner: l1.BlockId);
                 ids.Add(id);
             }
             var res = Acad.Handles(ids);
@@ -290,8 +292,9 @@ namespace ClaudeCAD.Plugin.Drawing
             if (r.ChamferStart != null)
             {
                 var ln = new Line(Acad.P3(r.ChamferStart), Acad.P3(r.ChamferEnd));
-                var id = Acad.Add(ctx, ln, null);
+                ln.SetDatabaseDefaults(ctx.Db);
                 ln.SetPropertiesFrom(l1);
+                var id = Acad.Add(ctx, ln, null, defaults: false, owner: l1.BlockId);
                 ids.Add(id);
             }
             return Acad.Handles(ids);
@@ -315,10 +318,11 @@ namespace ClaudeCAD.Plugin.Drawing
                     continue;
                 }
                 if (parts.Count == 0) { skipped.Add(new Dictionary<string, object> { ["handle"] = h, ["reason"] = "nothing to explode" }); continue; }
+                var owner = (BlockTableRecord)ctx.Tr.GetObject(e.BlockId, OpenMode.ForWrite);
                 foreach (DBObject o in parts)
                 {
                     var part = (Entity)o;
-                    var id = ctx.ModelSpace.AppendEntity(part);
+                    var id = owner.AppendEntity(part);
                     ctx.Tr.AddNewlyCreatedDBObject(part, true);
                     created.Add(id);
                 }
@@ -350,8 +354,9 @@ namespace ClaudeCAD.Plugin.Drawing
             else
             {
                 pl = ToPolyline(ents[0]);
-                plId = Acad.Add(ctx, pl, null);
+                pl.SetDatabaseDefaults(ctx.Db);
                 pl.SetPropertiesFrom(ents[0]);
+                plId = Acad.Add(ctx, pl, null, defaults: false, owner: ents[0].BlockId);
                 ents[0].Erase();
                 startIdx = 1;
             }
@@ -468,9 +473,11 @@ namespace ClaudeCAD.Plugin.Drawing
                 case AttributeReference ar:
                     if (ar.IsMTextAttribute)
                     {
-                        var m = ar.MTextAttribute;
-                        m.Contents = Apply(m.Contents, true);
-                        ar.MTextAttribute = m;
+                        using (var m = ar.MTextAttribute)
+                        {
+                            m.Contents = Apply(m.Contents, true);
+                            ar.MTextAttribute = m;
+                        }
                     }
                     else ar.TextString = Apply(ar.TextString, false);
                     if (height.HasValue) ar.Height = height.Value;
@@ -500,10 +507,12 @@ namespace ClaudeCAD.Plugin.Drawing
                     if (height.HasValue) dim.Dimtxt = height.Value;
                     break;
                 case MLeader ml when ml.ContentType == ContentType.MTextContent:
-                    var mm = ml.MText;
-                    mm.Contents = Apply(mm.Contents, true);
-                    if (height.HasValue) { mm.TextHeight = height.Value; ml.TextHeight = height.Value; }
-                    ml.MText = mm;
+                    using (var mm = ml.MText)
+                    {
+                        mm.Contents = Apply(mm.Contents, true);
+                        if (height.HasValue) { mm.TextHeight = height.Value; ml.TextHeight = height.Value; }
+                        ml.MText = mm;
+                    }
                     break;
                 case Table tb:
                     int row = p.Int("row"), col = p.Int("col");
