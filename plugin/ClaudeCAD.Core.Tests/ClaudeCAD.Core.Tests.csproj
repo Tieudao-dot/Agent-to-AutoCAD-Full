@@ -15,6 +15,11 @@
     <Compile Include="..\ClaudeCAD.Plugin\Core\ToolException.cs" Link="Core\ToolException.cs" />
     <Compile Include="..\ClaudeCAD.Plugin\Core\Geometry.cs" Link="Core\Geometry.cs" />
     <Compile Include="..\ClaudeCAD.Plugin\Core\UpdateLogic.cs" Link="Core\UpdateLogic.cs" />
+    <Compile Include="..\ClaudeCAD.Plugin\Core\Logger.cs" Link="Core\Logger.cs" />
+    <Compile Include="..\ClaudeCAD.Plugin\Core\MarkdownLite.cs" Link="Core\MarkdownLite.cs" />
+    <Compile Include="..\ClaudeCAD.Plugin\Core\ChatStore.cs" Link="Core\ChatStore.cs" />
+    <Compile Include="..\ClaudeCAD.Plugin\Core\PaletteSettings.cs" Link="Core\PaletteSettings.cs" />
+    <Compile Include="..\ClaudeCAD.Plugin\Core\QuickTemplates.cs" Link="Core\QuickTemplates.cs" />
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.11.1" />
