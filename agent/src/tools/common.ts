@@ -95,4 +95,8 @@ export const entityProps = {
     .string()
     .optional()
     .describe('Linetype name, e.g. "CONTINUOUS", "DASHED", "CENTER", "HIDDEN". Loaded from acadiso.lin if missing. Default: ByLayer.'),
+  lineweight: z
+    .union([z.number().min(0).max(211), z.enum(['bylayer', 'byblock', 'default'])])
+    .optional()
+    .describe('Entity lineweight in mm (e.g. 0.25) or "bylayer" (default).'),
 };

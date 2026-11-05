@@ -13,3 +13,15 @@ Chú thích: "Cloud" = đã kiểm chứng tự động trên Linux (build + tes
 Cloud: sidecar build ✅, 32/32 test IPC + session ✅; plugin build net48 ✅; 16/16 unit test lõi C# ✅.
 
 Cần test trên AutoCAD: mục "Phase 1a" trong `docs/test-log.md` (NETLOAD, palette, chat stream, `ping`, Stop, New, kill node.exe).
+
+## Phase 1b — vẽ hình học, layer, batch, undo group ✅ code xong
+
+Đã làm:
+- Plugin: handler 7.1 (14 tool vẽ), layer 7.4 (`create_layer` idempotent + tự load linetype, `list_layers`, `set_current_layer`, `set_layer_props`), `batch_execute` (một top transaction, nested transaction cho từng call, tối đa 500 call, lỗi từng call không rollback cả batch), `get_drawing_info` (cần cho quy tắc "luôn gọi trước"). Thuộc tính chung `layer`/`color`/`linetype`/`lineweight` cho mọi tool vẽ; layer thiếu → `LAYER_NOT_FOUND`, layer khóa → `LOCKED`.
+- Undo theo lượt: `UndoScope` mở group lười trước tool ghi đầu tiên (COM `StartUndoMark`), đóng ở `turn_end`.
+- Hình học thuần (`Core/Geometry.cs`): hình chữ nhật, đa giác đều, cung 3 điểm, revcloud bằng bulge, lineweight — có unit test.
+- Sidecar: schema zod + mô tả tiếng Anh cho toàn bộ tool trên.
+
+Cloud: `npm test` 38/38 (có test đối chiếu tên tool sidecar ↔ handler C#), `dotnet test` 29/29, build plugin ✅.
+
+Cần test trên AutoCAD: mục "Phase 1b" trong `docs/test-log.md`, quan trọng nhất là **một lệnh U hoàn tác cả lượt** và **batch 200 line < 2 s**.

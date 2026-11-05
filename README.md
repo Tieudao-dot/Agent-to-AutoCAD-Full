@@ -112,6 +112,16 @@ Ghi kết quả vào [`docs/test-log.md`](docs/test-log.md).
 - Bấm Stop giữa lúc Claude đang viết dài → lượt dừng, nút Gửi bật lại.
 - Mở Task Manager, kill tiến trình `node.exe` của ClaudeCAD → palette báo mất kết nối, tự khởi động lại (tối đa 3 lần liên tiếp), chat tiếp được.
 
+### Phase 1b — vẽ hình học, layer, batch, undo theo lượt
+
+Tool mới: `draw_line`, `draw_polyline`, `draw_circle`, `draw_arc`, `draw_ellipse`, `draw_spline`, `draw_rectangle`, `draw_polygon`, `draw_point`, `draw_xline`, `draw_ray`, `draw_hatch`, `draw_wipeout`, `draw_revcloud`, `create_layer`, `list_layers`, `set_current_layer`, `set_layer_props`, `batch_execute`, `get_drawing_info`.
+
+- "Vẽ lưới trục 5x4 bước 4000" → layer trục được tạo (linetype CENTER), 5 + 4 trục bằng một `batch_execute` (xem dòng trạng thái "Thực thi nhiều lệnh").
+- Gõ `U` một lần → toàn bộ lưới trục (và layer vừa tạo) biến mất. `REDO` đưa lại.
+- "Vẽ hình chữ nhật 4x6m, hatch ANSI31 bên trong, thêm mây sửa đổi quanh nó" → kiểm tra hatch, revcloud.
+- "Vẽ 200 đoạn thẳng song song cách nhau 100" → trong log plugin tìm dòng `tool batch_execute ok in N ms`, N < 2000.
+- Khóa một layer rồi bảo Claude vẽ lên layer đó → Claude nhận lỗi `LOCKED` và hỏi lại cậu.
+
 ## 5. Đóng gói bundle (autoloader)
 
 Xem [`bundle/README.md`](bundle/README.md) (thêm ở phase sau): tạo `ClaudeCAD.bundle` đặt vào `%AppData%\Autodesk\ApplicationPlugins` để AutoCAD tự nạp, không cần NETLOAD.

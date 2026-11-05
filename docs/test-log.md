@@ -31,6 +31,13 @@ Trạng thái: ⬜ chưa chạy · ✅ đạt · ❌ không đạt · ⚠️ đ�
 | 1a | Stop giữa lượt → lượt dừng, nút Gửi bật lại | ⬜ chưa chạy | |
 | 1a | New → lịch sử xóa, Claude không nhớ ngữ cảnh cũ | ⬜ chưa chạy | |
 | 1a | Đóng AutoCAD → không còn `node.exe` của ClaudeCAD | ⬜ chưa chạy | |
+| 1b | "Vẽ lưới trục 5x4 bước 4000" → 5 trục đứng + 4 trục ngang đúng bước, layer trục linetype CENTER, một `batch_execute` | ⬜ chưa chạy | |
+| 1b | U một lần sau lượt trên → mất toàn bộ lưới trục | ⬜ chưa chạy | |
+| 1b | Lượt chỉ đọc ("bản vẽ có bao nhiêu đối tượng?") rồi U → hoàn tác lượt vẽ trước đó, không "hụt" | ⬜ chưa chạy | |
+| 1b | Mỗi tool vẽ 7.1 tạo đúng loại đối tượng (line, LWPOLYLINE có bulge, circle, arc 2 cách, ellipse, spline, rectangle, polygon nội/ngoại tiếp, point, xline, ray, hatch SOLID/ANSI31 theo handle và theo điểm, wipeout, revcloud) | ⬜ chưa chạy | |
+| 1b | Layer: create (tự load linetype CENTER/DASHED), list, set current, set props (khóa, tắt, đóng băng; không cho đóng băng layer hiện hành) | ⬜ chưa chạy | |
+| 1b | Batch có 1 call lỗi ở giữa → các call khác vẫn vẽ, kết quả báo lỗi đúng index | ⬜ chưa chạy | |
+| 1b | Vẽ lên layer bị khóa → lỗi `LOCKED`, không crash | ⬜ chưa chạy | |
 
 ## Đã kiểm chứng tự động trên cloud (Linux)
 
@@ -40,3 +47,5 @@ Trạng thái: ⬜ chưa chạy · ✅ đạt · ❌ không đạt · ⚠️ đ�
 | 2026-11-05 | `npm test` — 32 test: protocol (encode/decode, UTF-8 cắt giữa chunk, CRLF, BOM, dòng quá dài), ToolRpc (tương quan id, timeout, response muộn, mất kết nối, failAll), tích hợp qua socket thật (echo tool, lỗi plugin, timeout, đứt pipe, dòng hỏng, tiến trình sidecar thật nối pipe rồi tự thoát), AgentSession với query giả (stream text, nhiều lượt, cancel, new session, process chết, lỗi đăng nhập, skill plugin) | ✅ 32/32 |
 | 2026-11-05 | `dotnet build` plugin net48 với reference AutoCAD.NET 24.1.51000 | ✅ 0 warning |
 | 2026-11-05 | `dotnet test plugin/ClaudeCAD.Core.Tests` — JsonCodec, Params | ✅ 16/16 |
+| 2026-11-05 | Phase 1b: `npm test` 38/38 (thêm: danh mục tool TS khớp handler C#, mọi schema chuyển được sang JSON Schema, schema nhận ví dụ spec, giới hạn 500 call/batch) | ✅ |
+| 2026-11-05 | Phase 1b: `dotnet test` 29/29 (thêm Geometry: hình chữ nhật, đa giác, cung 3 điểm, revcloud, lineweight, hướng) ; `dotnet build` plugin | ✅ |

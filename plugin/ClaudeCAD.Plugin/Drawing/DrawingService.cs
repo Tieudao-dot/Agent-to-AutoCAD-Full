@@ -17,11 +17,11 @@ namespace ClaudeCAD.Plugin.Drawing
         public static void RegisterAll(ToolDispatcher d, ITurnHost host)
         {
             RegisterSystem(d, host);
-            RegisterGroups(d, host);
+            // phase 1b
+            RegisterDraw(d);
+            RegisterLayers(d);
+            RegisterBatchAndInfo(d);
         }
-
-        /// <summary>Implemented by later phases (each group file adds itself here).</summary>
-        static partial void RegisterGroups(ToolDispatcher d, ITurnHost host);
 
         private static void RegisterSystem(ToolDispatcher d, ITurnHost host)
         {
