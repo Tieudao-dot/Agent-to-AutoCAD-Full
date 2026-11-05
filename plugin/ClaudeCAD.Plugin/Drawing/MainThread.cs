@@ -71,6 +71,14 @@ namespace ClaudeCAD.Plugin.Drawing
             return tcs.Task;
         }
 
+        /// <summary>Runs now (caller is on the main thread), entering the application context if needed.</summary>
+        public static void RunInAppContext(Action action)
+        {
+            var dm = AcApp.DocumentManager;
+            if (dm.IsApplicationContext) action();
+            else dm.ExecuteInApplicationContext(_ => action(), null);
+        }
+
         public static Task InvokeAsync(Action action) =>
             InvokeAsync<bool>(() => { action(); return true; });
 

@@ -161,6 +161,7 @@ namespace ClaudeCAD.Plugin.Core
     public sealed class ChatStore
     {
         private readonly string _dir;
+        private readonly object _io = new object();
 
         public ChatStore(string dir)
         {
@@ -192,13 +193,18 @@ namespace ClaudeCAD.Plugin.Core
         {
             try
             {
-                Directory.CreateDirectory(_dir);
-                t.Trim();
-                var file = Path.Combine(_dir, ChatTranscript.FileNameFor(t.DrawingKey));
-                var tmp = file + ".tmp";
-                File.WriteAllText(tmp, t.ToJson(), new UTF8Encoding(false));
-                if (File.Exists(file)) File.Delete(file);
-                File.Move(tmp, file);
+                lock (_io)
+                {
+                    Directory.CreateDirectory(_dir);
+                    t.Trim();
+                    var file = Path.Combine(_dir, ChatTranscript.FileNameFor(t.DrawingKey));
+                    var tmp = file + "." + Guid.NewGuid().ToString("N") + ".tmp";
+                    string json;
+                    lock (t) json = t.ToJson();
+                    File.WriteAllText(tmp, json, new UTF8Encoding(false));
+                    if (File.Exists(file)) File.Replace(tmp, file, null, true);
+                    else File.Move(tmp, file);
+                }
             }
             catch (Exception ex)
             {

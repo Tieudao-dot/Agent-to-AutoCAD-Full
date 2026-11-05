@@ -239,6 +239,48 @@ describe('AgentSession palette features', () => {
   });
 });
 
+describe('AgentSession robustness', () => {
+  it('a new message abandons a turn the plugin already ended (no stuck palette)', async () => {
+    let n = 0;
+    const { fn, calls } = fakeQuery(async (input, push) => {
+      for await (const _ of input) {
+        n++;
+        if (n === 1) { await tick(60); push(result); } // slow first turn; its result arrives late
+        else push(result);
+      }
+    });
+    const { s, events } = session(fn);
+    s.send('một việc rất lâu');
+    await tick(10);
+    s.send('việc mới');
+    await tick(150);
+    assert.equal(calls.prompts.length, 2);
+    // only the second turn produces a turn_end; the late result of the first is ignored
+    assert.equal(events.filter((e) => e.type === 'turn_end').length, 1);
+    assert.equal(events.filter((e) => e.type === 'agent_error').length, 0);
+    assert.equal(s.busy, false);
+    s.close();
+  });
+
+  it('"default" resets model and effort', async () => {
+    const { fn, calls } = fakeQuery(async (input, push) => { for await (const _ of input) push(result); });
+    const events: SidecarToPlugin[] = [];
+    const s = new AgentSession({
+      emit: (m) => events.push(m),
+      bridge: { call: async (id) => ({ id, ok: true, result: {} }), status: () => {} },
+      version: 'test', workDir: fs.mkdtempSync(path.join(os.tmpdir(), 'claudecad-def-')), log: () => {}, queryFn: fn,
+      model: 'claude-opus-5-5',
+    });
+    s.send('x');
+    await tick();
+    await s.setOptions({ model: 'claude-haiku-5-5', effort: 'low' });
+    await s.setOptions({ model: 'default', effort: 'default' });
+    assert.deepEqual(calls.setModel, ['claude-haiku-5-5', 'claude-opus-5-5']);
+    assert.deepEqual(calls.flags, [{ effortLevel: 'low' }, { effortLevel: null }]);
+    s.close();
+  });
+});
+
 describe('confirmation card tool', () => {
   it('emits confirm_request and tells Claude to end the turn', async () => {
     const shown: unknown[] = [];

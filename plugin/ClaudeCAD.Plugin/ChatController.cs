@@ -63,6 +63,8 @@ namespace ClaudeCAD.Plugin
         private bool _undoAvailable;                        // feature 5
         private bool _editing;                              // feature 20
         private ComposedMessage _afterUndo;
+        private bool _foreignChangeDuringTurn;              // user ran commands while Claude worked
+        private int _chatGen;                               // bumped by NewChat / drawing switch
         private (string id, bool yes)? _pendingConfirm;     // feature 11
 
         // usage (feature 14)
@@ -99,9 +101,9 @@ namespace ClaudeCAD.Plugin
             ui.ExportRequested += () => Guard("export", () => MainThread.Post(Export));
             ui.SettingsChanged += s => Guard("settings", () => OnSettingsChanged(s));
 
-            Interaction.SelectionPicked += sel => { _selection = sel; Ui.SetSelectionChip(sel, true); Ui.FocusInput(); };
+            Interaction.SelectionPicked += sel => { _selection = sel; Ui.SetSelectionChip(sel, true); _palette.FocusInput(); };
             Interaction.ImpliedSelectionChanged += sel => { if (!_busy) { _selection = sel; Ui.SetSelectionChip(sel, false); } };
-            Interaction.PointsPicked += pts => { Ui.InsertAtCaret(Interaction.FormatPoints(pts)); Ui.FocusInput(); };
+            Interaction.PointsPicked += pts => { Ui.InsertAtCaret(Interaction.FormatPoints(pts)); _palette.FocusInput(); };
 
             var dm = AcApp.DocumentManager;
             dm.DocumentToBeDestroyed += OnDocumentToBeDestroyed;
@@ -159,6 +161,25 @@ namespace ClaudeCAD.Plugin
             if (d == null || !_watchedDocs.Add(d)) return;
             Interaction.Watch(d);
             d.CommandEnded += OnCommandEnded;
+            d.CommandCancelled += OnCommandEnded;
+            d.CommandFailed += OnCommandEnded;
+            try
+            {
+                d.Database.ObjectAppended += OnDbChanged;
+                d.Database.ObjectErased += OnDbChanged;
+                d.Database.ObjectModified += OnDbChanged;
+            }
+            catch (Exception ex) { Logger.Warn("database events: " + ex.Message); }
+        }
+
+        /// <summary>Any drawing change outside a chat turn (Properties palette, grips...) makes "Hoàn tác lượt này" unsafe.</summary>
+        private void OnDbChanged(object sender, EventArgs e)
+        {
+            if (_busy || !_undoAvailable) return;
+            var obj = (e as Autodesk.AutoCAD.DatabaseServices.ObjectEventArgs)?.DBObject ?? (e as Autodesk.AutoCAD.DatabaseServices.ObjectErasedEventArgs)?.DBObject;
+            if (obj is Autodesk.AutoCAD.DatabaseServices.ViewportTableRecord || obj is Autodesk.AutoCAD.DatabaseServices.Viewport) return; // pan / zoom
+            _undoAvailable = false;
+            Ui.SetUndoAvailable(false);
         }
 
         // ================================================================= settings / theme (9, 14, 19)
@@ -180,11 +201,13 @@ namespace ClaudeCAD.Plugin
 
         private void SendOptions()
         {
-            if (string.IsNullOrEmpty(_settings.Model) && string.IsNullOrEmpty(_settings.Effort)) return;
-            var m = new Dictionary<string, object> { ["type"] = "set_options" };
-            if (!string.IsNullOrEmpty(_settings.Model)) m["model"] = _settings.Model;
-            if (!string.IsNullOrEmpty(_settings.Effort)) m["effort"] = _settings.Effort;
-            _ipc.Send(m);
+            // "default" = back to the sidecar's model / the model's default effort
+            _ipc.Send(new Dictionary<string, object>
+            {
+                ["type"] = "set_options",
+                ["model"] = string.IsNullOrEmpty(_settings.Model) ? "default" : _settings.Model,
+                ["effort"] = string.IsNullOrEmpty(_settings.Effort) ? "default" : _settings.Effort,
+            });
         }
 
         private void ApplyTheme()
@@ -219,6 +242,8 @@ namespace ClaudeCAD.Plugin
         private void LoadTranscriptFor(Document doc)
         {
             SaveTranscript();
+            _chatGen++;
+            _pendingConfirm = null;
             _transcriptDoc = doc;
             _transcript = _store.Load(KeyFor(doc), SafeDocName(doc));
             _undoAvailable = false;
@@ -259,12 +284,27 @@ namespace ClaudeCAD.Plugin
                 if (_undoAvailable)
                 {
                     // feature 20: undo the previous turn first, send once AutoCAD finished the U
+                    var refused = Interaction.UndoOnce();
+                    if (refused != null)
+                    {
+                        _editing = true;
+                        Ui.SetInputText(m.Text);
+                        Ui.SetToolStatus("Chưa hoàn tác được lượt trước: " + refused);
+                        return;
+                    }
                     _afterUndo = m;
                     _undoAvailable = false;
                     Ui.SetUndoAvailable(false);
                     Ui.AddNote("Đang hoàn tác lượt trước để làm lại theo yêu cầu đã sửa...");
-                    MainThread.Post(() => Interaction.UndoOnce());
-                    Task.Delay(5000).ContinueWith(_ => { var p = _afterUndo; if (p != null) { _afterUndo = null; MainThread.Post(() => Send(p, false)); } });
+                    Task.Delay(8000).ContinueWith(_ => MainThread.Post(() =>
+                    {
+                        // U never ran (AutoCAD busy / focus elsewhere): do not send as if it had
+                        var p = System.Threading.Interlocked.Exchange(ref _afterUndo, null);
+                        if (p == null) return;
+                        _editing = true;
+                        Ui.SetInputText(p.Text);
+                        Ui.AddErrorCard("AutoCAD chưa chạy lệnh U để hoàn tác lượt trước. Bấm vào bản vẽ rồi gửi lại, hoặc tự gõ U trước.", false);
+                    }));
                     return;
                 }
             }
@@ -325,6 +365,7 @@ namespace ClaudeCAD.Plugin
                 _textBreak = false;
                 _turnHandles.Clear();
                 _lastError = null;
+                _foreignChangeDuringTurn = false;
                 _transcript?.Entries.Add(userEntry);
             }
             _undoAvailable = false;
@@ -390,6 +431,8 @@ namespace ClaudeCAD.Plugin
                 _ipc.Send(new Dictionary<string, object> { ["type"] = "cancel" });
                 EndTurn(null, false);
             }
+            _chatGen++;
+            _pendingConfirm = null;
             if (_transcript != null)
             {
                 _transcript.Entries.Clear();
@@ -408,6 +451,7 @@ namespace ClaudeCAD.Plugin
             ChatEntry assistant;
             HashSet<string> handles;
             DateTime started;
+            int gen;
             lock (_gate)
             {
                 if (!_busy) return;
@@ -416,16 +460,26 @@ namespace ClaudeCAD.Plugin
                 _assistant = null;
                 handles = new HashSet<string>(_turnHandles, StringComparer.OrdinalIgnoreCase);
                 started = _turnStarted;
+                gen = _chatGen;
+                if (assistant != null)
+                {
+                    assistant.Text = _assistantText.ToString().Trim();
+                    assistant.Handles = handles.ToList();
+                }
             }
-            if (assistant != null)
+            // same Dispatcher queue as the streamed text/tool rows → runs after them
+            Ui.Enqueue(() => MainThread.RunInAppContext(() =>
             {
-                assistant.Text = _assistantText.ToString().Trim();
-                assistant.Handles = handles.ToList();
-            }
-            MainThread.Post(() =>
-            {
-                bool wrote = Undo.IsOpen;
+                bool wrote = Undo.IsOpen && !_foreignChangeDuringTurn;
                 Undo.End();
+                if (gen != _chatGen)
+                {
+                    // New chat / drawing switch happened meanwhile: the old reply belongs nowhere
+                    lock (_gate) { _turnDoc = null; _turnInvalidReason = null; }
+                    Ui.DiscardAssistant();
+                    Ui.SetBusy(false);
+                    return;
+                }
                 lock (_gate)
                 {
                     _turnDoc = null;
@@ -452,7 +506,7 @@ namespace ClaudeCAD.Plugin
                 MaybeNotify(assistant, errorNote, started);
                 if (_pendingSwitch) { _pendingSwitch = false; LoadTranscriptFor(AcApp.DocumentManager.MdiActiveDocument); }
                 if (_pendingConfirm.HasValue) { var c = _pendingConfirm.Value; _pendingConfirm = null; AnswerConfirm(c.id, c.yes); }
-            });
+            }));
         }
 
         private void MaybeNotify(ChatEntry assistant, string error, DateTime started)
@@ -492,7 +546,14 @@ namespace ClaudeCAD.Plugin
             Ui.SetUndoAvailable(false);
             MainThread.Post(() =>
             {
-                if (Interaction.UndoOnce()) Ui.AddNote("Đã hoàn tác lượt vừa rồi (một lệnh U).");
+                var refused = Interaction.UndoOnce();
+                if (refused == null) Ui.AddNote("Đã hoàn tác lượt vừa rồi (một lệnh U).");
+                else
+                {
+                    _undoAvailable = true;
+                    Ui.SetUndoAvailable(true);
+                    Ui.SetToolStatus(refused);
+                }
             });
         }
 
@@ -500,14 +561,18 @@ namespace ClaudeCAD.Plugin
         {
             var name = e.GlobalCommandName ?? "";
             if (name.StartsWith("CLAUDECAD_", StringComparison.OrdinalIgnoreCase)) return;
-            if (_afterUndo != null && name.Equals("U", StringComparison.OrdinalIgnoreCase))
+            if (name.Equals("U", StringComparison.OrdinalIgnoreCase))
             {
-                var p = _afterUndo;
-                _afterUndo = null;
-                Send(p, true);
+                var p = System.Threading.Interlocked.Exchange(ref _afterUndo, null);
+                if (p != null) { Send(p, true); return; }
+            }
+            if (_busy)
+            {
+                // a command run while Claude works lands inside the turn's undo group
+                _foreignChangeDuringTurn = true;
                 return;
             }
-            if (!_busy && _undoAvailable)
+            if (_undoAvailable)
             {
                 // any other command (or the user's own U) makes "Hoàn tác lượt này" unsafe
                 _undoAvailable = false;
@@ -585,10 +650,16 @@ namespace ClaudeCAD.Plugin
                     {
                         var d = msg.TryGetValue("delta", out var dv) ? dv as string : "";
                         if (string.IsNullOrEmpty(d)) break;
-                        if (_textBreak && _assistantText.Length > 0) { _assistantText.Append("\n\n"); Ui.AppendAssistant("\n\n"); }
-                        _textBreak = false;
-                        _assistantText.Append(d);
-                        Ui.AppendAssistant(d);
+                        string toUi;
+                        lock (_gate)
+                        {
+                            if (!_busy) break;
+                            // a new text block after a tool call starts a new paragraph
+                            toUi = _textBreak && _assistantText.Length > 0 ? "\n\n" + d : d;
+                            _textBreak = false;
+                            _assistantText.Append(toUi);
+                        }
+                        Ui.AppendAssistant(toUi);
                     }
                     break;
                 case "agent_text_end":
@@ -624,17 +695,20 @@ namespace ClaudeCAD.Plugin
                         int? count = msg.TryGetValue("count", out var cv) && cv is double cd ? (int)cd : (int?)null;
                         var hs = msg.TryGetValue("handles", out var hv) && hv is List<object> hl ? hl.OfType<string>().ToList() : null;
                         Ui.AddConfirmCard(id, text, count, hs);
-                        _transcript?.Entries.Add(new ChatEntry { Role = "note", Text = "Xác nhận: " + text });
+                        Ui.Enqueue(() => _transcript?.Entries.Add(new ChatEntry { Role = "note", Text = "Xác nhận: " + text }));
                         break;
                     }
                 case "session_info":
                     {
                         var sid = msg.TryGetValue("session_id", out var sv) ? sv as string : null;
-                        if (_transcript != null && !string.IsNullOrEmpty(sid) && sid != _transcript.SessionId)
+                        Ui.Enqueue(() =>
                         {
-                            _transcript.SessionId = sid;
-                            SaveTranscript();
-                        }
+                            if (_transcript != null && !string.IsNullOrEmpty(sid) && sid != _transcript.SessionId)
+                            {
+                                _transcript.SessionId = sid;
+                                SaveTranscript();
+                            }
+                        });
                         break;
                     }
                 case "rate_limit":
@@ -686,6 +760,7 @@ namespace ClaudeCAD.Plugin
 
         private void HandleToolStatus(Dictionary<string, object> msg)
         {
+            if (!_busy) return; // late status after Stop / New chat
             string tool = msg.TryGetValue("tool", out var t) ? t as string : "";
             string state = msg.TryGetValue("state", out var s) ? s as string : "";
             var entry = new ToolLogEntry

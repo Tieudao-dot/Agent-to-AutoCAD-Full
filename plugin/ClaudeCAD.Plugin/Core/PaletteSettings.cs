@@ -57,6 +57,9 @@ namespace ClaudeCAD.Plugin.Core
 
         public double ClampFont(double v) => Math.Max(10, Math.Min(22, v));
 
+        /// <summary>Independent copy (the palette edits its own copy; the controller compares old vs new).</summary>
+        public PaletteSettings Clone() => FromJson(ToJson());
+
         public string ToJson() => JsonCodec.Serialize(new Dictionary<string, object>
         {
             ["standard"] = Standard, ["scale"] = Scale, ["model"] = Model, ["effort"] = Effort,

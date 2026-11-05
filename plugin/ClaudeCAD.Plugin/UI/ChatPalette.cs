@@ -31,5 +31,12 @@ namespace ClaudeCAD.Plugin.UI
         }
 
         public bool Visible => _ps != null && _ps.Visible;
+
+        /// <summary>Gives the palette window the keyboard focus (after picking in the drawing).</summary>
+        public void FocusInput()
+        {
+            try { _ps?.Activate(0); } catch { }
+            Control.FocusInput();
+        }
     }
 }

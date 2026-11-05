@@ -67,6 +67,7 @@ namespace ClaudeCAD.Plugin.UI
         private AssistantView _current;
         private AssistantView _lastAssistant;
         private Button _lastEditButton;
+        private readonly List<Button> _openConfirmButtons = new List<Button>();
 
         public ChatControl()
         {
@@ -177,6 +178,12 @@ namespace ClaudeCAD.Plugin.UI
             // ---- settings popup (features 14, 15, 19)
             _settingsPopup = new Popup { PlacementTarget = _settingsBtn, Placement = PlacementMode.Bottom, StaysOpen = false, Child = BuildSettingsPanel() };
 
+            // popups must be in the logical tree for the theme resources to resolve
+            DockPanel.SetDock(_slashPopup, Dock.Top);
+            DockPanel.SetDock(_settingsPopup, Dock.Top);
+            root.Children.Add(_slashPopup);
+            root.Children.Add(_settingsPopup);
+
             // ---- middle: history
             _scroll = new ScrollViewer
             {
@@ -257,8 +264,34 @@ namespace ClaudeCAD.Plugin.UI
 
         private void Ui(Action a)
         {
-            if (Dispatcher.CheckAccess()) a();
-            else Dispatcher.BeginInvoke(a);
+            void Safe()
+            {
+                try { a(); }
+                catch (Exception ex) { Logger.Error("palette UI update failed", ex); }
+            }
+            if (Dispatcher.CheckAccess()) Safe();
+            else Dispatcher.BeginInvoke((Action)Safe);
+        }
+
+        /// <summary>
+        /// Queues work behind all UI updates already posted (same Dispatcher queue), so the
+        /// controller's end-of-turn work never overtakes the last streamed text or tool rows.
+        /// </summary>
+        public void Enqueue(Action a) => Dispatcher.BeginInvoke((Action)(() =>
+        {
+            try { a(); }
+            catch (Exception ex) { Logger.Error("palette queued action failed", ex); }
+        }));
+
+        internal static void ForwardWheel(UIElement element)
+        {
+            element.PreviewMouseWheel += (s, e) =>
+            {
+                if (e.Handled || (Keyboard.Modifiers & ModifierKeys.Control) != 0) return;
+                e.Handled = true;
+                var parent = (element as FrameworkElement)?.Parent as UIElement;
+                parent?.RaiseEvent(new MouseWheelEventArgs(e.MouseDevice, e.Timestamp, e.Delta) { RoutedEvent = MouseWheelEvent, Source = element });
+            };
         }
 
         private void ScrollToEnd() => _scroll.ScrollToEnd();
@@ -267,7 +300,7 @@ namespace ClaudeCAD.Plugin.UI
 
         public void ApplySettings(PaletteSettings s) => Ui(() =>
         {
-            _settings = s;
+            _settings = s.Clone();
             _suppressSettingsEvents = true;
             try
             {
@@ -295,7 +328,7 @@ namespace ClaudeCAD.Plugin.UI
             _settings.Effort = PaletteSettings.Efforts[Math.Max(0, _effort.SelectedIndex)];
             _settings.Theme = _theme.SelectedIndex == 1 ? "dark" : _theme.SelectedIndex == 2 ? "light" : "auto";
             _settings.Notify = _notify.IsChecked == true;
-            SettingsChanged?.Invoke(_settings);
+            SettingsChanged?.Invoke(_settings.Clone());
         }
 
         public void SetDark(bool dark) => Ui(() => Theme.Apply(Resources, dark));
@@ -305,7 +338,7 @@ namespace ClaudeCAD.Plugin.UI
             _settings.FontSize = _settings.ClampFont(_settings.FontSize + delta);
             FontSize = _settings.FontSize;
             foreach (var v in _messages.Children.OfType<FrameworkElement>().Select(e => e.Tag).OfType<AssistantView>()) v.Rerender();
-            SettingsChanged?.Invoke(_settings);
+            SettingsChanged?.Invoke(_settings.Clone());
         }
 
         private void OnZoomWheel(object sender, MouseWheelEventArgs e)
@@ -368,11 +401,22 @@ namespace ClaudeCAD.Plugin.UI
                 if (next != null) { _input.Text = next; _input.CaretIndex = next.Length; e.Handled = true; }
                 return;
             }
-            if (e.Key == Key.V && (Keyboard.Modifiers & ModifierKeys.Control) != 0 && Clipboard.ContainsImage())
+            if (e.Key == Key.V && (Keyboard.Modifiers & ModifierKeys.Control) != 0)
             {
-                e.Handled = true;
-                try { AddImage(ImageAttachment.FromBitmap(Clipboard.GetImage())); }
-                catch (Exception ex) { AddNote("Không dán được ảnh: " + ex.Message, true); }
+                try
+                {
+                    // Excel/Word also put a bitmap of the cells on the clipboard: text wins
+                    if (Clipboard.ContainsText() || !Clipboard.ContainsImage()) return;
+                    e.Handled = true;
+                    var img = Clipboard.GetImage();
+                    // screenshots often come as Bgra32 with alpha = 0: drop the alpha channel
+                    AddImage(ImageAttachment.FromBitmap(new System.Windows.Media.Imaging.FormatConvertedBitmap(img, PixelFormats.Bgr32, null, 0)));
+                }
+                catch (Exception ex)
+                {
+                    e.Handled = true;
+                    AddNote("Không dán được ảnh: " + ex.Message, true);
+                }
             }
         }
 
@@ -404,7 +448,7 @@ namespace ClaudeCAD.Plugin.UI
             _input.Clear();
             _images.Clear();
             _settings.AddHistory(text);
-            _history.Reset();
+            _history = new InputHistoryCursor(_settings.History);
             RefreshChips();
             SendRequested?.Invoke(msg);
         }
@@ -567,8 +611,11 @@ namespace ClaudeCAD.Plugin.UI
         private void AddUserCore(ChatEntry e)
         {
             EndAssistantCore();
+            foreach (var b in _openConfirmButtons) b.IsEnabled = false; // answered by typing instead
+            _openConfirmButtons.Clear();
             var tb = new TextBox { Text = e.Text, IsReadOnly = true, TextWrapping = TextWrapping.Wrap, BorderThickness = new Thickness(0), Background = Brushes.Transparent, Padding = new Thickness(0) };
             Theme.Ref(tb, ForegroundProperty, Theme.Fg);
+            ForwardWheel(tb);
             var stack = new StackPanel();
             stack.Children.Add(tb);
             var extras = new List<string>();
@@ -684,7 +731,6 @@ namespace ClaudeCAD.Plugin.UI
         /// <summary>Confirmation card with Đồng ý / Hủy / Xem trước (feature 11).</summary>
         public void AddConfirmCard(string id, string text, int? count, List<string> handles) => Ui(() =>
         {
-            EndAssistantCore();
             var stack = new StackPanel();
             var t = new TextBlock { Text = "Xác nhận: " + text, TextWrapping = TextWrapping.Wrap, FontWeight = FontWeights.SemiBold };
             Theme.Ref(t, TextBlock.ForegroundProperty, Theme.Fg);
@@ -709,12 +755,15 @@ namespace ClaudeCAD.Plugin.UI
             }
             yes.Click += (s, e) => Done(true);
             no.Click += (s, e) => Done(false);
+            _openConfirmButtons.Add(yes);
+            _openConfirmButtons.Add(no);
             row.Children.Add(answer);
             stack.Children.Add(row);
-            var b = new Border { Child = stack, BorderThickness = new Thickness(1), CornerRadius = new CornerRadius(6), Padding = new Thickness(10, 6, 10, 6), Margin = new Thickness(0, 4, 24, 4), Tag = "confirm" };
+            var b = new Border { Child = stack, BorderThickness = new Thickness(1), CornerRadius = new CornerRadius(6), Padding = new Thickness(10, 6, 10, 6), Margin = new Thickness(0, 4, 0, 4), Tag = "confirm" };
             Theme.Ref(b, Border.BackgroundProperty, Theme.CardBg);
             Theme.Ref(b, Border.BorderBrushProperty, Theme.Accent);
-            _messages.Children.Add(b);
+            if (_current != null) _current.AddCard(b);       // inside the turn's bubble: text after it continues there
+            else { b.Margin = new Thickness(0, 4, 24, 4); _messages.Children.Add(b); }
             ScrollToEnd();
         });
 
@@ -756,6 +805,7 @@ namespace ClaudeCAD.Plugin.UI
             private readonly StackPanel _toolRows = new StackPanel();
             private readonly List<(ToolLogEntry entry, TextBlock row)> _tools = new List<(ToolLogEntry, TextBlock)>();
             private readonly WrapPanel _actions = new WrapPanel { Margin = new Thickness(0, 4, 0, 0) };
+            private readonly StackPanel _cards = new StackPanel();
             private readonly DispatcherTimer _renderTimer;
             private Button _undo;
             private bool _dirty;
@@ -771,12 +821,15 @@ namespace ClaudeCAD.Plugin.UI
                 var stack = new StackPanel();
                 stack.Children.Add(_toolsExpander);
                 stack.Children.Add(_md);
+                stack.Children.Add(_cards);
                 stack.Children.Add(_actions);
                 Root = new Border { CornerRadius = new CornerRadius(6), Padding = new Thickness(8, 5, 8, 5), Margin = new Thickness(0, 4, 24, 4), HorizontalAlignment = HorizontalAlignment.Stretch, Child = stack, Tag = this };
                 Theme.Ref(Root, Border.BackgroundProperty, Theme.AssistantBg);
                 _renderTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(150) };
                 _renderTimer.Tick += (s, e) => { _renderTimer.Stop(); if (_dirty) { _dirty = false; _md.Markdown = _text.ToString(); } };
             }
+
+            public void AddCard(UIElement card) => _cards.Children.Add(card);
 
             public void Append(string delta)
             {

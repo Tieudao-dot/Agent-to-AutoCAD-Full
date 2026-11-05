@@ -53,13 +53,24 @@ namespace ClaudeCAD.Plugin.Drawing
             doc.SendStringToExecute("_" + command + " ", true, false, false);
         }
 
+        /// <summary>Selections larger than this are sent by handle without opening every object.</summary>
+        public const int DescribeLimit = 2000;
+
         internal static PickedSelection Describe(Document doc, IEnumerable<ObjectId> ids)
         {
             var sel = new PickedSelection();
             var byType = new Dictionary<string, int>();
+            var all = ids as ObjectId[] ?? ids.ToArray();
+            if (all.Length > DescribeLimit)
+            {
+                // Ctrl+A on a big drawing: do not open thousands of objects on the UI thread
+                foreach (var id in all) if (!id.IsNull && !id.IsErased) sel.Handles.Add(id.Handle.ToString());
+                sel.Summary = sel.Handles.Count + " đối tượng";
+                return sel;
+            }
             using (var tr = doc.TransactionManager.StartOpenCloseTransaction())
             {
-                foreach (var id in ids)
+                foreach (var id in all)
                 {
                     if (id.IsNull || id.IsErased) continue;
                     if (!(tr.GetObject(id, OpenMode.ForRead) is Entity e)) continue;
@@ -93,12 +104,14 @@ namespace ClaudeCAD.Plugin.Drawing
             if (doc == null) return;
             var ed = doc.Editor;
             var pts = new List<Point3d>();
+            Point3d? lastUcs = null;
             while (true)
             {
                 var o = new PromptPointOptions(pts.Count == 0 ? "\nChọn điểm cho Claude: " : "\nĐiểm tiếp theo (Enter để xong): ") { AllowNone = true };
-                if (pts.Count > 0) { o.UseBasePoint = true; o.BasePoint = pts[pts.Count - 1]; }
+                if (lastUcs.HasValue) { o.UseBasePoint = true; o.BasePoint = lastUcs.Value; } // BasePoint is in UCS
                 var r = ed.GetPoint(o);
                 if (r.Status != PromptStatus.OK) break;
+                lastUcs = r.Value;
                 // GetPoint returns UCS; the protocol is WCS
                 pts.Add(r.Value.TransformBy(ed.CurrentUserCoordinateSystem));
                 if (pts.Count >= 50) break;
@@ -172,7 +185,7 @@ namespace ClaudeCAD.Plugin.Drawing
                 var mx = ext.Value.MaxPoint;
                 // small objects: show some context around them
                 double pad = Math.Max(500, 0.15 * Math.Max(mx.X - mn.X, mx.Y - mn.Y));
-                DrawingService.ZoomTo(doc, new Point3d(mn.X - pad, mn.Y - pad, 0), new Point3d(mx.X + pad, mx.Y + pad, 0), 1.0);
+                DrawingService.ZoomTo(doc, new Point3d(mn.X - pad, mn.Y - pad, 0), new Point3d(mx.X + pad, mx.Y + pad, 0), 1.0, recordUndo: false);
             }
             using (doc.LockDocument())
             using (var tr = doc.TransactionManager.StartOpenCloseTransaction())
@@ -219,13 +232,19 @@ namespace ClaudeCAD.Plugin.Drawing
 
         // ------------------------------------------------------------------ undo the last turn
 
-        /// <summary>Queues one U (the last chat turn is one undo group).</summary>
-        public static bool UndoOnce()
+        /// <summary>
+        /// Queues one U (the last chat turn is one undo group). Refused while a command or
+        /// prompt is active, where "_.U" would be typed into it (e.g. LINE's Undo option).
+        /// </summary>
+        public static string UndoOnce()
         {
             var doc = AcApp.DocumentManager.MdiActiveDocument;
-            if (doc == null) return false;
+            if (doc == null) return "Không có bản vẽ nào đang mở.";
+            if (!string.IsNullOrEmpty(doc.CommandInProgress) || !doc.Editor.IsQuiescent)
+                return $"AutoCAD đang chạy lệnh {doc.CommandInProgress}; bấm Esc để thoát lệnh rồi thử lại.";
+            try { Autodesk.AutoCAD.Internal.Utils.SetFocusToDwgView(); } catch { }
             doc.SendStringToExecute("_.U ", true, false, false);
-            return true;
+            return null;
         }
     }
 

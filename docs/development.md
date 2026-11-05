@@ -68,3 +68,18 @@ Một lượt review riêng phần plugin C# (không chạy được AutoCAD nê
 9. Bản sao MText tạm (MLeader.MText, MTextAttribute) không được dispose → `using`.
 
 Thêm: `ping` chạy được cả khi chưa mở bản vẽ; giới hạn 3 lần tự khởi động lại sidecar không còn bị reset khi gửi tin nhắn.
+
+## Rà soát độc lập lần 2 (khung chat v0.4.0)
+
+Review riêng phần palette mới tìm và đã sửa 17 lỗi, các lỗi chính:
+
+1. Đổi model / effort / theme trong ⚙ không được áp dụng (palette và controller dùng chung một đối tượng cài đặt) → palette làm việc trên bản sao; "Mặc định" cũng được gửi (`"default"`).
+2. Dán từ Excel bị biến thành ảnh (Excel đặt kèm bitmap vào clipboard) và Ctrl+V có thể ném `COMException` → có chữ thì ưu tiên chữ; bọc try/catch; ảnh chụp màn hình bỏ kênh alpha.
+3. Lệnh U gửi từ palette có thể rơi vào lệnh đang chạy → từ chối khi AutoCAD đang có lệnh/prompt, chuyển focus vào bản vẽ; "Sửa và gửi lại" không còn tự gửi nếu U không chạy.
+4. "Hoàn tác lượt này" còn hiện sau thay đổi khác → theo dõi thêm `CommandCancelled`/`CommandFailed`, thay đổi database ngoài lượt, lệnh chạy giữa lượt; zoom của palette tắt ghi undo (`Database.DisableUndoRecording`).
+5. Cập nhật UI cuối lượt có thể vượt trước text đang stream (hai hàng đợi khác nhau) → kết thúc lượt đi cùng hàng đợi Dispatcher.
+6. New chat / đổi bản vẽ giữa lượt làm câu trả lời cũ lọt vào chat mới → bộ đếm thế hệ.
+7. Lịch sử bị sửa/lưu từ thread IPC; lưu file có thể làm mất lịch sử → mọi thay đổi trên thread UI, lưu bằng file tạm riêng + `File.Replace` có khóa.
+8. Thẻ xác nhận tách đôi câu trả lời → thẻ nằm trong bong bóng của lượt.
+9. Popup (⚙, mẫu lệnh `/`) không nhận theme → đưa vào cây logic.
+10–17. Cuộn chuột trên tin nhắn người dùng, câu trả lời xác nhận gửi nhầm bản vẽ, sidecar giữ lượt cũ làm palette kẹt (nay bỏ lượt cũ và nhận tin mới), điểm gốc rubber-band sai hệ tọa độ, chọn rất nhiều đối tượng làm treo UI, focus sau khi chọn, đọc text không khóa.

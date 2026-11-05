@@ -68,8 +68,13 @@ export class AgentSession {
   private pending?: UserMessage;
   private resuming = false;
   private gotInit = false;
+  /** Results still expected from turns abandoned by the plugin (forced end after Stop). */
+  private staleResults = 0;
+  private readonly defaultModel?: string;
 
-  constructor(private readonly cfg: SessionConfig) {}
+  constructor(private readonly cfg: SessionConfig) {
+    this.defaultModel = cfg.model;
+  }
 
   get busy(): boolean {
     return this.turnActive;
@@ -152,8 +157,18 @@ export class AgentSession {
   /** Sends one user turn with attachments / context from the palette. */
   sendMessage(msg: UserMessage): void {
     if (this.turnActive) {
-      this.cfg.emit({ type: 'agent_error', message: 'Đang xử lý lượt trước, đợi xong hoặc bấm Stop.' });
-      return;
+      // The plugin only sends when it considers the previous turn over (e.g. it force-ended a
+      // turn after Stop). Abandon that turn here too instead of rejecting the new message,
+      // otherwise the palette would wait forever for a turn_end.
+      this.cfg.log('new message while a turn is active: abandoning the previous turn');
+      this.cfg.onCancel?.();
+      this.staleResults++;
+      // safety: if the abandoned turn never reports a result, stop waiting for it
+      setTimeout(() => { if (this.staleResults > 0) this.staleResults--; }, 15_000).unref?.();
+      void this.q?.interrupt().catch(() => {});
+      this.turnActive = false;
+      this.cancelRequested = false;
+      this.textBlockOpen = false;
     }
     try {
       this.ensureStarted();
@@ -171,13 +186,16 @@ export class AgentSession {
 
   /** Model / effort from the palette's settings; applied live when a query is running. */
   async setOptions(opts: { model?: string; effort?: string }): Promise<void> {
-    if (opts.model) this.cfg.model = opts.model;
-    if (opts.effort) this.cfg.effort = opts.effort;
+    // "default" = back to the configured model / the model's own default effort
+    const model = opts.model === 'default' ? this.defaultModel : opts.model;
+    const resetEffort = opts.effort === 'default';
+    if (opts.model) this.cfg.model = model;
+    if (opts.effort) this.cfg.effort = resetEffort ? undefined : opts.effort;
     const q = this.q;
     if (q) {
       try {
-        if (opts.model) await q.setModel(opts.model);
-        if (opts.effort) await q.applyFlagSettings({ effortLevel: opts.effort as never });
+        if (opts.model) await q.setModel(model);
+        if (opts.effort) await q.applyFlagSettings({ effortLevel: (resetEffort ? null : opts.effort) as never });
       } catch (err) {
         this.cfg.log(`set_options failed live, will apply on next session: ${(err as Error).message}`);
         if (!this.turnActive) this.closeQuery(); // next message starts a query with the new options (resumed)
@@ -330,6 +348,10 @@ export class AgentSession {
       }
 
       case 'result': {
+        if (this.staleResults > 0) {
+          this.staleResults--; // result of an abandoned turn
+          return;
+        }
         if (!this.turnActive) return;
         const u = ((msg as unknown as { usage?: Record<string, number> }).usage ?? {}) as Record<string, number>;
         const usage = {

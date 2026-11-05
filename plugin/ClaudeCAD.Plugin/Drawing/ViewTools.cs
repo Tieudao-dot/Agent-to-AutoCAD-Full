@@ -7,6 +7,28 @@ using ClaudeCAD.Plugin.Core;
 
 namespace ClaudeCAD.Plugin.Drawing
 {
+    /// <summary>
+    /// Temporarily turns undo recording off, so palette-side view changes (Xem kết quả,
+    /// handle links) do not push an undo step between the chat turn and "Hoàn tác lượt này".
+    /// </summary>
+    internal sealed class UndoSuppressor : IDisposable
+    {
+        private readonly Database _db;
+        private readonly bool _active;
+
+        public UndoSuppressor(Database db, bool active)
+        {
+            _db = db;
+            _active = active;
+            if (_active) _db.DisableUndoRecording(true);
+        }
+
+        public void Dispose()
+        {
+            if (_active) _db.DisableUndoRecording(false);
+        }
+    }
+
     /// <summary>Spec §7.7 — view and document.</summary>
     public static partial class DrawingService
     {
@@ -24,10 +46,11 @@ namespace ClaudeCAD.Plugin.Drawing
         private static void ZoomTo(ToolContext ctx, Point3d min, Point3d max, double margin) => ZoomTo(ctx.Doc, min, max, margin);
 
         /// <summary>Shared with the palette (Xem kết quả / handle links).</summary>
-        internal static void ZoomTo(Document doc, Point3d min, Point3d max, double margin)
+        internal static void ZoomTo(Document doc, Point3d min, Point3d max, double margin, bool recordUndo = true)
         {
             var ed = doc.Editor;
             using (doc.LockDocument())
+            using (new UndoSuppressor(doc.Database, !recordUndo))
             using (var view = ed.GetCurrentView())
             {
                 var wcs2dcs = (Matrix3d.Rotation(-view.ViewTwist, view.ViewDirection, view.Target)
