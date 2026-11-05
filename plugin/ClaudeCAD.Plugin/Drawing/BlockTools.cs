@@ -149,6 +149,8 @@ namespace ClaudeCAD.Plugin.Drawing
             else { double s = p.Positive("scale", 1); scale = new Scale3d(s); }
             double rot = Geometry.DegToRad(p.Num("rotation", 0));
             var values = p.ObjOpt("attributes")?.Raw;
+            var dynProps = p.ObjOpt("dynamic_props")?.Raw; // phase 2: set dynamic properties at insertion
+            var dynErrors = new List<object>();
 
             var ids = new List<ObjectId>();
             var unknown = new List<object>();
@@ -157,11 +159,22 @@ namespace ClaudeCAD.Plugin.Drawing
                 var br = new BlockReference(Acad.P3(pos), btrId) { ScaleFactors = scale, Rotation = rot };
                 ids.Add(Acad.Add(ctx, br, p));
                 var created = AddAttributes(ctx, br, btr, values);
+                if (dynProps != null && br.IsDynamicBlock)
+                {
+                    foreach (var kv in dynProps)
+                        foreach (DynamicBlockReferenceProperty prop in br.DynamicBlockReferencePropertyCollection)
+                            if (prop.PropertyName.Equals(kv.Key, StringComparison.OrdinalIgnoreCase) && !prop.ReadOnly)
+                            {
+                                try { prop.Value = ConvertDynValue(prop, kv.Value); }
+                                catch (Exception ex) { dynErrors.Add($"{kv.Key}: {ex.Message}"); }
+                            }
+                }
                 if (values != null && ids.Count == 1)
                     unknown.AddRange(values.Keys.Where(k => !created.ContainsKey(k)));
             }
             var r = Acad.Handles(ids);
             if (unknown.Count > 0) r["unknown_attribute_tags"] = unknown;
+            if (dynErrors.Count > 0) r["dynamic_prop_errors"] = dynErrors;
             return r;
         }
 

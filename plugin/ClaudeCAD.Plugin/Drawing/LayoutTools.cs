@@ -1,0 +1,356 @@
+using System;
+using System.Collections.Generic;
+using System.Globalization;
+using System.IO;
+using System.Linq;
+using Autodesk.AutoCAD.ApplicationServices;
+using Autodesk.AutoCAD.DatabaseServices;
+using Autodesk.AutoCAD.Geometry;
+using Autodesk.AutoCAD.PlottingServices;
+using ClaudeCAD.Plugin.Core;
+using AcApp = Autodesk.AutoCAD.ApplicationServices.Application;
+
+namespace ClaudeCAD.Plugin.Drawing
+{
+    /// <summary>Phase 2 — layouts / paper space, viewports and PDF plotting.</summary>
+    public static partial class DrawingService
+    {
+        public const string DefaultPdfDevice = "DWG To PDF.pc3";
+        public const string DefaultPdfMedia = "ISO_full_bleed_A3_(420.00_x_297.00_MM)";
+
+        private static void RegisterLayouts(ToolDispatcher d)
+        {
+            d.Register("list_layouts", false, ListLayouts);
+            d.Register(new ToolDef("create_layout", true, CreateLayout, noTransaction: true));
+            d.Register(new ToolDef("set_current_layout", true, SetCurrentLayout, noTransaction: true));
+            d.Register(new ToolDef("delete_layout", true, DeleteLayout, noTransaction: true));
+            d.Register("add_viewport", true, AddViewport);
+            d.Register("set_viewport", true, SetViewport);
+            d.Register(new ToolDef("plot_pdf", false, PlotPdf, noTransaction: true));
+            d.Register(new ToolDef("list_plot_media", false, ListPlotMedia, noTransaction: true));
+        }
+
+        // ------------------------------------------------------------------ layouts
+
+        private static Layout FindLayout(Transaction tr, Database db, string name, OpenMode mode = OpenMode.ForRead)
+        {
+            var dict = (DBDictionary)tr.GetObject(db.LayoutDictionaryId, OpenMode.ForRead);
+            foreach (DBDictionaryEntry e in dict)
+                if (e.Key.Equals(name, StringComparison.OrdinalIgnoreCase))
+                    return (Layout)tr.GetObject(e.Value, mode);
+            throw ToolException.Invalid($"Layout '{name}' does not exist. Call list_layouts to see the layouts.");
+        }
+
+        private static object ListLayouts(ToolContext ctx, Params p)
+        {
+            var dict = (DBDictionary)ctx.Tr.GetObject(ctx.Db.LayoutDictionaryId, OpenMode.ForRead);
+            string current = LayoutManager.Current.CurrentLayout;
+            var list = new List<object>();
+            foreach (DBDictionaryEntry e in dict)
+            {
+                var lo = (Layout)ctx.Tr.GetObject(e.Value, OpenMode.ForRead);
+                var btr = (BlockTableRecord)ctx.Tr.GetObject(lo.BlockTableRecordId, OpenMode.ForRead);
+                int viewports = 0, entities = 0;
+                foreach (ObjectId id in btr)
+                {
+                    entities++;
+                    if (id.ObjectClass.DxfName == "VIEWPORT") viewports++;
+                }
+                list.Add(new Dictionary<string, object>
+                {
+                    ["name"] = lo.LayoutName,
+                    ["tab_order"] = lo.TabOrder,
+                    ["current"] = lo.LayoutName.Equals(current, StringComparison.OrdinalIgnoreCase),
+                    ["model"] = lo.ModelType,
+                    ["device"] = lo.PlotConfigurationName,
+                    ["media"] = lo.CanonicalMediaName,
+                    ["paper_size_mm"] = new List<object> { Acad.R(lo.PlotPaperSize.X), Acad.R(lo.PlotPaperSize.Y) },
+                    ["viewports"] = Math.Max(0, viewports - (lo.ModelType ? 0 : 1)), // minus the overall paper-space viewport
+                    ["entities"] = entities,
+                });
+            }
+            return new Dictionary<string, object> { ["current"] = current, ["layouts"] = list.OrderBy(o => (int)((Dictionary<string, object>)o)["tab_order"]).ToList() };
+        }
+
+        private static object CreateLayout(ToolContext ctx, Params p)
+        {
+            string name = p.Str("name").Trim();
+            ValidateSymbolName(name, "layout");
+            var lm = LayoutManager.Current;
+            using (ctx.Doc.LockDocument())
+            {
+                if (lm.LayoutExists(name)) throw ToolException.Invalid($"Layout '{name}' already exists.");
+                var copyFrom = p.Str("copy_from", null);
+                if (!string.IsNullOrEmpty(copyFrom))
+                {
+                    if (!lm.LayoutExists(copyFrom)) throw ToolException.Invalid($"Layout '{copyFrom}' (copy_from) does not exist.");
+                    lm.CopyLayout(copyFrom, name);
+                }
+                else lm.CreateLayout(name);
+                if (p.Has("media") || p.Has("device"))
+                {
+                    using (var tr = ctx.Doc.TransactionManager.StartTransaction())
+                    {
+                        var lo = FindLayout(tr, ctx.Db, name, OpenMode.ForWrite);
+                        var psv = PlotSettingsValidator.Current;
+                        psv.SetPlotConfigurationName(lo, p.Str("device", DefaultPdfDevice), p.Str("media", DefaultPdfMedia));
+                        psv.SetPlotPaperUnits(lo, PlotPaperUnit.Millimeters);
+                        tr.Commit();
+                    }
+                }
+                if (p.Bool("activate", false)) lm.CurrentLayout = name;
+            }
+            return new Dictionary<string, object> { ["name"] = name, ["created"] = true };
+        }
+
+        private static object SetCurrentLayout(ToolContext ctx, Params p)
+        {
+            string name = p.Str("name").Trim();
+            var lm = LayoutManager.Current;
+            if (!name.Equals("Model", StringComparison.OrdinalIgnoreCase) && !lm.LayoutExists(name))
+                throw ToolException.Invalid($"Layout '{name}' does not exist. Call list_layouts.");
+            using (ctx.Doc.LockDocument()) lm.CurrentLayout = name.Equals("model", StringComparison.OrdinalIgnoreCase) ? "Model" : name;
+            return new Dictionary<string, object> { ["current"] = lm.CurrentLayout };
+        }
+
+        private static object DeleteLayout(ToolContext ctx, Params p)
+        {
+            string name = p.Str("name").Trim();
+            if (name.Equals("Model", StringComparison.OrdinalIgnoreCase)) throw ToolException.Invalid("The Model layout cannot be deleted.");
+            var lm = LayoutManager.Current;
+            if (!lm.LayoutExists(name)) throw ToolException.Invalid($"Layout '{name}' does not exist.");
+            using (ctx.Doc.LockDocument()) lm.DeleteLayout(name);
+            return new Dictionary<string, object> { ["deleted"] = name };
+        }
+
+        // ------------------------------------------------------------------ viewports
+
+        /// <summary>"1:100", "1/100", 100 (denominator) or 0.01 (factor) → paper/model factor.</summary>
+        internal static double ParseScale(object v, string param = "scale")
+        {
+            if (v is double d)
+            {
+                if (d <= 0) throw ToolException.Invalid($"'{param}' must be > 0.");
+                return d >= 1 ? 1.0 / d : d;
+            }
+            if (v is string s)
+            {
+                var t = s.Trim().Replace(" ", "");
+                var parts = t.Split(':', '/');
+                if (parts.Length == 2
+                    && double.TryParse(parts[0], NumberStyles.Float, CultureInfo.InvariantCulture, out var a)
+                    && double.TryParse(parts[1], NumberStyles.Float, CultureInfo.InvariantCulture, out var b) && a > 0 && b > 0)
+                    return a / b;
+                if (double.TryParse(t, NumberStyles.Float, CultureInfo.InvariantCulture, out var n)) return ParseScale(n, param);
+            }
+            throw ToolException.Invalid($"'{param}' must be a scale like \"1:100\" (or 100, or 0.01).");
+        }
+
+        private static object AddViewport(ToolContext ctx, Params p)
+        {
+            string layout = p.Str("layout").Trim();
+            if (layout.Equals("Model", StringComparison.OrdinalIgnoreCase)) throw ToolException.Invalid("add_viewport: viewports go on a paper-space layout, not Model.");
+            var space = ctx.SpaceFor(layout);
+            double[] center;
+            double w, h;
+            if (p.Has("corner1"))
+            {
+                var c1 = p.Point("corner1");
+                var c2 = p.Point("corner2");
+                center = new[] { (c1[0] + c2[0]) / 2, (c1[1] + c2[1]) / 2, 0 };
+                w = Math.Abs(c2[0] - c1[0]);
+                h = Math.Abs(c2[1] - c1[1]);
+            }
+            else
+            {
+                center = p.Point("center");
+                w = p.Positive("width");
+                h = p.Positive("height");
+            }
+            var vp = new Viewport();
+            vp.SetDatabaseDefaults(ctx.Db);
+            vp.CenterPoint = Acad.P3(center);
+            vp.Width = w;
+            vp.Height = h;
+            Acad.ApplyCommon(ctx, vp, p);
+            var id = space.AppendEntity(vp);
+            ctx.Tr.AddNewlyCreatedDBObject(vp, true);
+            ApplyViewportSettings(ctx, vp, p);
+            try { vp.On = true; } catch (Autodesk.AutoCAD.Runtime.Exception) { /* turned on when the layout is first displayed */ }
+            var r = Acad.Handles(id);
+            r["scale"] = $"1:{Acad.R(1 / vp.CustomScale)}";
+            r["model_area_mm"] = new List<object> { Acad.R(w / vp.CustomScale), Acad.R(h / vp.CustomScale) };
+            return r;
+        }
+
+        private static void ApplyViewportSettings(ToolContext ctx, Viewport vp, Params p)
+        {
+            if (p.Has("view_center"))
+            {
+                var vc = p.Point("view_center");
+                vp.ViewDirection = Vector3d.ZAxis;
+                vp.ViewTarget = Point3d.Origin;
+                vp.ViewCenter = new Point2d(vc[0], vc[1]);
+            }
+            if (p.Has("scale")) vp.CustomScale = ParseScale(p.Get("scale"));
+            var locked = p.BoolOpt("locked");
+            if (locked.HasValue) vp.Locked = locked.Value;
+            var freeze = p.StringsOpt("freeze_layers");
+            if (freeze != null && freeze.Count > 0)
+                vp.FreezeLayersInViewport(freeze.Select(n => Acad.LayerId(ctx, n)).ToList().GetEnumerator());
+            var thaw = p.StringsOpt("thaw_layers");
+            if (thaw != null && thaw.Count > 0)
+                vp.ThawLayersInViewport(thaw.Select(n => Acad.LayerId(ctx, n)).ToList().GetEnumerator());
+        }
+
+        private static object SetViewport(ToolContext ctx, Params p)
+        {
+            var h = p.Handle("handle");
+            var e = Acad.GetEntity(ctx, h, true);
+            if (!(e is Viewport vp)) throw ToolException.Invalid($"{h} is a {Acad.TypeName(e)}, not a viewport.");
+            ApplyViewportSettings(ctx, vp, p);
+            if (p.Has("width")) vp.Width = p.Positive("width");
+            if (p.Has("height")) vp.Height = p.Positive("height");
+            if (p.Has("center")) vp.CenterPoint = Acad.P3(p.Point("center"));
+            var r = Acad.Handles(vp.ObjectId);
+            r["scale"] = $"1:{Acad.R(1 / vp.CustomScale)}";
+            return r;
+        }
+
+        // ------------------------------------------------------------------ plotting
+
+        private static object ListPlotMedia(ToolContext ctx, Params p)
+        {
+            string device = p.Str("device", DefaultPdfDevice);
+            var psv = PlotSettingsValidator.Current;
+            using (var ps = new PlotSettings(true))
+            {
+                psv.SetPlotConfigurationName(ps, device, null);
+                psv.RefreshLists(ps);
+                var media = psv.GetCanonicalMediaNameList(ps).Cast<string>().ToList();
+                string filter = p.Str("filter", null);
+                var items = media
+                    .Where(m => string.IsNullOrEmpty(filter) || m.IndexOf(filter, StringComparison.OrdinalIgnoreCase) >= 0 || psv.GetLocaleMediaName(ps, m).IndexOf(filter, StringComparison.OrdinalIgnoreCase) >= 0)
+                    .Take(200)
+                    .Select(m => (object)new Dictionary<string, object> { ["canonical"] = m, ["name"] = psv.GetLocaleMediaName(ps, m) })
+                    .ToList();
+                return new Dictionary<string, object>
+                {
+                    ["device"] = device,
+                    ["media"] = items,
+                    ["plot_styles"] = psv.GetPlotStyleSheetList().Cast<object>().ToList(),
+                    ["devices"] = psv.GetPlotDeviceList().Cast<object>().ToList(),
+                };
+            }
+        }
+
+        private static object PlotPdf(ToolContext ctx, Params p)
+        {
+            if (PlotFactory.ProcessPlotState != ProcessPlotState.NotPlotting)
+                throw new ToolException(ErrorCodes.AcadError, "AutoCAD is already plotting. Wait until it finishes and retry.");
+            var lm = LayoutManager.Current;
+            string layout = p.Str("layout", lm.CurrentLayout);
+            if (!layout.Equals("Model", StringComparison.OrdinalIgnoreCase) && !lm.LayoutExists(layout))
+                throw ToolException.Invalid($"Layout '{layout}' does not exist. Call list_layouts.");
+
+            string output = p.Str("output", null);
+            if (string.IsNullOrEmpty(output))
+            {
+                string dir = SafeString(() => Path.GetDirectoryName(ctx.Doc.Name));
+                if (string.IsNullOrEmpty(dir) || !Directory.Exists(dir)) dir = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
+                output = Path.Combine(dir, Path.GetFileNameWithoutExtension(ctx.Doc.Name) + "-" + layout + ".pdf");
+            }
+            if (!output.EndsWith(".pdf", StringComparison.OrdinalIgnoreCase)) throw ToolException.Invalid("plot_pdf: 'output' must end with .pdf.");
+            var outDir = Path.GetDirectoryName(Path.GetFullPath(output));
+            if (!Directory.Exists(outDir)) throw ToolException.Invalid($"plot_pdf: folder '{outDir}' does not exist.");
+
+            string device = p.Str("device", DefaultPdfDevice);
+            string media = p.Str("media", DefaultPdfMedia);
+            string styleSheet = p.Str("plot_style", "monochrome.ctb");
+            string area = p.Str("area", layout.Equals("Model", StringComparison.OrdinalIgnoreCase) ? "extents" : "layout").ToLowerInvariant();
+            string scaleText = p.Str("scale", "fit");
+
+            string previousLayout = lm.CurrentLayout;
+            object oldBackground = AcApp.GetSystemVariable("BACKGROUNDPLOT");
+            using (ctx.Doc.LockDocument())
+            {
+                try
+                {
+                    AcApp.SetSystemVariable("BACKGROUNDPLOT", (short)0);
+                    if (!previousLayout.Equals(layout, StringComparison.OrdinalIgnoreCase)) lm.CurrentLayout = layout;
+                    using (var tr = ctx.Doc.TransactionManager.StartTransaction())
+                    {
+                        var lo = FindLayout(tr, ctx.Db, layout);
+                        using (var ps = new PlotSettings(lo.ModelType))
+                        {
+                            ps.CopyFrom(lo);
+                            var psv = PlotSettingsValidator.Current;
+                            psv.SetPlotConfigurationName(ps, device, media);
+                            psv.SetPlotPaperUnits(ps, PlotPaperUnit.Millimeters);
+                            psv.RefreshLists(ps);
+                            switch (area)
+                            {
+                                case "layout": psv.SetPlotType(ps, Autodesk.AutoCAD.DatabaseServices.PlotType.Layout); break;
+                                case "extents": psv.SetPlotType(ps, Autodesk.AutoCAD.DatabaseServices.PlotType.Extents); break;
+                                case "display": psv.SetPlotType(ps, Autodesk.AutoCAD.DatabaseServices.PlotType.Display); break;
+                                case "window":
+                                    var w1 = p.Point("window_p1");
+                                    var w2 = p.Point("window_p2");
+                                    psv.SetPlotWindowArea(ps, new Extents2d(Math.Min(w1[0], w2[0]), Math.Min(w1[1], w2[1]), Math.Max(w1[0], w2[0]), Math.Max(w1[1], w2[1])));
+                                    psv.SetPlotType(ps, Autodesk.AutoCAD.DatabaseServices.PlotType.Window);
+                                    break;
+                                default: throw ToolException.Invalid("plot_pdf: area must be layout, extents, display or window.");
+                            }
+                            if (scaleText.Equals("fit", StringComparison.OrdinalIgnoreCase))
+                            {
+                                psv.SetUseStandardScale(ps, true);
+                                psv.SetStdScaleType(ps, StdScaleType.ScaleToFit);
+                            }
+                            else
+                            {
+                                double f = ParseScale(scaleText);
+                                psv.SetUseStandardScale(ps, false);
+                                psv.SetCustomPrintScale(ps, new CustomScale(1, 1 / f));
+                            }
+                            psv.SetPlotCentered(ps, p.Bool("center", true));
+                            try { psv.SetCurrentStyleSheet(ps, styleSheet); }
+                            catch (Autodesk.AutoCAD.Runtime.Exception) { throw ToolException.Invalid($"plot_pdf: plot style '{styleSheet}' not found. Use list_plot_media to see the available .ctb/.stb files."); }
+                            if (p.Has("landscape")) psv.SetPlotRotation(ps, p.Bool("landscape", true) ? PlotRotation.Degrees090 : PlotRotation.Degrees000);
+
+                            var pi = new PlotInfo { Layout = lo.ObjectId, OverrideSettings = ps };
+                            var piv = new PlotInfoValidator { MediaMatchingPolicy = MatchingPolicy.MatchEnabled };
+                            piv.Validate(pi);
+
+                            using (var pe = PlotFactory.CreatePublishEngine())
+                            using (var ppi = new PlotPageInfo())
+                            {
+                                pe.BeginPlot(null, null);
+                                pe.BeginDocument(pi, ctx.Doc.Name, null, 1, true, output);
+                                pe.BeginPage(ppi, pi, true, null);
+                                pe.BeginGenerateGraphics(null);
+                                pe.EndGenerateGraphics(null);
+                                pe.EndPage(null);
+                                pe.EndDocument(null);
+                                pe.EndPlot(null);
+                            }
+                        }
+                        tr.Commit();
+                    }
+                }
+                finally
+                {
+                    try { AcApp.SetSystemVariable("BACKGROUNDPLOT", oldBackground); } catch { }
+                    try { if (!lm.CurrentLayout.Equals(previousLayout, StringComparison.OrdinalIgnoreCase)) lm.CurrentLayout = previousLayout; } catch { }
+                }
+            }
+            return new Dictionary<string, object>
+            {
+                ["output"] = output,
+                ["exists"] = File.Exists(output),
+                ["layout"] = layout,
+                ["media"] = media,
+                ["scale"] = scaleText,
+            };
+        }
+    }
+}

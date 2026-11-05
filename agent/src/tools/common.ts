@@ -99,4 +99,8 @@ export const entityProps = {
     .union([z.number().min(0).max(211), z.enum(['bylayer', 'byblock', 'default'])])
     .optional()
     .describe('Entity lineweight in mm (e.g. 0.25) or "bylayer" (default).'),
+  layout: z
+    .string()
+    .optional()
+    .describe('Create the entity on this paper-space layout (sheet mm coordinates) instead of model space, e.g. for title blocks. Default: model space.'),
 };

@@ -269,5 +269,25 @@ namespace ClaudeCAD.Plugin.Core
             if (d1 > Eps || d2 > Eps) { r.ChamferStart = c1; r.ChamferEnd = c2; }
             return r;
         }
+
+        /// <summary>
+        /// EXTEND helper: among intersection candidates of the extended curve with the
+        /// boundaries, the nearest point beyond the end <paramref name="end"/> (closer to
+        /// that end than to the other end, and not already on the curve). Null if none.
+        /// </summary>
+        public static double[] ExtensionTarget(IEnumerable<double[]> candidates, double[] end, double[] otherEnd, Func<double[], bool> onCurve)
+        {
+            double[] best = null;
+            double bestD = double.MaxValue;
+            foreach (var q in candidates)
+            {
+                double d = Dist(q, end);
+                if (d < Eps) continue;                      // already touching
+                if (d >= Dist(q, otherEnd)) continue;       // beyond the other end
+                if (onCurve != null && onCurve(q)) continue; // inside the existing curve: that is trimming, not extending
+                if (d < bestD) { bestD = d; best = q; }
+            }
+            return best;
+        }
     }
 }

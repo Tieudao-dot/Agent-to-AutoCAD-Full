@@ -27,6 +27,7 @@ namespace ClaudeCAD.Plugin.Drawing
         public double[] WinMin, WinMax;
         public bool Crossing;
         public int? Color;
+        public string Layout;
 
         public static EntityFilter From(Params p)
         {
@@ -54,6 +55,7 @@ namespace ClaudeCAD.Plugin.Drawing
             }
             var c = p.ColorOpt("color");
             if (c is int ci) f.Color = ci;
+            f.Layout = p.Str("layout", null);
             return f;
         }
 
@@ -81,7 +83,7 @@ namespace ClaudeCAD.Plugin.Drawing
 
         public IEnumerable<Entity> Apply(ToolContext ctx)
         {
-            foreach (ObjectId id in ctx.ModelSpace)
+            foreach (ObjectId id in ctx.SpaceFor(Layout))
             {
                 if (id.IsErased) continue;
                 if (ctx.Tr.GetObject(id, OpenMode.ForRead) is Entity e && Match(ctx, e)) yield return e;

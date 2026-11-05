@@ -61,3 +61,13 @@ Cần test trên AutoCAD: mục "Phase 1d" trong `docs/test-log.md`, kịch bả
 Cloud: `npm test` 56/56; Agent SDK thật khởi tạo đúng cấu hình (chỉ Read/Skill + 72 tool, 3 skill); dry run kịch bản 2 và 4 đúng hành vi; bundle tạo được.
 
 Cần test trên AutoCAD: mục "Phase 1e" trong `docs/test-log.md`, kịch bản nghiệm thu 10, và toàn bộ 10 kịch bản §12 trên AutoCAD 2022 thật.
+
+## Phase 2 — layout/paper space, viewport, in PDF, xref, dynamic block nâng cao, trim/extend ✅ code xong
+
+(Ngoài spec v1, làm theo yêu cầu bổ sung; thiết kế ở `docs/phase2-design.md`.)
+
+Đã làm: 17 tool mới (layout ×4, viewport ×2, in PDF ×2, xref ×5, trim/extend ×2, dynamic block ×2), tham số `layout` cho mọi tool tạo đối tượng và bộ lọc, `dynamic_props` khi chèn block.
+
+Cloud: 89 tool; `npm test` 56/56; `dotnet test` 35/35; build plugin ✅. API AutoCAD của phase này mới kiểm chứng ở mức biên dịch.
+
+Cần test trên AutoCAD: mục "Phase 2" trong `docs/test-log.md`.

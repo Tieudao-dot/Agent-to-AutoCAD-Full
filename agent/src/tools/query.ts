@@ -18,6 +18,7 @@ export const entityFilter = {
     })
     .optional()
     .describe('Rectangular selection window in WCS.'),
+  layout: z.string().optional().describe('Search this paper-space layout instead of model space.'),
 };
 
 /** Spec §7.6 — reading and querying. */

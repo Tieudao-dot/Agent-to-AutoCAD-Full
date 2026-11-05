@@ -156,7 +156,8 @@ namespace ClaudeCAD.Plugin.Drawing
             var ltr = (LayerTableRecord)ctx.Tr.GetObject(ent.LayerId, OpenMode.ForRead);
             if (ltr.IsLocked)
                 throw new ToolException(ErrorCodes.Locked, $"Layer '{ltr.Name}' is locked; cannot draw on it. Use another layer or ask the user to unlock it.");
-            var id = ctx.ModelSpace.AppendEntity(ent);
+            var space = p != null && p.Has("layout") ? ctx.SpaceFor(p.Str("layout", null)) : ctx.ModelSpace;
+            var id = space.AppendEntity(ent);
             ctx.Tr.AddNewlyCreatedDBObject(ent, true);
             return id;
         }

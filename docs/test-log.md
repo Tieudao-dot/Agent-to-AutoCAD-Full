@@ -58,6 +58,14 @@ Trạng thái: ⬜ chưa chạy · ✅ đạt · ❌ không đạt · ⚠️ đ�
 | 1e | Kịch bản 10 (skill tự áp dụng) | ⬜ chưa chạy | |
 | 1e | Sửa SKILL.md + New → chuẩn mới được áp dụng | ⬜ chưa chạy | |
 | 1e | Bundle: copy `ClaudeCAD.bundle` vào ApplicationPlugins → AutoCAD tự nạp, `CLAUDECHAT` chạy không cần NETLOAD | ⬜ chưa chạy | |
+| 2 | create_layout (A3, copy_from), set_current_layout, list_layouts, delete_layout | ⬜ chưa chạy | |
+| 2 | add_viewport 1:100 đúng tâm view, khóa; set_viewport đổi tỷ lệ; VP freeze layer | ⬜ chưa chạy | |
+| 2 | Vẽ khung tên trên layout bằng tham số `layout` (sheet mm) | ⬜ chưa chạy | |
+| 2 | plot_pdf layout và Model (extents / window), scale fit và 1:100 → file PDF đúng khổ, nét monochrome | ⬜ chưa chạy | |
+| 2 | attach_xref (overlay/attach), list_xrefs trạng thái, reload, detach, bind | ⬜ chưa chạy | |
+| 2 | trim_entities: line/arc/polyline/circle với 1 và nhiều cạnh cắt, đúng mảnh bị bỏ | ⬜ chưa chạy | |
+| 2 | extend_entities: line/arc/polyline tới biên, auto/start/end/both | ⬜ chưa chạy | |
+| 2 | insert_block với dynamic_props, get_dynamic_props (allowed values), reset_dynamic_block | ⬜ chưa chạy | |
 
 ## Đã kiểm chứng tự động trên cloud (Linux)
 
@@ -68,6 +76,7 @@ Trạng thái: ⬜ chưa chạy · ✅ đạt · ❌ không đạt · ⚠️ đ�
 | 2026-11-05 | `dotnet build` plugin net48 với reference AutoCAD.NET 24.1.51000 | ✅ 0 warning |
 | 2026-11-05 | `dotnet test plugin/ClaudeCAD.Core.Tests` — JsonCodec, Params | ✅ 16/16 |
 | 2026-11-05 | Phase 1b: `npm test` 38/38 (thêm: danh mục tool TS khớp handler C#, mọi schema chuyển được sang JSON Schema, schema nhận ví dụ spec, giới hạn 500 call/batch) | ✅ |
+| 2026-11-05 | Phase 2: 89 tool; `npm test` 56/56 (danh mục khớp handler C#); `dotnet test` 35/35 (thêm ExtensionTarget); build plugin 0 warning | ✅ |
 | 2026-11-05 | Phase 1e: `npm test` 56/56 (thêm: 3 skill đúng chuẩn Agent Skills, có "Quy trình chuẩn bị", chỉ nhắc tool có thật, JSON ví dụ hợp lệ; system prompt đủ 10 quy tắc) | ✅ |
 | 2026-11-05 | Phase 1e: **Agent SDK thật** trên Linux với plugin giả: init chỉ có `Read`, `Skill` + 72 tool `mcp__claudecad__*`, MCP server `claudecad` connected, `permissionMode: dontAsk`, 3 skill nạp qua plugin `claudecad-skills`; Claude gọi `ping` và stream tiếng Việt, `turn_end` đúng | ✅ |
 | 2026-11-05 | Dry run kịch bản 2 (bản vẽ giả lập): Claude gọi get_drawing_info → list_layers → list_styles → **một** batch 30 call (tạo layer/style theo skill, tường, cửa, dim 4 phía, text) → zoom_extents; layer A-WALL/A-DOOR/A-DIM/A-TEXT; chữ 350/250 đúng skill | ✅ (mô phỏng) |

@@ -142,5 +142,18 @@ namespace ClaudeCAD.Core.Tests
             Near(900, r.ChamferStart[0]); Near(0, r.ChamferStart[1]);
             Near(1000, r.ChamferEnd[0]); Near(50, r.ChamferEnd[1]);
         }
+
+        [Fact]
+        public void ExtensionTargetPicksNearestPointBeyondTheEnd()
+        {
+            // line (0,0)-(1000,0); boundaries cross the extended line at x=-500, 1500, 3000 and at x=400 (already on the line)
+            var cands = new List<double[]> { Geometry.P(-500, 0), Geometry.P(1500, 0), Geometry.P(3000, 0), Geometry.P(400, 0) };
+            Func<double[], bool> onCurve = q => q[0] >= 0 && q[0] <= 1000;
+            var end = Geometry.ExtensionTarget(cands, Geometry.P(1000, 0), Geometry.P(0, 0), onCurve);
+            Near(1500, end[0]);
+            var start = Geometry.ExtensionTarget(cands, Geometry.P(0, 0), Geometry.P(1000, 0), onCurve);
+            Near(-500, start[0]);
+            Assert.Null(Geometry.ExtensionTarget(new List<double[]> { Geometry.P(400, 0) }, Geometry.P(1000, 0), Geometry.P(0, 0), onCurve));
+        }
     }
 }

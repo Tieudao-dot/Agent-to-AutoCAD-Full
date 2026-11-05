@@ -1,10 +1,12 @@
 import { createSdkMcpServer } from '@anthropic-ai/claude-agent-sdk';
 import type { AnyTool, ToolBridge } from './common.js';
+import { advancedTools } from './advanced.js';
 import { annotationTools } from './annotation.js';
 import { batchTools } from './batch.js';
 import { blockTools } from './blocks.js';
 import { drawTools } from './draw.js';
 import { layerTools } from './layers.js';
+import { layoutTools } from './layouts.js';
 import { modifyTools } from './modify.js';
 import { queryTools } from './query.js';
 import { styleTools } from './styles.js';
@@ -25,6 +27,8 @@ export function buildTools(bridge: ToolBridge): AnyTool[] {
     ...blockTools(bridge),
     ...styleTools(bridge),
     ...viewTools(bridge),
+    ...layoutTools(bridge),
+    ...advancedTools(bridge),
     ...systemTools(bridge),
   ];
 }

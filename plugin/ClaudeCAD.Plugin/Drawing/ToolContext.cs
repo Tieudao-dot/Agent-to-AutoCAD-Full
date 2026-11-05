@@ -54,6 +54,23 @@ namespace ClaudeCAD.Plugin.Drawing
 
         internal void ResetCache() => _modelSpace = null;
 
+        /// <summary>
+        /// Owner block of new entities: model space, or the paper space of a named
+        /// layout (phase 2: drawing title blocks / notes on layouts).
+        /// </summary>
+        public BlockTableRecord SpaceFor(string layout)
+        {
+            if (string.IsNullOrEmpty(layout) || layout.Equals("Model", StringComparison.OrdinalIgnoreCase)) return ModelSpace;
+            var dict = (DBDictionary)Tr.GetObject(Db.LayoutDictionaryId, OpenMode.ForRead);
+            foreach (DBDictionaryEntry e in dict)
+            {
+                if (!e.Key.Equals(layout, StringComparison.OrdinalIgnoreCase)) continue;
+                var lo = (Layout)Tr.GetObject(e.Value, OpenMode.ForRead);
+                return (BlockTableRecord)Tr.GetObject(lo.BlockTableRecordId, Writable ? OpenMode.ForWrite : OpenMode.ForRead);
+            }
+            throw new ToolException(ErrorCodes.InvalidParams, $"Layout '{layout}' does not exist. Call list_layouts, or create_layout first.");
+        }
+
         public void RequireWritable(string tool)
         {
             if (!Writable) throw new ToolException(ErrorCodes.AcadError, tool + " needs write access but was dispatched read-only (plugin bug).");

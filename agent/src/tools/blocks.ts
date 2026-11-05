@@ -40,6 +40,10 @@ export function blockTools(b: ToolBridge): AnyTool[] {
         scale: z.union([z.number().positive(), point]).optional(),
         rotation: angle('Rotation').optional(),
         attributes: z.record(z.string(), z.union([z.string(), z.number()])).optional(),
+        dynamic_props: z
+          .record(z.string(), z.union([z.string(), z.number(), point]))
+          .optional()
+          .describe('Dynamic block properties to set right after insertion, e.g. {"Width": 900, "Visibility1": "Mở"}. Angles in degrees.'),
         ...entityProps,
       }),
 
