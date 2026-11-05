@@ -21,10 +21,14 @@ namespace ClaudeCAD.Plugin.Drawing
         }
 
         /// <summary>Sets the current view to a WCS window (plan view assumed, like ZOOM W).</summary>
-        private static void ZoomTo(ToolContext ctx, Point3d min, Point3d max, double margin)
+        private static void ZoomTo(ToolContext ctx, Point3d min, Point3d max, double margin) => ZoomTo(ctx.Doc, min, max, margin);
+
+        /// <summary>Shared with the palette (Xem kết quả / handle links).</summary>
+        internal static void ZoomTo(Document doc, Point3d min, Point3d max, double margin)
         {
-            using (ctx.Doc.LockDocument())
-            using (var view = ctx.Ed.GetCurrentView())
+            var ed = doc.Editor;
+            using (doc.LockDocument())
+            using (var view = ed.GetCurrentView())
             {
                 var wcs2dcs = (Matrix3d.Rotation(-view.ViewTwist, view.ViewDirection, view.Target)
                     * Matrix3d.Displacement(view.Target - Point3d.Origin)
@@ -38,7 +42,7 @@ namespace ClaudeCAD.Plugin.Drawing
                 double ratio = view.Width / Math.Max(view.Height, 1e-9);
                 if (w / h > ratio) { view.Width = w; view.Height = w / ratio; }
                 else { view.Height = h; view.Width = h * ratio; }
-                ctx.Ed.SetCurrentView(view);
+                ed.SetCurrentView(view);
             }
         }
 

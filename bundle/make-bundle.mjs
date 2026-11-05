@@ -11,6 +11,7 @@
  *       README.md
  *       agent/                       (dist + package.json + production node_modules for win32-x64)
  *       skills/                      (user-editable skills)
+ *       templates/templates.json     ("/" quick prompts; users add their own in %AppData%\ClaudeCAD\templates.json)
  *
  * Usage (from the repo root, after building plugin and agent):
  *   node bundle/make-bundle.mjs [--dll <path>] [--dll2025 <path>] [--out <dir>] [--skip-npm]
@@ -82,8 +83,9 @@ if (values['update-url']) {
 }
 fs.copyFileSync(path.join(repo, 'README.md'), path.join(contents, 'README.md'));
 
-// skills (only folders with SKILL.md + the README)
+// skills (only folders with SKILL.md + the README) and the "/" quick prompts
 fs.cpSync(path.join(repo, 'skills'), path.join(contents, 'skills'), { recursive: true });
+fs.cpSync(path.join(repo, 'templates'), path.join(contents, 'templates'), { recursive: true });
 
 // agent: compiled JS + manifest + production dependencies
 const agentOut = path.join(contents, 'agent');

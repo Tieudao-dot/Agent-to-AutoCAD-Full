@@ -71,6 +71,26 @@ Trạng thái: ⬜ chưa chạy · ✅ đạt · ❌ không đạt · ⚠️ đ�
 | 3 | AutoCAD 2023 và 2024 nạp bản net48; AutoCAD 2025 nạp `Contents\2025` (net8); smoke 1a trên mỗi bản | ⬜ chưa chạy | |
 | 3 | Cập nhật: đặt `CLAUDECAD_UPDATE_URL` tới latest.json có version cao hơn → palette báo; `CLAUDECHATUPDATE` tải, kiểm SHA-256; đóng AutoCAD → bundle được thay, skill đã sửa còn nguyên | ⬜ chưa chạy | |
 | 3 | latest.json sai SHA-256 → hủy, không đụng bundle | ⬜ chưa chạy | |
+| UI-1 | Nút **Chọn đối tượng**: quét chọn → chip "Kèm N"; chọn sẵn (pickfirst) → chip tự hiện; ✕ bỏ kèm; "đổi mấy cái này sang layer X" đúng đối tượng | ⬜ chưa chạy | |
+| UI-2 | Nút **Lấy điểm**: 1 và nhiều điểm, tọa độ WCS đúng khi UCS xoay | ⬜ chưa chạy | |
+| UI-3 | Bấm link handle trong câu trả lời → zoom + tô sáng 4 s | ⬜ chưa chạy | |
+| UI-4 | **Xem kết quả (N)** sau lượt vẽ | ⬜ chưa chạy | |
+| UI-5 | **Hoàn tác lượt này** = một U; chạy lệnh khác sau lượt → nút ẩn | ⬜ chưa chạy | |
+| UI-6 | Ảnh: nút Ảnh, Ctrl+V ảnh chụp màn hình, kéo thả file; "vẽ theo phác thảo này" | ⬜ chưa chạy | |
+| UI-7 | Dán vùng ô Excel → bảng Markdown; `/bang-toa-do` + dán bảng → bảng tọa độ | ⬜ chưa chạy | |
+| UI-8 | Gõ `/` → popup mẫu, chọn bằng phím/chuột; thêm mẫu riêng ở `%AppData%\ClaudeCAD\templates.json` | ⬜ chưa chạy | |
+| UI-9 | Chuẩn = Điện nước, Tỷ lệ = 1:50 → Claude dùng skill ve-mep và chữ 1:50 không cần nhắc | ⬜ chưa chạy | |
+| UI-10 | ↑↓ gọi lại tin đã gửi, giữ bản nháp | ⬜ chưa chạy | |
+| UI-11 | Thẻ xác nhận: Xem trước tô sáng; Đồng ý → xóa; Hủy → không xóa | ⬜ chưa chạy | |
+| UI-12 | Nhật ký thao tác đúng số tool, thời gian, lỗi | ⬜ chưa chạy | |
+| UI-13 | Kill node.exe giữa lượt → thẻ lỗi → **Thử lại** chạy lại đúng yêu cầu | ⬜ chưa chạy | |
+| UI-14 | Đổi model / effort trong ⚙ giữa phiên; dòng usage và % hạn mức hiển thị | ⬜ chưa chạy | |
+| UI-15 | Lượt dài khi đang ở cửa sổ khác → thông báo Windows; tắt được | ⬜ chưa chạy | |
+| UI-16 | Markdown: đậm, danh sách, bảng, code hiển thị đúng | ⬜ chưa chạy | |
+| UI-17 | Hai bản vẽ đã lưu: chuyển qua lại → lịch sử riêng; đóng/mở AutoCAD → lịch sử còn, Claude nhớ ngữ cảnh | ⬜ chưa chạy | |
+| UI-18 | Copy tin nhắn; **Xuất** ra .md | ⬜ chưa chạy | |
+| UI-19 | Đổi COLORTHEME của AutoCAD → palette đổi theo; A−/A+, Ctrl+lăn chuột | ⬜ chưa chạy | |
+| UI-20 | **Sửa** tin cuối sau một lượt vẽ → lượt cũ được U rồi vẽ lại theo yêu cầu mới | ⬜ chưa chạy | |
 
 ## Đã kiểm chứng tự động trên cloud (Linux)
 
@@ -81,6 +101,7 @@ Trạng thái: ⬜ chưa chạy · ✅ đạt · ❌ không đạt · ⚠️ đ�
 | 2026-11-05 | `dotnet build` plugin net48 với reference AutoCAD.NET 24.1.51000 | ✅ 0 warning |
 | 2026-11-05 | `dotnet test plugin/ClaudeCAD.Core.Tests` — JsonCodec, Params | ✅ 16/16 |
 | 2026-11-05 | Phase 1b: `npm test` 38/38 (thêm: danh mục tool TS khớp handler C#, mọi schema chuyển được sang JSON Schema, schema nhận ví dụ spec, giới hạn 500 call/batch) | ✅ |
+| 2026-11-05 | v0.4.0 khung chat 20 tính năng: `npm test` 70/70 (nội dung tin nhắn, giao thức mới, model/effort, chuyển phiên + khôi phục lỗi, usage, rate limit, thẻ xác nhận); `dotnet test` lõi 56/56 (markdown, lịch sử, cài đặt, mẫu lệnh, bảng Excel); build plugin net48 + net8 0 warning | ✅ |
 | 2026-11-05 | **CI GitHub Actions `windows-latest`** (run 3–5, commit 3b87661): `npm ci` + `npm test` 58/58 với **named pipe Windows thật** (gồm tiến trình sidecar nối pipe), `dotnet test` lõi, build plugin net48 + net8.0-windows, make-bundle (node_modules win32-x64) + zip + latest.json, Inno Setup → `ClaudeCAD-Setup-0.3.0.exe`, upload artifact | ✅ |
 | 2026-11-05 | Phase 3: `npm test` 58/58 (thêm: phiên bản thống nhất 4 nơi, manifest đúng dll theo series); `dotnet test` 43/43 (thêm UpdateLogic); build **net48 + net8.0-windows** (AutoCAD.NET 24.1.51000 và 25.0.1) 0 warning; `make-bundle --zip` tạo bundle 2 dll + zip + latest.json | ✅ |
 | 2026-11-05 | Phase 2: 89 tool; `npm test` 56/56 (danh mục khớp handler C#); `dotnet test` 35/35 (thêm ExtensionTarget); build plugin 0 warning | ✅ |

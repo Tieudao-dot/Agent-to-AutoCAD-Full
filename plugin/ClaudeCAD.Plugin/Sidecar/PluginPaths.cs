@@ -22,6 +22,16 @@ namespace ClaudeCAD.Plugin.Sidecar
 
         public static string SkillsDirectory => Resolve("CLAUDECAD_SKILLS_DIR", "skills", Directory.Exists);
 
+        /// <summary>Shipped quick prompts (templates\templates.json); null if absent.</summary>
+        public static string TemplatesFile
+        {
+            get
+            {
+                var dir = Resolve("CLAUDECAD_TEMPLATES_DIR", "templates", d => File.Exists(Path.Combine(d, "templates.json")));
+                return dir == null ? null : Path.Combine(dir, "templates.json");
+            }
+        }
+
         public static string AgentEntry
         {
             get

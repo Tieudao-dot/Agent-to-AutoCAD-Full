@@ -72,6 +72,12 @@ Chỉ build một bản: thêm `-f net48` hoặc `-f net8.0-windows`. AutoCAD 20
 - Nếu không có AutoCAD (máy build/CI), project tự dùng package NuGet chính thức `AutoCAD.NET 24.1.51000` (= AutoCAD 2022) làm reference assemblies. Ép chế độ: `-p:AcadRefSource=Install` hoặc `-p:AcadRefSource=NuGet`.
 - Không phụ thuộc Newtonsoft.Json (tránh xung đột phiên bản trong acad.exe): plugin có bộ JSON riêng.
 
+Test giao diện WPF thật (chỉ chạy trên Windows, lưu ảnh chụp palette vào `bin\...\ui-screens`):
+
+```bash
+dotnet test plugin/ClaudeCAD.UI.Tests
+```
+
 Unit test phần lõi (JSON, kiểm tra tham số) chạy được trên mọi OS:
 
 ```bash
@@ -103,8 +109,11 @@ Lệnh AutoCAD:
 | `CLAUDECHATRESTART` | khởi động lại sidecar (khi báo lỗi liên tục) |
 | `CLAUDECHATLOG` | mở thư mục log `%LocalAppData%\ClaudeCAD\logs` |
 | `CLAUDECHATUPDATE` | (phase 3) kiểm tra và tải bản cập nhật |
+| `CLAUDECAD_PICK`, `CLAUDECAD_POINT` | lệnh phụ do nút **Chọn đối tượng** / **Lấy điểm** gọi (không cần gõ) |
 
-Palette: Enter gửi, Shift+Enter xuống dòng, **Stop** hủy lượt đang chạy, **New** tạo phiên chat mới. Sau mỗi lượt, gõ `U` một lần trong AutoCAD là hoàn tác toàn bộ thay đổi của lượt đó.
+Palette: Enter gửi, Shift+Enter xuống dòng, **Stop** hủy lượt đang chạy, **New** tạo phiên chat mới. Sau mỗi lượt, gõ `U` một lần trong AutoCAD (hoặc nút **Hoàn tác lượt này**) là hoàn tác toàn bộ thay đổi của lượt đó.
+
+Từ v0.4.0 khung chat có thêm 20 tính năng — chọn đối tượng / lấy điểm gửi kèm, handle bấm được để zoom, **Xem kết quả**, đính kèm ảnh, dán bảng Excel, mẫu lệnh `/`, chọn chuẩn + tỷ lệ in, ↑↓ gọi lại tin, thẻ xác nhận có nút, nhật ký thao tác, **Thử lại**, mức dùng + chọn model/effort, thông báo Windows, Markdown, lịch sử theo bản vẽ, Copy/Xuất, sáng/tối + cỡ chữ, **Sửa** và gửi lại. Hướng dẫn: [`docs/palette-features.md`](docs/palette-features.md).
 
 ## 4. Chạy thử theo từng phase
 

@@ -86,3 +86,11 @@ Cần test trên AutoCAD: mục "Phase 2" trong `docs/test-log.md`.
 Cloud: `npm test` 58/58, `dotnet test` 43/43, build hai target ✅, bundle + zip ✅. **CI Windows xanh**: test IPC với named pipe Windows thật, build hai target, Setup.exe; artifact `ClaudeCAD-0.3.0` trên tab Actions của PR.
 
 Cần test: mục "Phase 3" trong `docs/test-log.md` (installer, AutoCAD 2023/2024/2025, luồng cập nhật).
+
+## Khung chat v0.4.0 — 20 tính năng ✅ code xong
+
+Theo đề xuất đã duyệt: chọn đối tượng / lấy điểm, handle bấm được, Xem kết quả, Hoàn tác lượt này, ảnh, bảng Excel, mẫu lệnh `/`, chuẩn + tỷ lệ, ↑↓, thẻ xác nhận, nhật ký thao tác, Thử lại, usage + model/effort, thông báo Windows, Markdown, lịch sử theo bản vẽ (resume phiên), Copy/Xuất, sáng/tối + cỡ chữ, Sửa và gửi lại. Chi tiết và cách dùng: `docs/palette-features.md`.
+
+Cloud: `npm test` 70/70, `dotnet test` 56/56, build ✅; CI Windows chạy thêm test giao diện WPF thật và chụp ảnh palette (artifact `palette-screenshots`).
+
+Cần test trên AutoCAD: mục UI-1 … UI-20 trong `docs/test-log.md`.

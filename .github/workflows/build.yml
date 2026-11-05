@@ -42,6 +42,18 @@ jobs:
       - name: Plugin core unit tests
         run: dotnet test plugin/ClaudeCAD.Core.Tests -c Release
 
+      - name: Palette UI tests (real WPF palette, screenshots)
+        env:
+          CLAUDECAD_UI_SHOTS: ${{ github.workspace }}/ui-screens
+        run: dotnet test plugin/ClaudeCAD.UI.Tests -c Release
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: palette-screenshots
+          path: ui-screens/*.png
+          if-no-files-found: warn
+
       - name: Plugin build (net48 for AutoCAD 2022-2024, net8.0-windows for AutoCAD 2025)
         run: dotnet build plugin/ClaudeCAD.Plugin/ClaudeCAD.Plugin.csproj -c Release -p:AcadRefSource=NuGet
 

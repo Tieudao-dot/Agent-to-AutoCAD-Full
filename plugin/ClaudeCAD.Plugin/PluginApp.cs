@@ -8,6 +8,7 @@ using AcApp = Autodesk.AutoCAD.ApplicationServices.Application;
 
 [assembly: ExtensionApplication(typeof(ClaudeCAD.Plugin.PluginApp))]
 [assembly: CommandClass(typeof(ClaudeCAD.Plugin.Commands))]
+[assembly: CommandClass(typeof(ClaudeCAD.Plugin.Drawing.InteractionCommands))]
 
 namespace ClaudeCAD.Plugin
 {
