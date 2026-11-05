@@ -1,0 +1,22 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!--
+    Unit tests for the AutoCAD-independent core of the plugin (JSON codec,
+    parameter validation). The sources are linked from ClaudeCAD.Plugin so the
+    tests run on any OS with the .NET 8 SDK:  dotnet test plugin/ClaudeCAD.Core.Tests
+  -->
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <Nullable>disable</Nullable>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="..\ClaudeCAD.Plugin\Core\JsonCodec.cs" Link="Core\JsonCodec.cs" />
+    <Compile Include="..\ClaudeCAD.Plugin\Core\Params.cs" Link="Core\Params.cs" />
+    <Compile Include="..\ClaudeCAD.Plugin\Core\ToolException.cs" Link="Core\ToolException.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.11.1" />
+    <PackageReference Include="xunit" Version="2.9.2" />
+    <PackageReference Include="xunit.runner.visualstudio" Version="2.8.2" />
+  </ItemGroup>
+</Project>
