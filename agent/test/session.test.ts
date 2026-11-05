@@ -105,7 +105,7 @@ describe('AgentSession', () => {
     s.send('chào Claude', 'test.dwg');
     await tick();
     assert.deepEqual(received, ['[Bản vẽ đang mở: test.dwg]\nchào Claude']);
-    assert.deepEqual(events, [
+    assert.deepEqual(events.filter((e) => e.type !== 'session_info').map((e) => (e.type === 'turn_end' ? { type: e.type } : e)), [
       { type: 'ready', info: 'claude-opus-5-5 · Claude login', version: 'test' },
       { type: 'agent_text', delta: 'Xin ' },
       { type: 'agent_text', delta: 'chào!' },
@@ -160,8 +160,9 @@ describe('AgentSession', () => {
     await tick(80);
     assert.equal(calls.interrupted, 1);
     assert.equal(cancelled(), 1);
-    const end = events.find((e) => e.type === 'turn_end');
-    assert.deepEqual(end, { type: 'turn_end', cancelled: true });
+    const end = events.find((e) => e.type === 'turn_end') as any;
+    assert.equal(end.cancelled, true);
+    assert.equal(end.error, undefined);
     s.close();
   });
 

@@ -1,11 +1,19 @@
 import { tool, type SdkMcpToolDefinition } from '@anthropic-ai/claude-agent-sdk';
 import { z } from 'zod';
+import { summarizeResult } from '../agent/content.js';
 import type { ToolResponse } from '../ipc/protocol.js';
 
 /** What a tool body needs: forward the call to the plugin and report status to the palette. */
+export interface ToolStatusExtra {
+  ms?: number;
+  summary?: string;
+  error?: string;
+  handles?: string[];
+}
+
 export interface ToolBridge {
   call(tool: string, params: Record<string, unknown>): Promise<ToolResponse>;
-  status(tool: string, state: 'running' | 'done' | 'error'): void;
+  status(tool: string, state: 'running' | 'done' | 'error', extra?: ToolStatusExtra): void;
 }
 
 export type AnyTool = SdkMcpToolDefinition<any>;
@@ -45,8 +53,11 @@ export function cadTool<Shape extends z.ZodRawShape>(
     shape,
     async (args) => {
       bridge.status(name, 'running');
+      const t0 = Date.now();
       const resp = await bridge.call(name, clean(args as Record<string, unknown>));
-      bridge.status(name, resp.ok ? 'done' : 'error');
+      const ms = Date.now() - t0;
+      if (resp.ok) bridge.status(name, 'done', { ms, ...summarizeResult(name, resp.result) });
+      else bridge.status(name, 'error', { ms, error: `${resp.error.code}: ${resp.error.message}`.slice(0, 300) });
       return toCallToolResult(resp);
     },
     {

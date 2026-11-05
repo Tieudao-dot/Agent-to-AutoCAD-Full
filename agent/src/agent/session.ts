@@ -5,7 +5,8 @@ import {
   type SDKMessage,
   type SDKUserMessage,
 } from '@anthropic-ai/claude-agent-sdk';
-import type { SidecarToPlugin } from '../ipc/protocol.js';
+import type { SidecarToPlugin, UserMessage } from '../ipc/protocol.js';
+import { toSdkUserMessage } from './content.js';
 import type { ToolBridge } from '../tools/common.js';
 import { MCP_SERVER_NAME, createCadServer } from '../tools/index.js';
 import { InputQueue } from './inputQueue.js';
@@ -22,6 +23,8 @@ export interface SessionConfig {
   skillsDir?: string;
   model?: string;
   fallbackModel?: string;
+  /** Effort level (low | medium | high | xhigh | max); undefined = model default. */
+  effort?: string;
   log: (msg: string) => void;
   /** Called when the user cancels: pending tool calls must be failed. */
   onCancel?: () => void;
@@ -60,6 +63,11 @@ export class AgentSession {
   private sessionId?: string;
   private initInfo = '';
   private lastUser = '';
+  private lastConfirm?: 'yes' | 'no';
+  /** Message of the running turn, re-sent once if resuming an old session fails. */
+  private pending?: UserMessage;
+  private resuming = false;
+  private gotInit = false;
 
   constructor(private readonly cfg: SessionConfig) {}
 
@@ -76,13 +84,18 @@ export class AgentSession {
     return this.lastUser;
   }
 
+  /** True when the current turn was started by the "Đồng ý" button of a confirmation card. */
+  get lastUserConfirmed(): boolean {
+    return this.lastConfirm === 'yes';
+  }
+
   get info(): string {
     return this.initInfo;
   }
 
   /** Options handed to query(); exported for tests and documentation. */
   buildOptions(resume?: string): Options {
-    const server = createCadServer(this.cfg.bridge, this.cfg.version);
+    const server = createCadServer(this.cfg.bridge, this.cfg.version, (req) => this.cfg.emit(req));
     const plugin = prepareSkillsPlugin(this.cfg.skillsDir, this.cfg.workDir);
     if (plugin) this.cfg.log(`skills loaded: ${plugin.skills.join(', ') || '(none)'}`);
 
@@ -91,6 +104,7 @@ export class AgentSession {
       systemPrompt: SYSTEM_PROMPT,
       model: this.cfg.model,
       fallbackModel: this.cfg.fallbackModel,
+      ...(this.cfg.effort ? { effort: this.cfg.effort as Options['effort'] } : {}),
       mcpServers: { [MCP_SERVER_NAME]: server },
       strictMcpConfig: true,
       // Base tool set: only Read (to read skill files) and Skill. Everything CAD comes from our MCP server.
@@ -119,16 +133,24 @@ export class AgentSession {
     const gen = ++this.generation;
     const input = new InputQueue<SDKUserMessage>();
     const queryFn = this.cfg.queryFn ?? sdkQuery;
-    // After an unexpected end of the Claude process we resume the same conversation.
+    // After an unexpected end of the Claude process (or when switching back to a
+    // drawing) we resume the same conversation.
     const resume = this.sessionId;
+    this.resuming = !!resume;
+    this.gotInit = false;
     const q = queryFn({ prompt: input, options: this.buildOptions(resume) });
     this.q = q;
     this.input = input;
     void this.consume(q, gen);
   }
 
-  /** Sends one user turn. */
+  /** Sends one user turn (plain text form, kept for callers and tests). */
   send(text: string, drawing?: string): void {
+    this.sendMessage({ type: 'user_message', text, ...(drawing ? { drawing } : {}) });
+  }
+
+  /** Sends one user turn with attachments / context from the palette. */
+  sendMessage(msg: UserMessage): void {
     if (this.turnActive) {
       this.cfg.emit({ type: 'agent_error', message: 'Đang xử lý lượt trước, đợi xong hoặc bấm Stop.' });
       return;
@@ -141,13 +163,35 @@ export class AgentSession {
     }
     this.turnActive = true;
     this.cancelRequested = false;
-    this.lastUser = text;
-    const content = drawing ? `[Bản vẽ đang mở: ${drawing}]\n${text}` : text;
-    this.input!.push({
-      type: 'user',
-      message: { role: 'user', content },
-      parent_tool_use_id: null,
-    });
+    this.lastUser = msg.text;
+    this.lastConfirm = msg.confirm;
+    this.pending = msg;
+    this.input!.push(toSdkUserMessage(msg));
+  }
+
+  /** Model / effort from the palette's settings; applied live when a query is running. */
+  async setOptions(opts: { model?: string; effort?: string }): Promise<void> {
+    if (opts.model) this.cfg.model = opts.model;
+    if (opts.effort) this.cfg.effort = opts.effort;
+    const q = this.q;
+    if (q) {
+      try {
+        if (opts.model) await q.setModel(opts.model);
+        if (opts.effort) await q.applyFlagSettings({ effortLevel: opts.effort as never });
+      } catch (err) {
+        this.cfg.log(`set_options failed live, will apply on next session: ${(err as Error).message}`);
+        if (!this.turnActive) this.closeQuery(); // next message starts a query with the new options (resumed)
+      }
+    }
+    this.cfg.emit({ type: 'options', ...(this.cfg.model ? { model: this.cfg.model } : {}), ...(this.cfg.effort ? { effort: this.cfg.effort } : {}) });
+  }
+
+  /** Per-drawing conversations: continue the given session (or a fresh one) on the next message. */
+  switchTo(sessionId: string | undefined): void {
+    if (this.turnActive) this.cfg.onCancel?.();
+    this.closeQuery();
+    this.turnActive = false;
+    this.sessionId = sessionId;
   }
 
   /** Stop button: interrupts the running turn cleanly (spec §5). */
@@ -202,6 +246,18 @@ export class AgentSession {
     } catch (err) {
       if (gen === this.generation) {
         this.cfg.log(`query failed: ${(err as Error).stack ?? err}`);
+        if (this.resuming && !this.gotInit && this.pending && this.turnActive) {
+          // The saved conversation could not be resumed (deleted / incompatible): start fresh and re-send.
+          const msg = this.pending;
+          this.cfg.emit({ type: 'agent_error', message: 'Không khôi phục được cuộc chat cũ của bản vẽ này; tớ bắt đầu cuộc chat mới.' });
+          this.q = undefined;
+          this.input?.close();
+          this.input = undefined;
+          this.sessionId = undefined;
+          this.turnActive = false;
+          this.sendMessage(msg);
+          return;
+        }
         this.cfg.emit({ type: 'agent_error', message: `Phiên Claude bị lỗi: ${(err as Error).message}` });
       }
     } finally {
@@ -215,7 +271,7 @@ export class AgentSession {
     }
   }
 
-  private finishTurn(end: { error?: string; cancelled?: boolean }): void {
+  private finishTurn(end: { error?: string; cancelled?: boolean; usage?: { input_tokens: number; output_tokens: number; session_cost_usd?: number } }): void {
     if (this.textBlockOpen) {
       this.textBlockOpen = false;
       this.cfg.emit({ type: 'agent_text_end' });
@@ -231,6 +287,8 @@ export class AgentSession {
       case 'system':
         if (msg.subtype === 'init') {
           this.sessionId = msg.session_id;
+          this.gotInit = true;
+          this.cfg.emit({ type: 'session_info', session_id: msg.session_id, model: msg.model });
           const auth = msg.apiKeySource === 'ANTHROPIC_API_KEY' ? 'API key' : 'Claude login';
           this.initInfo = `${msg.model} · ${auth}`;
           this.cfg.log(
@@ -259,18 +317,37 @@ export class AgentSession {
         }
         return;
 
+      case 'rate_limit_event': {
+        const i = msg.rate_limit_info;
+        this.cfg.emit({
+          type: 'rate_limit',
+          status: i.status,
+          ...(typeof i.utilization === 'number' ? { utilization: i.utilization } : {}),
+          ...(typeof i.resetsAt === 'number' ? { resets_at: i.resetsAt } : {}),
+          ...(i.rateLimitType ? { limit_type: i.rateLimitType } : {}),
+        });
+        return;
+      }
+
       case 'result': {
         if (!this.turnActive) return;
+        const u = ((msg as unknown as { usage?: Record<string, number> }).usage ?? {}) as Record<string, number>;
+        const usage = {
+          input_tokens: (u.input_tokens ?? 0) + (u.cache_read_input_tokens ?? 0) + (u.cache_creation_input_tokens ?? 0),
+          output_tokens: u.output_tokens ?? 0,
+          ...(typeof msg.total_cost_usd === 'number' ? { session_cost_usd: msg.total_cost_usd } : {}),
+        };
+        this.pending = undefined;
         if (this.cancelRequested) {
-          this.finishTurn({ cancelled: true });
+          this.finishTurn({ cancelled: true, usage });
         } else if (msg.subtype !== 'success') {
           const why =
             msg.subtype === 'error_max_turns' ? 'Lượt quá dài (vượt số bước tối đa).' :
             msg.subtype === 'error_max_budget_usd' ? 'Vượt ngân sách chi phí của lượt.' :
             'Lỗi khi thực thi lượt.';
-          this.finishTurn({ error: why });
+          this.finishTurn({ error: why, usage });
         } else {
-          this.finishTurn({});
+          this.finishTurn({ usage });
         }
         return;
       }

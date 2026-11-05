@@ -56,14 +56,14 @@ async function main(): Promise<void> {
   let session: AgentSession;
   const bridge: ToolBridge = {
     call: async (tool, params) => {
-      const block = confirmationError(tool, params, session?.lastUserText);
+      const block = session?.lastUserConfirmed ? undefined : confirmationError(tool, params, session?.lastUserText);
       if (block) {
         log(`confirmation gate blocked ${tool}`);
         return { id: 'local', ok: false, error: { code: 'INVALID_PARAMS', message: block } };
       }
       return rpc.call(tool, params);
     },
-    status: (tool, state) => conn.send({ type: 'tool_status', tool, state }),
+    status: (tool, state, extra) => conn.send({ type: 'tool_status', tool, state, ...(extra ?? {}) }),
   };
 
   session = new AgentSession({
@@ -87,7 +87,13 @@ async function main(): Promise<void> {
     log(`<- ${msg.type}`);
     switch (msg.type) {
       case 'user_message':
-        session.send(msg.text, msg.drawing);
+        session.sendMessage(msg);
+        break;
+      case 'set_options':
+        void session.setOptions(msg);
+        break;
+      case 'switch_session':
+        session.switchTo(msg.session_id);
         break;
       case 'cancel':
         void session.cancel();

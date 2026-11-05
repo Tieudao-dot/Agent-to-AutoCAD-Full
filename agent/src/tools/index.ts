@@ -1,4 +1,6 @@
 import { createSdkMcpServer } from '@anthropic-ai/claude-agent-sdk';
+import type { ConfirmRequestMessage } from '../ipc/protocol.js';
+import { interactionTools } from './interaction.js';
 import type { AnyTool, ToolBridge } from './common.js';
 import { advancedTools } from './advanced.js';
 import { annotationTools } from './annotation.js';
@@ -33,11 +35,11 @@ export function buildTools(bridge: ToolBridge): AnyTool[] {
   ];
 }
 
-export function createCadServer(bridge: ToolBridge, version: string) {
+export function createCadServer(bridge: ToolBridge, version: string, showConfirm?: (req: ConfirmRequestMessage) => void) {
   return createSdkMcpServer({
     name: MCP_SERVER_NAME,
     version,
-    tools: buildTools(bridge),
+    tools: [...buildTools(bridge), ...(showConfirm ? interactionTools(showConfirm) : [])],
   });
 }
 

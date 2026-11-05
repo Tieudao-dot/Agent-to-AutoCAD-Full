@@ -39,6 +39,21 @@ export interface ToolStatusMessage {
   type: 'tool_status';
   tool: string;
   state: 'running' | 'done' | 'error';
+  /** Duration of the call in ms (done/error). */
+  ms?: number;
+  /** Short Vietnamese result summary for the activity log, e.g. "12 đối tượng". */
+  summary?: string;
+  /** Error message (state = error). */
+  error?: string;
+  /** Handles created/changed by the call (for "Xem kết quả"). */
+  handles?: string[];
+}
+
+export interface TurnUsage {
+  input_tokens: number;
+  output_tokens: number;
+  /** Estimated cost of the whole session so far (USD). */
+  session_cost_usd?: number;
 }
 
 export interface TurnEndMessage {
@@ -46,6 +61,39 @@ export interface TurnEndMessage {
   /** Set when the turn failed (not when it was cancelled by the user). */
   error?: string;
   cancelled?: boolean;
+  usage?: TurnUsage;
+}
+
+/** Claude asks the user to confirm a destructive operation (card with buttons). */
+export interface ConfirmRequestMessage {
+  type: 'confirm_request';
+  id: string;
+  text: string;
+  count?: number;
+  /** Entities to highlight with "Xem trước". */
+  handles?: string[];
+}
+
+/** Session id of the conversation, so the plugin can resume it per drawing. */
+export interface SessionInfoMessage {
+  type: 'session_info';
+  session_id: string;
+  model: string;
+}
+
+export interface RateLimitMessage {
+  type: 'rate_limit';
+  status: string;
+  utilization?: number;
+  resets_at?: number;
+  limit_type?: string;
+}
+
+/** Current model / effort after set_options. */
+export interface OptionsMessage {
+  type: 'options';
+  model?: string;
+  effort?: string;
 }
 
 /** Extension: non-fatal error to show in the palette. */
@@ -74,15 +122,56 @@ export type SidecarToPlugin =
   | TurnEndMessage
   | AgentErrorMessage
   | ReadyMessage
-  | SessionResetMessage;
+  | SessionResetMessage
+  | ConfirmRequestMessage
+  | SessionInfoMessage
+  | RateLimitMessage
+  | OptionsMessage;
 
 // ---------------------------------------------------------------- plugin -> sidecar
+
+export interface ImageAttachment {
+  media_type: 'image/png' | 'image/jpeg' | 'image/gif' | 'image/webp';
+  /** Base64 data without the data: prefix. */
+  data: string;
+}
+
+export interface UserAttachments {
+  /** Objects the user selected in the drawing. */
+  selection?: { handles: string[]; count?: number; summary?: string };
+  images?: ImageAttachment[];
+}
+
+export interface UserContext {
+  /** Drafting standard chosen in the palette (skill name) or undefined = automatic. */
+  standard?: string;
+  /** Print scale chosen in the palette, e.g. "1:100". */
+  scale?: string;
+}
 
 export interface UserMessage {
   type: 'user_message';
   text: string;
   /** File name of the active drawing (informational). */
   drawing?: string;
+  attachments?: UserAttachments;
+  context?: UserContext;
+  /** The user edited their previous request; that turn was undone first. */
+  edited?: boolean;
+  /** Sent by a confirmation card button. */
+  confirm?: 'yes' | 'no';
+}
+
+export interface SetOptionsMessage {
+  type: 'set_options';
+  model?: string;
+  effort?: string;
+}
+
+/** Switch to the conversation of another drawing (resume its session if known). */
+export interface SwitchSessionMessage {
+  type: 'switch_session';
+  session_id?: string;
 }
 
 export interface CancelMessage {
@@ -112,7 +201,46 @@ export interface ToolResponseErr {
 
 export type ToolResponse = ToolResponseOk | ToolResponseErr;
 
-export type PluginToSidecar = UserMessage | CancelMessage | NewSessionMessage | ToolResponse;
+export type PluginToSidecar =
+  | UserMessage
+  | CancelMessage
+  | NewSessionMessage
+  | SetOptionsMessage
+  | SwitchSessionMessage
+  | ToolResponse;
+
+const MEDIA_TYPES = new Set(['image/png', 'image/jpeg', 'image/gif', 'image/webp']);
+
+function parseAttachments(v: unknown): UserAttachments | undefined {
+  if (typeof v !== 'object' || v === null) return undefined;
+  const a = v as Record<string, unknown>;
+  const out: UserAttachments = {};
+  const sel = a.selection as Record<string, unknown> | undefined;
+  if (sel && Array.isArray(sel.handles)) {
+    out.selection = {
+      handles: sel.handles.filter((h): h is string => typeof h === 'string'),
+      ...(typeof sel.count === 'number' ? { count: sel.count } : {}),
+      ...(typeof sel.summary === 'string' ? { summary: sel.summary } : {}),
+    };
+  }
+  if (Array.isArray(a.images)) {
+    const imgs = a.images.filter(
+      (i): i is ImageAttachment =>
+        typeof i === 'object' && i !== null && MEDIA_TYPES.has((i as any).media_type) && typeof (i as any).data === 'string',
+    );
+    if (imgs.length) out.images = imgs.map((i) => ({ media_type: i.media_type, data: i.data }));
+  }
+  return out.selection || out.images ? out : undefined;
+}
+
+function parseContext(v: unknown): UserContext | undefined {
+  if (typeof v !== 'object' || v === null) return undefined;
+  const c = v as Record<string, unknown>;
+  const out: UserContext = {};
+  if (typeof c.standard === 'string' && c.standard) out.standard = c.standard;
+  if (typeof c.scale === 'string' && c.scale) out.scale = c.scale;
+  return out.standard || out.scale ? out : undefined;
+}
 
 // ---------------------------------------------------------------- encode / decode
 
@@ -146,13 +274,28 @@ export function parsePluginMessage(value: unknown): PluginToSidecar {
   }
 
   switch (m.type) {
-    case 'user_message':
+    case 'user_message': {
       if (typeof m.text !== 'string') throw new ProtocolError('user_message.text must be a string');
+      const attachments = parseAttachments(m.attachments);
+      const context = parseContext(m.context);
       return {
         type: 'user_message',
         text: m.text,
         ...(typeof m.drawing === 'string' ? { drawing: m.drawing } : {}),
+        ...(attachments ? { attachments } : {}),
+        ...(context ? { context } : {}),
+        ...(m.edited === true ? { edited: true } : {}),
+        ...(m.confirm === 'yes' || m.confirm === 'no' ? { confirm: m.confirm } : {}),
       };
+    }
+    case 'set_options':
+      return {
+        type: 'set_options',
+        ...(typeof m.model === 'string' && m.model ? { model: m.model } : {}),
+        ...(typeof m.effort === 'string' && m.effort ? { effort: m.effort } : {}),
+      };
+    case 'switch_session':
+      return { type: 'switch_session', ...(typeof m.session_id === 'string' && m.session_id ? { session_id: m.session_id } : {}) };
     case 'cancel':
       return { type: 'cancel' };
     case 'new_session':
