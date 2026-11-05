@@ -1,0 +1,16 @@
+# .NET
+bin/
+obj/
+*.user
+.vs/
+TestResults/
+
+# Node
+node_modules/
+agent/dist/
+
+# Bundle output
+bundle/out/
+*.zip
+agent/dist-test/
+tmp-log-*/

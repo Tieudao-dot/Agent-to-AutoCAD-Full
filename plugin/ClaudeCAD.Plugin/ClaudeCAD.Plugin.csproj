@@ -1,0 +1,75 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    ClaudeCAD.Plugin — AutoCAD 2022 (.NET Framework 4.8) in-process plugin.
+
+    Build modes:
+      * Windows + AutoCAD 2022 installed (default when the folder exists):
+          references accoremgd/acdbmgd/acmgd from $(AcadDir) with Copy Local = false.
+      * Anywhere else (CI, Linux, a machine without AutoCAD):
+          references the official Autodesk NuGet package AutoCAD.NET 24.1.x
+          (AutoCAD 2022 = R24.1) as compile-only reference assemblies.
+    Force a mode with:  dotnet build -p:AcadRefSource=Install|NuGet
+  -->
+
+  <PropertyGroup>
+    <TargetFramework>net48</TargetFramework>
+    <LangVersion>8.0</LangVersion>
+    <Nullable>disable</Nullable>
+    <OutputType>Library</OutputType>
+    <AssemblyName>ClaudeCAD.Plugin</AssemblyName>
+    <RootNamespace>ClaudeCAD.Plugin</RootNamespace>
+    <PlatformTarget>x64</PlatformTarget>
+    <Platforms>x64</Platforms>
+    <Version>0.1.0</Version>
+    <Deterministic>true</Deterministic>
+    <GenerateDocumentationFile>false</GenerateDocumentationFile>
+    <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
+    <!-- Allow building the Windows-only targets from Linux/macOS. -->
+    <EnableWindowsTargeting>true</EnableWindowsTargeting>
+    <AcadDir Condition="'$(AcadDir)' == ''">C:\Program Files\Autodesk\AutoCAD 2022</AcadDir>
+    <AcadRefSource Condition="'$(AcadRefSource)' == '' And Exists('$(AcadDir)\acmgd.dll')">Install</AcadRefSource>
+    <AcadRefSource Condition="'$(AcadRefSource)' == ''">NuGet</AcadRefSource>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- .NET Framework 4.8 reference assemblies so the project builds without the targeting pack installed. -->
+    <PackageReference Include="Microsoft.NETFramework.ReferenceAssemblies.net48" Version="1.0.3" PrivateAssets="all" />
+  </ItemGroup>
+
+  <ItemGroup Condition="'$(AcadRefSource)' == 'NuGet'">
+    <PackageReference Include="AutoCAD.NET" Version="24.1.51000" ExcludeAssets="runtime" PrivateAssets="all" />
+  </ItemGroup>
+
+  <ItemGroup Condition="'$(AcadRefSource)' == 'Install'">
+    <Reference Include="accoremgd">
+      <HintPath>$(AcadDir)\accoremgd.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="acdbmgd">
+      <HintPath>$(AcadDir)\acdbmgd.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="acmgd">
+      <HintPath>$(AcadDir)\acmgd.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="AdWindows">
+      <HintPath>$(AcadDir)\AdWindows.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+  </ItemGroup>
+
+  <ItemGroup>
+    <Reference Include="System" />
+    <Reference Include="System.Core" />
+    <Reference Include="Microsoft.CSharp" />
+    <Reference Include="System.Windows.Forms" />
+    <Reference Include="System.Drawing" />
+    <Reference Include="System.Xaml" />
+    <Reference Include="WindowsBase" />
+    <Reference Include="PresentationCore" />
+    <Reference Include="PresentationFramework" />
+  </ItemGroup>
+
+</Project>
