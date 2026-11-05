@@ -1,7 +1,123 @@
-# Agent-to-Autocad
+# ClaudeCAD — chat với Claude trong AutoCAD 2022
 
-Agent MCP để điều khiển AutoCAD bằng AI.
+Plugin cho AutoCAD 2022 (bản full, Windows): chat tiếng Việt trong một palette, Claude **vẽ, đọc, sửa, xóa đối tượng trực tiếp trên bản vẽ đang mở**. Spec đầy đủ: [`docs/spec.md`](docs/spec.md). Tiến độ từng phase: [`docs/progress.md`](docs/progress.md).
 
-## Trạng thái
+```
+plugin/   C# .NET Framework 4.8 — ClaudeCAD.Plugin (palette WPF, IPC server, tool handlers) + unit test lõi
+agent/    Node.js/TypeScript sidecar — @anthropic-ai/claude-agent-sdk, định nghĩa tool, load skill
+skills/   skill mẫu (chuẩn vẽ của người dùng, sửa không cần build)
+bundle/   PackageContents.xml + script đóng gói ClaudeCAD.bundle
+docs/     spec, giao thức IPC, ghi chú thiết kế, tiến độ, nhật ký smoke test
+```
 
-Dự án mới khởi tạo. Khung code sẽ được bổ sung.
+Kiến trúc: AutoCAD nạp `ClaudeCAD.Plugin.dll` → lệnh `CLAUDECHAT` mở palette, plugin mở named pipe `claudecad-<pid>` và spawn `node agent/dist/index.js`. Sidecar chạy Claude (động cơ Claude Code qua Agent SDK); mỗi tool call của Claude được gửi về plugin qua pipe (JSON Lines), plugin thực thi trên main thread trong `DocumentLock` + `Transaction`. Chi tiết: [`docs/ipc-protocol.md`](docs/ipc-protocol.md), [`docs/development.md`](docs/development.md).
+
+---
+
+## 1. Yêu cầu
+
+| Hạng mục | Yêu cầu |
+| --- | --- |
+| Máy | Windows 10/11 x64, AutoCAD 2022 bản full (không hỗ trợ LT) |
+| Build plugin | Visual Studio 2022 (workload *.NET desktop development*) hoặc .NET SDK 8 (`dotnet build`) |
+| Sidecar | Node.js >= 18 (khuyến nghị 20/22 LTS) có trong `PATH` |
+| Tài khoản | Claude Pro/Max đã `claude login`, **hoặc** biến môi trường `ANTHROPIC_API_KEY` |
+
+Đăng nhập Claude một lần (cài Claude Code CLI: `npm install -g @anthropic-ai/claude-code`):
+
+```bash
+claude login
+```
+
+Nếu dùng API key thay cho gói Pro/Max: đặt biến môi trường người dùng `ANTHROPIC_API_KEY` rồi mở lại AutoCAD.
+
+## 2. Build
+
+### 2.1. Sidecar (Node)
+
+```bash
+cd agent
+```
+
+```bash
+npm install
+```
+
+```bash
+npm run build
+```
+
+```bash
+npm test
+```
+
+`npm test` chạy test tích hợp lớp IPC (serialize/deserialize, cắt dòng UTF-8, timeout, mất kết nối, tiến trình sidecar thật nối pipe) và test phiên agent với `query()` giả lập — không gọi Claude thật.
+
+### 2.2. Plugin (C#)
+
+Mở `plugin/ClaudeCAD.sln` bằng Visual Studio 2022, chọn **Release | x64**, Build. Hoặc dòng lệnh:
+
+```bash
+dotnet build plugin/ClaudeCAD.Plugin/ClaudeCAD.Plugin.csproj -c Release
+```
+
+Kết quả: `plugin/ClaudeCAD.Plugin/bin/Release/ClaudeCAD.Plugin.dll`.
+
+- Nếu có `C:\Program Files\Autodesk\AutoCAD 2022\acmgd.dll`, project tham chiếu `accoremgd.dll`, `acdbmgd.dll`, `acmgd.dll` từ thư mục cài (Copy Local = false). AutoCAD cài chỗ khác: thêm `-p:AcadDir="D:\Autodesk\AutoCAD 2022"`.
+- Nếu không có AutoCAD (máy build/CI), project tự dùng package NuGet chính thức `AutoCAD.NET 24.1.51000` (= AutoCAD 2022) làm reference assemblies. Ép chế độ: `-p:AcadRefSource=Install` hoặc `-p:AcadRefSource=NuGet`.
+- Không phụ thuộc Newtonsoft.Json (tránh xung đột phiên bản trong acad.exe): plugin có bộ JSON riêng.
+
+Unit test phần lõi (JSON, kiểm tra tham số) chạy được trên mọi OS:
+
+```bash
+dotnet test plugin/ClaudeCAD.Core.Tests
+```
+
+## 3. Chạy thử khi phát triển (NETLOAD)
+
+1. Build sidecar (`npm run build`) và plugin như trên.
+2. Mở AutoCAD 2022, một bản vẽ trắng (acadiso.dwt).
+3. Gõ `NETLOAD`, chọn `plugin\ClaudeCAD.Plugin\bin\Release\ClaudeCAD.Plugin.dll`. (Nếu AutoCAD hỏi về file không đáng tin cậy: chọn *Load*; hoặc thêm thư mục vào `TRUSTEDPATHS`.)
+4. Gõ `CLAUDECHAT` → palette ClaudeCAD hiện ra, dòng trạng thái chuyển "Đã kết nối · claude-opus-5-5 · Claude login" sau vài giây ở lượt chat đầu.
+
+Plugin tự tìm `agent\dist\index.js` và `skills\` bằng cách đi ngược từ thư mục dll lên (layout repo), hoặc cạnh dll (layout bundle). Ghi đè bằng biến môi trường:
+
+| Biến | Ý nghĩa |
+| --- | --- |
+| `CLAUDECAD_AGENT_DIR` | thư mục `agent` (chứa `dist\index.js`) |
+| `CLAUDECAD_SKILLS_DIR` | thư mục skill |
+| `CLAUDECAD_NODE` | đường dẫn `node.exe` |
+| `CLAUDECAD_MODEL` | model (mặc định `claude-opus-5-5`, dự phòng `claude-sonnet-5-5` qua `CLAUDECAD_FALLBACK_MODEL`) |
+| `CLAUDECAD_TOOL_TIMEOUT_MS` | timeout mỗi tool call (mặc định 30000) |
+
+Lệnh AutoCAD:
+
+| Lệnh | Tác dụng |
+| --- | --- |
+| `CLAUDECHAT` | mở palette chat |
+| `CLAUDECHATRESTART` | khởi động lại sidecar (khi báo lỗi liên tục) |
+| `CLAUDECHATLOG` | mở thư mục log `%LocalAppData%\ClaudeCAD\logs` |
+
+Palette: Enter gửi, Shift+Enter xuống dòng, **Stop** hủy lượt đang chạy, **New** tạo phiên chat mới. Sau mỗi lượt, gõ `U` một lần trong AutoCAD là hoàn tác toàn bộ thay đổi của lượt đó.
+
+## 4. Chạy thử theo từng phase
+
+Ghi kết quả vào [`docs/test-log.md`](docs/test-log.md).
+
+### Phase 1a — khung xương
+
+- NETLOAD + `CLAUDECHAT`: palette hiện, không lỗi trên command line.
+- Gõ "chào Claude, cậu là ai?" → chữ trả lời chạy dần (stream) trong palette.
+- Gõ "kiểm tra kết nối với plugin" → Claude gọi tool `ping`, dòng trạng thái hiện "Kiểm tra kết nối plugin", câu trả lời có phiên bản AutoCAD + tên bản vẽ (IPC hai chiều).
+- Bấm Stop giữa lúc Claude đang viết dài → lượt dừng, nút Gửi bật lại.
+- Mở Task Manager, kill tiến trình `node.exe` của ClaudeCAD → palette báo mất kết nối, tự khởi động lại (tối đa 3 lần liên tiếp), chat tiếp được.
+
+## 5. Đóng gói bundle (autoloader)
+
+Xem [`bundle/README.md`](bundle/README.md) (thêm ở phase sau): tạo `ClaudeCAD.bundle` đặt vào `%AppData%\Autodesk\ApplicationPlugins` để AutoCAD tự nạp, không cần NETLOAD.
+
+## 6. Log và gỡ lỗi
+
+- Plugin: `%LocalAppData%\ClaudeCAD\logs\claudecad-YYYYMMDD.log` (mọi request/response IPC — cắt ngắn tham số dài — và exception kèm stack trace).
+- Sidecar: `%LocalAppData%\ClaudeCAD\logs\sidecar-YYYYMMDD.log`.
+- Phiên Claude (transcript) nằm trong `%LocalAppData%\ClaudeCAD\workspace` (thư mục làm việc của sidecar).
