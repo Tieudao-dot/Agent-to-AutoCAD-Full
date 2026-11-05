@@ -81,6 +81,7 @@ Trạng thái: ⬜ chưa chạy · ✅ đạt · ❌ không đạt · ⚠️ đ�
 | 2026-11-05 | `dotnet build` plugin net48 với reference AutoCAD.NET 24.1.51000 | ✅ 0 warning |
 | 2026-11-05 | `dotnet test plugin/ClaudeCAD.Core.Tests` — JsonCodec, Params | ✅ 16/16 |
 | 2026-11-05 | Phase 1b: `npm test` 38/38 (thêm: danh mục tool TS khớp handler C#, mọi schema chuyển được sang JSON Schema, schema nhận ví dụ spec, giới hạn 500 call/batch) | ✅ |
+| 2026-11-05 | **CI GitHub Actions `windows-latest`** (run 3–5, commit 3b87661): `npm ci` + `npm test` 58/58 với **named pipe Windows thật** (gồm tiến trình sidecar nối pipe), `dotnet test` lõi, build plugin net48 + net8.0-windows, make-bundle (node_modules win32-x64) + zip + latest.json, Inno Setup → `ClaudeCAD-Setup-0.3.0.exe`, upload artifact | ✅ |
 | 2026-11-05 | Phase 3: `npm test` 58/58 (thêm: phiên bản thống nhất 4 nơi, manifest đúng dll theo series); `dotnet test` 43/43 (thêm UpdateLogic); build **net48 + net8.0-windows** (AutoCAD.NET 24.1.51000 và 25.0.1) 0 warning; `make-bundle --zip` tạo bundle 2 dll + zip + latest.json | ✅ |
 | 2026-11-05 | Phase 2: 89 tool; `npm test` 56/56 (danh mục khớp handler C#); `dotnet test` 35/35 (thêm ExtensionTarget); build plugin 0 warning | ✅ |
 | 2026-11-05 | Phase 1e: `npm test` 56/56 (thêm: 3 skill đúng chuẩn Agent Skills, có "Quy trình chuẩn bị", chỉ nhắc tool có thật, JSON ví dụ hợp lệ; system prompt đủ 10 quy tắc) | ✅ |

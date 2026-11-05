@@ -83,6 +83,6 @@ Cần test trên AutoCAD: mục "Phase 2" trong `docs/test-log.md`.
 - CI GitHub Actions trên Windows: test sidecar với named pipe thật, test lõi C#, build cả hai target, bundle + zip + Setup.exe + latest.json; tag `v*` → GitHub Release.
 - Phiên bản 0.3.0 thống nhất (có test).
 
-Cloud: `npm test` 58/58, `dotnet test` 43/43, build hai target ✅, bundle + zip ✅.
+Cloud: `npm test` 58/58, `dotnet test` 43/43, build hai target ✅, bundle + zip ✅. **CI Windows xanh**: test IPC với named pipe Windows thật, build hai target, Setup.exe; artifact `ClaudeCAD-0.3.0` trên tab Actions của PR.
 
 Cần test: mục "Phase 3" trong `docs/test-log.md` (installer, AutoCAD 2023/2024/2025, luồng cập nhật).
