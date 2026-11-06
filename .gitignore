@@ -14,3 +14,4 @@ bundle/out/
 *.zip
 agent/dist-test/
 tmp-log-*/
+skills/skills.json

@@ -32,7 +32,8 @@ namespace ClaudeCAD.Plugin.Core
                 case "ve-kien-truc": return "Kiến trúc";
                 case "ve-mep": return "Điện nước";
                 case "ve-ha-tang": return "Hạ tầng";
-                default: return "Tự động";
+                case "": case null: return "Tự động";
+                default: return s;
             }
         }
 
@@ -73,7 +74,7 @@ namespace ClaudeCAD.Plugin.Core
             var s = new PaletteSettings();
             string Str(string k, string def) => d.TryGetValue(k, out var v) && v is string x ? x : def;
             s.Standard = Str("standard", "");
-            if (!Standards.Contains(s.Standard)) s.Standard = "";
+            if (s.Standard.Length > 0 && !SkillStore.IsValidName(s.Standard)) s.Standard = ""; // any added skill
             s.Scale = Str("scale", "");
             s.Model = Str("model", "");
             s.Effort = Str("effort", "");

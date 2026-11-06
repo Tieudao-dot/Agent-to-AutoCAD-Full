@@ -121,7 +121,7 @@ namespace ClaudeCAD.Core.Tests
             Assert.Equal(15, back.FontSize);
             Assert.False(back.Notify);
             Assert.Equal(new List<string> { "b", "a" }, back.History);
-            var bad = PaletteSettings.FromJson("{\"standard\":\"hack\",\"effort\":\"insane\",\"font_size\":99}");
+            var bad = PaletteSettings.FromJson("{\"standard\":\"Hack!\",\"effort\":\"insane\",\"font_size\":99}");
             Assert.Equal("", bad.Standard);
             Assert.Equal("", bad.Effort);
             Assert.Equal(22, bad.FontSize);
