@@ -29,6 +29,8 @@ namespace ClaudeCAD.Plugin.Core
         public List<string> Handles = new List<string>();
         public int ImageCount;
         public int SelectionCount;
+        /// <summary>Net drawing changes of the turn (assistant entries; null = none).</summary>
+        public ChangeSummary Changes;
     }
 
     /// <summary>
@@ -42,6 +44,10 @@ namespace ClaudeCAD.Plugin.Core
         public string DrawingKey = "";
         public string DrawingName = "";
         public string SessionId;
+        /// <summary>"Chỉ xem": Claude may read but not change this drawing.</summary>
+        public bool ReadOnly;
+        /// <summary>Notes of this drawing sent with every message (project-folder notes live next to the DWG).</summary>
+        public string Notes = "";
         public List<ChatEntry> Entries = new List<ChatEntry>();
 
         public static string KeyFor(string drawingPath)
@@ -76,6 +82,8 @@ namespace ClaudeCAD.Plugin.Core
                 ["drawing_key"] = DrawingKey,
                 ["drawing_name"] = DrawingName,
                 ["session_id"] = SessionId,
+                ["read_only"] = ReadOnly,
+                ["notes"] = Notes ?? "",
                 ["entries"] = Entries.Select(e => (object)new Dictionary<string, object>
                 {
                     ["role"] = e.Role,
@@ -84,6 +92,7 @@ namespace ClaudeCAD.Plugin.Core
                     ["images"] = e.ImageCount,
                     ["selection"] = e.SelectionCount,
                     ["handles"] = e.Handles.Cast<object>().ToList(),
+                    ["changes"] = e.Changes?.ToDict(),
                     ["tools"] = e.Tools.Select(t => (object)new Dictionary<string, object>
                     {
                         ["tool"] = t.Tool, ["state"] = t.State, ["ms"] = t.Ms, ["summary"] = t.Summary, ["error"] = t.Error,
@@ -103,6 +112,8 @@ namespace ClaudeCAD.Plugin.Core
                 DrawingKey = S(d, "drawing_key") ?? "",
                 DrawingName = S(d, "drawing_name") ?? "",
                 SessionId = S(d, "session_id"),
+                ReadOnly = d.TryGetValue("read_only", out var ro) && ro is bool rb && rb,
+                Notes = S(d, "notes") ?? "",
             };
             if (d.TryGetValue("entries", out var ev) && ev is List<object> list)
             {
@@ -117,6 +128,7 @@ namespace ClaudeCAD.Plugin.Core
                     };
                     if (DateTime.TryParse(S(o, "time"), CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out var tm)) e.Time = tm;
                     if (o.TryGetValue("handles", out var hv) && hv is List<object> hl) e.Handles = hl.OfType<string>().ToList();
+                    if (o.TryGetValue("changes", out var cv) && cv is Dictionary<string, object> cd) e.Changes = ChangeSummary.FromDict(cd);
                     if (o.TryGetValue("tools", out var tv) && tv is List<object> tl)
                         foreach (var to in tl.OfType<Dictionary<string, object>>())
                             e.Tools.Add(new ToolLogEntry { Tool = S(to, "tool"), State = S(to, "state"), Ms = (long)N(to, "ms"), Summary = S(to, "summary"), Error = S(to, "error") });
@@ -142,6 +154,11 @@ namespace ClaudeCAD.Plugin.Core
                 if (e.ImageCount > 0) sb.AppendLine($"_Kèm {e.ImageCount} ảnh_").AppendLine();
                 sb.AppendLine(e.Text);
                 sb.AppendLine();
+                if (e.Changes != null && !e.Changes.IsEmpty)
+                {
+                    sb.AppendLine("_" + e.Changes.Headline + "_ — " + string.Join(", ", e.Changes.Rows.Select(r => $"{ChangeSummary.KindLabel(r.Kind)} {r.Count} trên {r.Layer}")));
+                    sb.AppendLine();
+                }
                 if (e.Tools.Count > 0)
                 {
                     sb.AppendLine("<details><summary>Thao tác (" + e.Tools.Count + ")</summary>");

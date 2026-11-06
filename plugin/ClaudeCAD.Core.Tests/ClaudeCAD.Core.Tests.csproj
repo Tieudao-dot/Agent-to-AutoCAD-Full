@@ -21,6 +21,8 @@
     <Compile Include="..\ClaudeCAD.Plugin\Core\PaletteSettings.cs" Link="Core\PaletteSettings.cs" />
     <Compile Include="..\ClaudeCAD.Plugin\Core\QuickTemplates.cs" Link="Core\QuickTemplates.cs" />
     <Compile Include="..\ClaudeCAD.Plugin\Core\SkillStore.cs" Link="Core\SkillStore.cs" />
+    <Compile Include="..\ClaudeCAD.Plugin\Core\Macros.cs" Link="Core\Macros.cs" />
+    <Compile Include="..\ClaudeCAD.Plugin\Core\ChatExtras.cs" Link="Core\ChatExtras.cs" />
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.11.1" />

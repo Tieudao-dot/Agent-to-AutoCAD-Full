@@ -18,6 +18,10 @@ namespace ClaudeCAD.Plugin.Core
         public double FontSize = 13;        // feature 19
         public string Theme = "auto";       // auto | dark | light
         public bool Notify = true;          // feature 15
+        public bool VisualCheck = true;     // Claude looks at the drawing (capture_view) after big drawing tasks
+        public bool PlanFirst = true;       // plan card ("Làm" / "Sửa kế hoạch") before big multi-step tasks
+        public bool Suggestions = true;     // next-step buttons after each reply
+        public bool Hotkey = true;          // Ctrl+Shift+Space opens the palette
         public List<string> History = new List<string>(); // feature 10, newest last
 
         public static readonly string[] Standards = { "", "ve-kien-truc", "ve-mep", "ve-ha-tang" };
@@ -65,6 +69,7 @@ namespace ClaudeCAD.Plugin.Core
         {
             ["standard"] = Standard, ["scale"] = Scale, ["model"] = Model, ["effort"] = Effort,
             ["font_size"] = FontSize, ["theme"] = Theme, ["notify"] = Notify,
+            ["visual_check"] = VisualCheck, ["plan_first"] = PlanFirst, ["suggestions"] = Suggestions, ["hotkey"] = Hotkey,
             ["history"] = History.Cast<object>().ToList(),
         });
 
@@ -81,7 +86,12 @@ namespace ClaudeCAD.Plugin.Core
             if (!Efforts.Contains(s.Effort)) s.Effort = "";
             s.Theme = Str("theme", "auto");
             if (d.TryGetValue("font_size", out var fs) && fs is double f) s.FontSize = s.ClampFont(f);
-            if (d.TryGetValue("notify", out var n) && n is bool b) s.Notify = b;
+            bool Bool(string k, bool def) => d.TryGetValue(k, out var v) && v is bool x ? x : def;
+            s.Notify = Bool("notify", true);
+            s.VisualCheck = Bool("visual_check", true);
+            s.PlanFirst = Bool("plan_first", true);
+            s.Suggestions = Bool("suggestions", true);
+            s.Hotkey = Bool("hotkey", true);
             if (d.TryGetValue("history", out var h) && h is List<object> hl) s.History = hl.OfType<string>().Take(MaxHistory).ToList();
             return s;
         }

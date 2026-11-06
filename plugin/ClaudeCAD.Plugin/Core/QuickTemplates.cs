@@ -66,6 +66,52 @@ namespace ClaudeCAD.Plugin.Core
             return Merge(shipped, user);
         }
 
+        /// <summary>
+        /// Adds (or replaces, same name) a template in the user's templates.json ("Lưu thành mẫu lệnh").
+        /// Returns the template actually stored (name slugified, unique).
+        /// </summary>
+        public static QuickTemplate SaveUser(string userFile, string title, string text, bool replace = false)
+        {
+            if (string.IsNullOrWhiteSpace(text)) throw new ArgumentException("Mẫu lệnh trống.");
+            var list = new List<QuickTemplate>();
+            if (File.Exists(userFile)) list = Parse(File.ReadAllText(userFile, Encoding.UTF8));
+            var baseName = SkillStore.Slugify(string.IsNullOrWhiteSpace(title) ? text : title);
+            if (baseName.Length == 0) baseName = "mau";
+            if (baseName.Length > 30) baseName = baseName.Substring(0, 30).TrimEnd('-');
+            var name = baseName;
+            if (!replace)
+                for (int i = 2; list.Any(t => t.Name.Equals(name, StringComparison.OrdinalIgnoreCase)); i++) name = baseName + "-" + i;
+            list.RemoveAll(t => t.Name.Equals(name, StringComparison.OrdinalIgnoreCase));
+            var tpl = new QuickTemplate { Name = name, Title = string.IsNullOrWhiteSpace(title) ? Shorten(text, 60) : title.Trim(), Text = text.Trim() };
+            list.Add(tpl);
+            Directory.CreateDirectory(Path.GetDirectoryName(userFile));
+            var json = JsonCodec.Serialize(new Dictionary<string, object>
+            {
+                ["templates"] = list.Select(t => (object)new Dictionary<string, object> { ["name"] = t.Name, ["title"] = t.Title, ["text"] = t.Text }).ToList(),
+            });
+            File.WriteAllText(userFile, json, new UTF8Encoding(false));
+            return tpl;
+        }
+
+        public static bool DeleteUser(string userFile, string name)
+        {
+            if (!File.Exists(userFile)) return false;
+            var list = Parse(File.ReadAllText(userFile, Encoding.UTF8));
+            if (list.RemoveAll(t => t.Name.Equals(name, StringComparison.OrdinalIgnoreCase)) == 0) return false;
+            var json = JsonCodec.Serialize(new Dictionary<string, object>
+            {
+                ["templates"] = list.Select(t => (object)new Dictionary<string, object> { ["name"] = t.Name, ["title"] = t.Title, ["text"] = t.Text }).ToList(),
+            });
+            File.WriteAllText(userFile, json, new UTF8Encoding(false));
+            return true;
+        }
+
+        private static string Shorten(string s, int n)
+        {
+            s = s.Replace("\r", " ").Replace("\n", " ").Trim();
+            return s.Length <= n ? s : s.Substring(0, n - 1) + "…";
+        }
+
         public static string UserFile =>
             Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "ClaudeCAD", "templates.json");
 

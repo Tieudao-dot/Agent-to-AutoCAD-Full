@@ -14,6 +14,7 @@ namespace ClaudeCAD.Plugin.Core
         public const string Timeout = "TIMEOUT";
         public const string TooManyEntities = "TOO_MANY_ENTITIES";
         public const string UnknownTool = "UNKNOWN_TOOL";
+        public const string ReadOnly = "READ_ONLY";
     }
 
     /// <summary>
