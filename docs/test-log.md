@@ -112,6 +112,11 @@ Trạng thái: ⬜ chưa chạy · ✅ đạt · ❌ không đạt · ⚠️ đ�
 | V7-4 | Bật ⚙ **Lưu biên bản cạnh bản vẽ** → có thư mục ẩn `.claudecad`; máy khác có cài plugin mở cùng thư mục, sửa, chat → được báo | ⬜ chưa chạy | |
 | V7-5 | Chat sửa bản vẽ → **Phiên bản (1)**; trong 30 phút chat tiếp không tạo bản mới; sau 30 phút có bản mới; quá 10 bản thì bản cũ nhất bị xóa | ⬜ chưa chạy | |
 | V7-6 | **Phiên bản ▸ Xem** → tab chỉ xem đúng trạng thái trước lượt đó, thanh "Đang xem phiên bản…", ô chat khóa; **Đóng — về bản hiện tại** đóng tab, về đúng bản vẽ, lịch sử chat không đổi | ⬜ chưa chạy | |
+| I-1 | Tải `ClaudeCAD-Setup.exe` từ link releases/latest, chạy trên máy **chưa có Node.js và Claude Code** → cài xong không hỏi gì thêm (ngoài SmartScreen) | ⬜ chưa chạy | |
+| I-2 | Mở AutoCAD lần đầu sau khi cài → không có cảnh báo SECURELOAD; khung chat tự mở với thẻ **Bắt đầu** (Node đi kèm ✓, trợ lý ✓, tài khoản ✗) | ⬜ chưa chạy | |
+| I-3 | Bấm **Đăng nhập Claude** → cửa sổ đen + trình duyệt đăng nhập Pro/Max → "✓ Đã đăng nhập Claude", gửi tin nhắn được ngay | ⬜ chưa chạy | |
+| I-4 | Chưa đăng nhập mà gửi tin → thẻ lỗi có nút **Đăng nhập Claude** (không còn hướng dẫn terminal) | ⬜ chưa chạy | |
+| I-5 | Mở AutoCAD lần sau → thẻ Bắt đầu không tự hiện lại; ⚙ ▸ Hướng dẫn bắt đầu mở lại được | ⬜ chưa chạy | |
 | ST-1 | Gõ **CLAUDECHATSELFTEST** → mở bản vẽ tạm, chạy các bước, đóng lại, về bản vẽ của cậu; Notepad mở báo cáo — gửi file này cho người phát triển | ⬜ chưa chạy | |
 | L-1 | **Chọn đối tượng** quét qua tường, cửa, chữ → chip hiện đúng các layer và số lượng; bỏ tick A-TEXT → "Kèm x/y đối tượng"; Claude chỉ sửa phần còn tick | ⬜ chưa chạy | |
 | L-2 | Nút **Layer** → danh sách đúng (màu, số đối tượng, khóa/tắt), lọc theo tên, tick 2 layer → **Dùng layer đã chọn** → chip "Layer: …" | ⬜ chưa chạy | |

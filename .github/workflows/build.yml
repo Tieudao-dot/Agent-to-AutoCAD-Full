@@ -63,11 +63,18 @@ jobs:
           $v = (Get-Content agent/package.json | ConvertFrom-Json).version
           "version=$v" >> $env:GITHUB_OUTPUT
 
+      - name: Node.js for Windows to bundle (users do not install Node)
+        run: |
+          $nv = 'v22.12.0'
+          Invoke-WebRequest "https://nodejs.org/dist/$nv/node-$nv-win-x64.zip" -OutFile node.zip
+          Expand-Archive node.zip -DestinationPath node-dist
+          "NODE_DIR=$(Resolve-Path "node-dist/node-$nv-win-x64")" >> $env:GITHUB_ENV
+
       - name: Bundle + zip + update manifest
         run: |
           $v = '${{ steps.ver.outputs.version }}'
           $url = "https://github.com/${{ github.repository }}/releases/download/v$v/ClaudeCAD-$v.zip"
-          node bundle/make-bundle.mjs --zip --download-url $url --update-url "https://github.com/${{ github.repository }}/releases/latest/download/latest.json"
+          node bundle/make-bundle.mjs --zip --node-dir $env:NODE_DIR --download-url $url --update-url "https://github.com/${{ github.repository }}/releases/latest/download/latest.json"
 
       - name: Setup.exe (Inno Setup)
         run: |
@@ -80,7 +87,7 @@ jobs:
           name: ClaudeCAD-${{ steps.ver.outputs.version }}
           path: |
             bundle/out/ClaudeCAD-*.zip
-            bundle/out/ClaudeCAD-Setup-*.exe
+            bundle/out/ClaudeCAD-Setup.exe
             bundle/out/latest.json
             bundle/out/install.ps1
           if-no-files-found: error
@@ -91,6 +98,6 @@ jobs:
         with:
           files: |
             bundle/out/ClaudeCAD-*.zip
-            bundle/out/ClaudeCAD-Setup-*.exe
+            bundle/out/ClaudeCAD-Setup.exe
             bundle/out/latest.json
             bundle/out/install.ps1

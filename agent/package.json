@@ -1,6 +1,6 @@
 {
   "name": "claudecad-agent",
-  "version": "0.9.0",
+  "version": "0.9.1",
   "private": true,
   "description": "ClaudeCAD sidecar: runs Claude (Agent SDK) and forwards CAD tool calls to the AutoCAD plugin over a named pipe.",
   "type": "module",

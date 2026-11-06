@@ -145,3 +145,13 @@ Cloud: `dotnet test` 98/98, `npm test` 93/93, build plugin net48 + net8 ✅. C�
 - Lượt review độc lập thứ ba: 14 lỗi (4 lớn, 10 nhỏ) đã sửa — xem `docs/development.md`.
 
 Cloud: `dotnet test` 102/102, `npm test` 95/95, build plugin net48 + net8 ✅.
+
+## v0.9.1 — cài đặt 3 bước ✅ code xong
+
+- **A** Bộ cài kèm sẵn Node.js (`Contents\node\node.exe`, CI tải Node 22 LTS cho Windows) — không cần cài Node.
+- **B** Nút **Đăng nhập Claude** (thẻ lỗi khi chưa đăng nhập, thẻ Bắt đầu, ⚙): chạy `claude auth login` bằng Claude Code có sẵn trong Agent SDK, xong thì khởi động lại trợ lý — không cần cài Claude Code hay mở terminal. Sidecar gửi `code` trong `agent_error`.
+- **C** Bộ cài (và plugin khi nạp) thêm `…\ClaudeCAD.bundle\Contents\...` vào `TRUSTEDPATHS` của AutoCAD 2022–2025 — hết cảnh báo SECURELOAD.
+- **D** Lần đầu mở AutoCAD sau khi cài: khung chat tự mở với thẻ **Bắt đầu** (Node, trợ lý, tài khoản, skill; nút Đăng nhập / Chạy tự kiểm tra).
+- **E** Tên bộ cài cố định `ClaudeCAD-Setup.exe` → link `releases/latest/download/ClaudeCAD-Setup.exe`; tag `v*` tạo GitHub Release (repo công khai: tải và tự cập nhật không cần đăng nhập GitHub).
+
+Cần test trên máy thật: I-1 … I-5 trong `docs/test-log.md`.

@@ -131,6 +131,8 @@ export interface SkillDraftMessage {
 export interface AgentErrorMessage {
   type: 'agent_error';
   message: string;
+  /** SDK error kind when known, e.g. "authentication_failed" (the palette then offers "Đăng nhập Claude"). */
+  code?: string;
 }
 
 /** Extension: sidecar is connected and the agent session is configured. */

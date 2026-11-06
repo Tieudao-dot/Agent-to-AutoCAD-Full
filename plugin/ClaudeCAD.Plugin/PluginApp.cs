@@ -41,6 +41,8 @@ namespace ClaudeCAD.Plugin
                 // manual edits are tracked from AutoCAD start, palette open or not
                 DrawingHistory.Instance.NextToDrawing = settings.SnapshotNextToDrawing;
                 DrawingHistory.Instance.Start();
+                TrustBundleFolder();
+                ScheduleFirstStart();
                 AcApp.PreTranslateMessage += OnPreTranslateMessage;
                 var ed = AcApp.DocumentManager.MdiActiveDocument?.Editor;
                 ed?.WriteMessage("\nClaudeCAD đã nạp. Gõ CLAUDECHAT để mở khung chat.\n");
@@ -52,6 +54,60 @@ namespace ClaudeCAD.Plugin
         }
 
         public void Terminate() => Shutdown();
+
+        /// <summary>
+        /// Adds the bundle's Contents folder to TRUSTEDPATHS (the installer does it too), so AutoCAD stops asking
+        /// whether to load the plugin. Only for an installed bundle (ApplicationPlugins), never for a dev build.
+        /// </summary>
+        private static void TrustBundleFolder()
+        {
+            try
+            {
+                var contents = Sidecar.PluginPaths.ContentsDirectory;
+                if (contents == null || contents.IndexOf("ApplicationPlugins", StringComparison.OrdinalIgnoreCase) < 0) return;
+                var entry = System.IO.Path.Combine(contents, "...");
+                var current = Convert.ToString(AcApp.GetSystemVariable("TRUSTEDPATHS")) ?? "";
+                foreach (var part in current.Split(';'))
+                    if (string.Equals(part.Trim().TrimEnd('\\'), entry, StringComparison.OrdinalIgnoreCase)
+                        || string.Equals(part.Trim().TrimEnd('\\'), contents.TrimEnd('\\'), StringComparison.OrdinalIgnoreCase)) return;
+                AcApp.SetSystemVariable("TRUSTEDPATHS", string.IsNullOrWhiteSpace(current) ? entry : current.TrimEnd(';') + ";" + entry);
+                Logger.Info("TRUSTEDPATHS += " + entry);
+            }
+            catch (System.Exception ex)
+            {
+                Logger.Warn("TRUSTEDPATHS not updated: " + ex.Message);
+            }
+        }
+
+        private static string FirstStartFlag =>
+            System.IO.Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "ClaudeCAD", "first-start.done");
+
+        /// <summary>First AutoCAD start after installing: open the palette with the "Bắt đầu" card once AutoCAD is idle.</summary>
+        private static void ScheduleFirstStart()
+        {
+            try
+            {
+                if (System.IO.File.Exists(FirstStartFlag) || Sidecar.PluginPaths.ContentsDirectory == null) return;
+                EventHandler onIdle = null;
+                onIdle = (s, e) =>
+                {
+                    if (AcApp.DocumentManager.MdiActiveDocument == null) return; // wait for a drawing (start tab)
+                    AcApp.Idle -= onIdle;
+                    try
+                    {
+                        System.IO.Directory.CreateDirectory(System.IO.Path.GetDirectoryName(FirstStartFlag));
+                        System.IO.File.WriteAllText(FirstStartFlag, DateTime.Now.ToString("o"));
+                        Controller.ShowWelcome();
+                    }
+                    catch (System.Exception ex) { Logger.Error("first start failed", ex); }
+                };
+                AcApp.Idle += onIdle;
+            }
+            catch (System.Exception ex)
+            {
+                Logger.Warn("first start not scheduled: " + ex.Message);
+            }
+        }
 
         private const int WM_KEYDOWN = 0x0100;
         private const int VK_SPACE = 0x20;

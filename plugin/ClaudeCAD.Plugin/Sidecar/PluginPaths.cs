@@ -55,6 +55,52 @@ namespace ClaudeCAD.Plugin.Sidecar
             return null;
         }
 
+        /// <summary>The bundle's Contents folder (null in a dev layout without agent\ next to the dll).</summary>
+        public static string ContentsDirectory
+        {
+            get
+            {
+                foreach (var dir in new[] { DllDirectory, Path.GetDirectoryName(DllDirectory) })
+                    if (!string.IsNullOrEmpty(dir) && Directory.Exists(Path.Combine(dir, "agent")) && File.Exists(Path.Combine(dir, "ClaudeCAD.Plugin.dll"))) return dir;
+                return null;
+            }
+        }
+
+        /// <summary>
+        /// Claude Code shipped inside the Agent SDK (agent\node_modules\@anthropic-ai\claude-agent-sdk-win32-x64),
+        /// used for "Đăng nhập Claude" — no separate Claude Code install needed. Falls back to a claude on PATH.
+        /// </summary>
+        public static string ClaudeExecutable
+        {
+            get
+            {
+                var agent = AgentDirectory;
+                if (agent != null)
+                {
+                    var pkg = Path.Combine(agent, "node_modules", "@anthropic-ai", "claude-agent-sdk-win32-x64");
+                    foreach (var name in new[] { "claude.exe", "claude" })
+                    {
+                        var f = Path.Combine(pkg, name);
+                        if (File.Exists(f)) return f;
+                    }
+                }
+                var path = Environment.GetEnvironmentVariable("PATH") ?? "";
+                foreach (var p in path.Split(Path.PathSeparator).Where(s => !string.IsNullOrWhiteSpace(s)))
+                {
+                    foreach (var name in new[] { "claude.exe", "claude.cmd" })
+                    {
+                        try
+                        {
+                            var f = Path.Combine(p.Trim().Trim('"'), name);
+                            if (File.Exists(f)) return f;
+                        }
+                        catch (ArgumentException) { }
+                    }
+                }
+                return null;
+            }
+        }
+
         public static string NodeExecutable
         {
             get
@@ -62,8 +108,13 @@ namespace ClaudeCAD.Plugin.Sidecar
                 var env = Environment.GetEnvironmentVariable("CLAUDECAD_NODE");
                 if (!string.IsNullOrWhiteSpace(env) && File.Exists(env)) return env;
 
-                var bundled = Path.Combine(DllDirectory, "node", "node.exe");
-                if (File.Exists(bundled)) return bundled;
+                // bundled with the installer: Contents\node\node.exe (the AutoCAD 2025 dll sits one level deeper, in Contents\2025)
+                foreach (var dir in new[] { DllDirectory, Path.GetDirectoryName(DllDirectory) })
+                {
+                    if (string.IsNullOrEmpty(dir)) continue;
+                    var bundled = Path.Combine(dir, "node", "node.exe");
+                    if (File.Exists(bundled)) return bundled;
+                }
 
                 var path = Environment.GetEnvironmentVariable("PATH") ?? "";
                 foreach (var p in path.Split(Path.PathSeparator).Where(s => !string.IsNullOrWhiteSpace(s)))
