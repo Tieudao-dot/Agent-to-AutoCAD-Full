@@ -126,6 +126,8 @@ export class AgentSession {
       // Only the ClaudeCAD skills — not whatever else is installed for Claude Code on this machine.
       skills: plugin ? plugin.skills.map((s) => `${SKILLS_PLUGIN_NAME}:${s}`) : [],
       includePartialMessages: true,
+      // predicted next prompt after each turn → a next-step button (nearly free: rides the prompt cache)
+      promptSuggestions: true,
       persistSession: true,
       stderr: (data) => this.cfg.log(`[claude] ${data.trimEnd()}`),
       env: { ...process.env, CLAUDE_AGENT_SDK_CLIENT_APP: `claudecad/${this.cfg.version}` },
@@ -350,6 +352,12 @@ export class AgentSession {
           this.cfg.emit({ type: 'agent_error', message: ERROR_TEXT[msg.error] ?? `Lỗi từ Claude: ${msg.error}` });
         }
         return;
+
+      case 'prompt_suggestion': {
+        const text = (msg as { suggestion?: string }).suggestion?.trim();
+        if (text) this.cfg.emit({ type: 'suggestions', items: [text], source: 'sdk' });
+        return;
+      }
 
       case 'rate_limit_event': {
         const i = msg.rate_limit_info;

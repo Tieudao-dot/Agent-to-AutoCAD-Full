@@ -1,11 +1,12 @@
 import { createSdkMcpServer } from '@anthropic-ai/claude-agent-sdk';
-import type { ConfirmRequestMessage } from '../ipc/protocol.js';
+import type { SidecarToPlugin } from '../ipc/protocol.js';
 import { interactionTools } from './interaction.js';
 import type { AnyTool, ToolBridge } from './common.js';
 import { advancedTools } from './advanced.js';
 import { annotationTools } from './annotation.js';
 import { batchTools } from './batch.js';
 import { blockTools } from './blocks.js';
+import { captureTools } from './capture.js';
 import { drawTools } from './draw.js';
 import { layerTools } from './layers.js';
 import { layoutTools } from './layouts.js';
@@ -29,17 +30,19 @@ export function buildTools(bridge: ToolBridge): AnyTool[] {
     ...blockTools(bridge),
     ...styleTools(bridge),
     ...viewTools(bridge),
+    ...captureTools(bridge),
     ...layoutTools(bridge),
     ...advancedTools(bridge),
     ...systemTools(bridge),
   ];
 }
 
-export function createCadServer(bridge: ToolBridge, version: string, showConfirm?: (req: ConfirmRequestMessage) => void) {
+/** emit: palette messages of the local tools (confirmation / plan / suggestion / skill draft cards). */
+export function createCadServer(bridge: ToolBridge, version: string, emit?: (msg: SidecarToPlugin) => void) {
   return createSdkMcpServer({
     name: MCP_SERVER_NAME,
     version,
-    tools: [...buildTools(bridge), ...(showConfirm ? interactionTools(showConfirm) : [])],
+    tools: [...buildTools(bridge), ...(emit ? interactionTools(emit) : [])],
   });
 }
 

@@ -102,6 +102,29 @@ export interface OptionsMessage {
   effort?: string;
 }
 
+/** Next-step buttons under the reply (suggest_next_steps tool, or the SDK's predicted next prompt). */
+export interface SuggestionsMessage {
+  type: 'suggestions';
+  items: string[];
+  source: 'tool' | 'sdk';
+}
+
+/** Plan card ("Làm" / "Sửa kế hoạch" / "Bỏ") before a big task. */
+export interface PlanRequestMessage {
+  type: 'plan_request';
+  id: string;
+  summary: string;
+  steps: string[];
+}
+
+/** A SKILL.md drafted by Claude from the conversation, for the user to review and add. */
+export interface SkillDraftMessage {
+  type: 'skill_draft';
+  name: string;
+  description: string;
+  content: string;
+}
+
 /** Extension: non-fatal error to show in the palette. */
 export interface AgentErrorMessage {
   type: 'agent_error';
@@ -133,7 +156,10 @@ export type SidecarToPlugin =
   | SessionInfoMessage
   | RateLimitMessage
   | OptionsMessage
-  | SkillsReloadedMessage;
+  | SkillsReloadedMessage
+  | SuggestionsMessage
+  | PlanRequestMessage
+  | SkillDraftMessage;
 
 // ---------------------------------------------------------------- plugin -> sidecar
 
@@ -154,6 +180,16 @@ export interface UserContext {
   standard?: string;
   /** Print scale chosen in the palette, e.g. "1:100". */
   scale?: string;
+  /** "Chỉ xem": the plugin refuses every write; Claude should only read and answer. */
+  read_only?: boolean;
+  /** Project / drawing notes the user wants applied to every request. */
+  notes?: string;
+  /** false = the user turned off visual self-checks (capture_view). */
+  visual_check?: boolean;
+  /** false = the user turned off plan cards before big tasks. */
+  plan_first?: boolean;
+  /** false = the user turned off next-step buttons. */
+  suggestions?: boolean;
 }
 
 export interface UserMessage {
@@ -167,6 +203,8 @@ export interface UserMessage {
   edited?: boolean;
   /** Sent by a confirmation card button. */
   confirm?: 'yes' | 'no';
+  /** Sent by the "Làm" button of a plan card. */
+  plan?: 'approved';
 }
 
 export interface SetOptionsMessage {
@@ -252,7 +290,12 @@ function parseContext(v: unknown): UserContext | undefined {
   const out: UserContext = {};
   if (typeof c.standard === 'string' && c.standard) out.standard = c.standard;
   if (typeof c.scale === 'string' && c.scale) out.scale = c.scale;
-  return out.standard || out.scale ? out : undefined;
+  if (c.read_only === true) out.read_only = true;
+  if (typeof c.notes === 'string' && c.notes.trim()) out.notes = c.notes.trim().slice(0, 9000);
+  if (c.visual_check === false) out.visual_check = false;
+  if (c.plan_first === false) out.plan_first = false;
+  if (c.suggestions === false) out.suggestions = false;
+  return Object.keys(out).length > 0 ? out : undefined;
 }
 
 // ---------------------------------------------------------------- encode / decode
@@ -299,6 +342,7 @@ export function parsePluginMessage(value: unknown): PluginToSidecar {
         ...(context ? { context } : {}),
         ...(m.edited === true ? { edited: true } : {}),
         ...(m.confirm === 'yes' || m.confirm === 'no' ? { confirm: m.confirm } : {}),
+        ...(m.plan === 'approved' ? { plan: 'approved' as const } : {}),
       };
     }
     case 'set_options':

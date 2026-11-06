@@ -25,6 +25,13 @@ export function contextPreamble(msg: UserMessage): string[] {
     lines.push(`[Chuẩn bản vẽ người dùng chọn: ${label} — load and follow the skill "${std}" for this request]`);
   }
   if (msg.context?.scale) lines.push(`[Tỷ lệ in người dùng chọn: ${msg.context.scale} — size text/dimensions for this scale]`);
+  if (msg.context?.read_only) {
+    lines.push('[CHỈ XEM: người dùng bật "Chỉ xem" cho bản vẽ này — only read, measure, look (capture_view) and answer; do not call tools that change the drawing]');
+  }
+  if (msg.context?.notes) lines.push(`[Ghi chú dự án của người dùng — always apply, they override generic defaults:\n${msg.context.notes}\n]`);
+  if (msg.context?.visual_check === false) lines.push('[Người dùng tắt tự kiểm tra bằng ảnh: call capture_view only when asked]');
+  if (msg.context?.plan_first === false) lines.push('[Người dùng tắt thẻ kế hoạch: do not call propose_plan, just do the task]');
+  if (msg.context?.suggestions === false) lines.push('[Người dùng tắt nút gợi ý: do not call suggest_next_steps]');
   const sel = msg.attachments?.selection;
   if (sel && sel.handles.length > 0) {
     const n = sel.count ?? sel.handles.length;
@@ -40,6 +47,7 @@ export function contextPreamble(msg: UserMessage): string[] {
   }
   if (msg.confirm === 'yes') lines.push('[Người dùng bấm nút Đồng ý trên thẻ xác nhận]');
   if (msg.confirm === 'no') lines.push('[Người dùng bấm nút Hủy trên thẻ xác nhận: không thực hiện thao tác đó]');
+  if (msg.plan === 'approved') lines.push('[Người dùng bấm "Làm" trên thẻ kế hoạch: execute the plan you proposed exactly, without asking again]');
   return lines;
 }
 
@@ -86,6 +94,7 @@ export function summarizeResult(tool: string, result: unknown): { summary?: stri
   else if (typeof r.total === 'number') parts.push(`${r.total} kết quả`);
   else if (typeof r.count === 'number') parts.push(`${r.count}`);
   if (typeof r.area_m2 === 'number') parts.push(`${r.area_m2} m²`);
+  if (typeof r.width === 'number' && typeof r.height === 'number' && tool === 'capture_view') parts.push(`ảnh ${r.width}×${r.height}`);
   if (typeof r.distance === 'number') parts.push(`${r.distance} mm`);
   return { ...(parts.length ? { summary: parts.join(', ') } : {}), ...(handles?.length ? { handles } : {}) };
 }

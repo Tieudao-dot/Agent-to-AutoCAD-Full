@@ -64,6 +64,13 @@ export class FakeDrawing {
     switch (tool) {
       case 'ping':
         return { pong: true, acad_version: '24.1 (fake)', drawing: 'dry-run.dwg' };
+      case 'capture_view':
+        // 1×1 grey PNG: the dry run has no graphics
+        return {
+          image_png_base64: 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mN8/5+hHgAHggJ/PchI7wAAAABJRU5ErkJggg==',
+          width: 1, height: 1, region: 'view', min: [0, 0, 0], max: [1000, 1000, 0], mm_per_pixel: 1000,
+          note: 'dry run: no real picture',
+        };
       case 'get_drawing_info':
         return {
           drawing: 'dry-run.dwg', units: 'millimeters', insunits: 4, entity_count: this.entities.length,
