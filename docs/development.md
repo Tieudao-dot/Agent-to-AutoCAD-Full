@@ -100,3 +100,9 @@ Review riêng phần palette mới tìm và đã sửa 17 lỗi, các lỗi chí
 12. Ánh xạ handle khi chạy macro đổi cả chữ / tên layer trông giống handle → chỉ đổi trong tham số handle.
 13. Mô tả skill do Claude soạn có ": " làm hỏng YAML → mô tả đặt trong ngoặc kép.
 14. Mẫu lệnh tự lưu trùng tên mẫu có sẵn che mất mẫu có sẵn; file mẫu hỏng làm mọi lần lưu lỗi → tránh tên mẫu có sẵn, file hỏng được giữ thành `.bak`.
+
+## Phát hành
+
+- Mỗi thay đổi cho người dùng: nâng số phiên bản ở 5 nơi (agent/package.json + package-lock, agent/src/index.ts `VERSION`, plugin csproj `<Version>`, bundle/PackageContents.xml, installer/ClaudeCAD.iss — test `version.test.ts` kiểm tra), thêm một dòng vào bảng lịch sử trong `bo-cai/README.md`, merge vào `main`.
+- CI trên `main` thấy phiên bản chưa có bản phát hành → tự build và đăng GitHub Release `v<version>` (Setup.exe tên cố định, zip, latest.json). Link `releases/latest/download/ClaudeCAD-Setup.exe` và cập nhật tự động dùng bản đó.
+- Phát hành tay từ một nhánh: chạy workflow `build` (Run workflow) với `release` = true.
