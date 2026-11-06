@@ -22,6 +22,13 @@ Skill là chuẩn vẽ của cậu (bảng layer, chiều cao chữ, quy cách, 
 3. Khung chat báo **"✓ Đã thêm skill ve-ket-cau"** (hoặc lý do không thêm được). Skill bật ngay; Claude dùng từ tin nhắn tiếp theo mà vẫn nhớ cuộc chat.
 4. Trùng tên với skill đã có → plugin hỏi có thay không. Chọn lại một file đã nằm trong thư mục plugin → chỉ bật lại skill đó.
 
+## Để Claude soạn skill từ cuộc chat (v0.6.0)
+
+Sau khi đã chỉnh chuẩn theo ý mình trong một cuộc chat (layer, màu, chữ, kích thước, ký hiệu...), bấm **Skill (N) ▸ ✨ Tạo skill từ cuộc chat này**. Claude soạn `SKILL.md` và hiện thẻ bản nháp:
+
+- **Xem / sửa**: mở bản nháp (lưu ở `%LocalAppData%\ClaudeCAD\skill-drafts\<tên>\SKILL.md`) để chỉnh trước.
+- **Thêm vào plugin**: thêm như nút **+ Add skill** (hỏi nếu trùng tên), Claude dùng từ tin nhắn tiếp theo.
+
 ## Quản lý: nút **Skill (N)**
 
 Danh sách mọi skill trong plugin với trạng thái (skill mẫu / đã thêm ngày … / đang bật / đã tắt / lỗi):

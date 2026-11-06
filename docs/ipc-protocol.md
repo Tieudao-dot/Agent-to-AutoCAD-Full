@@ -21,12 +21,18 @@ Triển khai mục 6 của spec. Nguồn: `agent/src/ipc/protocol.ts` (TypeScrip
 | `ready` | `info`, `version` | *(mở rộng)* sidecar đã nối pipe / phiên đã khởi tạo (model, kiểu đăng nhập). |
 | `agent_error` | `message` | *(mở rộng)* lỗi không chặn lượt (đăng nhập, rate limit...) để hiện trên palette. |
 | `session_reset` | — | *(mở rộng)* xác nhận `new_session`. |
+| `confirm_request` | `id`, `text`, `count?`, `handles?` | *(v0.4)* thẻ xác nhận Đồng ý / Hủy. |
+| `session_info`, `options`, `rate_limit`, `skills_reloaded` | — | *(v0.4–0.5)* phiên, model/effort, hạn mức, skill đang dùng. |
+| `suggestions` | `items[]`, `source` = `tool`/`sdk` | *(v0.6)* nút gợi ý bước tiếp theo. `sdk` (dự đoán của Agent SDK) đến sau `turn_end`; plugin bỏ nếu lượt mới đã bắt đầu. |
+| `plan_request` | `id`, `summary`, `steps[]` | *(v0.6)* thẻ kế hoạch Làm / Sửa kế hoạch / Bỏ. |
+| `skill_draft` | `name`, `description`, `content` | *(v0.6)* bản nháp `SKILL.md` Claude soạn từ cuộc chat. |
 
 ## Plugin → sidecar
 
 | Thông điệp | Ý nghĩa |
 | --- | --- |
 | `{"type":"user_message","text":"...","drawing":"a.dwg"}` | Người dùng gửi chat. `drawing` (tùy chọn) là tên bản vẽ đang mở, được ghi vào đầu message cho Claude. |
+| `user_message` mở rộng | `attachments` (`selection`, `images`), `context` (`standard`, `scale`, *v0.6:* `read_only`, `notes`, `visual_check:false`, `plan_first:false`, `suggestions:false`), `edited`, `confirm`, *v0.6:* `plan:"approved"`. |
 | `{"type":"cancel"}` | Nút Stop, hoặc bản vẽ bị đóng/đổi giữa lượt. Sidecar `interrupt()` lượt và fail mọi call đang chờ. |
 | `{"type":"new_session"}` | Nút New: đóng phiên agent, phiên mới bắt đầu ở message kế tiếp. |
 | `{"id":"req-17","ok":true,"result":{...}}` | Kết quả tool call. Tool tạo/sửa luôn trả `handles`. |
@@ -43,7 +49,8 @@ Triển khai mục 6 của spec. Nguồn: `agent/src/ipc/protocol.ts` (TypeScrip
 ## Timeout và mã lỗi
 
 - Mỗi request 30 s (`CLAUDECAD_TOOL_TIMEOUT_MS`). Quá hạn → sidecar trả cho Claude lỗi `TIMEOUT` kèm hướng dẫn (bấm Esc trong AutoCAD, chia nhỏ batch). Response đến muộn bị bỏ qua.
-- Mã lỗi: `INVALID_PARAMS`, `ENTITY_NOT_FOUND`, `LAYER_NOT_FOUND`, `BLOCK_NOT_FOUND`, `LOCKED`, `ACAD_ERROR`, `TIMEOUT`, `TOO_MANY_ENTITIES`.
+- Mã lỗi: `INVALID_PARAMS`, `ENTITY_NOT_FOUND`, `LAYER_NOT_FOUND`, `BLOCK_NOT_FOUND`, `LOCKED`, `ACAD_ERROR`, `TIMEOUT`, `TOO_MANY_ENTITIES`, *(v0.6)* `READ_ONLY` (bản vẽ đang bật Chỉ xem).
+- `capture_view` trả `image_png_base64` trong `result`; sidecar chuyển thành khối ảnh MCP (`type: "image"`) cho Claude, phần còn lại (cửa sổ WCS, `mm_per_pixel`) là text.
   - Tool không tồn tại → `INVALID_PARAMS` kèm danh sách tool.
   - Không có bản vẽ / bản vẽ bị đóng hoặc đổi giữa lượt → `ACAD_ERROR` với lời dặn Claude dừng lượt.
   - Entity trên layer khóa → `LOCKED`.

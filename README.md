@@ -162,6 +162,17 @@ Tool mới: `add_text`, `add_mtext`, `add_dim_linear`, `add_dim_aligned`, `add_d
 - "Lập bảng thống kê cửa" → `add_table`. "Ghi chú ống D110 vào đường này" → `add_mleader`.
 - "Hoàn tác lượt trước" → `undo_last_turn` (gửi một lệnh U). `save_drawing` / `purge_unused` chỉ chạy khi cậu yêu cầu rõ.
 
+### Khung chat v0.6 — tiện ích mới
+
+- Mở nhanh: **Ctrl+Shift+Space** hoặc lệnh **CC**.
+- "Vẽ cả mặt bằng tầng 1 nhà 5x20m" → thẻ **Kế hoạch** → **Làm**. Vẽ xong, Claude tự **nhìn bản vẽ** (`capture_view`) để soát lỗi; dưới câu trả lời có bảng **Thay đổi: Thêm · Sửa · Xóa** và các nút gợi ý bước tiếp theo.
+- Nút **Chụp**: gửi vùng đang xem kèm câu "chỗ này sai, sửa lại".
+- **💾 Lưu macro** sau một lượt ưng ý → **Macro (N) ▸ ▶ Chạy / 📍 Tại điểm** vẽ lại không cần Claude.
+- **☆ Mẫu** lưu tin nhắn thành mẫu `/`; **Skill (N) ▸ ✨ Tạo skill từ cuộc chat này**.
+- **🔒 Chỉ xem** cho bản vẽ quan trọng; **Ghi chú** cho thông số cố định của dự án; gõ **@** để chọn tên layer/block.
+
+Chi tiết: [`docs/palette-features.md`](docs/palette-features.md) mục E.
+
 ## 5. Đóng gói bundle (autoloader)
 
 Xem [`bundle/README.md`](bundle/README.md) (thêm ở phase sau): tạo `ClaudeCAD.bundle` đặt vào `%AppData%\Autodesk\ApplicationPlugins` để AutoCAD tự nạp, không cần NETLOAD.

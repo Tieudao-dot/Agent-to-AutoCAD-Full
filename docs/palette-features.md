@@ -42,9 +42,25 @@ Phần giao diện của palette `CLAUDECHAT` sau đợt nâng cấp. Code: `plu
 | 19 | Sáng/tối, cỡ chữ | Theo `COLORTHEME` của AutoCAD (hoặc chọn cố định trong ⚙); cỡ chữ bằng A−/A+ hoặc Ctrl + lăn chuột. | |
 | 20 | Sửa và gửi lại | Nút **Sửa** trên tin nhắn cuối → sửa → Gửi. Nếu lượt trước đã thay đổi bản vẽ thì tự U trước rồi mới gửi (Claude được báo lượt trước đã hoàn tác). | |
 
+## E. v0.6.0 — 10 tiện ích mới
+
+| # | Tính năng | Cách dùng | Ghi chú |
+| --- | --- | --- | --- |
+| 21 | Claude tự nhìn bản vẽ | Sau việc vẽ lớn Claude tự chụp vùng vừa vẽ (`capture_view`) để soát lỗi (chữ đè, ký hiệu lệch tường, thiếu lỗ cửa) rồi sửa. Nút **Chụp** gửi vùng đang xem kèm tin nhắn ("chỗ này sai"). Tắt tự kiểm tra trong ⚙. | Vẽ model space vào thiết bị đồ họa ẩn (GraphicsSystem off-screen): khung nhìn của cậu không đổi, không thêm bước undo. Mỗi ảnh ≈ 1–1,6k token. |
+| 22 | Gợi ý bước tiếp theo | 1–3 nút dưới câu trả lời ("Ghi kích thước các phòng"…). Bấm là gửi; chuột phải để sửa trước khi gửi. Tắt trong ⚙. | Tool `suggest_next_steps` + gợi ý dự đoán của Agent SDK (`promptSuggestions`, gần như miễn phí). |
+| 23 | Macro — chạy lại không cần Claude | Dưới câu trả lời: **💾 Lưu macro** → đặt tên. Nút **Macro (N)**: **▶ Chạy** (đúng tọa độ cũ) hoặc **📍 Tại điểm** (chọn điểm chèn, macro được dời tới đó), **Xóa**, **Mở thư mục**. | Ghi lại các lệnh vẽ của lượt (không ghi zoom/lưu/purge/undo); khi chạy lại, handle tạo ở bước trước được ánh xạ sang handle mới. Không tốn token, một lệnh U hoàn tác cả macro. Lưu ở `%AppData%\ClaudeCAD\macros\*.json`. |
+| 24 | Lưu mẫu lệnh, tạo skill từ cuộc chat | **☆ Mẫu** trên tin nhắn của cậu → thành mẫu `/` mới. **Skill (N) ▸ ✨ Tạo skill từ cuộc chat này** → Claude soạn `SKILL.md` từ các chuẩn đã chỉnh → thẻ **Xem / sửa** · **Thêm vào plugin**. | Mẫu lưu vào `%AppData%\ClaudeCAD\templates.json`. Bản nháp skill ở `%LocalAppData%\ClaudeCAD\skill-drafts`; "Thêm" đi qua đúng luồng + Add skill. |
+| 25 | Chỉ xem | Nút **🔓 Sửa được / 🔒 Chỉ xem** trên thanh ngữ cảnh, lưu theo bản vẽ. Khi bật, Claude chỉ đọc, đo, xem, trả lời. | Plugin chặn mọi tool ghi (cả trong batch và `undo_last_turn`) với mã `READ_ONLY`; zoom vẫn được. Macro cũng không chạy. |
+| 26 | Ghi chú dự án | Nút **Ghi chú** → hai ô: **Dự án** (dùng chung mọi bản vẽ trong thư mục, file `ClaudeCAD-ghichu.md` cạnh DWG) và **Riêng bản vẽ này**. Gửi kèm mọi tin nhắn; nút có dấu • khi đang có ghi chú. | Tối đa 4000 ký tự mỗi ô. Ghi chú thắng skill khi mâu thuẫn. |
+| 27 | Gõ `@` chọn tên trong bản vẽ | Gõ `@` → danh sách layer, block, kiểu chữ, kiểu kích thước, layout của bản vẽ; ↑↓ Enter để chèn tên (tên có dấu cách được đặt trong ngoặc kép). | Không bật với địa chỉ e-mail (`a@b`). Layer/block của xref bị bỏ. |
+| 28 | Phím tắt | **Ctrl+Shift+Space** trong AutoCAD hoặc lệnh **CC** → mở palette, con trỏ ở ô nhập. Tắt phím tắt trong ⚙. | `Application.PreTranslateMessage`. |
+| 29 | Kế hoạch trước việc lớn | Việc nhiều bước (cả mặt bằng, cả hệ MEP, > ~50 đối tượng) → thẻ **Kế hoạch** với các bước, kích thước, giả định; **Làm** / **Sửa kế hoạch** / **Bỏ**. Tắt trong ⚙. | Tool `propose_plan`; "Làm" gửi `plan: "approved"`. |
+| 30 | Bảng thay đổi của lượt | Dưới câu trả lời: **Thay đổi: Thêm 15 · Sửa 3 · Xóa 0**, từng dòng theo layer; bấm dòng để zoom + tô sáng. Có cả khi mở lại lịch sử và trong file Xuất. | Theo dõi sự kiện database trong lượt; đối tượng tạo rồi xóa trong cùng lượt không tính; chỉ tính đối tượng trong model/paper space (không tính bên trong định nghĩa block). |
+
 ## Kiểm chứng
 
 - Lõi thuần (markdown, lịch sử, cài đặt, mẫu lệnh, bảng Excel) có unit test chạy mọi OS: `dotnet test plugin/ClaudeCAD.Core.Tests`.
 - Phía sidecar (nội dung tin nhắn, giao thức, đổi model/effort, chuyển phiên, khôi phục phiên lỗi, usage, rate limit, thẻ xác nhận): `npm test`.
 - **Giao diện WPF thật** dựng trên CI Windows (`plugin/ClaudeCAD.UI.Tests`): mô phỏng một cuộc chat đủ tính năng, kiểm tra không lỗi layout và chụp ảnh palette sáng/tối → artifact `palette-screenshots`.
 - Phần dính tới AutoCAD (chọn đối tượng, lấy điểm, tô sáng, U, thông báo khi AutoCAD ở nền) cần thử trên AutoCAD thật — xem `docs/test-log.md`.
+- v0.6: lõi macro / bảng thay đổi / `@` / ghi chú / mẫu lệnh có unit test (`ChatExtrasTests`); phía sidecar `test/v06.test.ts` (ảnh `capture_view`, thẻ kế hoạch, gợi ý, bản nháp skill, ngữ cảnh mới); UI test chụp thêm `palette-v06-dark/light.png`. Ảnh `capture_view`, phím tắt, macro tại điểm, Chỉ xem cần thử trên AutoCAD thật (V6-1 … V6-10).

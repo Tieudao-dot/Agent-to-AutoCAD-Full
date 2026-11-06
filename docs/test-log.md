@@ -97,6 +97,16 @@ Trạng thái: ⬜ chưa chạy · ✅ đạt · ❌ không đạt · ⚠️ đ�
 | SK-4 | Tin nhắn sau khi thêm dùng đúng skill mới, Claude vẫn nhớ cuộc chat trước | ⬜ chưa chạy | |
 | SK-5 | **Skill (N)**: bật/tắt (skill tắt không được dùng), Sửa → lưu file → tự nạp lại, Xóa, Mở thư mục | ⬜ chưa chạy | |
 | SK-6 | Ô **Chuẩn** liệt kê skill đang bật kể cả skill mới thêm | ⬜ chưa chạy | |
+| V6-1 | Vẽ mặt bằng lớn → nhật ký có "Nhìn bản vẽ", khung nhìn của cậu không đổi, không thêm bước U; nút **Chụp** đính kèm đúng vùng đang xem (màu, nét rõ) | ⬜ chưa chạy | |
+| V6-2 | Sau lượt vẽ có 1–3 nút gợi ý; bấm là gửi, chuột phải đưa vào ô nhập; tắt trong ⚙ thì không hiện | ⬜ chưa chạy | |
+| V6-3 | **💾 Lưu macro** → **Macro ▸ ▶ Chạy** vẽ lại giống hệt (lệnh offset/move dùng đúng đối tượng mới); **📍 Tại điểm** dời đúng điểm chọn; một U hoàn tác cả macro; Stop dừng giữa chừng | ⬜ chưa chạy | |
+| V6-4 | **☆ Mẫu** → gõ / thấy mẫu mới; **✨ Tạo skill từ cuộc chat** → thẻ bản nháp → Xem/sửa mở file → Thêm vào plugin → "✓ Đã thêm skill" | ⬜ chưa chạy | |
+| V6-5 | Bật **🔒 Chỉ xem** → yêu cầu vẽ/xóa bị từ chối (Claude giải thích), hỏi đáp/đo vẫn được; đóng mở lại bản vẽ vẫn giữ trạng thái; macro không chạy | ⬜ chưa chạy | |
+| V6-6 | **Ghi chú**: lưu ghi chú dự án → có `ClaudeCAD-ghichu.md` cạnh DWG; bản vẽ khác cùng thư mục cũng thấy; Claude áp dụng (vd. tường 220) không cần nhắc | ⬜ chưa chạy | |
+| V6-7 | Gõ `@A-` → danh sách layer/block của bản vẽ; Enter chèn tên; `a@b.com` không bật | ⬜ chưa chạy | |
+| V6-8 | **Ctrl+Shift+Space** khi đang vẽ → palette mở, con trỏ ở ô nhập; lệnh **CC** tương tự; tắt trong ⚙ | ⬜ chưa chạy | |
+| V6-9 | "Vẽ cả mặt bằng tầng 1" → thẻ kế hoạch, chưa vẽ gì; **Làm** → vẽ đúng kế hoạch; **Sửa kế hoạch** đưa chữ vào ô nhập | ⬜ chưa chạy | |
+| V6-10 | Bảng **Thay đổi** đúng số thêm/sửa/xóa theo layer, bấm dòng zoom tới; còn khi mở lại lịch sử và trong file Xuất | ⬜ chưa chạy | |
 
 ## Đã kiểm chứng tự động trên cloud (Linux)
 
@@ -107,6 +117,7 @@ Trạng thái: ⬜ chưa chạy · ✅ đạt · ❌ không đạt · ⚠️ đ�
 | 2026-11-05 | `dotnet build` plugin net48 với reference AutoCAD.NET 24.1.51000 | ✅ 0 warning |
 | 2026-11-05 | `dotnet test plugin/ClaudeCAD.Core.Tests` — JsonCodec, Params | ✅ 16/16 |
 | 2026-11-05 | Phase 1b: `npm test` 38/38 (thêm: danh mục tool TS khớp handler C#, mọi schema chuyển được sang JSON Schema, schema nhận ví dụ spec, giới hạn 500 call/batch) | ✅ |
+| 2026-11-06 | v0.6.0 tiện ích khung chat: `dotnet test` lõi 88/88 (macro ghi/ánh xạ handle/lưu, bảng thay đổi, `@`, ghi chú dự án, mẫu lệnh, cài đặt mới, lịch sử giữ Chỉ xem + ghi chú + thay đổi); `npm test` 89/89 (ảnh `capture_view` thành khối image MCP, thẻ kế hoạch, gợi ý, bản nháp skill, ngữ cảnh mới, `promptSuggestions`); build plugin net48 + net8 (API GraphicsSystem off-screen, PreTranslateMessage) ✅ | ✅ |
 | 2026-11-06 | v0.5.0 skill trên khung chat: `dotnet test` lõi 68/68 (SkillStore: nhập .md, tên từ file, file thiếu description, trùng tên, chọn lại file đã có, thư mục SKILL.md kèm file tham khảo, bật/tắt, xóa, `skills.json`); `npm test` 75/75 (chỉ nạp skill đang bật, reload_skills giữ ngữ cảnh) | ✅ |
 | 2026-11-05 | v0.4.0 khung chat 20 tính năng: `npm test` 70/70 (nội dung tin nhắn, giao thức mới, model/effort, chuyển phiên + khôi phục lỗi, usage, rate limit, thẻ xác nhận); `dotnet test` lõi 56/56 (markdown, lịch sử, cài đặt, mẫu lệnh, bảng Excel); build plugin net48 + net8 0 warning | ✅ |
 | 2026-11-05 | **CI GitHub Actions `windows-latest`** (run 3–5, commit 3b87661): `npm ci` + `npm test` 58/58 với **named pipe Windows thật** (gồm tiến trình sidecar nối pipe), `dotnet test` lõi, build plugin net48 + net8.0-windows, make-bundle (node_modules win32-x64) + zip + latest.json, Inno Setup → `ClaudeCAD-Setup-0.3.0.exe`, upload artifact | ✅ |

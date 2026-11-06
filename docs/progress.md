@@ -102,3 +102,20 @@ Cần test trên AutoCAD: mục UI-1 … UI-20 trong `docs/test-log.md`.
 - Trợ lý chỉ nạp skill đang bật; khi skill thay đổi, tin nhắn tiếp theo dùng bộ skill mới mà vẫn tiếp tục cùng cuộc chat.
 
 Cloud: `dotnet test` 68/68, `npm test` 75/75, build ✅. Cần test trên AutoCAD: SK-1 … SK-6 trong `docs/test-log.md`.
+
+## v0.6.0 — 10 tiện ích khung chat ✅ code xong
+
+Theo đề xuất đã duyệt (gói 1, 5, 10, 11, 13, 4 rồi 6, 7, 2, 14):
+
+- **Claude tự nhìn bản vẽ**: tool `capture_view` (ảnh model space vẽ ẩn, không đổi khung nhìn) + nút **Chụp** gửi vùng đang xem.
+- **Gợi ý bước tiếp theo**: 1–3 nút dưới câu trả lời (`suggest_next_steps` + `promptSuggestions` của SDK).
+- **Macro**: **💾 Lưu macro** sau lượt vẽ; **Macro (N)** chạy lại không cần Claude, tại chỗ cũ hoặc tại điểm chọn; ánh xạ handle giữa các bước.
+- **Mẫu lệnh / skill từ cuộc chat**: **☆ Mẫu** trên tin nhắn; **✨ Tạo skill từ cuộc chat này** → thẻ bản nháp → Thêm vào plugin.
+- **Chỉ xem** theo bản vẽ: plugin chặn mọi lệnh ghi (`READ_ONLY`).
+- **Ghi chú dự án** (file cạnh DWG, dùng chung thư mục) + ghi chú riêng bản vẽ, gửi kèm mọi tin nhắn.
+- **`@`** chọn layer / block / style / layout của bản vẽ.
+- **Ctrl+Shift+Space** và lệnh **CC** mở khung chat.
+- **Thẻ kế hoạch** Làm / Sửa kế hoạch / Bỏ trước việc lớn.
+- **Bảng thay đổi** của lượt: Thêm · Sửa · Xóa theo layer, bấm để xem.
+
+Chi tiết: `docs/palette-features.md` mục E. Cloud: `dotnet test` 88/88, `npm test` 89/89, build plugin net48 + net8 ✅. Cần test trên AutoCAD: V6-1 … V6-10 trong `docs/test-log.md`.
