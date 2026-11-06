@@ -73,6 +73,15 @@ Phần giao diện của palette `CLAUDECHAT` sau đợt nâng cấp. Code: `plu
 | 35 | Chọn layer trong khung chat | Nút **Layer** → danh sách mọi layer của bản vẽ: ô lọc theo tên, ô màu, số đối tượng, trạng thái (hiện hành / tắt / đóng băng / khóa / xref) → tick → **Dùng layer đã chọn** → chip "Layer: A-WALL, A-DOOR · 128 đối tượng". | Chip được gửi kèm tin nhắn tiếp theo rồi tự bỏ (như vùng chọn). |
 | 36 | Claude hiểu theo câu | "Đổi màu sang đỏ", "khóa lại", "tắt đi", "đổi tên thành…" → sửa **thuộc tính layer**, làm luôn. "Tăng chiều cao chữ lên 300", "dời sang phải 500", "xóa hết" → sửa **các đối tượng trên layer**: quá 20 đối tượng thì vẫn hiện thẻ **Đồng ý / Hủy** (kèm Xem trước). Câu mơ hồ thì Claude hỏi lại một câu. | `attachments.layers` + `selection.layers`; quy tắc trong system prompt. |
 
+## H. v0.9.2 — báo cáo lỗi và tài khoản AI
+
+| # | Tính năng | Cách dùng | Ghi chú |
+| --- | --- | --- | --- |
+| 37 | Gửi báo cáo lỗi | ⚙ ▸ **Gửi báo cáo lỗi**, hoặc nút trên thẻ lỗi → `ClaudeCAD-baocao-<máy>-<ngày giờ>.zip` trên Desktop, Explorer mở sẵn. | Gồm `thong-tin.txt` (Windows, AutoCAD, plugin, đường dẫn, Node, Claude Code, trạng thái trợ lý, tài khoản, TRUSTEDPATHS, SECURELOAD), log 3 ngày, 3 báo cáo tự kiểm tra gần nhất, log cài đặt Inno Setup (`SetupLogging=yes`). Lọc API key / token (`sk-ant-…`, `Bearer …`, `access/refresh_token`). Không có chat, bản vẽ, ghi chú. |
+| 39 | Toast trong khung chat | Thông báo nhỏ nổi trên vùng chat rồi tự ẩn (rê chuột vào để giữ, bấm để đóng): đã lưu macro / mẫu / ghi chú / phiên bản / API key, đã đăng nhập, mất / có lại kết nối, có bản cập nhật, skill thay đổi, sắp hết hạn mức. | Tối đa 3 toast cùng lúc, không lặp cùng nội dung. |
+| 40 | Giới hạn sử dụng AI | Từ khoảng 80% hạn mức (hoặc khi Claude báo `allowed_warning`): toast cảnh báo, mỗi kỳ hạn mức một lần. Hết hạn mức (`rejected`, lỗi `rate_limit` / `billing_error`): **thẻ trong cuộc chat** với loại hạn mức (5 giờ / tuần), giờ làm mới, đếm ngược, nút **Tự gửi lại lúc HH:mm** (gửi lại yêu cầu vừa rồi khoảng 1 phút sau khi hạn mức làm mới) và **Dùng API key**. | Dòng mức dùng phía trên vẫn hiển thị %; gửi tin mới hoặc New thì hủy tự gửi lại. |
+| 38 | Tài khoản AI | ⚙ ▸ **Tài khoản AI**: "Đang dùng: …" · **Đăng nhập Claude** · **Đổi tài khoản** · **Đăng xuất** · **Dùng API key**. | Đăng xuất = `claude auth logout` (Claude Code đi kèm); API key lưu bằng DPAPI (`%LocalAppData%\ClaudeCAD\apikey.bin`, chỉ tài khoản Windows đó đọc được), truyền cho trợ lý qua `ANTHROPIC_API_KEY`; mỗi thay đổi khởi động lại trợ lý. |
+
 ## Kiểm chứng
 
 - Lõi thuần (markdown, lịch sử, cài đặt, mẫu lệnh, bảng Excel) có unit test chạy mọi OS: `dotnet test plugin/ClaudeCAD.Core.Tests`.

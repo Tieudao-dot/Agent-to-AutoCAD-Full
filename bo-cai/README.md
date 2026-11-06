@@ -26,6 +26,22 @@ Sau khi cài: gõ `CLAUDECHATSELFTEST` để tự kiểm tra (báo cáo ✓/✗ 
 - Cài ngầm, không hỏi gì: `ClaudeCAD-Setup.exe /VERYSILENT` (mỗi máy vẫn cần bấm **Đăng nhập Claude** một lần).
 - Hoặc bằng PowerShell: giải nén `ClaudeCAD-<version>.zip`, đặt `install.ps1` cạnh thư mục `ClaudeCAD.bundle`, chạy `powershell -ExecutionPolicy Bypass -File install.ps1`.
 
+## Khi có lỗi trên máy khác
+
+Người dùng máy đó bấm **⚙ ▸ Gửi báo cáo lỗi** (hoặc nút cùng tên trên thẻ lỗi) → file `ClaudeCAD-baocao-<tên máy>-<ngày giờ>.zip` hiện trên Desktop → gửi file đó cho người hỗ trợ. Nên gõ `CLAUDECHATSELFTEST` trước để báo cáo có kết quả tự kiểm tra mới nhất.
+
+File gồm: thông tin máy / AutoCAD / plugin, trạng thái trợ lý và tài khoản, log 3 ngày gần đây, kết quả tự kiểm tra, log cài đặt. **Không** có lịch sử chat, bản vẽ, ghi chú dự án; API key và token trong log được che.
+
+## Đổi tài khoản AI
+
+**⚙ ▸ Tài khoản AI**: dòng "Đang dùng: …" cho biết tài khoản hiện tại.
+
+- **Đổi tài khoản**: đăng xuất rồi đăng nhập tài khoản Claude khác trên trình duyệt.
+- **Đăng xuất**: đăng xuất trên máy này (cả Claude Code nếu máy có dùng).
+- **Dùng API key**: dán API key Anthropic (console.anthropic.com, trả theo lượng dùng). Key được lưu mã hóa cho riêng tài khoản Windows đó và được ưu tiên hơn tài khoản Claude; **Xóa key đã lưu** để quay lại tài khoản Claude.
+
+Chỉ dùng được Claude (tài khoản Pro/Max/Team hoặc API key Anthropic); plugin không chạy với ChatGPT hay Gemini.
+
 ## Gỡ cài đặt
 
 Windows **Settings → Apps → ClaudeCAD for AutoCAD → Uninstall** (hoặc `install.ps1 -Uninstall`). Dữ liệu của cậu (lịch sử chat, macro, mẫu lệnh) nằm trong `%LocalAppData%\ClaudeCAD` và `%AppData%\ClaudeCAD`, xóa tay nếu không cần nữa.
@@ -34,7 +50,8 @@ Windows **Settings → Apps → ClaudeCAD for AutoCAD → Uninstall** (hoặc `i
 
 | Phiên bản | Nội dung chính |
 | --- | --- |
-| **0.9.1** | Cài 3 bước: kèm Node.js, nút **Đăng nhập Claude** ngay trong khung chat (không cần cài Claude Code / mở terminal), tự thêm thư mục plugin vào danh sách tin cậy của AutoCAD (hết cảnh báo SECURELOAD), thẻ **Bắt đầu** lần đầu mở AutoCAD, link tải cố định. |
+| **0.9.2** | **Toast** thông báo ngay trong khung chat; **giới hạn sử dụng AI** báo thẳng trong cuộc chat (cảnh báo khi sắp hết, thẻ khi hết với giờ làm mới và nút tự gửi lại); **Gửi báo cáo lỗi** (một file .zip trên Desktop: thông tin máy, log, tự kiểm tra, log cài đặt — không có chat, bản vẽ, API key); bộ cài luôn ghi log cài đặt; mục **Tài khoản AI** trong ⚙: xem đang dùng tài khoản nào, **Đổi tài khoản**, **Đăng xuất**, **Dùng API key** (lưu mã hóa). |
+| 0.9.1 | Cài 3 bước: kèm Node.js, nút **Đăng nhập Claude** ngay trong khung chat (không cần cài Claude Code / mở terminal), tự thêm thư mục plugin vào danh sách tin cậy của AutoCAD (hết cảnh báo SECURELOAD), thẻ **Bắt đầu** lần đầu mở AutoCAD, link tải cố định. |
 | 0.9.0 | Lệnh `CLAUDECHATSELFTEST`; so biên bản lúc AutoCAD rảnh, lưu phiên bản nhanh, bản vẽ lớn cập nhật dần, macro chạy theo lô; sửa 14 lỗi từ lượt soát code thứ ba. |
 | 0.8.0 | Chọn layer rồi chat chỉnh sửa: layer của vùng chọn (bỏ tick, → Cả layer), nút **Layer**. |
 | 0.7.0 | Claude biết phần cậu sửa tay (kể cả lần mở sau / máy khác); lịch sử phiên bản 30 phút một lần, giữ 10 bản, mở tab chỉ xem. |

@@ -1,9 +1,9 @@
 ﻿; Inno Setup script: builds ClaudeCAD-Setup-<version>.exe from bundle\out\ClaudeCAD.bundle.
-; Build on Windows:  "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" /DAppVersion=0.9.1 installer\ClaudeCAD.iss
+; Build on Windows:  "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" /DAppVersion=0.9.2 installer\ClaudeCAD.iss
 ; (CI does this in .github/workflows/build.yml.)
 
 #ifndef AppVersion
-  #define AppVersion "0.9.1"
+  #define AppVersion "0.9.2"
 #endif
 #define BundleDir "..\bundle\out\ClaudeCAD.bundle"
 
@@ -24,6 +24,8 @@ SolidCompression=yes
 ArchitecturesAllowed=x64compatible
 ArchitecturesInstallIn64BitMode=x64compatible
 CloseApplications=yes
+; always write %TEMP%\Setup Log yyyy-mm-dd #nnn.txt — "Gửi báo cáo lỗi" in the palette attaches it
+SetupLogging=yes
 UninstallDisplayName=ClaudeCAD for AutoCAD
 
 [Languages]

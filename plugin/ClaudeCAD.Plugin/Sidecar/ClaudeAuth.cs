@@ -14,8 +14,12 @@ namespace ClaudeCAD.Plugin.Sidecar
         public string Method = "";
         public string Error;
 
+        public string Email;
+
         public string Label =>
-            LoggedIn == true ? (Method == "api_key" ? "đã có ANTHROPIC_API_KEY" : "đã đăng nhập Claude")
+            LoggedIn == true ? (Method == "api_key" ? "dùng ANTHROPIC_API_KEY (biến môi trường)"
+                : Method == "api_key_saved" ? "dùng API key đã lưu trong plugin"
+                : "đã đăng nhập Claude" + (string.IsNullOrEmpty(Email) ? "" : " · " + Email))
             : LoggedIn == false ? "chưa đăng nhập Claude"
             : "chưa kiểm tra được" + (string.IsNullOrEmpty(Error) ? "" : $" ({Error})");
     }
@@ -29,6 +33,8 @@ namespace ClaudeCAD.Plugin.Sidecar
     {
         public static Task<AuthStatus> StatusAsync() => Task.Run(() =>
         {
+            if (ApiKeyStore.HasKey && ApiKeyStore.Load() != null)
+                return new AuthStatus { LoggedIn = true, Method = "api_key_saved" };
             if (!string.IsNullOrEmpty(Environment.GetEnvironmentVariable("ANTHROPIC_API_KEY")))
                 return new AuthStatus { LoggedIn = true, Method = "api_key" };
             var exe = PluginPaths.ClaudeExecutable;
@@ -68,6 +74,8 @@ namespace ClaudeCAD.Plugin.Sidecar
                 {
                     LoggedIn = d.TryGetValue("loggedIn", out var l) && l is bool b ? b : (bool?)null,
                     Method = d.TryGetValue("authMethod", out var m) ? m as string ?? "" : "",
+                    Email = d.TryGetValue("email", out var em) ? em as string
+                        : d.TryGetValue("account", out var ac) && ac is System.Collections.Generic.Dictionary<string, object> acd && acd.TryGetValue("email", out var em2) ? em2 as string : null,
                 };
             }
             catch (Exception ex)
@@ -75,6 +83,28 @@ namespace ClaudeCAD.Plugin.Sidecar
                 return new AuthStatus { Error = ex.Message };
             }
         }
+
+        /// <summary>"Đăng xuất": claude auth logout (hidden). Also signs out Claude Code on this computer (same credentials).</summary>
+        public static Task<bool> LogoutAsync() => Task.Run(() =>
+        {
+            var exe = PluginPaths.ClaudeExecutable;
+            if (exe == null) return false;
+            try
+            {
+                using (var p = Process.Start(new ProcessStartInfo(exe, "auth logout") { UseShellExecute = false, CreateNoWindow = true, RedirectStandardOutput = true, RedirectStandardError = true }))
+                {
+                    p.StandardOutput.ReadToEndAsync();
+                    p.StandardError.ReadToEndAsync();
+                    if (!p.WaitForExit(20000)) { try { p.Kill(); } catch { } return false; }
+                    return p.ExitCode == 0;
+                }
+            }
+            catch (Exception ex)
+            {
+                Logger.Warn("claude auth logout failed: " + ex.Message);
+                return false;
+            }
+        });
 
         /// <summary>
         /// Opens a console window with "claude auth login --claudeai" (it opens the browser). done(status) is called
