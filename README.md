@@ -24,11 +24,13 @@ Kiến trúc: AutoCAD nạp `ClaudeCAD.Plugin.dll` → lệnh `CLAUDECHAT` mở 
 | Sidecar | Node.js >= 18 (khuyến nghị 20/22 LTS) có trong `PATH` |
 | Tài khoản | Claude Pro/Max đã `claude login`, **hoặc** biến môi trường `ANTHROPIC_API_KEY` |
 
-Đăng nhập Claude một lần (cài Claude Code CLI: `npm install -g @anthropic-ai/claude-code`):
+Đăng nhập Claude một lần trên máy (cài Claude Code CLI: `npm install -g @anthropic-ai/claude-code`), rồi chạy:
 
 ```bash
-claude login
+claude
 ```
+
+Lần đầu chạy, Claude Code hướng dẫn đăng nhập: chọn **tài khoản Claude có gói Pro/Max**, trình duyệt mở ra để đăng nhập, xong quay lại terminal. Nếu Claude Code đã mở mà chưa đăng nhập, gõ `/login`. Gõ `/exit` để thoát. Thông tin đăng nhập được lưu ở `%USERPROFILE%\.claude`, plugin dùng lại tự động mỗi lần mở AutoCAD — không cần mở Claude Code nữa.
 
 Nếu dùng API key thay cho gói Pro/Max: đặt biến môi trường người dùng `ANTHROPIC_API_KEY` rồi mở lại AutoCAD.
 

@@ -40,7 +40,7 @@ export const DISALLOWED_BUILTINS = [
 ];
 
 const ERROR_TEXT: Record<string, string> = {
-  authentication_failed: 'Chưa đăng nhập Claude. Mở terminal chạy "claude login" (gói Pro/Max) hoặc đặt biến môi trường ANTHROPIC_API_KEY, rồi bấm New.',
+  authentication_failed: 'Chưa đăng nhập Claude. Mở terminal, chạy "claude" rồi đăng nhập tài khoản Pro/Max (hoặc gõ /login), hoặc đặt biến môi trường ANTHROPIC_API_KEY; xong bấm New. (claude login)',
   oauth_org_not_allowed: 'Tài khoản Claude này không được phép dùng Claude Code.',
   billing_error: 'Lỗi thanh toán / hết hạn mức tài khoản Claude.',
   rate_limit: 'Đã chạm giới hạn sử dụng của gói Claude. Đợi một lúc rồi thử lại.',
