@@ -115,6 +115,8 @@ Lệnh AutoCAD:
 
 Palette: Enter gửi, Shift+Enter xuống dòng, **Stop** hủy lượt đang chạy, **New** tạo phiên chat mới. Sau mỗi lượt, gõ `U` một lần trong AutoCAD (hoặc nút **Hoàn tác lượt này**) là hoàn tác toàn bộ thay đổi của lượt đó.
 
+**Skill (v0.5.0):** nút **+ Add skill** trên khung chat → chọn file `.md` trong máy (mặc định mở thư mục skill của plugin) → plugin chép vào `Contents\skills\<tên>\SKILL.md`, ghi vào `Contents\skills\skills.json` và báo "✓ Đã thêm skill …". Nút **Skill (N)** mở danh sách để bật/tắt, sửa, xóa; ô **Chuẩn** tự liệt kê các skill đang bật. Chi tiết: [`skills/README.md`](skills/README.md).
+
 Từ v0.4.0 khung chat có thêm 20 tính năng — chọn đối tượng / lấy điểm gửi kèm, handle bấm được để zoom, **Xem kết quả**, đính kèm ảnh, dán bảng Excel, mẫu lệnh `/`, chọn chuẩn + tỷ lệ in, ↑↓ gọi lại tin, thẻ xác nhận có nút, nhật ký thao tác, **Thử lại**, mức dùng + chọn model/effort, thông báo Windows, Markdown, lịch sử theo bản vẽ, Copy/Xuất, sáng/tối + cỡ chữ, **Sửa** và gửi lại. Hướng dẫn: [`docs/palette-features.md`](docs/palette-features.md).
 
 ## 4. Chạy thử theo từng phase

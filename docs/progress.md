@@ -94,3 +94,11 @@ Theo đề xuất đã duyệt: chọn đối tượng / lấy điểm, handle b
 Cloud: `npm test` 70/70, `dotnet test` 56/56, build ✅; CI Windows chạy thêm test giao diện WPF thật và chụp ảnh palette (artifact `palette-screenshots`).
 
 Cần test trên AutoCAD: mục UI-1 … UI-20 trong `docs/test-log.md`.
+
+## v0.5.0 — thêm và quản lý skill trên khung chat ✅ code xong
+
+- Nút **+ Add skill**: chọn file `.md` (mặc định mở thư mục skill của plugin), kiểm tra phần đầu `name`/`description`, chép vào `Contents\skills\<tên>\SKILL.md`, ghi `Contents\skills\skills.json`, báo trạng thái trên khung chat.
+- Nút **Skill (N)**: danh sách với trạng thái, bật/tắt, Sửa (tự nạp lại khi lưu), Xóa, Mở thư mục; ô **Chuẩn** tự liệt kê skill đang bật.
+- Trợ lý chỉ nạp skill đang bật; khi skill thay đổi, tin nhắn tiếp theo dùng bộ skill mới mà vẫn tiếp tục cùng cuộc chat.
+
+Cloud: `dotnet test` 68/68, `npm test` 75/75, build ✅. Cần test trên AutoCAD: SK-1 … SK-6 trong `docs/test-log.md`.

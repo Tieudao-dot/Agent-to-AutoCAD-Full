@@ -89,6 +89,12 @@ export interface RateLimitMessage {
   limit_type?: string;
 }
 
+/** Skills that the next message will use, after reload_skills. */
+export interface SkillsReloadedMessage {
+  type: 'skills_reloaded';
+  skills: string[];
+}
+
 /** Current model / effort after set_options. */
 export interface OptionsMessage {
   type: 'options';
@@ -126,7 +132,8 @@ export type SidecarToPlugin =
   | ConfirmRequestMessage
   | SessionInfoMessage
   | RateLimitMessage
-  | OptionsMessage;
+  | OptionsMessage
+  | SkillsReloadedMessage;
 
 // ---------------------------------------------------------------- plugin -> sidecar
 
@@ -168,6 +175,11 @@ export interface SetOptionsMessage {
   effort?: string;
 }
 
+/** The palette added / removed / toggled / edited a skill: load the skills again. */
+export interface ReloadSkillsMessage {
+  type: 'reload_skills';
+}
+
 /** Switch to the conversation of another drawing (resume its session if known). */
 export interface SwitchSessionMessage {
   type: 'switch_session';
@@ -207,6 +219,7 @@ export type PluginToSidecar =
   | NewSessionMessage
   | SetOptionsMessage
   | SwitchSessionMessage
+  | ReloadSkillsMessage
   | ToolResponse;
 
 const MEDIA_TYPES = new Set(['image/png', 'image/jpeg', 'image/gif', 'image/webp']);
@@ -294,6 +307,8 @@ export function parsePluginMessage(value: unknown): PluginToSidecar {
         ...(typeof m.model === 'string' && m.model ? { model: m.model } : {}),
         ...(typeof m.effort === 'string' && m.effort ? { effort: m.effort } : {}),
       };
+    case 'reload_skills':
+      return { type: 'reload_skills' };
     case 'switch_session':
       return { type: 'switch_session', ...(typeof m.session_id === 'string' && m.session_id ? { session_id: m.session_id } : {}) };
     case 'cancel':

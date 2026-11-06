@@ -281,6 +281,61 @@ describe('AgentSession robustness', () => {
   });
 });
 
+describe('skills added from the palette', () => {
+  function skillsDir() {
+    const d = fs.mkdtempSync(path.join(os.tmpdir(), 'claudecad-sk-'));
+    for (const n of ['ve-kien-truc', 've-ket-cau', 've-mep']) {
+      fs.mkdirSync(path.join(d, n));
+      fs.writeFileSync(path.join(d, n, 'SKILL.md'), `---\nname: ${n}\ndescription: test skill ${n} for the palette tests\n---\nbody`);
+    }
+    fs.writeFileSync(path.join(d, 'skills.json'), JSON.stringify({ version: 1, skills: [{ name: 've-mep', enabled: false }, { name: 've-ket-cau', enabled: true }] }));
+    return d;
+  }
+
+  it('loads only enabled skills from skills.json', async () => {
+    const { fn, calls } = fakeQuery(async (input, push) => { for await (const _ of input) push(result); });
+    const events: SidecarToPlugin[] = [];
+    const s = new AgentSession({
+      emit: (m) => events.push(m),
+      bridge: { call: async (id) => ({ id, ok: true, result: {} }), status: () => {} },
+      version: 'test', workDir: fs.mkdtempSync(path.join(os.tmpdir(), 'claudecad-skw-')), log: () => {}, queryFn: fn,
+      skillsDir: skillsDir(),
+    });
+    s.send('x');
+    await tick();
+    assert.deepEqual(calls.options[0].skills, ['claudecad-skills:ve-ket-cau', 'claudecad-skills:ve-kien-truc']);
+    s.close();
+  });
+
+  it('reload_skills resumes the same conversation with the new skill list', async () => {
+    const { fn, calls } = fakeQuery(async (input, push) => { for await (const _ of input) { push(init('conv-1')); push(result); } });
+    const dir = skillsDir();
+    const events: SidecarToPlugin[] = [];
+    const s = new AgentSession({
+      emit: (m) => events.push(m),
+      bridge: { call: async (id) => ({ id, ok: true, result: {} }), status: () => {} },
+      version: 'test', workDir: fs.mkdtempSync(path.join(os.tmpdir(), 'claudecad-skr-')), log: () => {}, queryFn: fn,
+      skillsDir: dir,
+    });
+    s.send('một');
+    await tick();
+    fs.writeFileSync(path.join(dir, 'skills.json'), JSON.stringify({ version: 1, skills: [] })); // ve-mep turned back on
+    s.reloadSkills();
+    const ack = events.find((e) => e.type === 'skills_reloaded') as any;
+    assert.deepEqual(ack.skills, ['ve-ket-cau', 've-kien-truc', 've-mep']);
+    s.send('hai');
+    await tick();
+    assert.equal(calls.options.length, 2);
+    assert.equal(calls.options[1].resume, 'conv-1');
+    assert.ok(calls.options[1].skills.includes('claudecad-skills:ve-mep'));
+    s.close();
+  });
+
+  it('parses reload_skills', () => {
+    assert.deepEqual(parsePluginMessage({ type: 'reload_skills' }), { type: 'reload_skills' });
+  });
+});
+
 describe('confirmation card tool', () => {
   it('emits confirm_request and tells Claude to end the turn', async () => {
     const shown: unknown[] = [];

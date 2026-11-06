@@ -17,7 +17,7 @@ import { ToolRpc } from './ipc/rpc.js';
 import { initLog, log, truncate } from './log.js';
 import type { ToolBridge } from './tools/common.js';
 
-export const VERSION = '0.4.0';
+export const VERSION = '0.5.0';
 
 async function main(): Promise<void> {
   const { values } = parseArgs({
@@ -94,6 +94,9 @@ async function main(): Promise<void> {
         break;
       case 'switch_session':
         session.switchTo(msg.session_id);
+        break;
+      case 'reload_skills':
+        session.reloadSkills();
         break;
       case 'cancel':
         void session.cancel();

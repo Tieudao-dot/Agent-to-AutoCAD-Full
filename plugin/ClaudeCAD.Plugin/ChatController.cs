@@ -36,6 +36,9 @@ namespace ClaudeCAD.Plugin
         private readonly ChatStore _store = new ChatStore(ChatStore.DefaultDirectory);
         private readonly PaletteSettings _settings = PaletteSettings.Load();
         private readonly HashSet<Document> _watchedDocs = new HashSet<Document>();
+        private SkillStore _skillStore;
+        private FileSystemWatcher _skillWatcher;
+        private System.Threading.Timer _skillDebounce;
 
         private bool _started;
         private volatile bool _busy;
@@ -100,6 +103,11 @@ namespace ClaudeCAD.Plugin
             ui.ConfirmAnswered += (id, yes) => Guard("confirm", () => AnswerConfirm(id, yes));
             ui.ExportRequested += () => Guard("export", () => MainThread.Post(Export));
             ui.SettingsChanged += s => Guard("settings", () => OnSettingsChanged(s));
+            ui.AddSkillRequested += () => Guard("add skill", () => MainThread.Post(AddSkill));
+            ui.SkillToggled += (n, on) => Guard("toggle skill", () => ToggleSkill(n, on));
+            ui.SkillEditRequested += n => Guard("edit skill", () => EditSkill(n));
+            ui.SkillDeleteRequested += n => Guard("delete skill", () => MainThread.Post(() => DeleteSkill(n)));
+            ui.OpenSkillsFolderRequested += () => Guard("skills folder", OpenSkillsFolder);
 
             Interaction.SelectionPicked += sel => { _selection = sel; Ui.SetSelectionChip(sel, true); _palette.FocusInput(); };
             Interaction.ImpliedSelectionChanged += sel => { if (!_busy) { _selection = sel; Ui.SetSelectionChip(sel, false); } };
@@ -126,6 +134,7 @@ namespace ClaudeCAD.Plugin
                 Ui.ApplySettings(_settings);
                 ApplyTheme();
                 Ui.SetTemplates(QuickTemplates.LoadAll(PluginPaths.TemplatesFile, QuickTemplates.UserFile));
+                InitSkills();
                 foreach (Document d in AcApp.DocumentManager) WatchDoc(d);
                 LoadTranscriptFor(AcApp.DocumentManager.MdiActiveDocument);
                 _ipc.Start();
@@ -219,6 +228,151 @@ namespace ClaudeCAD.Plugin
         private void OnSystemVariableChanged(object sender, Autodesk.AutoCAD.ApplicationServices.SystemVariableChangedEventArgs e)
         {
             if (e.Name.Equals("COLORTHEME", StringComparison.OrdinalIgnoreCase) && _settings.Theme == "auto") ApplyTheme();
+        }
+
+        // ================================================================= skills (+ Add skill)
+
+        /// <summary>Skill folder of the plugin (Contents\skills in the bundle, repo\skills in dev).</summary>
+        private string SkillsRoot => PluginPaths.SkillsDirectory ?? Path.Combine(PluginPaths.DllDirectory, "skills");
+
+        private void InitSkills()
+        {
+            _skillStore = new SkillStore(SkillsRoot);
+            RefreshSkills();
+            try
+            {
+                Directory.CreateDirectory(_skillStore.Root);
+                // edits made with "Sửa" (or in Explorer) are picked up automatically
+                _skillWatcher = new FileSystemWatcher(_skillStore.Root, "*.md") { IncludeSubdirectories = true, NotifyFilter = NotifyFilters.LastWrite | NotifyFilters.FileName | NotifyFilters.DirectoryName };
+                FileSystemEventHandler h = (s, e) => ScheduleSkillReload();
+                _skillWatcher.Changed += h;
+                _skillWatcher.Created += h;
+                _skillWatcher.Deleted += h;
+                _skillWatcher.Renamed += (s, e) => ScheduleSkillReload();
+                _skillWatcher.EnableRaisingEvents = true;
+            }
+            catch (Exception ex)
+            {
+                Logger.Warn("skills watcher unavailable: " + ex.Message);
+            }
+        }
+
+        private void ScheduleSkillReload()
+        {
+            _skillDebounce?.Dispose();
+            _skillDebounce = new System.Threading.Timer(_ => Ui.Enqueue(() =>
+            {
+                RefreshSkills();
+                ReloadSkillsInAgent();
+                Ui.SetToolStatus("Skill đã thay đổi — Claude dùng bản mới từ tin nhắn tiếp theo.");
+            }), null, 1500, System.Threading.Timeout.Infinite);
+        }
+
+        private List<SkillInfo> RefreshSkills()
+        {
+            var list = _skillStore?.Scan() ?? new List<SkillInfo>();
+            Ui.SetSkills(list);
+            return list;
+        }
+
+        private void ReloadSkillsInAgent() => _ipc.Send(new Dictionary<string, object> { ["type"] = "reload_skills" });
+
+        /// <summary>"+ Add skill": pick .md files (default: the plugin's skill folder), copy, register, report.</summary>
+        private void AddSkill()
+        {
+            if (_skillStore == null) InitSkills();
+            if (!_skillStore.IsWritable())
+            {
+                Ui.AddErrorCard($"Không ghi được vào thư mục skill của plugin ({_skillStore.Root}). Nếu cậu cài cho mọi người dùng (ProgramData), hãy cài lại cho riêng tài khoản của cậu bằng Setup.exe.", false);
+                return;
+            }
+            var dlg = new Microsoft.Win32.OpenFileDialog
+            {
+                Title = "Chọn file skill (.md)",
+                Filter = "Skill Markdown (*.md)|*.md",
+                Multiselect = true,
+                InitialDirectory = _skillStore.Root,
+            };
+            if (dlg.ShowDialog() != true) return;
+            if (_skillWatcher != null) _skillWatcher.EnableRaisingEvents = false; // our own copies are not "edits"
+            var added = new List<string>();
+            try
+            {
+                foreach (var file in dlg.FileNames)
+                {
+                    var r = _skillStore.Import(file, false);
+                    if (r.Status == SkillImportStatus.Conflict)
+                    {
+                        var answer = System.Windows.MessageBox.Show(
+                            $"Plugin đã có skill \"{r.Name}\".\n\nThay bằng nội dung của file:\n{file} ?",
+                            "ClaudeCAD — skill đã tồn tại", System.Windows.MessageBoxButton.YesNo, System.Windows.MessageBoxImage.Question);
+                        if (answer != System.Windows.MessageBoxResult.Yes) { Ui.AddNote($"Giữ nguyên skill \"{r.Name}\" (không thay)."); continue; }
+                        r = _skillStore.Import(file, true);
+                    }
+                    switch (r.Status)
+                    {
+                        case SkillImportStatus.Invalid:
+                            Ui.AddErrorCard(r.Message + "\n\nFile skill cần bắt đầu bằng:\n---\nname: ten-skill\ndescription: Khi nào dùng skill, các từ khóa...\n---", false);
+                            break;
+                        default:
+                            added.Add(r.Name);
+                            Ui.AddNote("✓ " + r.Message + " Skill đang bật; Claude dùng từ tin nhắn tiếp theo (vẫn nhớ cuộc chat).");
+                            break;
+                    }
+                }
+            }
+            finally
+            {
+                if (_skillWatcher != null) _skillWatcher.EnableRaisingEvents = true;
+            }
+            if (added.Count == 0) return;
+            RefreshSkills();
+            ReloadSkillsInAgent();
+        }
+
+        private void ToggleSkill(string name, bool on)
+        {
+            _skillStore?.SetEnabled(name, on);
+            RefreshSkills();
+            ReloadSkillsInAgent();
+            Ui.SetToolStatus(on ? $"Đã bật skill {name}." : $"Đã tắt skill {name}.");
+            if (!on && _settings.Standard == name)
+            {
+                _settings.Standard = "";
+                _settings.Save();
+                Ui.ApplySettings(_settings);
+            }
+        }
+
+        private void EditSkill(string name)
+        {
+            var file = _skillStore?.SkillFile(name);
+            if (file == null || !File.Exists(file)) return;
+            try { Process.Start(new ProcessStartInfo(file) { UseShellExecute = true }); }
+            catch { Process.Start("notepad.exe", "\"" + file + "\""); } // no .md editor associated
+            Ui.SetToolStatus($"Đang mở {name}\\SKILL.md — lưu file là xong, plugin tự nạp lại.");
+        }
+
+        private void DeleteSkill(string name)
+        {
+            var answer = System.Windows.MessageBox.Show(
+                $"Xóa skill \"{name}\" khỏi plugin?\n\nThư mục {Path.Combine(_skillStore.Root, name)} sẽ bị xóa.",
+                "ClaudeCAD — xóa skill", System.Windows.MessageBoxButton.YesNo, System.Windows.MessageBoxImage.Warning);
+            if (answer != System.Windows.MessageBoxResult.Yes) return;
+            if (_skillWatcher != null) _skillWatcher.EnableRaisingEvents = false;
+            try { _skillStore.Delete(name); }
+            finally { if (_skillWatcher != null) _skillWatcher.EnableRaisingEvents = true; }
+            if (_settings.Standard == name) { _settings.Standard = ""; _settings.Save(); Ui.ApplySettings(_settings); }
+            RefreshSkills();
+            ReloadSkillsInAgent();
+            Ui.AddNote($"Đã xóa skill \"{name}\".");
+        }
+
+        private void OpenSkillsFolder()
+        {
+            var root = _skillStore?.Root ?? SkillsRoot;
+            Directory.CreateDirectory(root);
+            Process.Start("explorer.exe", "\"" + root + "\"");
         }
 
         // ================================================================= per-drawing history (17)
@@ -736,6 +890,13 @@ namespace ClaudeCAD.Plugin
                         Ui.SetConnection("Đã kết nối" + (string.IsNullOrEmpty(info) ? "" : " · " + info), true);
                         break;
                     }
+                case "skills_reloaded":
+                    {
+                        var names = msg.TryGetValue("skills", out var sk) && sk is List<object> sl ? sl.OfType<string>().ToList() : new List<string>();
+                        Logger.Info("sidecar skills: " + string.Join(", ", names));
+                        Ui.SetToolStatus($"Claude sẽ dùng {names.Count} skill: {string.Join(", ", names)}");
+                        break;
+                    }
                 case "session_reset":
                     Ui.SetConnection("Đã kết nối · phiên mới", true);
                     break;
@@ -885,6 +1046,8 @@ namespace ClaudeCAD.Plugin
                 AcApp.SystemVariableChanged -= OnSystemVariableChanged;
                 foreach (var d in _watchedDocs.ToList()) { try { d.CommandEnded -= OnCommandEnded; } catch { } Interaction.Unwatch(d); }
                 Notifier.Dispose();
+                _skillWatcher?.Dispose();
+                _skillDebounce?.Dispose();
             }
             catch { }
             _sidecar.Dispose();

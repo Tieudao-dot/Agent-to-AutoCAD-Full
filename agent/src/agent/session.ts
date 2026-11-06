@@ -10,7 +10,7 @@ import { toSdkUserMessage } from './content.js';
 import type { ToolBridge } from '../tools/common.js';
 import { MCP_SERVER_NAME, createCadServer } from '../tools/index.js';
 import { InputQueue } from './inputQueue.js';
-import { SKILLS_PLUGIN_NAME, prepareSkillsPlugin } from './skills.js';
+import { SKILLS_PLUGIN_NAME, enabledSkills, prepareSkillsPlugin } from './skills.js';
 import { SYSTEM_PROMPT } from './systemPrompt.js';
 
 export type QueryFn = typeof sdkQuery;
@@ -70,6 +70,7 @@ export class AgentSession {
   private gotInit = false;
   /** Results still expected from turns abandoned by the plugin (forced end after Stop). */
   private staleResults = 0;
+  private reloadPending = false;
   private readonly defaultModel?: string;
 
   constructor(private readonly cfg: SessionConfig) {
@@ -204,6 +205,17 @@ export class AgentSession {
     this.cfg.emit({ type: 'options', ...(this.cfg.model ? { model: this.cfg.model } : {}), ...(this.cfg.effort ? { effort: this.cfg.effort } : {}) });
   }
 
+  /**
+   * Skills changed in the palette. The skill list is fixed when a Claude process starts, so
+   * the next message starts a new process that resumes the SAME conversation (context kept)
+   * with the new skills. During a turn this waits until the turn ends.
+   */
+  reloadSkills(): void {
+    if (this.turnActive) this.reloadPending = true;
+    else this.closeQuery(); // sessionId is kept → resumed on the next message
+    this.cfg.emit({ type: 'skills_reloaded', skills: enabledSkills(this.cfg.skillsDir) });
+  }
+
   /** Per-drawing conversations: continue the given session (or a fresh one) on the next message. */
   switchTo(sessionId: string | undefined): void {
     if (this.turnActive) this.cfg.onCancel?.();
@@ -297,6 +309,10 @@ export class AgentSession {
     this.turnActive = false;
     this.cancelRequested = false;
     this.cfg.emit({ type: 'turn_end', ...end });
+    if (this.reloadPending) {
+      this.reloadPending = false;
+      this.closeQuery();
+    }
   }
 
   /** Translates SDK events into palette events (spec §5 "Streaming ra UI"). */

@@ -91,6 +91,12 @@ Trạng thái: ⬜ chưa chạy · ✅ đạt · ❌ không đạt · ⚠️ đ�
 | UI-18 | Copy tin nhắn; **Xuất** ra .md | ⬜ chưa chạy | |
 | UI-19 | Đổi COLORTHEME của AutoCAD → palette đổi theo; A−/A+, Ctrl+lăn chuột | ⬜ chưa chạy | |
 | UI-20 | **Sửa** tin cuối sau một lượt vẽ → lượt cũ được U rồi vẽ lại theo yêu cầu mới | ⬜ chưa chạy | |
+| SK-1 | **+ Add skill** → hộp chọn mở đúng thư mục skill của plugin; chọn file .md hợp lệ → "✓ Đã thêm skill …", có thư mục + `skills.json` | ⬜ chưa chạy | |
+| SK-2 | File thiếu description / không có phần đầu → thẻ lỗi nêu lý do, không thêm | ⬜ chưa chạy | |
+| SK-3 | Thêm trùng tên → hỏi thay; chọn lại file trong thư mục plugin → chỉ bật lại | ⬜ chưa chạy | |
+| SK-4 | Tin nhắn sau khi thêm dùng đúng skill mới, Claude vẫn nhớ cuộc chat trước | ⬜ chưa chạy | |
+| SK-5 | **Skill (N)**: bật/tắt (skill tắt không được dùng), Sửa → lưu file → tự nạp lại, Xóa, Mở thư mục | ⬜ chưa chạy | |
+| SK-6 | Ô **Chuẩn** liệt kê skill đang bật kể cả skill mới thêm | ⬜ chưa chạy | |
 
 ## Đã kiểm chứng tự động trên cloud (Linux)
 
@@ -101,6 +107,7 @@ Trạng thái: ⬜ chưa chạy · ✅ đạt · ❌ không đạt · ⚠️ đ�
 | 2026-11-05 | `dotnet build` plugin net48 với reference AutoCAD.NET 24.1.51000 | ✅ 0 warning |
 | 2026-11-05 | `dotnet test plugin/ClaudeCAD.Core.Tests` — JsonCodec, Params | ✅ 16/16 |
 | 2026-11-05 | Phase 1b: `npm test` 38/38 (thêm: danh mục tool TS khớp handler C#, mọi schema chuyển được sang JSON Schema, schema nhận ví dụ spec, giới hạn 500 call/batch) | ✅ |
+| 2026-11-06 | v0.5.0 skill trên khung chat: `dotnet test` lõi 68/68 (SkillStore: nhập .md, tên từ file, file thiếu description, trùng tên, chọn lại file đã có, thư mục SKILL.md kèm file tham khảo, bật/tắt, xóa, `skills.json`); `npm test` 75/75 (chỉ nạp skill đang bật, reload_skills giữ ngữ cảnh) | ✅ |
 | 2026-11-05 | v0.4.0 khung chat 20 tính năng: `npm test` 70/70 (nội dung tin nhắn, giao thức mới, model/effort, chuyển phiên + khôi phục lỗi, usage, rate limit, thẻ xác nhận); `dotnet test` lõi 56/56 (markdown, lịch sử, cài đặt, mẫu lệnh, bảng Excel); build plugin net48 + net8 0 warning | ✅ |
 | 2026-11-05 | **CI GitHub Actions `windows-latest`** (run 3–5, commit 3b87661): `npm ci` + `npm test` 58/58 với **named pipe Windows thật** (gồm tiến trình sidecar nối pipe), `dotnet test` lõi, build plugin net48 + net8.0-windows, make-bundle (node_modules win32-x64) + zip + latest.json, Inno Setup → `ClaudeCAD-Setup-0.3.0.exe`, upload artifact | ✅ |
 | 2026-11-05 | Phase 3: `npm test` 58/58 (thêm: phiên bản thống nhất 4 nơi, manifest đúng dll theo series); `dotnet test` 43/43 (thêm UpdateLogic); build **net48 + net8.0-windows** (AutoCAD.NET 24.1.51000 và 25.0.1) 0 warning; `make-bundle --zip` tạo bundle 2 dll + zip + latest.json | ✅ |

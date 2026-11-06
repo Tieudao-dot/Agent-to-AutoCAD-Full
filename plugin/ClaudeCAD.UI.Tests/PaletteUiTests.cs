@@ -69,6 +69,13 @@ namespace ClaudeCAD.UI.Tests
             c.ApplySettings(s);
             c.SetDark(dark);
             c.SetTemplates(QuickTemplates.Parse(File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "templates.json"))));
+            c.SetSkills(new List<SkillInfo>
+            {
+                new SkillInfo { Name = "ve-kien-truc", Title = "Vẽ kiến trúc theo chuẩn", Description = "Chuẩn vẽ kiến trúc...", Builtin = true },
+                new SkillInfo { Name = "ve-mep", Title = "Vẽ điện nước", Description = "Chuẩn MEP...", Builtin = true, Enabled = false },
+                new SkillInfo { Name = "ve-ket-cau", Title = "Vẽ kết cấu", Description = "Chuẩn kết cấu của công ty", Added = DateTime.Now, Source = @"D:\chuan\ket-cau.md" },
+                new SkillInfo { Name = "sai-ten", Error = "Thiếu dòng description" },
+            });
             c.SetConnection("Đã kết nối · Opus 5.5 · Claude login", true);
             c.SetUsage("Lượt vừa rồi: ↑12.3k ↓1.1k token · phiên ≈ $0.08 · hạn mức 5 giờ 41%");
 
