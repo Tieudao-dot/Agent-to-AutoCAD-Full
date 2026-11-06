@@ -117,6 +117,9 @@ Trạng thái: ⬜ chưa chạy · ✅ đạt · ❌ không đạt · ⚠️ đ�
 | I-3 | Bấm **Đăng nhập Claude** → cửa sổ đen + trình duyệt đăng nhập Pro/Max → "✓ Đã đăng nhập Claude", gửi tin nhắn được ngay | ⬜ chưa chạy | |
 | I-4 | Chưa đăng nhập mà gửi tin → thẻ lỗi có nút **Đăng nhập Claude** (không còn hướng dẫn terminal) | ⬜ chưa chạy | |
 | I-5 | Mở AutoCAD lần sau → thẻ Bắt đầu không tự hiện lại; ⚙ ▸ Hướng dẫn bắt đầu mở lại được | ⬜ chưa chạy | |
+| R-1 | ⚙ ▸ **Gửi báo cáo lỗi** → zip trên Desktop, Explorer mở; trong zip có thong-tin.txt, log, tự kiểm tra, log cài đặt; không có API key / chat | ⬜ chưa chạy | |
+| A-1 | ⚙ ▸ Tài khoản AI hiện đúng tài khoản; **Đổi tài khoản** → đăng nhập tài khoản khác → chat chạy bằng tài khoản mới | ⬜ chưa chạy | |
+| A-2 | **Dùng API key** → dán key → dòng trạng thái "API key"; **Xóa key đã lưu** → quay lại tài khoản Claude; **Đăng xuất** → gửi tin hiện thẻ Đăng nhập | ⬜ chưa chạy | |
 | ST-1 | Gõ **CLAUDECHATSELFTEST** → mở bản vẽ tạm, chạy các bước, đóng lại, về bản vẽ của cậu; Notepad mở báo cáo — gửi file này cho người phát triển | ⬜ chưa chạy | |
 | L-1 | **Chọn đối tượng** quét qua tường, cửa, chữ → chip hiện đúng các layer và số lượng; bỏ tick A-TEXT → "Kèm x/y đối tượng"; Claude chỉ sửa phần còn tick | ⬜ chưa chạy | |
 | L-2 | Nút **Layer** → danh sách đúng (màu, số đối tượng, khóa/tắt), lọc theo tên, tick 2 layer → **Dùng layer đã chọn** → chip "Layer: …" | ⬜ chưa chạy | |

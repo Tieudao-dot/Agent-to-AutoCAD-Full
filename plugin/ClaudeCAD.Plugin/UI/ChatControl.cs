@@ -73,6 +73,15 @@ namespace ClaudeCAD.Plugin.UI
         public event Action LoginRequested;
         public event Action SelfTestRequested;
         public event Action WelcomeRequested;
+        // v0.9.2: account + bug report
+        public event Action SettingsOpened;
+        public event Action SwitchAccountRequested;
+        public event Action LogoutRequested;
+        public event Action<string> ApiKeySaveRequested;
+        public event Action ApiKeyClearRequested;
+        public event Action ReportRequested;
+        /// <summary>"sk-ant-…AbCd" of the saved key, or null (shown in the API key editor).</summary>
+        public Func<string> ApiKeyMask;
         /// <summary>Layer / block / style names of the active drawing for "@" (called on the UI thread).</summary>
         public Func<List<MentionItem>> MentionSource;
         /// <summary>Layers of the active drawing with object counts for the layer picker (UI thread).</summary>
@@ -104,6 +113,10 @@ namespace ClaudeCAD.Plugin.UI
         private TextBlock _versionBannerText;
         private List<VersionInfo> _versions = new List<VersionInfo>();
         private bool _viewingVersion;
+        private TextBlock _accountStatus;
+        private Border _apiKeyPanel;
+        private PasswordBox _apiKeyBox;
+        private TextBlock _apiKeyInfo;
         // layer scope
         private Button _layersBtn;
         private Border _layerPanel;
@@ -166,7 +179,11 @@ namespace ClaudeCAD.Plugin.UI
             _new = MakeButton("New", "Bắt đầu cuộc chat mới cho bản vẽ này");
             _stop = MakeButton("Stop", "Dừng lượt đang chạy");
             _stop.IsEnabled = false;
-            _settingsBtn.Click += (s, e) => _settingsPopup.IsOpen = !_settingsPopup.IsOpen;
+            _settingsBtn.Click += (s, e) =>
+            {
+                _settingsPopup.IsOpen = !_settingsPopup.IsOpen;
+                if (_settingsPopup.IsOpen) SettingsOpened?.Invoke(); // refresh the account line
+            };
             _export.Click += (s, e) => ExportRequested?.Invoke();
             _new.Click += (s, e) => NewChatRequested?.Invoke();
             _stop.Click += (s, e) => StopRequested?.Invoke();
@@ -233,6 +250,11 @@ namespace ClaudeCAD.Plugin.UI
             Theme.Ref(_versionBanner, Border.BorderBrushProperty, Theme.Accent);
             DockPanel.SetDock(_versionBanner, Dock.Top);
             root.Children.Add(_versionBanner);
+
+            // ---- API key editor (inline: a password box in a popup gets no keys inside a PaletteSet)
+            _apiKeyPanel = BuildApiKeyPanel();
+            DockPanel.SetDock(_apiKeyPanel, Dock.Top);
+            root.Children.Add(_apiKeyPanel);
 
             // ---- layer picker (inline: it has a search box)
             _layerPanel = BuildLayerPanel();
@@ -471,13 +493,38 @@ namespace ClaudeCAD.Plugin.UI
             _visualCheck = Check("Claude tự nhìn bản vẽ để kiểm tra sau khi vẽ việc lớn", "Claude chụp vùng vừa vẽ (capture_view) để tự soát lỗi; tốn thêm ít token cho mỗi ảnh");
             _planFirst = Check("Trình bày kế hoạch trước khi làm việc nhiều bước", "Thẻ kế hoạch có nút Làm / Sửa kế hoạch trước khi Claude vẽ việc lớn");
             _suggestCheck = Check("Gợi ý bước tiếp theo sau mỗi câu trả lời", "2–3 nút gợi ý dưới câu trả lời; bấm là gửi");
-            var setupRow = new WrapPanel { Margin = new Thickness(0, 10, 0, 0) };
-            var login = SmallButton("Đăng nhập Claude", "Đăng nhập tài khoản Claude Pro/Max trên trình duyệt (dùng Claude Code có sẵn trong plugin)");
-            login.Click += (s, e) => { _settingsPopup.IsOpen = false; LoginRequested?.Invoke(); };
+            var setupRow = new StackPanel { Margin = new Thickness(0, 10, 0, 0) };
+            var accTitle = new TextBlock { Text = "Tài khoản AI", FontWeight = FontWeights.SemiBold, Margin = new Thickness(0, 0, 0, 2) };
+            Theme.Ref(accTitle, TextBlock.ForegroundProperty, Theme.Fg);
+            setupRow.Children.Add(accTitle);
+            _accountStatus = MutedText("Đang kiểm tra...");
+            _accountStatus.TextWrapping = TextWrapping.Wrap;
+            _accountStatus.FontSize = 11;
+            setupRow.Children.Add(_accountStatus);
+            var accButtons = new WrapPanel { Margin = new Thickness(0, 4, 0, 0) };
+            Button Act(string text, string tip, Action a)
+            {
+                var b = SmallButton(text, tip);
+                b.Margin = new Thickness(0, 0, 6, 4);
+                b.Click += (s, e) => { _settingsPopup.IsOpen = false; a(); };
+                accButtons.Children.Add(b);
+                return b;
+            }
+            Act("Đăng nhập Claude", "Đăng nhập tài khoản Claude Pro/Max trên trình duyệt (dùng Claude Code có sẵn trong plugin)", () => LoginRequested?.Invoke());
+            Act("Đổi tài khoản", "Đăng xuất tài khoản hiện tại rồi đăng nhập tài khoản Claude khác", () => SwitchAccountRequested?.Invoke());
+            Act("Đăng xuất", "Đăng xuất tài khoản Claude trên máy này (cả Claude Code nếu có)", () => LogoutRequested?.Invoke());
+            Act("Dùng API key", "Dán API key Anthropic (trả theo lượng dùng) thay cho tài khoản Pro/Max", () => ShowApiKeyPanel(ApiKeyMask?.Invoke()));
+            setupRow.Children.Add(accButtons);
+            var helpButtons = new WrapPanel { Margin = new Thickness(0, 4, 0, 0) };
+            var report = SmallButton("Gửi báo cáo lỗi", "Gom thông tin máy, log, kết quả tự kiểm tra thành một file .zip trên Desktop để gửi cho người hỗ trợ");
+            report.Margin = new Thickness(0, 0, 6, 4);
+            report.Click += (s, e) => { _settingsPopup.IsOpen = false; ReportRequested?.Invoke(); };
             var welcome = SmallButton("Hướng dẫn bắt đầu", "Kiểm tra cài đặt, đăng nhập, tự kiểm tra");
+            welcome.Margin = new Thickness(0, 0, 6, 4);
             welcome.Click += (s, e) => { _settingsPopup.IsOpen = false; WelcomeRequested?.Invoke(); };
-            setupRow.Children.Add(login);
-            setupRow.Children.Add(welcome);
+            helpButtons.Children.Add(report);
+            helpButtons.Children.Add(welcome);
+            setupRow.Children.Add(helpButtons);
             _hotkey = Check("Phím tắt Ctrl+Shift+Space mở khung chat", "Trong AutoCAD: Ctrl+Shift+Space mở palette và đặt con trỏ vào ô nhập (lệnh tắt: CC)");
             _versionsCheck = Check("Tự lưu phiên bản trước khi chat sửa (30 phút/lần, giữ 10 bản)", "Bản sao DWG trong %LocalAppData%\\ClaudeCAD\\versions; mở xem bằng nút Phiên bản");
             _sideSnapshot = Check("Lưu biên bản cạnh bản vẽ (nhóm dùng chung thư mục dự án)", "Biên bản thay đổi lưu thêm trong thư mục ẩn .claudecad cạnh file DWG, để máy khác có cài plugin cũng biết bản vẽ đã được sửa tay");
@@ -1275,14 +1322,17 @@ namespace ClaudeCAD.Plugin.UI
             var t = new TextBlock { Text = "⚠ " + text, TextWrapping = TextWrapping.Wrap };
             Theme.Ref(t, TextBlock.ForegroundProperty, Theme.ErrorFg);
             stack.Children.Add(t);
+            var row = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(0, 4, 0, 0) };
             if (canRetry)
             {
                 var retry = SmallButton("Thử lại", "Gửi lại yêu cầu vừa rồi");
-                retry.Margin = new Thickness(0, 4, 0, 0);
-                retry.HorizontalAlignment = HorizontalAlignment.Left;
                 retry.Click += (s, e) => { retry.IsEnabled = false; RetryRequested?.Invoke(); };
-                stack.Children.Add(retry);
+                row.Children.Add(retry);
             }
+            var report = SmallButton("Gửi báo cáo lỗi", "Gom thông tin máy và log thành một file .zip trên Desktop để gửi cho người hỗ trợ");
+            report.Click += (s, e) => ReportRequested?.Invoke();
+            row.Children.Add(report);
+            stack.Children.Add(row);
             var b = new Border { Child = stack, BorderThickness = new Thickness(1), CornerRadius = new CornerRadius(6), Padding = new Thickness(8, 5, 8, 5), Margin = new Thickness(0, 4, 24, 4) };
             Theme.Ref(b, Border.BorderBrushProperty, Theme.ErrorFg);
             _messages.Children.Add(b);
@@ -1735,6 +1785,60 @@ namespace ClaudeCAD.Plugin.UI
             AddImage(ImageAttachment.FromBitmap(bmp));
             _toolStatus.Text = "Đã chụp vùng đang xem — gõ yêu cầu (ví dụ \"chỗ này sai, sửa lại\") rồi gửi.";
             _input.Focus();
+        });
+
+        // ---------------------------------------------------------------- account
+
+        public void SetAccountStatus(string text) => Ui(() => { if (_accountStatus != null) _accountStatus.Text = text ?? ""; });
+
+        private Border BuildApiKeyPanel()
+        {
+            var p = new StackPanel { Margin = new Thickness(8) };
+            var head = new DockPanel { Margin = new Thickness(0, 0, 0, 4) };
+            var close = SmallButton("Đóng", "Đóng");
+            close.Margin = new Thickness(0);
+            var clear = SmallButton("Xóa key đã lưu", "Bỏ API key đã lưu: quay lại dùng tài khoản Claude đã đăng nhập");
+            var save = SmallButton("Lưu", "Lưu key (mã hóa theo tài khoản Windows) và khởi động lại trợ lý");
+            foreach (var b in new[] { close, clear, save }) { DockPanel.SetDock(b, Dock.Right); head.Children.Add(b); }
+            var title = new TextBlock { Text = "Dùng API key Anthropic", FontWeight = FontWeights.SemiBold, VerticalAlignment = VerticalAlignment.Center };
+            Theme.Ref(title, TextBlock.ForegroundProperty, Theme.Fg);
+            head.Children.Add(title);
+            p.Children.Add(head);
+            var hint = MutedText("Tạo key ở console.anthropic.com (trả theo lượng dùng, không dùng hạn mức gói Pro/Max). Key được lưu mã hóa cho riêng tài khoản Windows này và được ưu tiên hơn tài khoản Claude đã đăng nhập.");
+            hint.TextWrapping = TextWrapping.Wrap;
+            hint.FontSize = 11;
+            p.Children.Add(hint);
+            _apiKeyBox = new PasswordBox { Margin = new Thickness(0, 6, 0, 4), Padding = new Thickness(2), FontSize = 12 };
+            Theme.Ref(_apiKeyBox, BackgroundProperty, Theme.InputBg);
+            Theme.Ref(_apiKeyBox, ForegroundProperty, Theme.Fg);
+            Theme.Ref(_apiKeyBox, BorderBrushProperty, Theme.Border);
+            p.Children.Add(_apiKeyBox);
+            _apiKeyInfo = MutedText("");
+            _apiKeyInfo.FontSize = 11;
+            p.Children.Add(_apiKeyInfo);
+            var border = new Border { Child = p, BorderThickness = new Thickness(1), CornerRadius = new CornerRadius(4), Margin = new Thickness(6, 0, 6, 4), Visibility = Visibility.Collapsed };
+            Theme.Ref(border, Border.BackgroundProperty, Theme.CardBg);
+            Theme.Ref(border, Border.BorderBrushProperty, Theme.Border);
+            void Close() { _apiKeyBox.Clear(); border.Visibility = Visibility.Collapsed; }
+            close.Click += (s, e) => Close();
+            clear.Click += (s, e) => { Close(); ApiKeyClearRequested?.Invoke(); };
+            save.Click += (s, e) =>
+            {
+                var key = _apiKeyBox.Password.Trim();
+                if (key.Length < 20) { _apiKeyInfo.Text = "Key chưa đúng (thường bắt đầu bằng sk-ant-)."; return; }
+                Close();
+                ApiKeySaveRequested?.Invoke(key);
+            };
+            _apiKeyBox.KeyDown += (s, e) => { if (e.Key == Key.Enter) { e.Handled = true; save.RaiseEvent(new RoutedEventArgs(System.Windows.Controls.Primitives.ButtonBase.ClickEvent)); } };
+            return border;
+        }
+
+        /// <summary>Opens the API key editor; savedMask = "sk-ant-…AbCd" when a key is already saved.</summary>
+        public void ShowApiKeyPanel(string savedMask = null) => Ui(() =>
+        {
+            _apiKeyInfo.Text = string.IsNullOrEmpty(savedMask) ? "Chưa có key nào được lưu." : "Đang dùng key đã lưu: " + savedMask;
+            _apiKeyPanel.Visibility = Visibility.Visible;
+            _apiKeyBox.Focus();
         });
 
         // ---------------------------------------------------------------- cards: login, welcome

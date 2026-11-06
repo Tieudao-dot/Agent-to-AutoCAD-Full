@@ -155,3 +155,11 @@ Cloud: `dotnet test` 102/102, `npm test` 95/95, build plugin net48 + net8 ✅.
 - **E** Tên bộ cài cố định `ClaudeCAD-Setup.exe` → link `releases/latest/download/ClaudeCAD-Setup.exe`; tag `v*` tạo GitHub Release (repo công khai: tải và tự cập nhật không cần đăng nhập GitHub).
 
 Cần test trên máy thật: I-1 … I-5 trong `docs/test-log.md`.
+
+## v0.9.2 — báo cáo lỗi + tài khoản AI ✅ code xong
+
+- **Gửi báo cáo lỗi** (⚙ và thẻ lỗi): zip trên Desktop với thông tin máy, trạng thái, log 3 ngày, tự kiểm tra, log cài đặt; API key / token được che; không có chat hay bản vẽ.
+- Bộ cài luôn ghi log (`SetupLogging=yes`).
+- **Tài khoản AI** trong ⚙: trạng thái, Đăng nhập, Đổi tài khoản, Đăng xuất, Dùng API key (DPAPI).
+
+Cloud: `dotnet test` 106/106, `npm test` 95/95, build ✅. Cần test: R-1, A-1, A-2.

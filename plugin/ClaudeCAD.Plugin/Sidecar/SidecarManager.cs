@@ -121,6 +121,9 @@ namespace ClaudeCAD.Plugin.Sidecar
                 StandardErrorEncoding = Encoding.UTF8,
                 WorkingDirectory = System.IO.Path.GetDirectoryName(System.IO.Path.GetDirectoryName(entry)) ?? PluginPaths.DllDirectory,
             };
+            // "Dùng API key" in the palette: the saved key is given to the assistant (it wins over the Claude login)
+            var savedKey = ApiKeyStore.Load();
+            if (!string.IsNullOrEmpty(savedKey)) psi.EnvironmentVariables["ANTHROPIC_API_KEY"] = savedKey;
 
             try
             {

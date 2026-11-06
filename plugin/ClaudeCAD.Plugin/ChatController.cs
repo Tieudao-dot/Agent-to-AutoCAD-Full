@@ -166,6 +166,13 @@ namespace ClaudeCAD.Plugin
             ui.LoginRequested += () => Guard("login", Login);
             ui.SelfTestRequested += () => Guard("self-test", () => MainThread.Post(() => AcApp.DocumentManager.MdiActiveDocument?.SendStringToExecute("_CLAUDECHATSELFTEST ", true, false, false)));
             ui.WelcomeRequested += () => Guard("welcome", ShowWelcome);
+            ui.SettingsOpened += () => Guard("account status", RefreshAccountStatus);
+            ui.SwitchAccountRequested += () => Guard("switch account", SwitchAccount);
+            ui.LogoutRequested += () => Guard("logout", Logout);
+            ui.ApiKeySaveRequested += k => Guard("api key", () => SaveApiKey(k));
+            ui.ApiKeyClearRequested += () => Guard("api key", ClearApiKey);
+            ui.ReportRequested += () => Guard("report", ReportBug);
+            ui.ApiKeyMask = () => ApiKeyStore.HasKey ? ApiKeyStore.Mask(ApiKeyStore.Load()) : null;
 
             Interaction.SelectionPicked += sel => { _selection = sel; Ui.SetSelectionChip(sel, true); _palette.FocusInput(); };
             Interaction.ImpliedSelectionChanged += sel => { if (!_busy) { _selection = sel; Ui.SetSelectionChip(sel, false); } };
@@ -1475,6 +1482,95 @@ namespace ClaudeCAD.Plugin
             }
             _loginRunning = true;
             Ui.AddNote("Đang mở cửa sổ đăng nhập Claude: trình duyệt sẽ mở trang đăng nhập — chọn tài khoản Pro/Max, đồng ý, rồi quay lại AutoCAD. Cửa sổ đen tự đóng khi xong.");
+        }
+
+        // ================================================================= v0.9.2: account, bug report
+
+        private void RefreshAccountStatus()
+        {
+            Ui.SetAccountStatus("Đang kiểm tra...");
+            ClaudeAuth.StatusAsync().ContinueWith(t =>
+            {
+                var a = t.IsFaulted ? new AuthStatus { Error = t.Exception?.GetBaseException().Message } : t.Result;
+                var extra = a.Method == "api_key_saved" ? " (" + ApiKeyStore.Mask(ApiKeyStore.Load()) + ")" : "";
+                Ui.SetAccountStatus("Đang dùng: " + a.Label + extra + (string.IsNullOrEmpty(_readyInfo) ? "" : " · " + _readyInfo));
+            });
+        }
+
+        /// <summary>"Đổi tài khoản": sign out, then the normal sign-in (browser) for another account.</summary>
+        private void SwitchAccount()
+        {
+            if (ApiKeyStore.HasKey)
+            {
+                Ui.AddNote("Đang dùng API key đã lưu — bấm ⚙ ▸ Dùng API key ▸ Xóa key đã lưu nếu cậu muốn dùng tài khoản Claude.", true);
+                return;
+            }
+            Ui.AddNote("Đang đăng xuất tài khoản hiện tại...");
+            ClaudeAuth.LogoutAsync().ContinueWith(t => Ui.Enqueue(() =>
+            {
+                if (!t.Result) Ui.AddNote("Không đăng xuất được bằng Claude Code đi kèm; vẫn mở đăng nhập — chọn tài khoản khác trên trình duyệt.", true);
+                Login();
+            }));
+        }
+
+        private void Logout()
+        {
+            ClaudeAuth.LogoutAsync().ContinueWith(t => Ui.Enqueue(() =>
+            {
+                if (t.Result)
+                {
+                    Ui.AddNote("Đã đăng xuất tài khoản Claude trên máy này. Bấm ⚙ ▸ Đăng nhập Claude để đăng nhập lại.");
+                    _sidecar.Restart();
+                }
+                else Ui.AddErrorCard("Không đăng xuất được (không thấy Claude Code đi kèm plugin hoặc lệnh bị lỗi). Xóa tay file %USERPROFILE%\\.claude\\.credentials.json nếu cần.", false);
+            }));
+        }
+
+        private void SaveApiKey(string key)
+        {
+            try { ApiKeyStore.Save(key); }
+            catch (Exception ex) { Ui.AddErrorCard("Không lưu được API key: " + ex.Message, false); return; }
+            Ui.AddNote($"✓ Đã lưu API key {ApiKeyStore.Mask(key)} (mã hóa cho tài khoản Windows này). Trợ lý khởi động lại và dùng key này thay cho tài khoản Claude.");
+            _sidecar.Restart();
+        }
+
+        private void ClearApiKey()
+        {
+            if (!ApiKeyStore.HasKey) { Ui.SetToolStatus("Chưa có API key nào được lưu."); return; }
+            ApiKeyStore.Clear();
+            Ui.AddNote("Đã xóa API key đã lưu. Trợ lý khởi động lại và dùng tài khoản Claude đã đăng nhập" +
+                       (string.IsNullOrEmpty(Environment.GetEnvironmentVariable("ANTHROPIC_API_KEY")) ? "." : " — lưu ý: biến môi trường ANTHROPIC_API_KEY vẫn đang được đặt và vẫn được ưu tiên."));
+            _sidecar.Restart();
+        }
+
+        /// <summary>"Gửi báo cáo lỗi": zip on the Desktop, then Explorer shows it.</summary>
+        private void ReportBug()
+        {
+            Ui.SetToolStatus("Đang gom thông tin báo cáo lỗi...");
+            ClaudeAuth.StatusAsync().ContinueWith(t =>
+            {
+                var auth = t.IsFaulted ? new AuthStatus { Error = t.Exception?.GetBaseException().Message } : t.Result;
+                MainThread.Post(() =>
+                {
+                    string info;
+                    try { info = DiagnosticsBundle.Info(this, auth); }
+                    catch (Exception ex) { info = "Không lấy được thông tin: " + ex.Message; }
+                    System.Threading.Tasks.Task.Run(() =>
+                    {
+                        try
+                        {
+                            var zip = DiagnosticsBundle.Create(info);
+                            Ui.AddNote($"✓ Đã tạo báo cáo lỗi: {zip}\nGửi file này cho người hỗ trợ (Zalo, email...). File gồm thông tin máy, log 3 ngày gần đây, kết quả tự kiểm tra và log cài đặt — không có lịch sử chat, bản vẽ hay API key. Muốn kèm kết quả tự kiểm tra mới nhất: gõ CLAUDECHATSELFTEST trước rồi bấm lại.");
+                            try { Process.Start("explorer.exe", "/select,\"" + zip + "\""); } catch { }
+                        }
+                        catch (Exception ex)
+                        {
+                            Logger.Error("bug report failed", ex);
+                            Ui.AddErrorCard("Không tạo được báo cáo lỗi: " + ex.Message + ". Gõ CLAUDECHATLOG để mở thư mục log và gửi tay.", false);
+                        }
+                    });
+                });
+            });
         }
 
         /// <summary>The "Bắt đầu" card: node, assistant, Claude sign-in, skills — with Login / Self-test buttons.</summary>

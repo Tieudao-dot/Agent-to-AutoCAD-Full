@@ -17,7 +17,7 @@ import { ToolRpc } from './ipc/rpc.js';
 import { initLog, log, truncate } from './log.js';
 import type { ToolBridge } from './tools/common.js';
 
-export const VERSION = '0.9.1';
+export const VERSION = '0.9.2';
 
 async function main(): Promise<void> {
   const { values } = parseArgs({
