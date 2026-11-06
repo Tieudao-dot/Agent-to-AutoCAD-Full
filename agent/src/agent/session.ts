@@ -40,7 +40,7 @@ export const DISALLOWED_BUILTINS = [
 ];
 
 const ERROR_TEXT: Record<string, string> = {
-  authentication_failed: 'Chưa đăng nhập Claude. Mở terminal, chạy "claude" rồi đăng nhập tài khoản Pro/Max (hoặc gõ /login), hoặc đặt biến môi trường ANTHROPIC_API_KEY; xong bấm New. (claude login)',
+  authentication_failed: 'Chưa đăng nhập Claude. Bấm nút "Đăng nhập Claude" bên dưới và đăng nhập tài khoản Pro/Max trên trình duyệt (hoặc đặt biến môi trường ANTHROPIC_API_KEY).',
   oauth_org_not_allowed: 'Tài khoản Claude này không được phép dùng Claude Code.',
   billing_error: 'Lỗi thanh toán / hết hạn mức tài khoản Claude.',
   rate_limit: 'Đã chạm giới hạn sử dụng của gói Claude. Đợi một lúc rồi thử lại.',
@@ -351,7 +351,7 @@ export class AgentSession {
 
       case 'assistant':
         if (msg.error && msg.parent_tool_use_id === null) {
-          this.cfg.emit({ type: 'agent_error', message: ERROR_TEXT[msg.error] ?? `Lỗi từ Claude: ${msg.error}` });
+          this.cfg.emit({ type: 'agent_error', message: ERROR_TEXT[msg.error] ?? `Lỗi từ Claude: ${msg.error}`, code: msg.error });
         }
         return;
 

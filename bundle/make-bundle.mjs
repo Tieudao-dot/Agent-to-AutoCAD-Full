@@ -10,12 +10,14 @@
  *       update-config.json           (only with --update-url)
  *       README.md
  *       agent/                       (dist + package.json + production node_modules for win32-x64)
+ *       node/node.exe                (only with --node-dir: Node.js for Windows bundled, no separate install)
  *       skills/                      (user-editable skills)
  *       templates/templates.json     ("/" quick prompts; users add their own in %AppData%\ClaudeCAD\templates.json)
  *
  * Usage (from the repo root, after building plugin and agent):
  *   node bundle/make-bundle.mjs [--dll <path>] [--dll2025 <path>] [--out <dir>] [--skip-npm]
  *                               [--update-url <https://.../latest.json>] [--zip] [--download-url <https://.../ClaudeCAD-x.y.z.zip>]
+ *                               [--node-dir <extracted node-vXX-win-x64 folder>]
  *
  * --zip also writes bundle/out/ClaudeCAD-<version>.zip and latest.json (the update
  * manifest read by CLAUDECHATUPDATE: version, url, sha256).
@@ -40,6 +42,7 @@ const { values } = parseArgs({
     'update-url': { type: 'string' },
     zip: { type: 'boolean' },
     'download-url': { type: 'string' },
+    'node-dir': { type: 'string' },
   },
 });
 
@@ -103,6 +106,18 @@ if (!values['skip-npm']) {
   });
   const winBin = path.join(agentOut, 'node_modules', '@anthropic-ai', 'claude-agent-sdk-win32-x64');
   if (!fs.existsSync(winBin)) fail('the win32-x64 Claude Code binary package was not installed (npm too old? needs npm >= 9)');
+}
+
+// Node.js for Windows next to the plugin (Contents\node\node.exe): the user does not install Node
+if (values['node-dir']) {
+  const nodeDir = path.resolve(values['node-dir']);
+  const exe = path.join(nodeDir, 'node.exe');
+  if (!fs.existsSync(exe)) fail(`node.exe not found in ${nodeDir}`);
+  const nodeOut = path.join(contents, 'node');
+  fs.mkdirSync(nodeOut, { recursive: true });
+  fs.copyFileSync(exe, path.join(nodeOut, 'node.exe'));
+  if (fs.existsSync(path.join(nodeDir, 'LICENSE'))) fs.copyFileSync(path.join(nodeDir, 'LICENSE'), path.join(nodeOut, 'LICENSE'));
+  console.log(`make-bundle: bundled ${exe}`);
 }
 
 if (values.zip) {

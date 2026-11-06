@@ -19,7 +19,7 @@ Phạm vi theo spec §11: đóng gói installer (kèm kiểm tra Node), cập nh
 ## Installer
 
 - `installer/install.ps1` (PowerShell 5.1+): kiểm tra AutoCAD đã đóng; kiểm tra **Node.js >= 18** (PATH, `%ProgramFiles%\nodejs`), đề nghị cài bằng `winget install OpenJS.NodeJS.LTS` hoặc mở trang tải; copy bundle vào `%AppData%` (hoặc `%ProgramData%` với `-AllUsers`) bằng robocopy; **giữ nguyên skill người dùng đã sửa** (chỉ thêm tệp mới); kiểm tra đăng nhập Claude (`ANTHROPIC_API_KEY` hoặc `~\.claude\.credentials.json`) và hướng dẫn `claude login`; `-Uninstall` để gỡ.
-- `installer/ClaudeCAD.iss` (Inno Setup 6): tạo `ClaudeCAD-Setup-<version>.exe` cài cho user hiện tại (không cần quyền admin), kiểm tra Node.js khi bắt đầu, skill cài với `onlyifdoesntexist` (không ghi đè), nhắc đăng nhập Claude khi cài xong.
+- `installer/ClaudeCAD.iss` (Inno Setup 6): tạo `ClaudeCAD-Setup.exe` (tên cố định cho link `releases/latest/download/`) cài cho user hiện tại (không cần quyền admin), kèm Node.js (v0.9.1; chỉ kiểm tra Node khi bundle không có `node\node.exe`), skill cài với `onlyifdoesntexist` (không ghi đè), thêm thư mục plugin vào `TRUSTEDPATHS` của mọi profile AutoCAD R24/R25. Đăng nhập Claude làm trong AutoCAD bằng nút **Đăng nhập Claude**.
 
 ## Cập nhật tự động
 

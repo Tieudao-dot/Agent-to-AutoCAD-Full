@@ -234,6 +234,28 @@ namespace ClaudeCAD.UI.Tests
         }
 
         [Fact]
+        public void RendersSetupCards()
+        {
+            Sta(() =>
+            {
+                var c = new ChatControl { Width = 400, Height = 600 };
+                c.ApplySettings(new PaletteSettings());
+                c.SetDark(false);
+                c.LoadTranscript(new ChatTranscript(), false);
+                c.AddWelcomeCard(new List<(string, bool?, string)>
+                {
+                    ("Node.js", true, "đi kèm plugin"),
+                    ("Trợ lý (sidecar)", true, "sẵn sàng"),
+                    ("Tài khoản Claude", false, "chưa đăng nhập Claude"),
+                    ("Skill", true, "3 skill trong plugin"),
+                }, true);
+                c.AddLoginCard("Chưa đăng nhập Claude. Bấm nút \"Đăng nhập Claude\" bên dưới và đăng nhập tài khoản Pro/Max trên trình duyệt.");
+                Shot(c, "palette-setup");
+            });
+            Assert.True(new FileInfo(Path.Combine(OutDir, "palette-setup.png")).Length > 5_000);
+        }
+
+        [Fact]
         public void ReloadsPersistedTranscript()
         {
             Sta(() =>

@@ -224,7 +224,8 @@ describe('AgentSession', () => {
     s.send('x');
     await tick();
     const err = events.find((e) => e.type === 'agent_error') as any;
-    assert.match(err.message, /claude login/);
+    assert.match(err.message, /Đăng nhập Claude/);
+    assert.equal(err.code, 'authentication_failed'); // the palette shows its login button for this code
     s.close();
   });
 

@@ -69,6 +69,10 @@ namespace ClaudeCAD.Plugin.UI
         public event Action<string> VersionOpenRequested;           // version id
         public event Action VersionCloseRequested;
         public event Action OpenVersionsFolderRequested;
+        // v0.9.1: setup
+        public event Action LoginRequested;
+        public event Action SelfTestRequested;
+        public event Action WelcomeRequested;
         /// <summary>Layer / block / style names of the active drawing for "@" (called on the UI thread).</summary>
         public Func<List<MentionItem>> MentionSource;
         /// <summary>Layers of the active drawing with object counts for the layer picker (UI thread).</summary>
@@ -467,10 +471,18 @@ namespace ClaudeCAD.Plugin.UI
             _visualCheck = Check("Claude tự nhìn bản vẽ để kiểm tra sau khi vẽ việc lớn", "Claude chụp vùng vừa vẽ (capture_view) để tự soát lỗi; tốn thêm ít token cho mỗi ảnh");
             _planFirst = Check("Trình bày kế hoạch trước khi làm việc nhiều bước", "Thẻ kế hoạch có nút Làm / Sửa kế hoạch trước khi Claude vẽ việc lớn");
             _suggestCheck = Check("Gợi ý bước tiếp theo sau mỗi câu trả lời", "2–3 nút gợi ý dưới câu trả lời; bấm là gửi");
+            var setupRow = new WrapPanel { Margin = new Thickness(0, 10, 0, 0) };
+            var login = SmallButton("Đăng nhập Claude", "Đăng nhập tài khoản Claude Pro/Max trên trình duyệt (dùng Claude Code có sẵn trong plugin)");
+            login.Click += (s, e) => { _settingsPopup.IsOpen = false; LoginRequested?.Invoke(); };
+            var welcome = SmallButton("Hướng dẫn bắt đầu", "Kiểm tra cài đặt, đăng nhập, tự kiểm tra");
+            welcome.Click += (s, e) => { _settingsPopup.IsOpen = false; WelcomeRequested?.Invoke(); };
+            setupRow.Children.Add(login);
+            setupRow.Children.Add(welcome);
             _hotkey = Check("Phím tắt Ctrl+Shift+Space mở khung chat", "Trong AutoCAD: Ctrl+Shift+Space mở palette và đặt con trỏ vào ô nhập (lệnh tắt: CC)");
             _versionsCheck = Check("Tự lưu phiên bản trước khi chat sửa (30 phút/lần, giữ 10 bản)", "Bản sao DWG trong %LocalAppData%\\ClaudeCAD\\versions; mở xem bằng nút Phiên bản");
             _sideSnapshot = Check("Lưu biên bản cạnh bản vẽ (nhóm dùng chung thư mục dự án)", "Biên bản thay đổi lưu thêm trong thư mục ẩn .claudecad cạnh file DWG, để máy khác có cài plugin cũng biết bản vẽ đã được sửa tay");
             _sideSnapshot.IsChecked = false;
+            p.Children.Add(setupRow);
             _model.SelectionChanged += (s, e) => OnSettingsUi();
             _effort.SelectionChanged += (s, e) => OnSettingsUi();
             _theme.SelectionChanged += (s, e) => OnSettingsUi();
@@ -1723,6 +1735,59 @@ namespace ClaudeCAD.Plugin.UI
             AddImage(ImageAttachment.FromBitmap(bmp));
             _toolStatus.Text = "Đã chụp vùng đang xem — gõ yêu cầu (ví dụ \"chỗ này sai, sửa lại\") rồi gửi.";
             _input.Focus();
+        });
+
+        // ---------------------------------------------------------------- cards: login, welcome
+
+        /// <summary>Not signed in to Claude: one button opens the sign-in (browser).</summary>
+        public void AddLoginCard(string text) => Ui(() =>
+        {
+            var stack = new StackPanel();
+            var t = new TextBlock { Text = "⚠ " + text, TextWrapping = TextWrapping.Wrap };
+            Theme.Ref(t, TextBlock.ForegroundProperty, Theme.ErrorFg);
+            stack.Children.Add(t);
+            var b = new Button { Content = "Đăng nhập Claude", Padding = new Thickness(12, 2, 12, 2), Margin = new Thickness(0, 6, 0, 0), FontWeight = FontWeights.SemiBold, HorizontalAlignment = HorizontalAlignment.Left };
+            b.Click += (s, e) => LoginRequested?.Invoke();
+            stack.Children.Add(b);
+            var card = new Border { Child = stack, BorderThickness = new Thickness(1), CornerRadius = new CornerRadius(6), Padding = new Thickness(8, 5, 8, 6), Margin = new Thickness(0, 4, 24, 4) };
+            Theme.Ref(card, Border.BorderBrushProperty, Theme.ErrorFg);
+            _messages.Children.Add(card);
+            ScrollToEnd();
+        });
+
+        /// <summary>First start after installing: what is ready, sign-in, self-test.</summary>
+        public void AddWelcomeCard(List<(string name, bool? ok, string detail)> checks, bool needLogin) => Ui(() =>
+        {
+            var stack = new StackPanel();
+            var title = new TextBlock { Text = "Chào mừng đến với ClaudeCAD", FontWeight = FontWeights.SemiBold, FontSize = FontSize + 1 };
+            Theme.Ref(title, TextBlock.ForegroundProperty, Theme.Fg);
+            stack.Children.Add(title);
+            foreach (var (name, ok, detail) in checks)
+            {
+                var row = new TextBlock { Text = $"{(ok == true ? "✓" : ok == false ? "✗" : "…")} {name}{(string.IsNullOrEmpty(detail) ? "" : " — " + detail)}", TextWrapping = TextWrapping.Wrap, Margin = new Thickness(4, 2, 0, 0) };
+                Theme.Ref(row, TextBlock.ForegroundProperty, ok == false ? Theme.ErrorFg : Theme.Fg);
+                stack.Children.Add(row);
+            }
+            var buttons = new WrapPanel { Margin = new Thickness(0, 8, 0, 0) };
+            if (needLogin)
+            {
+                var login = new Button { Content = "Đăng nhập Claude", Padding = new Thickness(12, 2, 12, 2), Margin = new Thickness(0, 0, 6, 4), FontWeight = FontWeights.SemiBold };
+                login.Click += (s, e) => LoginRequested?.Invoke();
+                buttons.Children.Add(login);
+            }
+            var test = new Button { Content = "Chạy tự kiểm tra", Padding = new Thickness(10, 2, 10, 2), Margin = new Thickness(0, 0, 6, 4), ToolTip = "CLAUDECHATSELFTEST: thử trên một bản vẽ tạm, mở báo cáo ✓/✗" };
+            test.Click += (s, e) => SelfTestRequested?.Invoke();
+            buttons.Children.Add(test);
+            stack.Children.Add(buttons);
+            var hint = MutedText("Gõ yêu cầu bằng tiếng Việt rồi Enter, ví dụ \"vẽ lưới trục 5x4 bước 4000\". Mở nhanh khung chat: Ctrl+Shift+Space hoặc lệnh CC. Xem lại hướng dẫn này: ⚙ ▸ Hướng dẫn bắt đầu.");
+            hint.TextWrapping = TextWrapping.Wrap;
+            hint.FontSize = 11;
+            hint.Margin = new Thickness(0, 4, 0, 0);
+            stack.Children.Add(hint);
+            var card = Card(stack, "welcome");
+            card.Margin = new Thickness(0, 4, 24, 4);
+            _messages.Children.Add(card);
+            ScrollToEnd();
         });
 
         // ---------------------------------------------------------------- cards: skill draft, plan

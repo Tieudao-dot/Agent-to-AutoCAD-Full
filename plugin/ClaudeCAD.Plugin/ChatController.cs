@@ -163,6 +163,9 @@ namespace ClaudeCAD.Plugin
             ui.VersionOpenRequested += id => Guard("open version", () => MainThread.Post(() => OpenVersion(id)));
             ui.VersionCloseRequested += () => Guard("close version", () => MainThread.Post(CloseVersions));
             ui.OpenVersionsFolderRequested += () => Guard("versions folder", OpenVersionsFolder);
+            ui.LoginRequested += () => Guard("login", Login);
+            ui.SelfTestRequested += () => Guard("self-test", () => MainThread.Post(() => AcApp.DocumentManager.MdiActiveDocument?.SendStringToExecute("_CLAUDECHATSELFTEST ", true, false, false)));
+            ui.WelcomeRequested += () => Guard("welcome", ShowWelcome);
 
             Interaction.SelectionPicked += sel => { _selection = sel; Ui.SetSelectionChip(sel, true); _palette.FocusInput(); };
             Interaction.ImpliedSelectionChanged += sel => { if (!_busy) { _selection = sel; Ui.SetSelectionChip(sel, false); } };
@@ -1438,6 +1441,61 @@ namespace ClaudeCAD.Plugin
             }
         }
 
+        // ================================================================= v0.9.1: sign-in and first start
+
+        private bool _loginRunning;
+
+        /// <summary>"Đăng nhập Claude": the bundled Claude Code opens the browser; afterwards the assistant restarts with the new credentials.</summary>
+        private void Login()
+        {
+            if (_loginRunning) { Ui.SetToolStatus("Cửa sổ đăng nhập Claude đang mở — làm theo hướng dẫn trên trình duyệt."); return; }
+            bool started;
+            try
+            {
+                started = ClaudeAuth.StartLogin(status => Ui.Enqueue(() =>
+                {
+                    _loginRunning = false;
+                    if (status.LoggedIn == true)
+                    {
+                        Ui.AddNote("✓ Đã đăng nhập Claude. Trợ lý khởi động lại với tài khoản này — cậu gõ yêu cầu được rồi.");
+                        _sidecar.Restart();
+                    }
+                    else Ui.AddLoginCard("Chưa đăng nhập xong (" + status.Label + "). Bấm lại để thử lần nữa.");
+                }));
+            }
+            catch (Exception ex)
+            {
+                Logger.Error("login failed to start", ex);
+                started = false;
+            }
+            if (!started)
+            {
+                Ui.AddErrorCard("Không tìm thấy Claude Code đi kèm plugin (thư mục agent\\node_modules). Cài lại ClaudeCAD bằng Setup.exe, hoặc đặt biến môi trường ANTHROPIC_API_KEY.", false);
+                return;
+            }
+            _loginRunning = true;
+            Ui.AddNote("Đang mở cửa sổ đăng nhập Claude: trình duyệt sẽ mở trang đăng nhập — chọn tài khoản Pro/Max, đồng ý, rồi quay lại AutoCAD. Cửa sổ đen tự đóng khi xong.");
+        }
+
+        /// <summary>The "Bắt đầu" card: node, assistant, Claude sign-in, skills — with Login / Self-test buttons.</summary>
+        public void ShowWelcome()
+        {
+            ShowPalette();
+            ClaudeAuth.StatusAsync().ContinueWith(t =>
+            {
+                var auth = t.IsFaulted ? new AuthStatus { Error = t.Exception?.GetBaseException().Message } : t.Result;
+                var node = PluginPaths.NodeExecutable;
+                var checks = new List<(string, bool?, string)>
+                {
+                    ("Node.js", node != null, node == null ? "không thấy — cài lại bằng Setup.exe" : (node.IndexOf("ClaudeCAD.bundle", StringComparison.OrdinalIgnoreCase) >= 0 ? "đi kèm plugin" : node)),
+                    ("Trợ lý (sidecar)", PluginPaths.AgentEntry != null, PluginPaths.AgentEntry == null ? "không thấy thư mục agent" : "sẵn sàng"),
+                    ("Tài khoản Claude", auth.LoggedIn, auth.Label),
+                    ("Skill", _skillStore != null, _skillStore == null ? "" : $"{_skillStore.Scan().Count} skill trong plugin"),
+                };
+                Ui.AddWelcomeCard(checks, auth.LoggedIn != true);
+            });
+        }
+
         // ================================================================= v0.7: version history
 
         private bool IsVersionDoc(Document d) => d != null && _versionDocs.ContainsKey(d);
@@ -1642,6 +1700,13 @@ namespace ClaudeCAD.Plugin
                 case "agent_error":
                     {
                         var m = msg.TryGetValue("message", out var mv) ? mv as string : "?";
+                        var code = msg.TryGetValue("code", out var cv0) ? cv0 as string : null;
+                        if (code == "authentication_failed" || code == "oauth_org_not_allowed")
+                        {
+                            Ui.AddLoginCard(m); // one button instead of terminal instructions
+                            if (_busy) _lastError = null;
+                            break;
+                        }
                         if (_busy)
                         {
                             _lastError = m; // becomes a "Thử lại" card if the turn ends without a reply
