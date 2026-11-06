@@ -32,6 +32,22 @@ export function contextPreamble(msg: UserMessage): string[] {
   if (msg.context?.visual_check === false) lines.push('[Người dùng tắt tự kiểm tra bằng ảnh: call capture_view only when asked]');
   if (msg.context?.plan_first === false) lines.push('[Người dùng tắt thẻ kế hoạch: do not call propose_plan, just do the task]');
   if (msg.context?.suggestions === false) lines.push('[Người dùng tắt nút gợi ý: do not call suggest_next_steps]');
+  const mc = msg.context?.manual_changes;
+  if (mc) {
+    const since = mc.since === 'previous'
+      ? 'since the last chat turn (in an earlier AutoCAD session or on another computer)'
+      : 'since your previous turn';
+    const lists = [
+      mc.modified?.length ? `sửa: ${mc.modified.join(', ')}` : '',
+      mc.erased?.length ? `xóa (không còn): ${mc.erased.join(', ')}` : '',
+      mc.added?.length ? `thêm: ${mc.added.join(', ')}` : '',
+    ].filter(Boolean).join('; ');
+    lines.push(
+      `[Người dùng đã sửa bản vẽ bằng tay ngoài khung chat ${since}: ${mc.text}.` +
+        (lists ? ` Handles — ${lists}${mc.more ? ` (+${mc.more} nữa)` : ''}.` : '') +
+        ' Coordinates, sizes and handles you remember for these objects may be stale: read them again (get_entity / get_bounding_box / list_entities) before relying on them, and do not recreate objects the user erased unless asked.]',
+    );
+  }
   const sel = msg.attachments?.selection;
   if (sel && sel.handles.length > 0) {
     const n = sel.count ?? sel.handles.length;

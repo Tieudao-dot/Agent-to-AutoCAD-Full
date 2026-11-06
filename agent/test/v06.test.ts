@@ -156,3 +156,30 @@ describe('predicted next prompt', () => {
     assert.deepEqual(events, [{ type: 'suggestions', items: ['Ghi kích thước'], source: 'sdk' }]);
   });
 });
+
+describe('manual edits (v0.7)', () => {
+  it('parses manual_changes and drops bad handles', () => {
+    const m = parsePluginMessage({
+      type: 'user_message',
+      text: 'dời cửa sang trái 500',
+      context: { manual_changes: { text: 'sửa 2 (A-WALL 2); xóa 1 (A-DOOR 1)', since: 'previous', modified: ['2F4A', 'xx;drop', '2F4B'], erased: ['30'], more: 0 } },
+    });
+    assert.deepEqual((m as { context?: unknown }).context, {
+      manual_changes: { text: 'sửa 2 (A-WALL 2); xóa 1 (A-DOOR 1)', since: 'previous', modified: ['2F4A', '2F4B'], erased: ['30'] },
+    });
+    const none = parsePluginMessage({ type: 'user_message', text: 'x', context: { manual_changes: { text: '  ' } } });
+    assert.deepEqual(none, { type: 'user_message', text: 'x' });
+  });
+
+  it('tells Claude to read the edited objects again', () => {
+    const all = contextPreamble({
+      type: 'user_message',
+      text: 'x',
+      context: { manual_changes: { text: 'sửa 1 (A-WALL 1)', since: 'session', modified: ['2F4A'], added: ['31'], more: 5 } },
+    }).join('\n');
+    assert.match(all, /sửa bản vẽ bằng tay ngoài khung chat since your previous turn: sửa 1 \(A-WALL 1\)/);
+    assert.match(all, /sửa: 2F4A; thêm: 31 \(\+5 nữa\)/);
+    assert.match(all, /read them again/);
+    assert.ok(SYSTEM_PROMPT.includes('Manual edits between turns'));
+  });
+});

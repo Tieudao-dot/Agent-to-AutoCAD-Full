@@ -36,7 +36,11 @@ namespace ClaudeCAD.Plugin
                 MainThread.Initialize();
                 Logger.Info($"ClaudeCAD {DrawingService.PluginVersion} loaded into AutoCAD {AcApp.Version}");
                 AcApp.QuitWillStart += (s, e) => Shutdown();
-                HotkeyEnabled = PaletteSettings.Load().Hotkey;
+                var settings = PaletteSettings.Load();
+                HotkeyEnabled = settings.Hotkey;
+                // manual edits are tracked from AutoCAD start, palette open or not
+                DrawingHistory.Instance.NextToDrawing = settings.SnapshotNextToDrawing;
+                DrawingHistory.Instance.Start();
                 AcApp.PreTranslateMessage += OnPreTranslateMessage;
                 var ed = AcApp.DocumentManager.MdiActiveDocument?.Editor;
                 ed?.WriteMessage("\nClaudeCAD đã nạp. Gõ CLAUDECHAT để mở khung chat.\n");

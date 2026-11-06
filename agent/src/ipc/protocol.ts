@@ -190,6 +190,36 @@ export interface UserContext {
   plan_first?: boolean;
   /** false = the user turned off next-step buttons. */
   suggestions?: boolean;
+  /** v0.7: what the user changed by hand outside the chat since the last chat turn. */
+  manual_changes?: ManualChanges;
+}
+
+export interface ManualChanges {
+  /** Vietnamese summary by kind and layer, e.g. "sửa 3 (A-WALL 2, A-TEXT 1); xóa 1 (A-DOOR 1)". */
+  text: string;
+  /** "session" = since the previous turn in this AutoCAD session; "previous" = since the last chat, in an earlier session or on another computer. */
+  since: 'session' | 'previous';
+  modified?: string[];
+  erased?: string[];
+  added?: string[];
+  /** Handles left out of the lists (very large edits). */
+  more?: number;
+}
+
+const HANDLE_RX = /^[0-9A-Fa-f]{1,16}$/;
+
+function parseManualChanges(v: unknown): ManualChanges | undefined {
+  if (typeof v !== 'object' || v === null) return undefined;
+  const m = v as Record<string, unknown>;
+  if (typeof m.text !== 'string' || !m.text.trim()) return undefined;
+  const list = (x: unknown) => (Array.isArray(x) ? x.filter((h): h is string => typeof h === 'string' && HANDLE_RX.test(h)).slice(0, 1000) : []);
+  const out: ManualChanges = { text: m.text.trim().slice(0, 2000), since: m.since === 'previous' ? 'previous' : 'session' };
+  for (const k of ['modified', 'erased', 'added'] as const) {
+    const l = list(m[k]);
+    if (l.length) out[k] = l;
+  }
+  if (typeof m.more === 'number' && m.more > 0) out.more = Math.floor(m.more);
+  return out;
 }
 
 export interface UserMessage {
@@ -295,6 +325,8 @@ function parseContext(v: unknown): UserContext | undefined {
   if (c.visual_check === false) out.visual_check = false;
   if (c.plan_first === false) out.plan_first = false;
   if (c.suggestions === false) out.suggestions = false;
+  const manual = parseManualChanges(c.manual_changes);
+  if (manual) out.manual_changes = manual;
   return Object.keys(out).length > 0 ? out : undefined;
 }
 

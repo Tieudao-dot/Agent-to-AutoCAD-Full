@@ -47,6 +47,8 @@ namespace ClaudeCAD.Plugin.Drawing
         bool ReadOnly { get; }
         /// <summary>A successful drawing call of the turn (for "Lưu thành macro").</summary>
         void RecordCall(string tool, Dictionary<string, object> parameters, object result);
+        /// <summary>Right before the first change of the turn (version history copy).</summary>
+        void BeforeWrite(Document doc);
     }
 
     /// <summary>
@@ -191,6 +193,7 @@ namespace ClaudeCAD.Plugin.Drawing
             if ((writes || def.Name == "undo_last_turn") && _host.ReadOnly && !ReadOnlyAllowed.Contains(def.Name))
                 throw new ToolException(ErrorCodes.ReadOnly, $"{def.Name}: {ReadOnlyMessage}");
 
+            if (writes && !_host.Undo.IsOpen && !ReadOnlyAllowed.Contains(def.Name)) _host.BeforeWrite(doc);
             if (def.NoTransaction)
             {
                 if (writes) _host.Undo.EnsureStarted(doc);

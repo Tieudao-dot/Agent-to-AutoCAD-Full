@@ -82,6 +82,14 @@ namespace ClaudeCAD.Plugin
         private readonly List<string> _turnSuggestions = new List<string>();
         private (string id, string kind)? _pendingPlan;
 
+        // v0.7: manual edits, snapshot, version history
+        private DrawingHistory History => DrawingHistory.Instance;
+        private Document _turnStartDoc;
+        private string _turnLabel = "";
+        private bool _versionChecked;
+        private readonly Dictionary<Document, (Document original, VersionInfo info)> _versionDocs = new Dictionary<Document, (Document, VersionInfo)>();
+        private (Document original, VersionInfo info)? _openingVersion;
+
         // usage (feature 14)
         private string _usageText = "";
         private string _rateText = "";
@@ -134,6 +142,9 @@ namespace ClaudeCAD.Plugin
             ui.SkillDraftAddRequested += f => Guard("add draft", () => MainThread.Post(() => ImportSkillFiles(new[] { f })));
             ui.PlanAnswered += (id, kind) => Guard("plan", () => AnswerPlan(id, kind));
             ui.MentionSource = () => Interaction.DrawingNames(AcApp.DocumentManager.MdiActiveDocument);
+            ui.VersionOpenRequested += id => Guard("open version", () => MainThread.Post(() => OpenVersion(id)));
+            ui.VersionCloseRequested += () => Guard("close version", () => MainThread.Post(CloseVersions));
+            ui.OpenVersionsFolderRequested += () => Guard("versions folder", OpenVersionsFolder);
 
             Interaction.SelectionPicked += sel => { _selection = sel; Ui.SetSelectionChip(sel, true); _palette.FocusInput(); };
             Interaction.ImpliedSelectionChanged += sel => { if (!_busy) { _selection = sel; Ui.SetSelectionChip(sel, false); } };
@@ -254,6 +265,9 @@ namespace ClaudeCAD.Plugin
             _settings.Suggestions = s.Suggestions;
             _settings.Hotkey = s.Hotkey;
             PluginApp.HotkeyEnabled = s.Hotkey;
+            _settings.Versions = s.Versions;
+            _settings.SnapshotNextToDrawing = s.SnapshotNextToDrawing;
+            History.NextToDrawing = s.SnapshotNextToDrawing;
             _settings.Save();
             if (oldModel != s.Model || oldEffort != s.Effort) SendOptions();
             if (oldTheme != s.Theme) ApplyTheme();
@@ -471,6 +485,7 @@ namespace ClaudeCAD.Plugin
             Ui.SetReadOnly(_transcript.ReadOnly);
             Ui.ClearSuggestions();
             UpdateNotesIndicator();
+            RefreshVersions();
             SendSwitchSession();
         }
 
@@ -492,6 +507,12 @@ namespace ClaudeCAD.Plugin
         private void SendComposed(ComposedMessage m)
         {
             if (_busy) return;
+            if (IsVersionDoc(AcApp.DocumentManager.MdiActiveDocument))
+            {
+                Ui.SetInputText(m.Text);
+                Ui.SetToolStatus("Đang xem phiên bản cũ (chỉ xem) — bấm \"Đóng — về bản hiện tại\" rồi chat.");
+                return;
+            }
             if (!_ipc.IsConnected)
             {
                 Ui.AddErrorCard("Chưa kết nối được với trợ lý. Đợi vài giây rồi bấm Thử lại, hoặc gõ lệnh CLAUDECHATRESTART.", false);
@@ -565,6 +586,15 @@ namespace ClaudeCAD.Plugin
             if (!_settings.VisualCheck) ctx["visual_check"] = false;
             if (!_settings.PlanFirst) ctx["plan_first"] = false;
             if (!_settings.Suggestions) ctx["suggestions"] = false;
+            Dictionary<string, object> manual = null;
+            string manualShort = null;
+            try
+            {
+                bool hasConversation = _transcript != null && _transcript.Entries.Any(x => x.Role == "assistant");
+                manual = History.TakeManualChanges(doc, KeyFor(doc), DrawingPathOf(doc), hasConversation, out manualShort);
+            }
+            catch (Exception ex) { Logger.Warn("manual changes not collected: " + ex.Message); }
+            if (manual != null) ctx["manual_changes"] = manual;
             if (ctx.Count > 0) payload["context"] = ctx;
             if (edited) payload["edited"] = true;
             if (confirm != null) payload["confirm"] = confirm;
@@ -576,6 +606,13 @@ namespace ClaudeCAD.Plugin
             _settings.AddHistory(m.Text);
             _settings.Save();
             if (selCount > 0) { _selection = null; Ui.SetSelectionChip(null, false); }
+            if (manualShort != null)
+            {
+                var since = (manual.TryGetValue("since", out var sv) ? sv as string : "") == "previous" ? "từ lần chat trước" : "từ lượt chat trước";
+                var note = $"✎ Bản vẽ đã được sửa ngoài khung chat {since}: {manualShort} — Claude sẽ đọc lại các đối tượng này trước khi làm.";
+                Ui.AddNote(note);
+                _transcript?.Entries.Add(new ChatEntry { Role = "note", Text = note });
+            }
             StartTurn(doc, payload, entry);
         }
 
@@ -595,11 +632,15 @@ namespace ClaudeCAD.Plugin
                 _lastError = null;
                 _foreignChangeDuringTurn = false;
                 _turnDb = doc?.Database;
+                _turnStartDoc = doc;
+                _turnLabel = userEntry?.Text ?? "";
+                _versionChecked = false;
                 _turnSuggestions.Clear();
                 _transcript?.Entries.Add(userEntry);
             }
             _recorder.Clear();
             _changes.Clear();
+            History.TurnDb = doc?.Database; // changes from now on are Claude's, not manual
             Ui.ClearSuggestions();
             _undoAvailable = false;
             Ui.SetUndoAvailable(false);
@@ -669,6 +710,8 @@ namespace ClaudeCAD.Plugin
             _chatGen++;
             _pendingConfirm = null;
             _pendingPlan = null;
+            try { History.Reset(_transcriptDoc, KeyFor(_transcriptDoc), DrawingPathOf(_transcriptDoc)); }
+            catch (Exception ex) { Logger.Warn("snapshot reset failed: " + ex.Message); }
             if (_transcript != null)
             {
                 _transcript.Entries.Clear();
@@ -689,6 +732,7 @@ namespace ClaudeCAD.Plugin
             DateTime started;
             int gen;
             Autodesk.AutoCAD.DatabaseServices.Database turnDb;
+            Document turnStartDoc;
             List<string> suggestions;
             lock (_gate)
             {
@@ -696,6 +740,8 @@ namespace ClaudeCAD.Plugin
                 _busy = false;
                 turnDb = _turnDb;
                 _turnDb = null;
+                turnStartDoc = _turnStartDoc;
+                _turnStartDoc = null;
                 suggestions = _turnSuggestions.ToList();
                 _turnSuggestions.Clear();
                 assistant = _assistant;
@@ -716,6 +762,14 @@ namespace ClaudeCAD.Plugin
                 Undo.End();
                 var macroCalls = _recorder.Take();
                 var changes = BuildChangeSummary(turnDb);
+                History.TurnDb = null;
+                try
+                {
+                    // the "biên bản": what the drawing looks like after this turn
+                    if (turnStartDoc != null && !turnStartDoc.IsDisposed && gen == _chatGen)
+                        History.AfterTurn(turnStartDoc, KeyFor(turnStartDoc), DrawingPathOf(turnStartDoc));
+                }
+                catch (Exception ex) { Logger.Warn("snapshot after turn failed: " + ex.Message); }
                 if (gen != _chatGen)
                 {
                     // New chat / drawing switch happened meanwhile: the old reply belongs nowhere
@@ -752,7 +806,12 @@ namespace ClaudeCAD.Plugin
                 if (_settings.Suggestions && suggestions.Count > 0 && string.IsNullOrEmpty(errorNote)) Ui.AddSuggestions(suggestions);
                 if (usage != null) ShowUsage(usage);
                 MaybeNotify(assistant, errorNote, started);
-                if (_pendingSwitch) { _pendingSwitch = false; LoadTranscriptFor(AcApp.DocumentManager.MdiActiveDocument); }
+                if (_pendingSwitch)
+                {
+                    _pendingSwitch = false;
+                    var active = AcApp.DocumentManager.MdiActiveDocument;
+                    if (!IsVersionDoc(active)) LoadTranscriptFor(active);
+                }
                 if (_pendingConfirm.HasValue) { var c = _pendingConfirm.Value; _pendingConfirm = null; AnswerConfirm(c.id, c.yes); }
                 if (_pendingPlan.HasValue) { var pp = _pendingPlan.Value; _pendingPlan = null; AnswerPlan(pp.id, pp.kind); }
             }));
@@ -1245,6 +1304,81 @@ namespace ClaudeCAD.Plugin
             }
         }
 
+        // ================================================================= v0.7: version history
+
+        private bool IsVersionDoc(Document d) => d != null && _versionDocs.ContainsKey(d);
+
+        private void RefreshVersions()
+        {
+            try
+            {
+                var doc = _transcriptDoc;
+                Ui.SetVersions(doc == null ? new List<VersionInfo>() : History.Versions(KeyFor(doc)).List());
+            }
+            catch (Exception ex) { Logger.Warn("versions list failed: " + ex.Message); }
+        }
+
+        private static string VersionBannerText(Document original, VersionInfo v)
+        {
+            string name = "";
+            try { name = Path.GetFileName(original?.Name ?? ""); } catch { }
+            return $"Đang xem phiên bản lúc {v.Time:HH:mm dd/MM} của {name} — trước lượt \"{v.Label}\". Chỉ xem: sửa ở đây không ảnh hưởng bản vẽ thật.";
+        }
+
+        /// <summary>Opens a version copy read-only in its own tab; the real drawing stays as it is.</summary>
+        private void OpenVersion(string id)
+        {
+            var original = _transcriptDoc ?? AcApp.DocumentManager.MdiActiveDocument;
+            if (original == null) return;
+            if (_busy) { Ui.SetToolStatus("Đợi lượt hiện tại xong rồi mở phiên bản."); return; }
+            var store = History.Versions(KeyFor(original));
+            var v = store.List().FirstOrDefault(x => x.Id == id);
+            if (v == null) { Ui.AddNote("Phiên bản này không còn (đã bị xóa khi vượt quá 10 bản).", true); RefreshVersions(); return; }
+            var file = store.FileOf(v);
+            // already open → just switch to it
+            foreach (var kv in _versionDocs)
+                if (kv.Value.info.Id == id && !kv.Key.IsDisposed) { AcApp.DocumentManager.MdiActiveDocument = kv.Key; return; }
+            _openingVersion = (original, v);
+            try
+            {
+                var vdoc = DocumentCollectionExtension.Open(AcApp.DocumentManager, file, true);
+                if (vdoc != null && !_versionDocs.ContainsKey(vdoc)) _versionDocs[vdoc] = (original, v);
+                if (vdoc != null) Ui.ShowVersionBanner(VersionBannerText(original, v));
+            }
+            catch (Exception ex)
+            {
+                Logger.Error("open version failed", ex);
+                Ui.AddErrorCard("Không mở được phiên bản: " + ex.Message, false);
+            }
+            finally
+            {
+                _openingVersion = null;
+            }
+        }
+
+        /// <summary>"Đóng — về bản hiện tại": closes every version tab (discarding) and returns to the drawing.</summary>
+        private void CloseVersions()
+        {
+            Document back = null;
+            foreach (var kv in _versionDocs.ToList())
+            {
+                back = back ?? kv.Value.original;
+                try { if (!kv.Key.IsDisposed) kv.Key.CloseAndDiscard(); }
+                catch (Exception ex) { Logger.Warn("closing version tab failed: " + ex.Message); }
+            }
+            _versionDocs.Clear();
+            Ui.HideVersionBanner();
+            try { if (back != null && !back.IsDisposed) AcApp.DocumentManager.MdiActiveDocument = back; } catch { }
+        }
+
+        private void OpenVersionsFolder()
+        {
+            var doc = _transcriptDoc;
+            var dir = doc == null ? DrawingHistory.VersionsRoot : History.Versions(KeyFor(doc)).Dir;
+            Directory.CreateDirectory(dir);
+            Process.Start("explorer.exe", "\"" + dir + "\"");
+        }
+
         // ================================================================= export (18)
 
         private void Export()
@@ -1296,6 +1430,27 @@ namespace ClaudeCAD.Plugin
         public bool ReadOnly => _transcript?.ReadOnly == true;
 
         public void RecordCall(string tool, Dictionary<string, object> parameters, object result) => _recorder.Record(tool, parameters, result);
+
+        /// <summary>First change of a chat turn: keep a copy of the drawing as it was (every 30 min max).</summary>
+        public void BeforeWrite(Document doc)
+        {
+            if (_versionChecked || !_settings.Versions || doc == null) return;
+            _versionChecked = true;
+            try
+            {
+                var v = History.MaybeSaveVersion(doc, KeyFor(doc), _turnLabel);
+                if (v != null)
+                {
+                    Ui.SetToolStatus($"Đã lưu phiên bản {v.Time:HH:mm} trước khi sửa (xem bằng nút Phiên bản).");
+                    if (doc == _transcriptDoc) RefreshVersions();
+                }
+            }
+            catch (Exception ex)
+            {
+                Logger.Error("version copy failed", ex);
+                Ui.SetToolStatus("Không lưu được phiên bản trước khi sửa: " + ex.Message);
+            }
+        }
 
         // ================================================================= IPC events
 
@@ -1531,6 +1686,7 @@ namespace ClaudeCAD.Plugin
             }
             Undo.Abandon(e.Document);
             Interaction.Unwatch(e.Document);
+            if (_versionDocs.Remove(e.Document) && _versionDocs.Count == 0) Ui.HideVersionBanner();
             _watchedDocs.Remove(e.Document);
             if (e.Document == _transcriptDoc) { SaveTranscript(); _transcriptDoc = null; }
             if (cancel)
@@ -1542,6 +1698,15 @@ namespace ClaudeCAD.Plugin
 
         private void OnDocumentActivated(object sender, DocumentCollectionEventArgs e)
         {
+            // an old version opened from the palette: no chat of its own
+            if (_openingVersion.HasValue && e.Document != null && !_versionDocs.ContainsKey(e.Document) && e.Document != _transcriptDoc)
+            {
+                _versionDocs[e.Document] = _openingVersion.Value;
+                _openingVersion = null;
+            }
+            bool isVersion = e.Document != null && _versionDocs.ContainsKey(e.Document);
+            if (isVersion) { var vd = _versionDocs[e.Document]; Ui.ShowVersionBanner(VersionBannerText(vd.original, vd.info)); }
+            else if (_versionDocs.Count > 0) Ui.HideVersionBanner();
             bool cancel = false;
             lock (_gate)
             {
@@ -1558,7 +1723,7 @@ namespace ClaudeCAD.Plugin
                 _pendingSwitch = true;
                 return;
             }
-            if (!_started || e.Document == _transcriptDoc) return;
+            if (isVersion || !_started || e.Document == _transcriptDoc) return; // a version tab has no chat of its own
             if (_busy) { _pendingSwitch = true; return; }
             WatchDoc(e.Document);
             LoadTranscriptFor(e.Document);

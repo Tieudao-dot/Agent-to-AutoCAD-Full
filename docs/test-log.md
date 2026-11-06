@@ -106,6 +106,12 @@ Trạng thái: ⬜ chưa chạy · ✅ đạt · ❌ không đạt · ⚠️ đ�
 | V6-7 | Gõ `@A-` → danh sách layer/block của bản vẽ; Enter chèn tên; `a@b.com` không bật | ⬜ chưa chạy | |
 | V6-8 | **Ctrl+Shift+Space** khi đang vẽ → palette mở, con trỏ ở ô nhập; lệnh **CC** tương tự; tắt trong ⚙ | ⬜ chưa chạy | |
 | V6-9 | "Vẽ cả mặt bằng tầng 1" → thẻ kế hoạch, chưa vẽ gì; **Làm** → vẽ đúng kế hoạch; **Sửa kế hoạch** đưa chữ vào ô nhập | ⬜ chưa chạy | |
+| V7-1 | Sau một lượt chat, sửa tay (dời 2 tường, xóa 1 cửa, thêm chữ) → chat "ghi lại kích thước" → dòng ✎ đúng số liệu; Claude đọc lại đúng các đối tượng đó, không vẽ lại cửa đã xóa | ⬜ chưa chạy | |
+| V7-2 | Đóng khung chat, sửa tay, mở lại khung chat → vẫn được báo; sửa trước khi mở khung chat lần đầu trong phiên cũng được báo | ⬜ chưa chạy | |
+| V7-3 | Chat, lưu, đóng AutoCAD; mở lại hôm sau sửa tay rồi chat → báo "từ lần chat trước"; bản vẽ > 20.000 đối tượng không làm AutoCAD khựng quá 2–3 s | ⬜ chưa chạy | |
+| V7-4 | Bật ⚙ **Lưu biên bản cạnh bản vẽ** → có thư mục ẩn `.claudecad`; máy khác có cài plugin mở cùng thư mục, sửa, chat → được báo | ⬜ chưa chạy | |
+| V7-5 | Chat sửa bản vẽ → **Phiên bản (1)**; trong 30 phút chat tiếp không tạo bản mới; sau 30 phút có bản mới; quá 10 bản thì bản cũ nhất bị xóa | ⬜ chưa chạy | |
+| V7-6 | **Phiên bản ▸ Xem** → tab chỉ xem đúng trạng thái trước lượt đó, thanh "Đang xem phiên bản…", ô chat khóa; **Đóng — về bản hiện tại** đóng tab, về đúng bản vẽ, lịch sử chat không đổi | ⬜ chưa chạy | |
 | V6-10 | Bảng **Thay đổi** đúng số thêm/sửa/xóa theo layer, bấm dòng zoom tới; còn khi mở lại lịch sử và trong file Xuất | ⬜ chưa chạy | |
 
 ## Đã kiểm chứng tự động trên cloud (Linux)
@@ -117,6 +123,7 @@ Trạng thái: ⬜ chưa chạy · ✅ đạt · ❌ không đạt · ⚠️ đ�
 | 2026-11-05 | `dotnet build` plugin net48 với reference AutoCAD.NET 24.1.51000 | ✅ 0 warning |
 | 2026-11-05 | `dotnet test plugin/ClaudeCAD.Core.Tests` — JsonCodec, Params | ✅ 16/16 |
 | 2026-11-05 | Phase 1b: `npm test` 38/38 (thêm: danh mục tool TS khớp handler C#, mọi schema chuyển được sang JSON Schema, schema nhận ví dụ spec, giới hạn 500 call/batch) | ✅ |
+| 2026-11-06 | v0.7.0 sửa tay + phiên bản: `dotnet test` 96/96 (biên bản nén/đọc lại, mã kiểm tra bỏ nhiễu số thực và "-0", so đầy đủ / bản vẽ lớn theo layer, báo cáo sửa tay giới hạn 300 mã, phiên bản 30 phút + giữ 10 bản); `npm test` 91/91 (`manual_changes` lọc mã sai, câu dặn Claude đọc lại); build net48 + net8 (Wblock/SaveAs, mở DWG chỉ xem, CloseAndDiscard) ✅ | ✅ |
 | 2026-11-06 | v0.6.0 tiện ích khung chat: `dotnet test` lõi 88/88 (macro ghi/ánh xạ handle/lưu, bảng thay đổi, `@`, ghi chú dự án, mẫu lệnh, cài đặt mới, lịch sử giữ Chỉ xem + ghi chú + thay đổi); `npm test` 89/89 (ảnh `capture_view` thành khối image MCP, thẻ kế hoạch, gợi ý, bản nháp skill, ngữ cảnh mới, `promptSuggestions`); build plugin net48 + net8 (API GraphicsSystem off-screen, PreTranslateMessage) ✅ | ✅ |
 | 2026-11-06 | v0.5.0 skill trên khung chat: `dotnet test` lõi 68/68 (SkillStore: nhập .md, tên từ file, file thiếu description, trùng tên, chọn lại file đã có, thư mục SKILL.md kèm file tham khảo, bật/tắt, xóa, `skills.json`); `npm test` 75/75 (chỉ nạp skill đang bật, reload_skills giữ ngữ cảnh) | ✅ |
 | 2026-11-05 | v0.4.0 khung chat 20 tính năng: `npm test` 70/70 (nội dung tin nhắn, giao thức mới, model/effort, chuyển phiên + khôi phục lỗi, usage, rate limit, thẻ xác nhận); `dotnet test` lõi 56/56 (markdown, lịch sử, cài đặt, mẫu lệnh, bảng Excel); build plugin net48 + net8 0 warning | ✅ |

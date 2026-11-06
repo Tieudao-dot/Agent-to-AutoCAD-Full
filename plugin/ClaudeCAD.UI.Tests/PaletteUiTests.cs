@@ -189,6 +189,13 @@ namespace ClaudeCAD.UI.Tests
                 Shot(NewFeatures(true), "palette-v06-dark");
                 var light = NewFeatures(false);
                 light.SetReadOnly(true);
+                light.SetVersions(new List<VersionInfo>
+                {
+                    new VersionInfo { Id = "v-2", Time = new DateTime(2026, 11, 6, 14, 35, 0), Label = "Thêm cửa sổ S1 cho các phòng", Bytes = 4_200_000 },
+                    new VersionInfo { Id = "v-1", Time = new DateTime(2026, 11, 6, 14, 2, 0), Label = "Vẽ mặt bằng tầng 1 nhà phố 5x20m", Bytes = 3_100_000 },
+                });
+                light.ShowVersionBanner("Đang xem phiên bản lúc 14:02 06/11 của Nha-pho.dwg — trước lượt \"Vẽ mặt bằng tầng 1\". Chỉ xem: sửa ở đây không ảnh hưởng bản vẽ thật.");
+                light.AddNote("✎ Bản vẽ đã được sửa ngoài khung chat từ lần chat trước: sửa 12, xóa 3, thêm 40 — Claude sẽ đọc lại các đối tượng này trước khi làm.");
                 light.ShowNotes("Cao độ ±0.000 = +3.200\nTường bao 220, tường ngăn 110", "Bản vẽ tầng 1", @"D:\DuAn\ClaudeCAD-ghichu.md");
                 Shot(light, "palette-v06-light");
             });

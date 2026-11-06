@@ -57,6 +57,14 @@ Phần giao diện của palette `CLAUDECHAT` sau đợt nâng cấp. Code: `plu
 | 29 | Kế hoạch trước việc lớn | Việc nhiều bước (cả mặt bằng, cả hệ MEP, > ~50 đối tượng) → thẻ **Kế hoạch** với các bước, kích thước, giả định; **Làm** / **Sửa kế hoạch** / **Bỏ**. Tắt trong ⚙. | Tool `propose_plan`; "Làm" gửi `plan: "approved"`. |
 | 30 | Bảng thay đổi của lượt | Dưới câu trả lời: **Thay đổi: Thêm 15 · Sửa 3 · Xóa 0**, từng dòng theo layer; bấm dòng để zoom + tô sáng. Có cả khi mở lại lịch sử và trong file Xuất. | Theo dõi sự kiện database trong lượt; đối tượng tạo rồi xóa trong cùng lượt không tính; chỉ tính đối tượng trong model/paper space (không tính bên trong định nghĩa block). |
 
+## F. v0.7.0 — Claude biết cậu sửa tay; lịch sử phiên bản
+
+| # | Tính năng | Cách dùng | Ghi chú |
+| --- | --- | --- | --- |
+| 31 | Ghi nhận sửa tay | Không cần làm gì. Sửa tay xong rồi chat tiếp → khung chat hiện "✎ Bản vẽ đã được sửa ngoài khung chat từ lượt chat trước: sửa 12, xóa 3, thêm 40 — Claude sẽ đọc lại…" và Claude đo lại đúng các đối tượng đó trước khi làm. | Plugin nghe sự kiện thêm/sửa/xóa của bản vẽ **từ lúc AutoCAD nạp plugin** (khung chat mở hay đóng đều được); chỉ ghi mã đối tượng, không tốn token. Gửi kèm tin nhắn tối đa 300 mã + tóm tắt theo layer. Thuộc tính block được tính là block đó bị sửa. Bản vẽ chưa từng chat thì không báo. |
+| 32 | Biên bản sau mỗi lượt | Không cần làm gì. Cuối mỗi lượt chat, plugin lưu biên bản của bản vẽ; lần sau mở lại (hôm sau, AutoCAD khác) so với bản vẽ hiện tại → báo phần sửa tay như trên. ⚙ **Lưu biên bản cạnh bản vẽ** để máy khác cũng so được. | Biên bản = mỗi đối tượng: layer, loại, mã kiểm tra (khung bao, độ dài, chữ, block, thuộc tính, màu, nét…), nén gzip. Lưu ở `%LocalAppData%\ClaudeCAD\snapshots`, ghi đè mỗi lượt, tự xóa sau 90 ngày không dùng; tùy chọn thêm `.claudecad\<tên>.dwg.snap.gz` cạnh DWG. Bản vẽ > 20.000 đối tượng: chỉ so số lượng theo layer + các đối tượng Claude/cậu đã đụng tới. Bấm **New** xóa biên bản. Không ghi gì vào file DWG. |
+| 33 | Lịch sử phiên bản | Tự động: ngay trước khi chat sửa bản vẽ, nếu bản sao gần nhất đã cũ hơn **30 phút** thì plugin lưu một bản sao DWG. Giữ **10 bản** gần nhất. Nút **Phiên bản (N)** → **Xem**: mở bản sao trong **tab chỉ xem**; thanh trên cùng có **Đóng — về bản hiện tại**. Tắt trong ⚙. | Bản sao bằng `Database.Wblock()` + `SaveAs` → bản vẽ đang mở không bị đụng tới. Lưu ở `%LocalAppData%\ClaudeCAD\versions\v-<mã bản vẽ>\`. Chỉ lưu khi **chat** sửa (sửa tay không tạo phiên bản), bỏ qua bản vẽ chưa lưu (Drawing1). Khi đang xem bản cũ, ô chat bị khóa. Xref đường dẫn tương đối có thể không hiện trong bản sao. |
+
 ## Kiểm chứng
 
 - Lõi thuần (markdown, lịch sử, cài đặt, mẫu lệnh, bảng Excel) có unit test chạy mọi OS: `dotnet test plugin/ClaudeCAD.Core.Tests`.

@@ -22,6 +22,8 @@ namespace ClaudeCAD.Plugin.Core
         public bool PlanFirst = true;       // plan card ("Làm" / "Sửa kế hoạch") before big multi-step tasks
         public bool Suggestions = true;     // next-step buttons after each reply
         public bool Hotkey = true;          // Ctrl+Shift+Space opens the palette
+        public bool Versions = true;        // copy of the DWG before chat changes it (every 30 min max, 10 kept)
+        public bool SnapshotNextToDrawing;  // also write the "biên bản" next to the DWG (shared project folders)
         public List<string> History = new List<string>(); // feature 10, newest last
 
         public static readonly string[] Standards = { "", "ve-kien-truc", "ve-mep", "ve-ha-tang" };
@@ -70,6 +72,7 @@ namespace ClaudeCAD.Plugin.Core
             ["standard"] = Standard, ["scale"] = Scale, ["model"] = Model, ["effort"] = Effort,
             ["font_size"] = FontSize, ["theme"] = Theme, ["notify"] = Notify,
             ["visual_check"] = VisualCheck, ["plan_first"] = PlanFirst, ["suggestions"] = Suggestions, ["hotkey"] = Hotkey,
+            ["versions"] = Versions, ["snapshot_next_to_drawing"] = SnapshotNextToDrawing,
             ["history"] = History.Cast<object>().ToList(),
         });
 
@@ -92,6 +95,8 @@ namespace ClaudeCAD.Plugin.Core
             s.PlanFirst = Bool("plan_first", true);
             s.Suggestions = Bool("suggestions", true);
             s.Hotkey = Bool("hotkey", true);
+            s.Versions = Bool("versions", true);
+            s.SnapshotNextToDrawing = Bool("snapshot_next_to_drawing", false);
             if (d.TryGetValue("history", out var h) && h is List<object> hl) s.History = hl.OfType<string>().Take(MaxHistory).ToList();
             return s;
         }

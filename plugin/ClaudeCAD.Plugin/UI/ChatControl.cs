@@ -60,6 +60,10 @@ namespace ClaudeCAD.Plugin.UI
         public event Action<string> SkillDraftOpenRequested;        // SKILL.md of the draft
         public event Action<string> SkillDraftAddRequested;
         public event Action<string, string> PlanAnswered;           // id, go | edit | cancel
+        // v0.7: version history
+        public event Action<string> VersionOpenRequested;           // version id
+        public event Action VersionCloseRequested;
+        public event Action OpenVersionsFolderRequested;
         /// <summary>Layer / block / style names of the active drawing for "@" (called on the UI thread).</summary>
         public Func<List<MentionItem>> MentionSource;
 
@@ -81,7 +85,14 @@ namespace ClaudeCAD.Plugin.UI
         private List<SkillInfo> _skills = new List<SkillInfo>();
         private List<string> _standardNames = new List<string>(PaletteSettings.Standards);
         private ComboBox _model, _effort, _theme;
-        private CheckBox _notify, _visualCheck, _planFirst, _suggestCheck, _hotkey;
+        private CheckBox _notify, _visualCheck, _planFirst, _suggestCheck, _hotkey, _versionsCheck, _sideSnapshot;
+        private Button _versionsBtn;
+        private Popup _versionsPopup;
+        private readonly StackPanel _versionRows = new StackPanel();
+        private Border _versionBanner;
+        private TextBlock _versionBannerText;
+        private List<VersionInfo> _versions = new List<VersionInfo>();
+        private bool _viewingVersion;
         // v0.6
         private readonly Button _capture, _macrosBtn, _notesBtn;
         private readonly ToggleButton _readOnlyBtn;
@@ -171,6 +182,9 @@ namespace ClaudeCAD.Plugin.UI
             _notesBtn = MakeButton("Ghi chú", "Ghi chú dự án gửi kèm mọi tin nhắn (cao độ, chiều dày tường, khung tên...)");
             _notesBtn.Click += (s, e) => NotesRequested?.Invoke();
             ctxBar.Children.Add(_notesBtn);
+            _versionsBtn = MakeButton("Phiên bản", "Bản sao bản vẽ trước khi chat sửa (30 phút một lần, giữ 10 bản): mở ra xem, Đóng để về bản hiện tại");
+            _versionsBtn.Click += (s, e) => { RefreshVersionsPanel(); _versionsPopup.IsOpen = !_versionsPopup.IsOpen; };
+            ctxBar.Children.Add(_versionsBtn);
             _readOnlyBtn = new ToggleButton { Content = "🔓 Sửa được", ToolTip = "Chỉ xem: Claude chỉ được đọc, đo, hỏi đáp — không sửa bản vẽ này", MinWidth = 40, Margin = new Thickness(4, 0, 0, 0), Padding = new Thickness(8, 2, 8, 2) };
             _readOnlyBtn.Checked += (s, e) => { PaintReadOnly(); if (!_suppressReadOnlyEvent) ReadOnlyToggled?.Invoke(true); };
             _readOnlyBtn.Unchecked += (s, e) => { PaintReadOnly(); if (!_suppressReadOnlyEvent) ReadOnlyToggled?.Invoke(false); };
@@ -179,6 +193,21 @@ namespace ClaudeCAD.Plugin.UI
             _scale.SelectionChanged += (s, e) => OnSettingsUi();
             DockPanel.SetDock(ctxBar, Dock.Top);
             root.Children.Add(ctxBar);
+
+            // ---- banner while an old version is open (read-only tab)
+            var bannerRow = new DockPanel { Margin = new Thickness(8, 5, 8, 5) };
+            var closeVersion = new Button { Content = "Đóng — về bản hiện tại", Padding = new Thickness(10, 2, 10, 2), FontWeight = FontWeights.SemiBold, VerticalAlignment = VerticalAlignment.Center };
+            closeVersion.Click += (s, e) => VersionCloseRequested?.Invoke();
+            DockPanel.SetDock(closeVersion, Dock.Right);
+            bannerRow.Children.Add(closeVersion);
+            _versionBannerText = new TextBlock { TextWrapping = TextWrapping.Wrap, VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(0, 0, 8, 0) };
+            Theme.Ref(_versionBannerText, TextBlock.ForegroundProperty, Theme.Fg);
+            bannerRow.Children.Add(_versionBannerText);
+            _versionBanner = new Border { Child = bannerRow, BorderThickness = new Thickness(1), CornerRadius = new CornerRadius(4), Margin = new Thickness(6, 0, 6, 4), Visibility = Visibility.Collapsed };
+            Theme.Ref(_versionBanner, Border.BackgroundProperty, Theme.CardBg);
+            Theme.Ref(_versionBanner, Border.BorderBrushProperty, Theme.Accent);
+            DockPanel.SetDock(_versionBanner, Dock.Top);
+            root.Children.Add(_versionBanner);
 
             // ---- project notes editor (inline: text boxes in WPF popups get no keys inside a PaletteSet)
             _notesPanel = BuildNotesPanel();
@@ -292,6 +321,29 @@ namespace ClaudeCAD.Plugin.UI
             _macrosPopup = new Popup { PlacementTarget = _macrosBtn, Placement = PlacementMode.Bottom, StaysOpen = false, Child = macrosBorder };
 
 
+            // ---- versions popup
+            var versionsHead = new DockPanel { Margin = new Thickness(0, 0, 0, 4) };
+            var versionsFolder = SmallButton("Mở thư mục", "Mở thư mục chứa các bản sao trong Explorer");
+            versionsFolder.Margin = new Thickness(0);
+            versionsFolder.Click += (s, e) => OpenVersionsFolderRequested?.Invoke();
+            DockPanel.SetDock(versionsFolder, Dock.Right);
+            versionsHead.Children.Add(versionsFolder);
+            var versionsTitle = new TextBlock { Text = "Phiên bản của bản vẽ này", FontWeight = FontWeights.SemiBold, VerticalAlignment = VerticalAlignment.Center };
+            Theme.Ref(versionsTitle, TextBlock.ForegroundProperty, Theme.Fg);
+            versionsHead.Children.Add(versionsTitle);
+            var versionsHint = MutedText("Tự lưu bản sao ngay trước khi chat sửa bản vẽ, tối đa 30 phút một lần, giữ 10 bản gần nhất. Mở ra là một tab chỉ xem.");
+            versionsHint.FontSize = 11;
+            versionsHint.TextWrapping = TextWrapping.Wrap;
+            versionsHint.Margin = new Thickness(0, 0, 0, 6);
+            var versionsStack = new StackPanel { Margin = new Thickness(10), Width = 340 };
+            versionsStack.Children.Add(versionsHead);
+            versionsStack.Children.Add(versionsHint);
+            versionsStack.Children.Add(new ScrollViewer { Content = _versionRows, MaxHeight = 360, VerticalScrollBarVisibility = ScrollBarVisibility.Auto });
+            var versionsBorder = new Border { BorderThickness = new Thickness(1), CornerRadius = new CornerRadius(4), Child = versionsStack };
+            Theme.Ref(versionsBorder, Border.BackgroundProperty, Theme.InputBg);
+            Theme.Ref(versionsBorder, Border.BorderBrushProperty, Theme.Border);
+            _versionsPopup = new Popup { PlacementTarget = _versionsBtn, Placement = PlacementMode.Bottom, StaysOpen = false, Child = versionsBorder };
+
             // ---- @ names popup
             _mentionList = new ListBox { MaxHeight = 240, MinWidth = 240, BorderThickness = new Thickness(1) };
             Theme.Ref(_mentionList, BackgroundProperty, Theme.InputBg);
@@ -301,7 +353,7 @@ namespace ClaudeCAD.Plugin.UI
             _mentionPopup = new Popup { PlacementTarget = _input, Placement = PlacementMode.Top, StaysOpen = false, Child = _mentionList };
 
             // popups must be in the logical tree for the theme resources to resolve
-            foreach (var pop in new[] { _slashPopup, _settingsPopup, _skillsPopup, _macrosPopup, _mentionPopup })
+            foreach (var pop in new[] { _slashPopup, _settingsPopup, _skillsPopup, _macrosPopup, _versionsPopup, _mentionPopup })
             {
                 DockPanel.SetDock(pop, Dock.Top);
                 root.Children.Add(pop);
@@ -390,6 +442,9 @@ namespace ClaudeCAD.Plugin.UI
             _planFirst = Check("Trình bày kế hoạch trước khi làm việc nhiều bước", "Thẻ kế hoạch có nút Làm / Sửa kế hoạch trước khi Claude vẽ việc lớn");
             _suggestCheck = Check("Gợi ý bước tiếp theo sau mỗi câu trả lời", "2–3 nút gợi ý dưới câu trả lời; bấm là gửi");
             _hotkey = Check("Phím tắt Ctrl+Shift+Space mở khung chat", "Trong AutoCAD: Ctrl+Shift+Space mở palette và đặt con trỏ vào ô nhập (lệnh tắt: CC)");
+            _versionsCheck = Check("Tự lưu phiên bản trước khi chat sửa (30 phút/lần, giữ 10 bản)", "Bản sao DWG trong %LocalAppData%\\ClaudeCAD\\versions; mở xem bằng nút Phiên bản");
+            _sideSnapshot = Check("Lưu biên bản cạnh bản vẽ (nhóm dùng chung thư mục dự án)", "Biên bản thay đổi lưu thêm trong thư mục ẩn .claudecad cạnh file DWG, để máy khác có cài plugin cũng biết bản vẽ đã được sửa tay");
+            _sideSnapshot.IsChecked = false;
             _model.SelectionChanged += (s, e) => OnSettingsUi();
             _effort.SelectionChanged += (s, e) => OnSettingsUi();
             _theme.SelectionChanged += (s, e) => OnSettingsUi();
@@ -450,6 +505,8 @@ namespace ClaudeCAD.Plugin.UI
                 _planFirst.IsChecked = s.PlanFirst;
                 _suggestCheck.IsChecked = s.Suggestions;
                 _hotkey.IsChecked = s.Hotkey;
+                _versionsCheck.IsChecked = s.Versions;
+                _sideSnapshot.IsChecked = s.SnapshotNextToDrawing;
                 FontSize = s.FontSize;
                 _history = new InputHistoryCursor(s.History);
             }
@@ -472,6 +529,8 @@ namespace ClaudeCAD.Plugin.UI
             _settings.PlanFirst = _planFirst.IsChecked == true;
             _settings.Suggestions = _suggestCheck.IsChecked == true;
             _settings.Hotkey = _hotkey.IsChecked == true;
+            _settings.Versions = _versionsCheck.IsChecked == true;
+            _settings.SnapshotNextToDrawing = _sideSnapshot.IsChecked == true;
             if (!_settings.Suggestions) ClearSuggestionsCore();
             SettingsChanged?.Invoke(_settings.Clone());
         }
@@ -591,6 +650,7 @@ namespace ClaudeCAD.Plugin.UI
         private void SubmitInput()
         {
             if (_busy) return;
+            if (_viewingVersion) { _toolStatus.Text = "Đang xem phiên bản cũ (chỉ xem) — bấm \"Đóng — về bản hiện tại\" rồi chat."; return; }
             _slashPopup.IsOpen = false;
             var text = _input.Text.Trim();
             if (text.Length == 0 && _images.Count == 0) return;
@@ -1039,7 +1099,7 @@ namespace ClaudeCAD.Plugin.UI
         public void SetBusy(bool busy) => Ui(() =>
         {
             _busy = busy;
-            _send.IsEnabled = !busy;
+            _send.IsEnabled = !busy && !_viewingVersion;
             _stop.IsEnabled = busy;
             _pickSel.IsEnabled = _pickPt.IsEnabled = !busy;
             foreach (var b in _macroRows.Children.OfType<FrameworkElement>().SelectMany(r => FindButtons(r)).Where(b => (b.Tag as string) == "run")) b.IsEnabled = !busy;
@@ -1342,6 +1402,64 @@ namespace ClaudeCAD.Plugin.UI
                 _macroRows.Children.Add(row);
             }
         }
+
+        // ---------------------------------------------------------------- version history
+
+        public void SetVersions(List<VersionInfo> versions) => Ui(() =>
+        {
+            _versions = versions ?? new List<VersionInfo>();
+            _versionsBtn.Content = _versions.Count > 0 ? $"Phiên bản ({_versions.Count})" : "Phiên bản";
+            RefreshVersionsPanel();
+        });
+
+        private void RefreshVersionsPanel()
+        {
+            _versionRows.Children.Clear();
+            if (_versions.Count == 0)
+            {
+                var t = MutedText("Chưa có phiên bản nào. Lần đầu chat sửa bản vẽ này, plugin sẽ lưu một bản sao trước khi sửa.");
+                t.TextWrapping = TextWrapping.Wrap;
+                _versionRows.Children.Add(t);
+                return;
+            }
+            foreach (var v in _versions)
+            {
+                var row = new DockPanel { Margin = new Thickness(0, 0, 0, 6) };
+                var id = v.Id;
+                var open = SmallButton("Xem", "Mở bản sao này trong một tab chỉ xem; bản vẽ hiện tại không bị đụng tới");
+                open.Margin = new Thickness(0);
+                open.VerticalAlignment = VerticalAlignment.Top;
+                open.Click += (s, e) => { _versionsPopup.IsOpen = false; VersionOpenRequested?.Invoke(id); };
+                DockPanel.SetDock(open, Dock.Right);
+                row.Children.Add(open);
+                var info = new StackPanel();
+                var title = new TextBlock { Text = v.Time.ToString("HH:mm  dd/MM/yyyy"), FontWeight = FontWeights.SemiBold };
+                Theme.Ref(title, TextBlock.ForegroundProperty, Theme.Fg);
+                info.Children.Add(title);
+                var label = MutedText("Trước lượt: " + (string.IsNullOrEmpty(v.Label) ? "(không rõ)" : v.Label) + (v.Bytes > 0 ? $" · {v.Bytes / 1048576.0:0.0} MB" : ""));
+                label.FontSize = 11;
+                label.TextWrapping = TextWrapping.Wrap;
+                info.Children.Add(label);
+                row.Children.Add(info);
+                _versionRows.Children.Add(row);
+            }
+        }
+
+        /// <summary>An old version is the active drawing: show the banner and block sending.</summary>
+        public void ShowVersionBanner(string text) => Ui(() =>
+        {
+            _viewingVersion = true;
+            _versionBannerText.Text = "👁 " + text;
+            _versionBanner.Visibility = Visibility.Visible;
+            _send.IsEnabled = false;
+        });
+
+        public void HideVersionBanner() => Ui(() =>
+        {
+            _viewingVersion = false;
+            _versionBanner.Visibility = Visibility.Collapsed;
+            _send.IsEnabled = !_busy;
+        });
 
         // ---------------------------------------------------------------- screenshot of the view
 

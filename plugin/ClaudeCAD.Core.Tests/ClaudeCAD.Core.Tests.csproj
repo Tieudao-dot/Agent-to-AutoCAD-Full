@@ -23,6 +23,7 @@
     <Compile Include="..\ClaudeCAD.Plugin\Core\SkillStore.cs" Link="Core\SkillStore.cs" />
     <Compile Include="..\ClaudeCAD.Plugin\Core\Macros.cs" Link="Core\Macros.cs" />
     <Compile Include="..\ClaudeCAD.Plugin\Core\ChatExtras.cs" Link="Core\ChatExtras.cs" />
+    <Compile Include="..\ClaudeCAD.Plugin\Core\DrawingHistoryCore.cs" Link="Core\DrawingHistoryCore.cs" />
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.11.1" />

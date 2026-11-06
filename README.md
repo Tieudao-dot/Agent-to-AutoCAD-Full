@@ -173,6 +173,12 @@ Tool mới: `add_text`, `add_mtext`, `add_dim_linear`, `add_dim_aligned`, `add_d
 
 Chi tiết: [`docs/palette-features.md`](docs/palette-features.md) mục E.
 
+### v0.7 — sửa tay và lịch sử phiên bản
+
+- Sửa tay bản vẽ giữa các lượt chat (kể cả khi đóng khung chat, hay hôm sau mở lại) → tin nhắn tiếp theo tự kèm danh sách thay đổi, Claude đọc lại trước khi làm.
+- **Phiên bản (N)**: bản sao bản vẽ trước khi chat sửa (30 phút một lần, giữ 10 bản) → **Xem** mở tab chỉ xem → **Đóng — về bản hiện tại**.
+- Chi tiết: [`docs/palette-features.md`](docs/palette-features.md) mục F.
+
 ## 5. Đóng gói bundle (autoloader)
 
 Xem [`bundle/README.md`](bundle/README.md) (thêm ở phase sau): tạo `ClaudeCAD.bundle` đặt vào `%AppData%\Autodesk\ApplicationPlugins` để AutoCAD tự nạp, không cần NETLOAD.

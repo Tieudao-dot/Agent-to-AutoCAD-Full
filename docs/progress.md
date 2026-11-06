@@ -119,3 +119,11 @@ Theo đề xuất đã duyệt (gói 1, 5, 10, 11, 13, 4 rồi 6, 7, 2, 14):
 - **Bảng thay đổi** của lượt: Thêm · Sửa · Xóa theo layer, bấm để xem.
 
 Chi tiết: `docs/palette-features.md` mục E. Cloud: `dotnet test` 88/88, `npm test` 89/89, build plugin net48 + net8 ✅. Cần test trên AutoCAD: V6-1 … V6-10 trong `docs/test-log.md`.
+
+## v0.7.0 — Claude biết cậu sửa tay + lịch sử phiên bản ✅ code xong
+
+- **Ghi nhận sửa tay** từ lúc AutoCAD nạp plugin (không cần mở khung chat); tin nhắn tiếp theo gửi kèm `manual_changes` (tóm tắt theo layer + mã đối tượng) để Claude đọc lại trước khi làm; khung chat hiện dòng "✎ Bản vẽ đã được sửa ngoài khung chat…".
+- **Biên bản** sau mỗi lượt chat (local, tùy chọn cạnh DWG) → so khi mở lại ở phiên AutoCAD sau / máy khác.
+- **Lịch sử phiên bản**: bản sao DWG trước khi chat sửa, tối đa 30 phút một lần, giữ 10 bản; **Phiên bản (N) ▸ Xem** mở tab chỉ xem, **Đóng — về bản hiện tại**.
+
+Cloud: `dotnet test` 96/96, `npm test` 91/91, build plugin net48 + net8 ✅. Cần test trên AutoCAD: V7-1 … V7-6 trong `docs/test-log.md`.
