@@ -80,6 +80,8 @@ namespace ClaudeCAD.Plugin.UI
         public event Action<string> ApiKeySaveRequested;
         public event Action ApiKeyClearRequested;
         public event Action ReportRequested;
+        /// <summary>Usage limit card: true = send the request again automatically when the limit resets.</summary>
+        public event Action<bool> LimitAutoRetryToggled;
         /// <summary>"sk-ant-…AbCd" of the saved key, or null (shown in the API key editor).</summary>
         public Func<string> ApiKeyMask;
         /// <summary>Layer / block / style names of the active drawing for "@" (called on the UI thread).</summary>
@@ -117,6 +119,7 @@ namespace ClaudeCAD.Plugin.UI
         private Border _apiKeyPanel;
         private PasswordBox _apiKeyBox;
         private TextBlock _apiKeyInfo;
+        private readonly StackPanel _toasts = new StackPanel { VerticalAlignment = VerticalAlignment.Top, HorizontalAlignment = HorizontalAlignment.Stretch, Margin = new Thickness(12, 64, 12, 0), IsHitTestVisible = true };
         // layer scope
         private Button _layersBtn;
         private Border _layerPanel;
@@ -419,7 +422,11 @@ namespace ClaudeCAD.Plugin.UI
                 Content = _messages,
             };
             root.Children.Add(_scroll);
-            Content = root;
+            // toasts float over the conversation (top), they never push the messages around
+            var layer = new Grid();
+            layer.Children.Add(root);
+            layer.Children.Add(_toasts);
+            Content = layer;
             RefreshChips();
         }
 
@@ -1785,6 +1792,119 @@ namespace ClaudeCAD.Plugin.UI
             AddImage(ImageAttachment.FromBitmap(bmp));
             _toolStatus.Text = "Đã chụp vùng đang xem — gõ yêu cầu (ví dụ \"chỗ này sai, sửa lại\") rồi gửi.";
             _input.Focus();
+        });
+
+        // ---------------------------------------------------------------- toasts
+
+        public enum ToastKind { Info, Success, Warning, Error }
+
+        /// <summary>
+        /// Small notice floating over the chat that disappears by itself (click to close). At most 3 at once;
+        /// the same text is not stacked twice. action/actionText: optional button (e.g. "Xem").
+        /// </summary>
+        public void ShowToast(string text, ToastKind kind = ToastKind.Info, double seconds = 4, string actionText = null, Action action = null) => Ui(() =>
+        {
+            if (string.IsNullOrWhiteSpace(text)) return;
+            foreach (var old in _toasts.Children.OfType<Border>().ToList())
+                if ((old.Tag as string) == text) _toasts.Children.Remove(old);
+            while (_toasts.Children.Count >= 3) _toasts.Children.RemoveAt(0);
+            string icon = kind == ToastKind.Success ? "✓" : kind == ToastKind.Warning ? "⚠" : kind == ToastKind.Error ? "✕" : "ℹ";
+            var row = new DockPanel();
+            if (action != null && !string.IsNullOrEmpty(actionText))
+            {
+                var b = SmallButton(actionText, actionText);
+                b.Margin = new Thickness(8, 0, 0, 0);
+                b.VerticalAlignment = VerticalAlignment.Center;
+                DockPanel.SetDock(b, Dock.Right);
+                row.Children.Add(b);
+                b.Click += (s, e) => action();
+            }
+            var t = new TextBlock { Text = icon + "  " + text, TextWrapping = TextWrapping.Wrap, VerticalAlignment = VerticalAlignment.Center, FontSize = 12 };
+            Theme.Ref(t, TextBlock.ForegroundProperty, kind == ToastKind.Error ? Theme.ErrorFg : Theme.Fg);
+            row.Children.Add(t);
+            var toast = new Border
+            {
+                Child = row, Tag = text, BorderThickness = new Thickness(1, 1, 1, 1), CornerRadius = new CornerRadius(6),
+                Padding = new Thickness(10, 6, 10, 6), Margin = new Thickness(0, 0, 0, 6), Opacity = 0, Cursor = Cursors.Hand,
+                ToolTip = "Bấm để đóng",
+                Effect = new System.Windows.Media.Effects.DropShadowEffect { BlurRadius = 8, ShadowDepth = 1, Opacity = 0.35 },
+            };
+            Theme.Ref(toast, Border.BackgroundProperty, Theme.CardBg);
+            Theme.Ref(toast, Border.BorderBrushProperty, kind == ToastKind.Error || kind == ToastKind.Warning ? Theme.ErrorFg : Theme.Accent);
+            void Remove()
+            {
+                var fade = new System.Windows.Media.Animation.DoubleAnimation(toast.Opacity, 0, TimeSpan.FromMilliseconds(250));
+                fade.Completed += (s, e) => _toasts.Children.Remove(toast);
+                toast.BeginAnimation(OpacityProperty, fade);
+            }
+            toast.MouseLeftButtonUp += (s, e) => Remove();
+            _toasts.Children.Add(toast);
+            toast.BeginAnimation(OpacityProperty, new System.Windows.Media.Animation.DoubleAnimation(0, 1, TimeSpan.FromMilliseconds(180)));
+            var timer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(Math.Max(1.5, seconds)) };
+            timer.Tick += (s, e) =>
+            {
+                if (toast.IsMouseOver) return; // keep it while the user reads it
+                timer.Stop();
+                Remove();
+            };
+            timer.Start();
+        });
+
+        // ---------------------------------------------------------------- usage limit card
+
+        /// <summary>
+        /// The Claude plan's usage limit was reached: what limit, when it resets, buttons "Tự gửi lại lúc …"
+        /// (sends the last request again when the limit resets) and "Dùng API key".
+        /// </summary>
+        public void AddLimitCard(string title, string detail, DateTime? resetsAt, bool canAutoRetry, bool autoRetryOn) => Ui(() =>
+        {
+            var stack = new StackPanel();
+            var t = new TextBlock { Text = "⛔ " + title, FontWeight = FontWeights.SemiBold, TextWrapping = TextWrapping.Wrap };
+            Theme.Ref(t, TextBlock.ForegroundProperty, Theme.ErrorFg);
+            stack.Children.Add(t);
+            if (!string.IsNullOrEmpty(detail))
+            {
+                var d = new TextBlock { Text = detail, TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 3, 0, 0) };
+                Theme.Ref(d, TextBlock.ForegroundProperty, Theme.Fg);
+                stack.Children.Add(d);
+            }
+            var countdown = MutedText("");
+            countdown.FontSize = 11;
+            stack.Children.Add(countdown);
+            if (resetsAt.HasValue)
+            {
+                void Tick()
+                {
+                    var left = resetsAt.Value - DateTime.Now;
+                    countdown.Text = left <= TimeSpan.Zero ? "Đã có thể dùng lại." : $"Còn khoảng {(left.TotalHours >= 1 ? $"{(int)left.TotalHours} giờ {left.Minutes} phút" : $"{Math.Max(1, (int)Math.Ceiling(left.TotalMinutes))} phút")}.";
+                }
+                Tick();
+                var timer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(30) };
+                timer.Tick += (s, e) => { Tick(); if (resetsAt.Value <= DateTime.Now) timer.Stop(); };
+                timer.Start();
+            }
+            var row = new WrapPanel { Margin = new Thickness(0, 6, 0, 0) };
+            if (canAutoRetry && resetsAt.HasValue)
+            {
+                var auto = new ToggleButton
+                {
+                    Content = autoRetryOn ? $"✓ Sẽ tự gửi lại lúc {resetsAt.Value:HH:mm}" : $"Tự gửi lại lúc {resetsAt.Value:HH:mm}",
+                    IsChecked = autoRetryOn, Padding = new Thickness(10, 2, 10, 2), Margin = new Thickness(0, 0, 6, 4),
+                    ToolTip = "Khi hạn mức được làm mới, plugin tự gửi lại yêu cầu vừa rồi (cứ để AutoCAD mở)",
+                };
+                auto.Checked += (s, e) => { auto.Content = $"✓ Sẽ tự gửi lại lúc {resetsAt.Value:HH:mm}"; LimitAutoRetryToggled?.Invoke(true); };
+                auto.Unchecked += (s, e) => { auto.Content = $"Tự gửi lại lúc {resetsAt.Value:HH:mm}"; LimitAutoRetryToggled?.Invoke(false); };
+                row.Children.Add(auto);
+            }
+            var key = new Button { Content = "Dùng API key", Padding = new Thickness(10, 2, 10, 2), Margin = new Thickness(0, 0, 6, 4), ToolTip = "API key Anthropic trả theo lượng dùng, không phụ thuộc hạn mức gói" };
+            key.Click += (s, e) => ShowApiKeyPanel(ApiKeyMask?.Invoke());
+            row.Children.Add(key);
+            stack.Children.Add(row);
+            var card = new Border { Child = stack, BorderThickness = new Thickness(1), CornerRadius = new CornerRadius(6), Padding = new Thickness(10, 6, 10, 6), Margin = new Thickness(0, 4, 24, 4), Tag = "limit" };
+            Theme.Ref(card, Border.BackgroundProperty, Theme.CardBg);
+            Theme.Ref(card, Border.BorderBrushProperty, Theme.ErrorFg);
+            _messages.Children.Add(card);
+            ScrollToEnd();
         });
 
         // ---------------------------------------------------------------- account

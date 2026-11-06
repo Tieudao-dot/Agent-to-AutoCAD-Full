@@ -161,5 +161,6 @@ Cần test trên máy thật: I-1 … I-5 trong `docs/test-log.md`.
 - **Gửi báo cáo lỗi** (⚙ và thẻ lỗi): zip trên Desktop với thông tin máy, trạng thái, log 3 ngày, tự kiểm tra, log cài đặt; API key / token được che; không có chat hay bản vẽ.
 - Bộ cài luôn ghi log (`SetupLogging=yes`).
 - **Tài khoản AI** trong ⚙: trạng thái, Đăng nhập, Đổi tài khoản, Đăng xuất, Dùng API key (DPAPI).
+- **Toast** trong khung chat; **giới hạn sử dụng AI**: cảnh báo khi sắp hết, thẻ trong chat khi hết (giờ làm mới, đếm ngược, tự gửi lại, dùng API key).
 
-Cloud: `dotnet test` 106/106, `npm test` 95/95, build ✅. Cần test: R-1, A-1, A-2.
+Cloud: `dotnet test` 106/106, `npm test` 95/95, build ✅. Cần test: T-1, T-2, R-1, A-1, A-2.

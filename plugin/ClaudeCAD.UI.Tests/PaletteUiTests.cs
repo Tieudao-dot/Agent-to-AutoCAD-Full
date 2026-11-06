@@ -250,6 +250,9 @@ namespace ClaudeCAD.UI.Tests
                     ("Skill", true, "3 skill trong plugin"),
                 }, true);
                 c.AddLoginCard("Chưa đăng nhập Claude. Bấm nút \"Đăng nhập Claude\" bên dưới và đăng nhập tài khoản Pro/Max trên trình duyệt.");
+                c.AddLimitCard("Đã chạm giới hạn sử dụng Claude", "Gói Claude đã dùng hết hạn mức 5 giờ. Được dùng lại lúc 14:30 06/11.", DateTime.Now.AddMinutes(95), true, false);
+                c.ShowToast("Sắp hết hạn mức 5 giờ: đã dùng 85%, làm mới lúc 14:30.", ChatControl.ToastKind.Warning, 30);
+                c.ShowToast("Đã lưu macro \"Khung tên A3\".", ChatControl.ToastKind.Success, 30);
                 Shot(c, "palette-setup");
             });
             Assert.True(new FileInfo(Path.Combine(OutDir, "palette-setup.png")).Length > 5_000);
