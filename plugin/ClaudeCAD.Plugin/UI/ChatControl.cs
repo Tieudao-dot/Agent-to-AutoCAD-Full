@@ -1299,6 +1299,8 @@ namespace ClaudeCAD.Plugin.UI
             void Done(bool ok)
             {
                 yes.IsEnabled = no.IsEnabled = false;
+                _openConfirmButtons.Remove(yes);
+                _openConfirmButtons.Remove(no);
                 answer.Text = ok ? "  → đã đồng ý" : "  → đã hủy";
                 ConfirmAnswered?.Invoke(id, ok);
             }
@@ -1521,6 +1523,16 @@ namespace ClaudeCAD.Plugin.UI
             return border;
         }
 
+        /// <summary>Drawing switched: the notes editor and the layer picker / chosen layers belong to the old one.</summary>
+        public void CloseDrawingPanels() => Ui(() =>
+        {
+            _notesPanel.Visibility = Visibility.Collapsed;
+            _layerPanel.Visibility = Visibility.Collapsed;
+            _layerRows = new List<LayerRow>();
+            ClearLayerScope();
+            RefreshChips();
+        });
+
         /// <summary>Opens the notes editor. folderFile = null when the drawing was never saved.</summary>
         public void ShowNotes(string folderText, string drawingText, string folderFile) => Ui(() =>
         {
@@ -1611,7 +1623,7 @@ namespace ClaudeCAD.Plugin.UI
                 run.IsEnabled = !_busy;
                 run.Click += (s, e) => { _macrosPopup.IsOpen = false; MacroRunRequested?.Invoke(name, false); };
                 var at = SmallButton("📍 Tại điểm", m.BasePoint != null ? "Chọn điểm chèn trên bản vẽ: macro được dời tới đó" : "Macro này không có điểm gốc (không tạo đối tượng mới)");
-                at.Tag = "run";
+                at.Tag = m.BasePoint != null ? "run" : null; // SetBusy must not enable it for macros without a base point
                 at.IsEnabled = !_busy && m.BasePoint != null;
                 at.Click += (s, e) => { _macrosPopup.IsOpen = false; MacroRunRequested?.Invoke(name, true); };
                 var del = SmallButton("Xóa", "Xóa macro");
@@ -1684,6 +1696,7 @@ namespace ClaudeCAD.Plugin.UI
             _versionBannerText.Text = "👁 " + text;
             _versionBanner.Visibility = Visibility.Visible;
             _send.IsEnabled = false;
+            foreach (var b in _openConfirmButtons) b.IsEnabled = false; // plan / confirm cards wait for the real drawing
         });
 
         public void HideVersionBanner() => Ui(() =>
@@ -1691,6 +1704,7 @@ namespace ClaudeCAD.Plugin.UI
             _viewingVersion = false;
             _versionBanner.Visibility = Visibility.Collapsed;
             _send.IsEnabled = !_busy;
+            foreach (var b in _openConfirmButtons) b.IsEnabled = true;
         });
 
         // ---------------------------------------------------------------- screenshot of the view
@@ -1777,6 +1791,9 @@ namespace ClaudeCAD.Plugin.UI
             void Done(string kind, string label)
             {
                 go.IsEnabled = edit.IsEnabled = drop.IsEnabled = false;
+                _openConfirmButtons.Remove(go);
+                _openConfirmButtons.Remove(edit);
+                _openConfirmButtons.Remove(drop);
                 answer.Text = "  → " + label;
                 PlanAnswered?.Invoke(id, kind);
             }

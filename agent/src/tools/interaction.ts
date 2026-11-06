@@ -12,7 +12,8 @@ let seq = 0;
 
 /** The SKILL.md text of a drafted skill (frontmatter + body). */
 export function skillMarkdown(name: string, description: string, body: string): string {
-  const desc = description.replace(/\r?\n/g, ' ').trim();
+  // quoted: a ": " or " #" in a Vietnamese description must not break the YAML frontmatter
+  const desc = JSON.stringify(description.replace(/\r?\n/g, ' ').replace(/"/g, "'").trim());
   const text = body.replace(/\r\n/g, '\n').trim();
   // Claude sometimes repeats the frontmatter in the body: keep only ours
   const withoutFrontmatter = text.startsWith('---') ? text.replace(/^---\n[\s\S]*?\n---\n?/, '').trim() : text;

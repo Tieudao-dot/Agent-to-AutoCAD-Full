@@ -80,13 +80,15 @@ describe('plan / next-step / skill-draft tools', () => {
     }, {});
     const m = emitted.at(-1) as Extract<SidecarToPlugin, { type: 'skill_draft' }>;
     assert.equal(m.type, 'skill_draft');
-    assert.match(m.content, /^---\nname: chuan-cong-ty-x\ndescription: Chuẩn bản vẽ kiến trúc/);
+    assert.match(m.content, /^---\nname: chuan-cong-ty-x\ndescription: "Chuẩn bản vẽ kiến trúc/);
     assert.match(m.content, /\| A-WALL \| 7 \|/);
   });
 
   it('skillMarkdown drops a frontmatter repeated in the body', () => {
     const md = skillMarkdown('a-b', 'mô tả đủ dài cho skill này nhé', '---\nname: x\ndescription: y\n---\nNội dung');
-    assert.equal(md, '---\nname: a-b\ndescription: mô tả đủ dài cho skill này nhé\n---\n\nNội dung\n');
+    assert.equal(md, '---\nname: a-b\ndescription: "mô tả đủ dài cho skill này nhé"\n---\n\nNội dung\n');
+    // a colon or quotes in the description stay inside one quoted YAML string
+    assert.match(skillMarkdown('a-b', 'Chuẩn công ty X: layer "A-*", #ghi chú', 'x'), /^---\nname: a-b\ndescription: "Chuẩn công ty X: layer 'A-\*', #ghi chú"\n---/);
   });
 });
 
@@ -216,5 +218,12 @@ describe('layer scope', () => {
     assert.match(all, /set_layer_props on each layer, no confirmation needed/);
     assert.match(all, /request_confirmation/);
     assert.ok(SYSTEM_PROMPT.includes('Changing the properties of layers the user chose'));
+  });
+});
+
+describe('turn id', () => {
+  it('is parsed and echoed in turn_end', async () => {
+    const m = parsePluginMessage({ type: 'user_message', text: 'x', turn_id: 't-42' });
+    assert.deepEqual(m, { type: 'user_message', text: 'x', turn_id: 't-42' });
   });
 });

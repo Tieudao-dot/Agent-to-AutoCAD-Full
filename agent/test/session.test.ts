@@ -89,6 +89,20 @@ function makeSession(fn: QueryFn, skillsDir?: string) {
 const tick = (ms = 20) => new Promise((r) => setTimeout(r, ms));
 
 describe('AgentSession', () => {
+  it('echoes the turn id of the message in turn_end', async () => {
+    const { fn } = fakeQuery(async (input, push) => {
+      for await (const _m of input) {
+        push(init);
+        push(result());
+      }
+    });
+    const { s, events } = makeSession(fn);
+    s.sendMessage({ type: 'user_message', text: 'x', turn_id: 't-7' });
+    await tick();
+    const end = events.find((e) => e.type === 'turn_end') as { turn_id?: string };
+    assert.equal(end.turn_id, 't-7');
+  });
+
   it('streams text deltas and ends the turn on result', async () => {
     const received: string[] = [];
     const { fn, calls } = fakeQuery(async (input, push) => {

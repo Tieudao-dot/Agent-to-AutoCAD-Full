@@ -190,7 +190,9 @@ namespace ClaudeCAD.Plugin.Drawing
             var doc = _host.ResolveDocument();
             bool writes = def.Writes || (def.Name == "batch_execute" && BatchWrites(p));
             // undo_last_turn is registered as a read (it only queues U) but it changes the drawing
-            if ((writes || def.Name == "undo_last_turn") && _host.ReadOnly && !ReadOnlyAllowed.Contains(def.Name))
+            // save_drawing with a path renames the drawing (and overwrites a file): a change too
+            bool changes = writes || def.Name == "undo_last_turn" || (def.Name == "save_drawing" && p.Has("path"));
+            if (changes && _host.ReadOnly && !ReadOnlyAllowed.Contains(def.Name))
                 throw new ToolException(ErrorCodes.ReadOnly, $"{def.Name}: {ReadOnlyMessage}");
 
             if (writes && !_host.Undo.IsOpen && !ReadOnlyAllowed.Contains(def.Name)) _host.BeforeWrite(doc);

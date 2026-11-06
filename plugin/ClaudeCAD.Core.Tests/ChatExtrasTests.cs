@@ -106,6 +106,43 @@ namespace ClaudeCAD.Core.Tests
         }
 
         [Fact]
+        public void Remap_touches_only_handle_parameters()
+        {
+            var map = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase) { ["2B5"] = "3C0" };
+            var p = P(("text", "2B5"), ("layer", "2B5"), ("handle", "2B5"), ("base_dim_handle", "2b5"),
+                      ("nested", P(("entity_handles", new List<object> { "2B5", "FF" }))));
+            var r = (Dictionary<string, object>)MacroLogic.Remap(p, map);
+            Assert.Equal("2B5", r["text"]);      // a text that looks like a handle stays as typed
+            Assert.Equal("2B5", r["layer"]);
+            Assert.Equal("3C0", r["handle"]);
+            Assert.Equal("3C0", r["base_dim_handle"]);
+            Assert.Equal(new object[] { "3C0", "FF" }, ((List<object>)((Dictionary<string, object>)r["nested"])["entity_handles"]).ToArray());
+        }
+
+        [Fact]
+        public void Calls_using_objects_of_a_failed_step_are_detected()
+        {
+            var created = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "2F0", "2F1" };
+            var map = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase) { ["2F1"] = "400" };
+            Assert.Equal(new[] { "2F0" }, MacroLogic.Unresolved(P(("handles", new List<object> { "2F0", "2F1", "AA" })), created, map));
+            Assert.Empty(MacroLogic.Unresolved(P(("handle", "2F1")), created, map));
+            Assert.Empty(MacroLogic.Unresolved(P(("handle", "AA")), created, map)); // pre-existing object: allowed
+        }
+
+        [Fact]
+        public void Saved_templates_do_not_shadow_shipped_ones_and_survive_a_broken_file()
+        {
+            var file = Path.Combine(Temp(), "templates.json");
+            var t = QuickTemplates.SaveUser(file, "Lưới trục", "vẽ lưới trục", false, new[] { "luoi-truc" });
+            Assert.Equal("luoi-truc-2", t.Name);
+            File.WriteAllText(file, "{ not json");
+            var t2 = QuickTemplates.SaveUser(file, "Cửa đi", "vẽ cửa đi 900");
+            Assert.Equal("cua-di", t2.Name);
+            Assert.True(File.Exists(file + ".bak"));
+            Assert.Single(QuickTemplates.LoadAll(null, file));
+        }
+
+        [Fact]
         public void Learn_keeps_the_first_mapping()
         {
             var map = new Dictionary<string, string>();

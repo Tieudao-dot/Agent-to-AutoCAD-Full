@@ -71,6 +71,7 @@ export class AgentSession {
   /** Results still expected from turns abandoned by the plugin (forced end after Stop). */
   private staleResults = 0;
   private reloadPending = false;
+  private turnId?: string;
   private readonly defaultModel?: string;
 
   constructor(private readonly cfg: SessionConfig) {
@@ -183,6 +184,7 @@ export class AgentSession {
     this.cancelRequested = false;
     this.lastUser = msg.text;
     this.lastConfirm = msg.confirm;
+    this.turnId = msg.turn_id;
     this.pending = msg;
     this.input!.push(toSdkUserMessage(msg));
   }
@@ -310,7 +312,7 @@ export class AgentSession {
     }
     this.turnActive = false;
     this.cancelRequested = false;
-    this.cfg.emit({ type: 'turn_end', ...end });
+    this.cfg.emit({ type: 'turn_end', ...(this.turnId ? { turn_id: this.turnId } : {}), ...end });
     if (this.reloadPending) {
       this.reloadPending = false;
       this.closeQuery();

@@ -106,17 +106,34 @@ namespace ClaudeCAD.Plugin.Core
             }
         }
 
-        /// <summary>Deep copy where every string equal to a recorded handle is replaced by the handle created on replay.</summary>
-        public static object Remap(object v, IDictionary<string, string> map)
+        /// <summary>
+        /// Deep copy where the values of handle parameters (handle / handles / *_handle(s)) that are recorded
+        /// handles are replaced by the handles created on replay. Other strings (texts, layer names) are kept
+        /// even if they happen to look like a handle.
+        /// </summary>
+        public static object Remap(object v, IDictionary<string, string> map) => Remap(v, map, false);
+
+        private static object Remap(object v, IDictionary<string, string> map, bool handleValue)
         {
             switch (v)
             {
-                case string s: return map.TryGetValue(s, out var n) ? n : s;
-                case Dictionary<string, object> d: return d.ToDictionary(kv => kv.Key, kv => Remap(kv.Value, map));
-                case List<object> l: return l.Select(x => Remap(x, map)).ToList();
+                case string s: return handleValue && map.TryGetValue(s, out var n) ? n : s;
+                case Dictionary<string, object> d: return d.ToDictionary(kv => kv.Key, kv => Remap(kv.Value, map, IsHandleKey(kv.Key)));
+                case List<object> l: return l.Select(x => Remap(x, map, handleValue)).ToList();
                 default: return v;
             }
         }
+
+        public static bool IsHandleKey(string k) =>
+            k == "handle" || k == "handles" || k.EndsWith("_handle", StringComparison.Ordinal) || k.EndsWith("_handles", StringComparison.Ordinal);
+
+        /// <summary>
+        /// Handles created by an earlier call of the macro that this call uses but that were not re-created
+        /// on replay (that call failed). Sending them unchanged would hit the user's own objects, so the
+        /// call must be skipped.
+        /// </summary>
+        public static List<string> Unresolved(Dictionary<string, object> p, ISet<string> createdByMacro, IDictionary<string, string> map) =>
+            HandleParams(p).Where(h => createdByMacro.Contains(h) && !map.ContainsKey(h)).Distinct(StringComparer.OrdinalIgnoreCase).ToList();
 
         /// <summary>After a replayed call: recorded handle k ↦ new handle k (first mapping wins).</summary>
         public static void Learn(IDictionary<string, string> map, IList<string> recorded, IList<string> replayed)
@@ -148,7 +165,7 @@ namespace ClaudeCAD.Plugin.Core
         {
             foreach (var kv in p)
             {
-                bool named = kv.Key == "handle" || kv.Key == "handles" || kv.Key.EndsWith("_handle", StringComparison.Ordinal) || kv.Key.EndsWith("_handles", StringComparison.Ordinal);
+                bool named = IsHandleKey(kv.Key);
                 if (named)
                 {
                     if (kv.Value is string s) yield return s;
@@ -212,7 +229,7 @@ namespace ClaudeCAD.Plugin.Core
                     groups.Add(new List<int> { i });
                     continue;
                 }
-                if (cur.Count >= max || References(c.Params, created)) Flush();
+                if (cur.Count >= max || HandleParams(c.Params).Any(created.Contains)) Flush();
                 cur.Add(i);
                 foreach (var h in c.ResultHandles) created.Add(h);
             }

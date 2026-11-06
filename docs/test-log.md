@@ -112,6 +112,7 @@ Trạng thái: ⬜ chưa chạy · ✅ đạt · ❌ không đạt · ⚠️ đ�
 | V7-4 | Bật ⚙ **Lưu biên bản cạnh bản vẽ** → có thư mục ẩn `.claudecad`; máy khác có cài plugin mở cùng thư mục, sửa, chat → được báo | ⬜ chưa chạy | |
 | V7-5 | Chat sửa bản vẽ → **Phiên bản (1)**; trong 30 phút chat tiếp không tạo bản mới; sau 30 phút có bản mới; quá 10 bản thì bản cũ nhất bị xóa | ⬜ chưa chạy | |
 | V7-6 | **Phiên bản ▸ Xem** → tab chỉ xem đúng trạng thái trước lượt đó, thanh "Đang xem phiên bản…", ô chat khóa; **Đóng — về bản hiện tại** đóng tab, về đúng bản vẽ, lịch sử chat không đổi | ⬜ chưa chạy | |
+| ST-1 | Gõ **CLAUDECHATSELFTEST** → mở bản vẽ tạm, chạy các bước, đóng lại, về bản vẽ của cậu; Notepad mở báo cáo — gửi file này cho người phát triển | ⬜ chưa chạy | |
 | L-1 | **Chọn đối tượng** quét qua tường, cửa, chữ → chip hiện đúng các layer và số lượng; bỏ tick A-TEXT → "Kèm x/y đối tượng"; Claude chỉ sửa phần còn tick | ⬜ chưa chạy | |
 | L-2 | Nút **Layer** → danh sách đúng (màu, số đối tượng, khóa/tắt), lọc theo tên, tick 2 layer → **Dùng layer đã chọn** → chip "Layer: …" | ⬜ chưa chạy | |
 | L-3 | Chọn layer + "đổi màu sang đỏ" / "khóa lại" → đổi thuộc tính layer, không hỏi xác nhận; "tăng chiều cao chữ lên 300" trên layer có > 20 chữ → thẻ Đồng ý / Hủy, Đồng ý thì sửa đúng | ⬜ chưa chạy | |
@@ -127,6 +128,7 @@ Trạng thái: ⬜ chưa chạy · ✅ đạt · ❌ không đạt · ⚠️ đ�
 | 2026-11-05 | `dotnet build` plugin net48 với reference AutoCAD.NET 24.1.51000 | ✅ 0 warning |
 | 2026-11-05 | `dotnet test plugin/ClaudeCAD.Core.Tests` — JsonCodec, Params | ✅ 16/16 |
 | 2026-11-05 | Phase 1b: `npm test` 38/38 (thêm: danh mục tool TS khớp handler C#, mọi schema chuyển được sang JSON Schema, schema nhận ví dụ spec, giới hạn 500 call/batch) | ✅ |
+| 2026-11-06 | v0.9.0 tối ưu + review: `dotnet test` 102/102 (gom macro theo lô, chỉ ánh xạ tham số handle, bỏ bước dùng đối tượng chưa tạo lại, mẫu lệnh không che mẫu có sẵn, file mẫu hỏng); `npm test` 95/95 (`turn_id`, mô tả skill trong ngoặc kép); build net48 + net8 ✅ | ✅ |
 | 2026-11-06 | v0.8.0 chọn layer: `dotnet test` 98/98 (đếm theo layer, lọc theo layer bỏ tick, tìm layer, lịch sử giữ layer đã chọn); `npm test` 93/93 (`attachments.layers`, `selection.layers`, câu dặn Claude phân biệt thuộc tính layer / đối tượng); build net48 + net8 ✅ | ✅ |
 | 2026-11-06 | v0.7.0 sửa tay + phiên bản: `dotnet test` 96/96 (biên bản nén/đọc lại, mã kiểm tra bỏ nhiễu số thực và "-0", so đầy đủ / bản vẽ lớn theo layer, báo cáo sửa tay giới hạn 300 mã, phiên bản 30 phút + giữ 10 bản); `npm test` 91/91 (`manual_changes` lọc mã sai, câu dặn Claude đọc lại); build net48 + net8 (Wblock/SaveAs, mở DWG chỉ xem, CloseAndDiscard) ✅ | ✅ |
 | 2026-11-06 | v0.6.0 tiện ích khung chat: `dotnet test` lõi 88/88 (macro ghi/ánh xạ handle/lưu, bảng thay đổi, `@`, ghi chú dự án, mẫu lệnh, cài đặt mới, lịch sử giữ Chỉ xem + ghi chú + thay đổi); `npm test` 89/89 (ảnh `capture_view` thành khối image MCP, thẻ kế hoạch, gợi ý, bản nháp skill, ngữ cảnh mới, `promptSuggestions`); build plugin net48 + net8 (API GraphicsSystem off-screen, PreTranslateMessage) ✅ | ✅ |

@@ -32,7 +32,7 @@ Triển khai mục 6 của spec. Nguồn: `agent/src/ipc/protocol.ts` (TypeScrip
 | Thông điệp | Ý nghĩa |
 | --- | --- |
 | `{"type":"user_message","text":"...","drawing":"a.dwg"}` | Người dùng gửi chat. `drawing` (tùy chọn) là tên bản vẽ đang mở, được ghi vào đầu message cho Claude. |
-| `user_message` mở rộng | `attachments` (`selection` — *v0.8:* thêm `layers` = số đối tượng theo layer, `images`, *v0.8:* `layers` = `{names[], counts?, total?}` layer người dùng tick), `context` (`standard`, `scale`, *v0.6:* `read_only`, `notes`, `visual_check:false`, `plan_first:false`, `suggestions:false`, *v0.7:* `manual_changes` = `{text, since: "session"/"previous", modified[], erased[], added[], more?}`), `edited`, `confirm`, *v0.6:* `plan:"approved"`. |
+| `user_message` mở rộng | `attachments` (`selection` — *v0.8:* thêm `layers` = số đối tượng theo layer, `images`, *v0.8:* `layers` = `{names[], counts?, total?}` layer người dùng tick), `context` (`standard`, `scale`, *v0.6:* `read_only`, `notes`, `visual_check:false`, `plan_first:false`, `suggestions:false`, *v0.7:* `manual_changes` = `{text, since: "session"/"previous", modified[], erased[], added[], more?}`), `edited`, `confirm`, *v0.6:* `plan:"approved"`, *v0.9:* `turn_id` (sidecar trả lại trong `turn_end`; plugin bỏ qua `turn_end` của lượt khác). |
 | `{"type":"cancel"}` | Nút Stop, hoặc bản vẽ bị đóng/đổi giữa lượt. Sidecar `interrupt()` lượt và fail mọi call đang chờ. |
 | `{"type":"new_session"}` | Nút New: đóng phiên agent, phiên mới bắt đầu ở message kế tiếp. |
 | `{"id":"req-17","ok":true,"result":{...}}` | Kết quả tool call. Tool tạo/sửa luôn trả `handles`. |

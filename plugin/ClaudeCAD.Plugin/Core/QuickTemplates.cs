@@ -70,17 +70,28 @@ namespace ClaudeCAD.Plugin.Core
         /// Adds (or replaces, same name) a template in the user's templates.json ("Lưu thành mẫu lệnh").
         /// Returns the template actually stored (name slugified, unique).
         /// </summary>
-        public static QuickTemplate SaveUser(string userFile, string title, string text, bool replace = false)
+        public static QuickTemplate SaveUser(string userFile, string title, string text, bool replace = false, IEnumerable<string> reserved = null)
         {
             if (string.IsNullOrWhiteSpace(text)) throw new ArgumentException("Mẫu lệnh trống.");
             var list = new List<QuickTemplate>();
-            if (File.Exists(userFile)) list = Parse(File.ReadAllText(userFile, Encoding.UTF8));
+            if (File.Exists(userFile))
+            {
+                try { list = Parse(File.ReadAllText(userFile, Encoding.UTF8)); }
+                catch (Exception ex)
+                {
+                    // keep the broken file for the user instead of failing every save
+                    Logger.Warn("templates.json (user) unreadable, kept as .bak: " + ex.Message);
+                    File.Copy(userFile, userFile + ".bak", true);
+                    list = new List<QuickTemplate>();
+                }
+            }
+            var taken = new HashSet<string>(reserved ?? Enumerable.Empty<string>(), StringComparer.OrdinalIgnoreCase);
             var baseName = SkillStore.Slugify(string.IsNullOrWhiteSpace(title) ? text : title);
             if (baseName.Length == 0) baseName = "mau";
             if (baseName.Length > 30) baseName = baseName.Substring(0, 30).TrimEnd('-');
             var name = baseName;
             if (!replace)
-                for (int i = 2; list.Any(t => t.Name.Equals(name, StringComparison.OrdinalIgnoreCase)); i++) name = baseName + "-" + i;
+                for (int i = 2; taken.Contains(name) || list.Any(t => t.Name.Equals(name, StringComparison.OrdinalIgnoreCase)); i++) name = baseName + "-" + i;
             list.RemoveAll(t => t.Name.Equals(name, StringComparison.OrdinalIgnoreCase));
             var tpl = new QuickTemplate { Name = name, Title = string.IsNullOrWhiteSpace(title) ? Shorten(text, 60) : title.Trim(), Text = text.Trim() };
             list.Add(tpl);

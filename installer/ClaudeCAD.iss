@@ -1,9 +1,9 @@
 ; Inno Setup script: builds ClaudeCAD-Setup-<version>.exe from bundle\out\ClaudeCAD.bundle.
-; Build on Windows:  "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" /DAppVersion=0.8.0 installer\ClaudeCAD.iss
+; Build on Windows:  "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" /DAppVersion=0.9.0 installer\ClaudeCAD.iss
 ; (CI does this in .github/workflows/build.yml.)
 
 #ifndef AppVersion
-  #define AppVersion "0.8.0"
+  #define AppVersion "0.9.0"
 #endif
 #define BundleDir "..\bundle\out\ClaudeCAD.bundle"
 

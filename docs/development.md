@@ -83,3 +83,20 @@ Review riêng phần palette mới tìm và đã sửa 17 lỗi, các lỗi chí
 8. Thẻ xác nhận tách đôi câu trả lời → thẻ nằm trong bong bóng của lượt.
 9. Popup (⚙, mẫu lệnh `/`) không nhận theme → đưa vào cây logic.
 10–17. Cuộn chuột trên tin nhắn người dùng, câu trả lời xác nhận gửi nhầm bản vẽ, sidecar giữ lượt cũ làm palette kẹt (nay bỏ lượt cũ và nhận tin mới), điểm gốc rubber-band sai hệ tọa độ, chọn rất nhiều đối tượng làm treo UI, focus sau khi chọn, đọc text không khóa.
+
+### Lượt review thứ ba (v0.6–0.8) — 14 lỗi, đã sửa trong v0.9.0
+
+1. Chạy lại macro: bước tạo đối tượng bị lỗi thì các bước sau gửi nguyên handle cũ → có thể sửa/xóa nhầm đối tượng của người dùng → bước dùng đối tượng chưa được tạo lại bị bỏ qua và báo lỗi.
+2. Gửi tin (Làm / Đồng ý / Thử lại / macro) khi đang xem tab phiên bản cũ làm mất cuộc chat → chặn mọi lượt trên tab phiên bản, khóa nút trên thẻ khi đang xem.
+3. Ghi chú / danh sách layer mở cho bản vẽ A rồi lưu khi đã chuyển sang B → đóng hai bảng khi đổi bản vẽ, từ chối lưu nếu khác bản vẽ.
+4. Chép phiên bản (Wblock) chạy trong lệnh ghi đầu tiên, có thể vượt timeout 30 s → Claude gửi lại → vẽ trùng → chép trước khi bắt đầu lượt, lúc ghi chỉ đổi tên file.
+5. Macro tiếp tục chạy / kết thúc nhầm lượt chat sau (New chat giữa macro) → gắn macro với số lượt.
+6. `turn_end` đến muộn kết thúc nhầm lượt khác; mất kết nối làm dừng macro → `turn_id` trong `user_message`/`turn_end`, bỏ qua `turn_end` khi đang chạy macro.
+7. "Chỉ xem" vẫn cho `save_drawing` với `path` (lưu đè / đổi tên bản vẽ) → chặn.
+8. Sửa tay trong lúc Claude đang làm bị coi là của Claude → lệnh AutoCAD của người dùng trong lượt vẫn tính là sửa tay.
+9. Rời bản vẽ rồi quay lại giữa lượt làm mất nút Hoàn tác và khởi động lại phiên Claude → chỉ nạp lại khi thật sự đổi bản vẽ.
+10. Bản vẽ .dxf/.dwt chép thẳng file thành "phiên bản" .dwg không mở được → chỉ chép file khi là .dwg.
+11. Nút "📍 Tại điểm" được bật lại sau mỗi lượt cho macro không có điểm gốc → sửa tag.
+12. Ánh xạ handle khi chạy macro đổi cả chữ / tên layer trông giống handle → chỉ đổi trong tham số handle.
+13. Mô tả skill do Claude soạn có ": " làm hỏng YAML → mô tả đặt trong ngoặc kép.
+14. Mẫu lệnh tự lưu trùng tên mẫu có sẵn che mất mẫu có sẵn; file mẫu hỏng làm mọi lần lưu lỗi → tránh tên mẫu có sẵn, file hỏng được giữ thành `.bak`.

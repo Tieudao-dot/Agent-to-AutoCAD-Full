@@ -137,3 +137,11 @@ Theo lựa chọn của người dùng (cả hai cách chọn; Claude tự hiể
 - Claude phân biệt sửa thuộc tính layer (làm luôn) với sửa đối tượng trên layer (quá 20 thì thẻ Đồng ý / Hủy).
 
 Cloud: `dotnet test` 98/98, `npm test` 93/93, build plugin net48 + net8 ✅. Cần test trên AutoCAD: L-1 … L-4 trong `docs/test-log.md`.
+
+## v0.9.0 — tối ưu + soát lỗi ✅ code xong
+
+- **`CLAUDECHATSELFTEST`**: tự kiểm tra trong AutoCAD thật trên một bản vẽ tạm (vẽ bằng API, nhóm hoàn tác, sự kiện sửa tay, biên bản, chụp ảnh ẩn, danh sách layer, bản sao + mở tab chỉ xem, kết nối trợ lý, đường dẫn) → báo cáo ✓/✗ trong thư mục log.
+- So biên bản lúc AutoCAD rảnh ngay sau khi mở bản vẽ; phiên bản chép thẳng file khi không có thay đổi chưa lưu, chép database trước khi bắt đầu lượt khi có; bản vẽ lớn chỉ cập nhật phần thay đổi; macro chạy theo lô; một chỗ duy nhất nghe sự kiện bản vẽ.
+- Lượt review độc lập thứ ba: 14 lỗi (4 lớn, 10 nhỏ) đã sửa — xem `docs/development.md`.
+
+Cloud: `dotnet test` 102/102, `npm test` 95/95, build plugin net48 + net8 ✅.

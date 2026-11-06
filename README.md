@@ -110,6 +110,8 @@ Lệnh AutoCAD:
 | `CLAUDECHAT` | mở palette chat |
 | `CLAUDECHATRESTART` | khởi động lại sidecar (khi báo lỗi liên tục) |
 | `CLAUDECHATLOG` | mở thư mục log `%LocalAppData%\ClaudeCAD\logs` |
+| `CLAUDECHATSELFTEST` | tự kiểm tra trên một bản vẽ tạm (không đụng bản vẽ của cậu), mở báo cáo ✓/✗ — chạy lệnh này đầu tiên sau khi cài |
+| `CC` | mở khung chat, con trỏ ở ô nhập (cũng là Ctrl+Shift+Space) |
 | `CLAUDECHATUPDATE` | (phase 3) kiểm tra và tải bản cập nhật |
 | `CLAUDECAD_PICK`, `CLAUDECAD_POINT` | lệnh phụ do nút **Chọn đối tượng** / **Lấy điểm** gọi (không cần gõ) |
 

@@ -50,6 +50,9 @@ namespace ClaudeCAD.Plugin.Drawing
         /// <summary>Database of the running chat turn: its changes are Claude's, not manual.</summary>
         public Database TurnDb { get; set; }
 
+        /// <summary>Drawings in which the user is running an AutoCAD command (their changes stay manual during a turn).</summary>
+        private readonly HashSet<Database> _userCommand = new HashSet<Database>();
+
         /// <summary>Also write the snapshot next to the DWG (.claudecad folder) so other computers can compare.</summary>
         public bool NextToDrawing { get; set; }
 
@@ -82,7 +85,19 @@ namespace ClaudeCAD.Plugin.Drawing
             db.ObjectModified += (s, e) => On(db, e.DBObject, "modified", true);
             db.ObjectErased += (s, e) => On(db, e.DBObject, "erased", e.Erased);
             db.ObjectOpenedForModify += (s, e) => OnOpenedForModify(db, e.DBObject);
+            try
+            {
+                doc.CommandWillStart += (s, e) => { if (IsUserCommand(e.GlobalCommandName)) _userCommand.Add(db); };
+                CommandEventHandler end = (s, e) => { if (IsUserCommand(e.GlobalCommandName)) _userCommand.Remove(db); };
+                doc.CommandEnded += end;
+                doc.CommandCancelled += end;
+                doc.CommandFailed += end;
+            }
+            catch (Exception ex) { Logger.Warn("command events: " + ex.Message); }
         }
+
+        private static bool IsUserCommand(string name) =>
+            !string.IsNullOrEmpty(name) && !name.StartsWith("CLAUDECAD_", StringComparison.OrdinalIgnoreCase) && !name.Equals("U", StringComparison.OrdinalIgnoreCase);
 
         /// <summary>Large drawings only: remember the layer before a modification so layer counts stay exact.</summary>
         private void OnOpenedForModify(Database db, DBObject obj)
@@ -99,7 +114,8 @@ namespace ClaudeCAD.Plugin.Drawing
 
         private void Forget(Document doc)
         {
-            try { if (doc?.Database != null) _states.Remove(doc.Database); } catch { }
+            try { if (doc?.Database != null) { _states.Remove(doc.Database); _userCommand.Remove(doc.Database); } } catch { }
+            if (_pending.HasValue && _pending.Value.doc == doc) DiscardPendingVersion();
         }
 
         private void On(Database db, DBObject obj, string kind, bool erased)
@@ -119,7 +135,7 @@ namespace ClaudeCAD.Plugin.Drawing
                 string h = obj.Handle.ToString();
                 if (st.Dirty.Count < MaxDirty) st.Dirty.Add(h);
                 TrackLayerCount(st, ent, h, kind, erased);
-                if (ReferenceEquals(db, TurnDb)) return; // Claude's own change
+                if (ReferenceEquals(db, TurnDb) && !_userCommand.Contains(db)) return; // Claude's own change
                 if (kind == "added") st.Manual.Appended(h);
                 else if (kind == "modified") st.Manual.Modified(h);
                 else st.Manual.Erased(h, erased);
@@ -592,6 +608,48 @@ namespace ClaudeCAD.Plugin.Drawing
 
         public VersionStore Versions(string key) => new VersionStore(VersionsRoot, key);
 
+        private (Document doc, string file)? _pending;
+
+        private static bool Versionable(string key) => key != null && key != "(none)" && !key.StartsWith("unsaved:", StringComparison.Ordinal);
+
+        /// <summary>
+        /// Start of a chat turn: when a version is due and the drawing has unsaved changes (so the fast file
+        /// copy is not possible), copy the database now — at the first write the copy is only renamed, so a
+        /// slow copy can never make Claude's first drawing call time out. Discarded when the turn writes nothing.
+        /// </summary>
+        public void PrepareVersion(Document doc, string key)
+        {
+            DiscardPendingVersion();
+            if (doc == null || !Versionable(key)) return;
+            var store = Versions(key);
+            if (!store.IsDue(DateTime.Now) || CanCopySavedFile(doc)) return;
+            Directory.CreateDirectory(store.Dir);
+            var file = Path.Combine(store.Dir, "pending-" + Guid.NewGuid().ToString("N") + ".dwg");
+            using (doc.LockDocument())
+            using (var copy = doc.Database.Wblock())
+                copy.SaveAs(file, DwgVersion.Current);
+            _pending = (doc, file);
+        }
+
+        /// <summary>End of a turn (or a turn that wrote nothing): drop the prepared copy.</summary>
+        public void DiscardPendingVersion()
+        {
+            var p = _pending;
+            _pending = null;
+            if (p.HasValue) try { File.Delete(p.Value.file); } catch { }
+        }
+
+        private static bool CanCopySavedFile(Document doc)
+        {
+            try
+            {
+                return doc == AcApp.DocumentManager.MdiActiveDocument && doc.IsNamedDrawing && File.Exists(doc.Name)
+                    && string.Equals(Path.GetExtension(doc.Name), ".dwg", StringComparison.OrdinalIgnoreCase) // not .dxf / .dwt
+                    && Convert.ToInt32(AcApp.GetSystemVariable("DBMOD")) == 0;
+            }
+            catch { return false; }
+        }
+
         /// <summary>
         /// No unsaved changes (DBMOD = 0): the DWG on disk is exactly what is open, so copying the file is
         /// enough and takes milliseconds instead of a full database copy.
@@ -600,8 +658,7 @@ namespace ClaudeCAD.Plugin.Drawing
         {
             try
             {
-                if (doc != AcApp.DocumentManager.MdiActiveDocument || !doc.IsNamedDrawing || !File.Exists(doc.Name)) return false;
-                if (Convert.ToInt32(AcApp.GetSystemVariable("DBMOD")) != 0) return false;
+                if (!CanCopySavedFile(doc)) return false;
                 File.Copy(doc.Name, target, false);
                 return true;
             }
@@ -620,12 +677,18 @@ namespace ClaudeCAD.Plugin.Drawing
         public VersionInfo MaybeSaveVersion(Document doc, string key, string label)
         {
             // unsaved drawings ("Drawing1") get a new key every session: no history to keep
-            if (doc == null || key == "(none)" || key.StartsWith("unsaved:", StringComparison.Ordinal)) return null;
+            if (doc == null || !Versionable(key)) { DiscardPendingVersion(); return null; }
             var store = Versions(key);
             var now = DateTime.Now;
-            if (!store.IsDue(now)) return null;
+            if (!store.IsDue(now)) { DiscardPendingVersion(); return null; }
             var file = store.NewFile(now, out var id);
-            if (!TryCopySavedFile(doc, file))
+            var pending = _pending;
+            _pending = null;
+            if (pending.HasValue && pending.Value.doc == doc && File.Exists(pending.Value.file))
+            {
+                File.Move(pending.Value.file, file); // copied before the turn, when nothing could time out
+            }
+            else if (!TryCopySavedFile(doc, file))
             {
                 using (doc.LockDocument())
                 using (var copy = doc.Database.Wblock())

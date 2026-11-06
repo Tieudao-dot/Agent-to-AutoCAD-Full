@@ -495,6 +495,7 @@ namespace ClaudeCAD.Plugin
             Ui.LoadTranscript(_transcript, false);
             Ui.SetReadOnly(_transcript.ReadOnly);
             Ui.ClearSuggestions();
+            Ui.CloseDrawingPanels(); // notes / layer picker belong to the previous drawing
             UpdateNotesIndicator();
             RefreshVersions();
             SendSwitchSession();
@@ -569,6 +570,7 @@ namespace ClaudeCAD.Plugin
         {
             if (_busy) return;
             Document doc = AcApp.DocumentManager.MdiActiveDocument;
+            if (RefuseOnVersionTab(doc, m.Text)) return;
             if (doc != _transcriptDoc) LoadTranscriptFor(doc);
 
             var payload = new Dictionary<string, object> { ["type"] = "user_message", ["text"] = m.Text };
@@ -644,12 +646,23 @@ namespace ClaudeCAD.Plugin
             StartTurn(doc, payload, entry);
         }
 
+        /// <summary>An old version (read-only copy) is the active drawing: chatting there would lose the conversation.</summary>
+        private bool RefuseOnVersionTab(Document doc, string text)
+        {
+            if (!IsVersionDoc(doc)) return false;
+            if (!string.IsNullOrEmpty(text)) Ui.SetInputText(text);
+            Ui.SetToolStatus("Đang xem phiên bản cũ (chỉ xem) — bấm \"Đóng — về bản hiện tại\" rồi làm tiếp.");
+            return true;
+        }
+
         private void StartTurn(Document doc, Dictionary<string, object> payload, ChatEntry userEntry, bool toAgent = true)
         {
+            if (RefuseOnVersionTab(doc, null)) return;
             lock (_gate)
             {
                 _busy = true;
                 _turnSeq++;
+                if (payload != null) payload["turn_id"] = "t-" + _turnSeq.ToString(CultureInfo.InvariantCulture);
                 _turnDoc = doc;
                 _turnInvalidReason = null;
                 _turnStarted = DateTime.UtcNow;
@@ -668,6 +681,12 @@ namespace ClaudeCAD.Plugin
             }
             _recorder.Clear();
             _changes.Clear();
+            // a slow (Wblock) version copy is prepared now, before any tool call can time out waiting for it
+            if (_settings.Versions && doc != null)
+            {
+                try { History.PrepareVersion(doc, KeyFor(doc)); }
+                catch (Exception ex) { Logger.Warn("version copy not prepared: " + ex.Message); }
+            }
             History.TurnDb = doc?.Database; // changes from now on are Claude's, not manual
             Ui.ClearSuggestions();
             _undoAvailable = false;
@@ -738,6 +757,7 @@ namespace ClaudeCAD.Plugin
             _chatGen++;
             _pendingConfirm = null;
             _pendingPlan = null;
+            if (_macroRunning) { _macroCancel = true; _macroRunning = false; }
             try { History.Reset(_transcriptDoc, KeyFor(_transcriptDoc), DrawingPathOf(_transcriptDoc)); }
             catch (Exception ex) { Logger.Warn("snapshot reset failed: " + ex.Message); }
             if (_transcript != null)
@@ -791,6 +811,7 @@ namespace ClaudeCAD.Plugin
                 var macroCalls = _recorder.Take();
                 var changes = BuildChangeSummary(turnDb);
                 History.TurnDb = null;
+                History.DiscardPendingVersion(); // prepared for a turn that did not change the drawing
                 try
                 {
                     // the "biên bản": what the drawing looks like after this turn
@@ -838,7 +859,7 @@ namespace ClaudeCAD.Plugin
                 {
                     _pendingSwitch = false;
                     var active = AcApp.DocumentManager.MdiActiveDocument;
-                    if (!IsVersionDoc(active)) LoadTranscriptFor(active);
+                    if (!IsVersionDoc(active) && active != _transcriptDoc) LoadTranscriptFor(active);
                 }
                 if (_pendingConfirm.HasValue) { var c = _pendingConfirm.Value; _pendingConfirm = null; AnswerConfirm(c.id, c.yes); }
                 if (_pendingPlan.HasValue) { var pp = _pendingPlan.Value; _pendingPlan = null; AnswerPlan(pp.id, pp.kind); }
@@ -952,14 +973,22 @@ namespace ClaudeCAD.Plugin
             try { return d != null && d.IsNamedDrawing ? d.Name : null; } catch { return null; }
         }
 
+        private Document _notesDoc;
+
         private void OpenNotes()
         {
+            _notesDoc = _transcriptDoc;
             var path = DrawingPathOf(_transcriptDoc);
             Ui.ShowNotes(ProjectNotes.LoadFolder(path), _transcript?.Notes ?? "", ProjectNotes.FolderFile(path));
         }
 
         private void SaveNotes(string folderText, string drawingText)
         {
+            if (_notesDoc != _transcriptDoc)
+            {
+                Ui.AddNote("Ghi chú này được mở cho bản vẽ khác — không lưu. Mở lại Ghi chú cho bản vẽ đang mở.", true);
+                return;
+            }
             var path = DrawingPathOf(_transcriptDoc);
             if (folderText != null && path != null)
             {
@@ -1147,17 +1176,34 @@ namespace ClaudeCAD.Plugin
                 if (doc == null) return;
                 if (doc != _transcriptDoc) LoadTranscriptFor(doc);
                 var entry = new ChatEntry { Role = "user", Text = $"▶ Chạy macro \"{m.Name}\"" + (at.HasValue ? " tại " + Interaction.FormatPoints(new[] { at.Value }) : "") };
+                if (RefuseOnVersionTab(doc, null)) return;
                 _macroRunning = true;
                 _macroCancel = false;
                 StartTurn(doc, null, entry, toAgent: false);
+                int seq = _turnSeq;
+                bool Alive() => _busy && _turnSeq == seq && !_macroCancel;
                 var map = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
                 int ok = 0, failed = 0, n = 0;
                 string firstError = null;
                 // independent calls run together as one batch_execute (one transaction, one screen update)
                 var groups = MacroLogic.PlanBatches(m.Calls, t => _dispatcher.TryGet(t, out var def) && !def.BatchForbidden, ToolDispatcher.MaxBatchCalls);
-                foreach (var g in groups)
+                var createdByMacro = new HashSet<string>(MacroLogic.CreatedHandles(m), StringComparer.OrdinalIgnoreCase);
+                foreach (var group in groups)
                 {
-                    if (_macroCancel || !_busy) break;
+                    if (!Alive()) break;
+                    // 1: a call that uses an object an earlier (failed) call should have created is skipped,
+                    // never sent with the old handle (it could hit the user's own object)
+                    var runnable = new List<int>();
+                    foreach (var i in group)
+                    {
+                        var missing = MacroLogic.Unresolved(m.Calls[i].Params, createdByMacro, map);
+                        if (missing.Count == 0) { runnable.Add(i); continue; }
+                        failed++;
+                        if (firstError == null) firstError = $"{m.Calls[i].Tool}: bỏ qua vì đối tượng {string.Join(", ", missing)} của bước trước không vẽ được";
+                        AddToolLog(new ToolLogEntry { Tool = m.Calls[i].Tool, State = "error", Error = "bỏ qua: bước tạo đối tượng trước đó bị lỗi" });
+                    }
+                    var g = runnable;
+                    if (g.Count == 0) continue;
                     if (g.Count == 1)
                     {
                         var c = m.Calls[g[0]];
@@ -1187,7 +1233,7 @@ namespace ClaudeCAD.Plugin
                     }
                 }
                 string moved = "";
-                if (at.HasValue && m.BasePoint != null && ok > 0 && !_macroCancel && _busy)
+                if (at.HasValue && m.BasePoint != null && ok > 0 && Alive())
                 {
                     var created = MacroLogic.CreatedHandles(m).Select(h => map.TryGetValue(h, out var nh) ? nh : null).Where(h => h != null).ToList();
                     var ents = EntityHandlesOnly(doc, created);
@@ -1203,9 +1249,12 @@ namespace ClaudeCAD.Plugin
                     + moved
                     + (_macroCancel ? " — đã dừng giữa chừng" : "")
                     + ". Không dùng Claude, không tốn token. Gõ U một lần nếu cậu muốn hoàn tác cả macro.";
-                lock (_gate) { if (_busy) _assistantText.Append(text); }
-                Ui.AppendAssistant(text);
-                EndTurn(null, false);
+                if (_busy && _turnSeq == seq)
+                {
+                    lock (_gate) { _assistantText.Append(text); }
+                    Ui.AppendAssistant(text);
+                    EndTurn(null, false);
+                }
             }
             catch (Exception ex)
             {
@@ -1319,7 +1368,8 @@ namespace ClaudeCAD.Plugin
         {
             try
             {
-                var t = QuickTemplates.SaveUser(QuickTemplates.UserFile, title, text);
+                var shipped = QuickTemplates.LoadAll(PluginPaths.TemplatesFile, null).Select(x => x.Name);
+                var t = QuickTemplates.SaveUser(QuickTemplates.UserFile, title, text, false, shipped);
                 Ui.SetTemplates(QuickTemplates.LoadAll(PluginPaths.TemplatesFile, QuickTemplates.UserFile));
                 Ui.AddNote($"✓ Đã lưu mẫu lệnh /{t.Name} — gõ / rồi chọn \"{t.Title}\" để dùng lại.");
             }
@@ -1579,6 +1629,9 @@ namespace ClaudeCAD.Plugin
                     break;
                 case "turn_end":
                     {
+                        string tid = msg.TryGetValue("turn_id", out var tv0) ? tv0 as string : null;
+                        if (_macroRunning) { Logger.Info("turn_end ignored: a macro is running"); break; }
+                        if (tid != null && tid != "t-" + _turnSeq.ToString(CultureInfo.InvariantCulture)) { Logger.Info($"late turn_end {tid} ignored"); break; }
                         string err = msg.TryGetValue("error", out var e) ? e as string : null;
                         var usage = msg.TryGetValue("usage", out var u) ? u as Dictionary<string, object> : null;
                         bool cancelled = msg.TryGetValue("cancelled", out var c) && c is bool cb && cb;
@@ -1745,7 +1798,7 @@ namespace ClaudeCAD.Plugin
 
         private void OnDisconnected(string reason)
         {
-            if (_busy) EndTurn("Mất kết nối với trợ lý giữa lượt; lượt này đã dừng. Lịch sử chat vẫn giữ nguyên.", true);
+            if (_busy && !_macroRunning) EndTurn("Mất kết nối với trợ lý giữa lượt; lượt này đã dừng. Lịch sử chat vẫn giữ nguyên.", true);
             Ui.SetConnection("Mất kết nối với trợ lý...", false);
         }
 

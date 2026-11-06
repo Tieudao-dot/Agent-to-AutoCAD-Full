@@ -58,6 +58,8 @@ export interface TurnUsage {
 
 export interface TurnEndMessage {
   type: 'turn_end';
+  /** turn_id of the user_message this turn answers (lets the plugin ignore a late turn_end). */
+  turn_id?: string;
   /** Set when the turn failed (not when it was cancelled by the user). */
   error?: string;
   cancelled?: boolean;
@@ -246,6 +248,8 @@ export interface UserMessage {
   confirm?: 'yes' | 'no';
   /** Sent by the "Làm" button of a plan card. */
   plan?: 'approved';
+  /** Echoed in turn_end. */
+  turn_id?: string;
 }
 
 export interface SetOptionsMessage {
@@ -400,6 +404,7 @@ export function parsePluginMessage(value: unknown): PluginToSidecar {
         ...(m.edited === true ? { edited: true } : {}),
         ...(m.confirm === 'yes' || m.confirm === 'no' ? { confirm: m.confirm } : {}),
         ...(m.plan === 'approved' ? { plan: 'approved' as const } : {}),
+        ...(typeof m.turn_id === 'string' && m.turn_id ? { turn_id: m.turn_id.slice(0, 64) } : {}),
       };
     }
     case 'set_options':
