@@ -1,0 +1,71 @@
+import fs from 'node:fs';
+import path from 'node:path';
+
+export const SKILLS_PLUGIN_NAME = 'claudecad-skills';
+
+/** Names of skills turned off with the palette's Skill list (skills.json next to the skills). */
+export function disabledSkills(skillsDir: string): Set<string> {
+  const off = new Set<string>();
+  try {
+    const reg = JSON.parse(fs.readFileSync(path.join(skillsDir, 'skills.json'), 'utf8')) as { skills?: Array<{ name?: unknown; enabled?: unknown }> };
+    for (const s of reg.skills ?? []) if (typeof s.name === 'string' && s.enabled === false) off.add(s.name);
+  } catch {
+    /* no registry yet: everything is enabled */
+  }
+  return off;
+}
+
+/** Skill folders that will be loaded (have SKILL.md, not hidden, not disabled). */
+export function enabledSkills(skillsDir: string | undefined): string[] {
+  if (!skillsDir || !fs.existsSync(skillsDir)) return [];
+  const off = disabledSkills(skillsDir);
+  return fs
+    .readdirSync(skillsDir, { withFileTypes: true })
+    .filter((e) => e.isDirectory() && !e.name.startsWith('.') && !e.name.startsWith('_') && !off.has(e.name))
+    .filter((e) => fs.existsSync(path.join(skillsDir, e.name, 'SKILL.md')))
+    .map((e) => e.name)
+    .sort();
+}
+
+export interface SkillsPlugin {
+  /** Directory handed to the SDK as a local plugin. */
+  pluginDir: string;
+  /** Skill folder names found (each has a SKILL.md). */
+  skills: string[];
+}
+
+/**
+ * Builds a local Claude Code plugin from the user-editable skills folder (spec §8).
+ *
+ * The SDK loads skills from plugin directories (`<plugin>/skills/<name>/SKILL.md`).
+ * We copy the bundle's `skills/` folder into a generated plugin under the
+ * sidecar's work directory at every session start, so adding or editing a skill
+ * only needs a new chat (New button) — no rebuild, no symlink privileges.
+ */
+export function prepareSkillsPlugin(skillsDir: string | undefined, workDir: string): SkillsPlugin | undefined {
+  if (!skillsDir || !fs.existsSync(skillsDir)) return undefined;
+
+  const pluginDir = path.join(workDir, SKILLS_PLUGIN_NAME);
+  const target = path.join(pluginDir, 'skills');
+  fs.rmSync(pluginDir, { recursive: true, force: true });
+  fs.mkdirSync(path.join(pluginDir, '.claude-plugin'), { recursive: true });
+  fs.mkdirSync(target, { recursive: true });
+
+  const skills = enabledSkills(skillsDir);
+  for (const name of skills) fs.cpSync(path.join(skillsDir, name), path.join(target, name), { recursive: true });
+
+  fs.writeFileSync(
+    path.join(pluginDir, '.claude-plugin', 'plugin.json'),
+    JSON.stringify(
+      {
+        name: SKILLS_PLUGIN_NAME,
+        version: '1.0.0',
+        description: 'ClaudeCAD drafting standards (user-editable skills copied from the bundle skills/ folder).',
+      },
+      null,
+      2,
+    ),
+    'utf8',
+  );
+  return { pluginDir, skills };
+}

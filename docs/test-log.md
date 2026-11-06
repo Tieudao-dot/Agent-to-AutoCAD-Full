@@ -1,0 +1,147 @@
+# Nhật ký smoke test thủ công
+
+Môi trường cần: Windows 10/11 x64, AutoCAD 2022 bản full, bản vẽ trắng (acadiso.dwt) trừ khi ghi khác, Node.js >= 18, đã `claude login` hoặc có `ANTHROPIC_API_KEY`.
+
+Trạng thái: ⬜ chưa chạy · ✅ đạt · ❌ không đạt · ⚠️ đạt một phần. Ghi ngày, phiên bản commit và ghi chú ở cột cuối.
+
+> **Chưa có kịch bản nào được chạy trên AutoCAD thật.** Phiên phát triển chạy trên cloud Linux, không có Windows/AutoCAD. Những gì đã kiểm chứng tự động trên cloud được liệt kê ở cuối file.
+
+## Tiêu chí nghiệm thu (spec §12)
+
+| # | Kịch bản | Kỳ vọng | Trạng thái | Ghi chú |
+| --- | --- | --- | --- | --- |
+| 1 | "Vẽ lưới trục 5 trục đứng bước 4000, 4 trục ngang bước 3600, kèm ký hiệu trục" | xline/line đúng layer trục, vòng tròn + chữ ký hiệu đầu trục | ⬜ chưa chạy | |
+| 2 | "Vẽ mặt bằng phòng 4x6m, tường 220, cửa đi 900 ở cạnh dài, ghi kích thước" | tường hai nét, cửa có cánh + cung mở, dim đủ bốn phía | ⬜ chưa chạy | |
+| 3 | (bản vẽ có sẵn text) "Tìm tất cả text chứa 'WC' và đổi thành 'VỆ SINH'" | đúng và đủ các text | ⬜ chưa chạy | |
+| 4 | "Xóa toàn bộ đối tượng trên layer A-TEMP" | Claude báo số lượng, hỏi xác nhận; trả lời "đồng ý" mới xóa | ⬜ chưa chạy | |
+| 5 | "Đo diện tích polyline tô màu đỏ lớn nhất" | trả đúng diện tích m² | ⬜ chưa chạy | |
+| 6 | "Chèn block GHE vừa định nghĩa thành dãy 3 hàng 8 cột giãn cách 600x900" | array đúng | ⬜ chưa chạy | |
+| 7 | Một lượt vẽ 200 đoạn thẳng qua `batch_execute` | phần thực thi < 2 s (xem log `tool batch_execute ok in N ms`) | ⬜ chưa chạy | |
+| 8 | Gõ U một lần sau bất kỳ kịch bản nào | hoàn tác toàn bộ lượt đó | ⬜ chưa chạy | |
+| 9 | Tắt sidecar (`node.exe`) bằng Task Manager giữa phiên | palette báo mất kết nối, tự khôi phục, chat tiếp được | ⬜ chưa chạy | |
+| 10 | Bật skill `ve-kien-truc`, chạy lại kịch bản 2 | tự dùng đúng tên layer và chiều cao chữ trong skill, không cần nhắc | ⬜ chưa chạy | |
+
+## Kiểm tra theo phase
+
+| Phase | Kiểm tra | Trạng thái | Ghi chú |
+| --- | --- | --- | --- |
+| 1a | NETLOAD dll không lỗi, `CLAUDECHAT` mở palette | ⬜ chưa chạy | |
+| 1a | Chat "chào Claude" → text stream dần trong palette | ⬜ chưa chạy | |
+| 1a | "kiểm tra kết nối với plugin" → tool `ping` trả phiên bản AutoCAD + tên bản vẽ | ⬜ chưa chạy | |
+| 1a | Stop giữa lượt → lượt dừng, nút Gửi bật lại | ⬜ chưa chạy | |
+| 1a | New → lịch sử xóa, Claude không nhớ ngữ cảnh cũ | ⬜ chưa chạy | |
+| 1a | Đóng AutoCAD → không còn `node.exe` của ClaudeCAD | ⬜ chưa chạy | |
+| 1b | "Vẽ lưới trục 5x4 bước 4000" → 5 trục đứng + 4 trục ngang đúng bước, layer trục linetype CENTER, một `batch_execute` | ⬜ chưa chạy | |
+| 1b | U một lần sau lượt trên → mất toàn bộ lưới trục | ⬜ chưa chạy | |
+| 1b | Lượt chỉ đọc ("bản vẽ có bao nhiêu đối tượng?") rồi U → hoàn tác lượt vẽ trước đó, không "hụt" | ⬜ chưa chạy | |
+| 1b | Mỗi tool vẽ 7.1 tạo đúng loại đối tượng (line, LWPOLYLINE có bulge, circle, arc 2 cách, ellipse, spline, rectangle, polygon nội/ngoại tiếp, point, xline, ray, hatch SOLID/ANSI31 theo handle và theo điểm, wipeout, revcloud) | ⬜ chưa chạy | |
+| 1b | Layer: create (tự load linetype CENTER/DASHED), list, set current, set props (khóa, tắt, đóng băng; không cho đóng băng layer hiện hành) | ⬜ chưa chạy | |
+| 1b | Batch có 1 call lỗi ở giữa → các call khác vẫn vẽ, kết quả báo lỗi đúng index | ⬜ chưa chạy | |
+| 1b | Vẽ lên layer bị khóa → lỗi `LOCKED`, không crash | ⬜ chưa chạy | |
+| 1c | "Đổi hết text cao 250 thành 300" → đúng các text cao 250 (TEXT + MTEXT), text khác giữ nguyên | ⬜ chưa chạy | |
+| 1c | list_entities lọc theo type/layer/màu/cửa sổ (inside và crossing), limit/offset | ⬜ chưa chạy | |
+| 1c | find_text tìm trong TEXT, MTEXT, attribute, dim override, mleader, ô bảng | ⬜ chưa chạy | |
+| 1c | measure_area polyline kín / circle / hatch → m² đúng | ⬜ chưa chạy | |
+| 1c | move/copy (nhiều vị trí)/rotate/scale/mirror (text đọc xuôi) / offset về phía side_point / array_rect / array_polar | ⬜ chưa chạy | |
+| 1c | fillet (r>0 và r=0) và chamfer hai line; join line+arc thành polyline; explode block/polyline | ⬜ chưa chạy | |
+| 1c | Chốt xác nhận: xóa theo layer → Claude hỏi trước; trả lời "không" → không xóa; "đồng ý" → xóa | ⬜ chưa chạy | |
+| 1c | Sửa > 20 đối tượng khi chưa xác nhận → sidecar chặn (log `confirmation gate blocked`), Claude hỏi lại | ⬜ chưa chạy | |
+| 1c | erase_entities > 1000 handle → `TOO_MANY_ENTITIES` | ⬜ chưa chạy | |
+| 1d | Mặt bằng có dim + text + block cửa (kịch bản 2) | ⬜ chưa chạy | |
+| 1d | add_text các kiểu justify; add_mtext xuống dòng; tiếng Việt có dấu hiển thị đúng với style Arial | ⬜ chưa chạy | |
+| 1d | Dim: linear (auto ngang/dọc), aligned, angular (3 điểm và 2 line), radial, diameter, ordinate, continue, baseline | ⬜ chưa chạy | |
+| 1d | create_dim_style 1:100 (chữ 2.5, archtick) → dim hiển thị đúng kích thước in | ⬜ chưa chạy | |
+| 1d | add_mleader, add_table (có/không title; dòng đầu không bị merge khi không có title) | ⬜ chưa chạy | |
+| 1d | define_block (thay bằng insert, có attribute), insert_block (attribute, nhiều vị trí), list_block_defs, get/set attributes, set_dynamic_props trên một dynamic block có sẵn | ⬜ chưa chạy | |
+| 1d | zoom_extents, zoom_window; save_drawing chỉ khi yêu cầu; purge_unused; undo_last_turn | ⬜ chưa chạy | |
+| 1e | Palette tạo phiên → log sidecar có `skills loaded: ve-ha-tang, ve-kien-truc, ve-mep` | ⬜ chưa chạy | |
+| 1e | Kịch bản 10 (skill tự áp dụng) | ⬜ chưa chạy | |
+| 1e | Sửa SKILL.md + New → chuẩn mới được áp dụng | ⬜ chưa chạy | |
+| 1e | Bundle: copy `ClaudeCAD.bundle` vào ApplicationPlugins → AutoCAD tự nạp, `CLAUDECHAT` chạy không cần NETLOAD | ⬜ chưa chạy | |
+| 2 | create_layout (A3, copy_from), set_current_layout, list_layouts, delete_layout | ⬜ chưa chạy | |
+| 2 | add_viewport 1:100 đúng tâm view, khóa; set_viewport đổi tỷ lệ; VP freeze layer | ⬜ chưa chạy | |
+| 2 | Vẽ khung tên trên layout bằng tham số `layout` (sheet mm) | ⬜ chưa chạy | |
+| 2 | plot_pdf layout và Model (extents / window), scale fit và 1:100 → file PDF đúng khổ, nét monochrome | ⬜ chưa chạy | |
+| 2 | attach_xref (overlay/attach), list_xrefs trạng thái, reload, detach, bind | ⬜ chưa chạy | |
+| 2 | trim_entities: line/arc/polyline/circle với 1 và nhiều cạnh cắt, đúng mảnh bị bỏ | ⬜ chưa chạy | |
+| 2 | extend_entities: line/arc/polyline tới biên, auto/start/end/both | ⬜ chưa chạy | |
+| 2 | insert_block với dynamic_props, get_dynamic_props (allowed values), reset_dynamic_block | ⬜ chưa chạy | |
+| 3 | `install.ps1`: máy chưa có Node → báo + đề nghị winget; có Node → cài bundle; chạy lại sau khi sửa skill → skill giữ nguyên; `-Uninstall` | ⬜ chưa chạy | |
+| 3 | `ClaudeCAD-Setup-<v>.exe` cài/gỡ, cảnh báo thiếu Node / chưa đăng nhập | ⬜ chưa chạy | |
+| 3 | AutoCAD 2023 và 2024 nạp bản net48; AutoCAD 2025 nạp `Contents\2025` (net8); smoke 1a trên mỗi bản | ⬜ chưa chạy | |
+| 3 | Cập nhật: đặt `CLAUDECAD_UPDATE_URL` tới latest.json có version cao hơn → palette báo; `CLAUDECHATUPDATE` tải, kiểm SHA-256; đóng AutoCAD → bundle được thay, skill đã sửa còn nguyên | ⬜ chưa chạy | |
+| 3 | latest.json sai SHA-256 → hủy, không đụng bundle | ⬜ chưa chạy | |
+| UI-1 | Nút **Chọn đối tượng**: quét chọn → chip "Kèm N"; chọn sẵn (pickfirst) → chip tự hiện; ✕ bỏ kèm; "đổi mấy cái này sang layer X" đúng đối tượng | ⬜ chưa chạy | |
+| UI-2 | Nút **Lấy điểm**: 1 và nhiều điểm, tọa độ WCS đúng khi UCS xoay | ⬜ chưa chạy | |
+| UI-3 | Bấm link handle trong câu trả lời → zoom + tô sáng 4 s | ⬜ chưa chạy | |
+| UI-4 | **Xem kết quả (N)** sau lượt vẽ | ⬜ chưa chạy | |
+| UI-5 | **Hoàn tác lượt này** = một U; chạy lệnh khác sau lượt → nút ẩn | ⬜ chưa chạy | |
+| UI-6 | Ảnh: nút Ảnh, Ctrl+V ảnh chụp màn hình, kéo thả file; "vẽ theo phác thảo này" | ⬜ chưa chạy | |
+| UI-7 | Dán vùng ô Excel → bảng Markdown; `/bang-toa-do` + dán bảng → bảng tọa độ | ⬜ chưa chạy | |
+| UI-8 | Gõ `/` → popup mẫu, chọn bằng phím/chuột; thêm mẫu riêng ở `%AppData%\ClaudeCAD\templates.json` | ⬜ chưa chạy | |
+| UI-9 | Chuẩn = Điện nước, Tỷ lệ = 1:50 → Claude dùng skill ve-mep và chữ 1:50 không cần nhắc | ⬜ chưa chạy | |
+| UI-10 | ↑↓ gọi lại tin đã gửi, giữ bản nháp | ⬜ chưa chạy | |
+| UI-11 | Thẻ xác nhận: Xem trước tô sáng; Đồng ý → xóa; Hủy → không xóa | ⬜ chưa chạy | |
+| UI-12 | Nhật ký thao tác đúng số tool, thời gian, lỗi | ⬜ chưa chạy | |
+| UI-13 | Kill node.exe giữa lượt → thẻ lỗi → **Thử lại** chạy lại đúng yêu cầu | ⬜ chưa chạy | |
+| UI-14 | Đổi model / effort trong ⚙ giữa phiên; dòng usage và % hạn mức hiển thị | ⬜ chưa chạy | |
+| UI-15 | Lượt dài khi đang ở cửa sổ khác → thông báo Windows; tắt được | ⬜ chưa chạy | |
+| UI-16 | Markdown: đậm, danh sách, bảng, code hiển thị đúng | ⬜ chưa chạy | |
+| UI-17 | Hai bản vẽ đã lưu: chuyển qua lại → lịch sử riêng; đóng/mở AutoCAD → lịch sử còn, Claude nhớ ngữ cảnh | ⬜ chưa chạy | |
+| UI-18 | Copy tin nhắn; **Xuất** ra .md | ⬜ chưa chạy | |
+| UI-19 | Đổi COLORTHEME của AutoCAD → palette đổi theo; A−/A+, Ctrl+lăn chuột | ⬜ chưa chạy | |
+| UI-20 | **Sửa** tin cuối sau một lượt vẽ → lượt cũ được U rồi vẽ lại theo yêu cầu mới | ⬜ chưa chạy | |
+| SK-1 | **+ Add skill** → hộp chọn mở đúng thư mục skill của plugin; chọn file .md hợp lệ → "✓ Đã thêm skill …", có thư mục + `skills.json` | ⬜ chưa chạy | |
+| SK-2 | File thiếu description / không có phần đầu → thẻ lỗi nêu lý do, không thêm | ⬜ chưa chạy | |
+| SK-3 | Thêm trùng tên → hỏi thay; chọn lại file trong thư mục plugin → chỉ bật lại | ⬜ chưa chạy | |
+| SK-4 | Tin nhắn sau khi thêm dùng đúng skill mới, Claude vẫn nhớ cuộc chat trước | ⬜ chưa chạy | |
+| SK-5 | **Skill (N)**: bật/tắt (skill tắt không được dùng), Sửa → lưu file → tự nạp lại, Xóa, Mở thư mục | ⬜ chưa chạy | |
+| SK-6 | Ô **Chuẩn** liệt kê skill đang bật kể cả skill mới thêm | ⬜ chưa chạy | |
+| V6-1 | Vẽ mặt bằng lớn → nhật ký có "Nhìn bản vẽ", khung nhìn của cậu không đổi, không thêm bước U; nút **Chụp** đính kèm đúng vùng đang xem (màu, nét rõ) | ⬜ chưa chạy | |
+| V6-2 | Sau lượt vẽ có 1–3 nút gợi ý; bấm là gửi, chuột phải đưa vào ô nhập; tắt trong ⚙ thì không hiện | ⬜ chưa chạy | |
+| V6-3 | **💾 Lưu macro** → **Macro ▸ ▶ Chạy** vẽ lại giống hệt (lệnh offset/move dùng đúng đối tượng mới); **📍 Tại điểm** dời đúng điểm chọn; một U hoàn tác cả macro; Stop dừng giữa chừng | ⬜ chưa chạy | |
+| V6-4 | **☆ Mẫu** → gõ / thấy mẫu mới; **✨ Tạo skill từ cuộc chat** → thẻ bản nháp → Xem/sửa mở file → Thêm vào plugin → "✓ Đã thêm skill" | ⬜ chưa chạy | |
+| V6-5 | Bật **🔒 Chỉ xem** → yêu cầu vẽ/xóa bị từ chối (Claude giải thích), hỏi đáp/đo vẫn được; đóng mở lại bản vẽ vẫn giữ trạng thái; macro không chạy | ⬜ chưa chạy | |
+| V6-6 | **Ghi chú**: lưu ghi chú dự án → có `ClaudeCAD-ghichu.md` cạnh DWG; bản vẽ khác cùng thư mục cũng thấy; Claude áp dụng (vd. tường 220) không cần nhắc | ⬜ chưa chạy | |
+| V6-7 | Gõ `@A-` → danh sách layer/block của bản vẽ; Enter chèn tên; `a@b.com` không bật | ⬜ chưa chạy | |
+| V6-8 | **Ctrl+Shift+Space** khi đang vẽ → palette mở, con trỏ ở ô nhập; lệnh **CC** tương tự; tắt trong ⚙ | ⬜ chưa chạy | |
+| V6-9 | "Vẽ cả mặt bằng tầng 1" → thẻ kế hoạch, chưa vẽ gì; **Làm** → vẽ đúng kế hoạch; **Sửa kế hoạch** đưa chữ vào ô nhập | ⬜ chưa chạy | |
+| V7-1 | Sau một lượt chat, sửa tay (dời 2 tường, xóa 1 cửa, thêm chữ) → chat "ghi lại kích thước" → dòng ✎ đúng số liệu; Claude đọc lại đúng các đối tượng đó, không vẽ lại cửa đã xóa | ⬜ chưa chạy | |
+| V7-2 | Đóng khung chat, sửa tay, mở lại khung chat → vẫn được báo; sửa trước khi mở khung chat lần đầu trong phiên cũng được báo | ⬜ chưa chạy | |
+| V7-3 | Chat, lưu, đóng AutoCAD; mở lại hôm sau sửa tay rồi chat → báo "từ lần chat trước"; bản vẽ > 20.000 đối tượng không làm AutoCAD khựng quá 2–3 s | ⬜ chưa chạy | |
+| V7-4 | Bật ⚙ **Lưu biên bản cạnh bản vẽ** → có thư mục ẩn `.claudecad`; máy khác có cài plugin mở cùng thư mục, sửa, chat → được báo | ⬜ chưa chạy | |
+| V7-5 | Chat sửa bản vẽ → **Phiên bản (1)**; trong 30 phút chat tiếp không tạo bản mới; sau 30 phút có bản mới; quá 10 bản thì bản cũ nhất bị xóa | ⬜ chưa chạy | |
+| V7-6 | **Phiên bản ▸ Xem** → tab chỉ xem đúng trạng thái trước lượt đó, thanh "Đang xem phiên bản…", ô chat khóa; **Đóng — về bản hiện tại** đóng tab, về đúng bản vẽ, lịch sử chat không đổi | ⬜ chưa chạy | |
+| ST-1 | Gõ **CLAUDECHATSELFTEST** → mở bản vẽ tạm, chạy các bước, đóng lại, về bản vẽ của cậu; Notepad mở báo cáo — gửi file này cho người phát triển | ⬜ chưa chạy | |
+| L-1 | **Chọn đối tượng** quét qua tường, cửa, chữ → chip hiện đúng các layer và số lượng; bỏ tick A-TEXT → "Kèm x/y đối tượng"; Claude chỉ sửa phần còn tick | ⬜ chưa chạy | |
+| L-2 | Nút **Layer** → danh sách đúng (màu, số đối tượng, khóa/tắt), lọc theo tên, tick 2 layer → **Dùng layer đã chọn** → chip "Layer: …" | ⬜ chưa chạy | |
+| L-3 | Chọn layer + "đổi màu sang đỏ" / "khóa lại" → đổi thuộc tính layer, không hỏi xác nhận; "tăng chiều cao chữ lên 300" trên layer có > 20 chữ → thẻ Đồng ý / Hủy, Đồng ý thì sửa đúng | ⬜ chưa chạy | |
+| L-4 | Chọn một đối tượng → **→ Cả layer** → chip chuyển thành layer của nó; gửi xong chip tự bỏ | ⬜ chưa chạy | |
+| V6-10 | Bảng **Thay đổi** đúng số thêm/sửa/xóa theo layer, bấm dòng zoom tới; còn khi mở lại lịch sử và trong file Xuất | ⬜ chưa chạy | |
+
+## Đã kiểm chứng tự động trên cloud (Linux)
+
+| Ngày | Hạng mục | Kết quả |
+| --- | --- | --- |
+| 2026-11-05 | `npm run build` sidecar | ✅ |
+| 2026-11-05 | `npm test` — 32 test: protocol (encode/decode, UTF-8 cắt giữa chunk, CRLF, BOM, dòng quá dài), ToolRpc (tương quan id, timeout, response muộn, mất kết nối, failAll), tích hợp qua socket thật (echo tool, lỗi plugin, timeout, đứt pipe, dòng hỏng, tiến trình sidecar thật nối pipe rồi tự thoát), AgentSession với query giả (stream text, nhiều lượt, cancel, new session, process chết, lỗi đăng nhập, skill plugin) | ✅ 32/32 |
+| 2026-11-05 | `dotnet build` plugin net48 với reference AutoCAD.NET 24.1.51000 | ✅ 0 warning |
+| 2026-11-05 | `dotnet test plugin/ClaudeCAD.Core.Tests` — JsonCodec, Params | ✅ 16/16 |
+| 2026-11-05 | Phase 1b: `npm test` 38/38 (thêm: danh mục tool TS khớp handler C#, mọi schema chuyển được sang JSON Schema, schema nhận ví dụ spec, giới hạn 500 call/batch) | ✅ |
+| 2026-11-06 | v0.9.0 tối ưu + review: `dotnet test` 102/102 (gom macro theo lô, chỉ ánh xạ tham số handle, bỏ bước dùng đối tượng chưa tạo lại, mẫu lệnh không che mẫu có sẵn, file mẫu hỏng); `npm test` 95/95 (`turn_id`, mô tả skill trong ngoặc kép); build net48 + net8 ✅ | ✅ |
+| 2026-11-06 | v0.8.0 chọn layer: `dotnet test` 98/98 (đếm theo layer, lọc theo layer bỏ tick, tìm layer, lịch sử giữ layer đã chọn); `npm test` 93/93 (`attachments.layers`, `selection.layers`, câu dặn Claude phân biệt thuộc tính layer / đối tượng); build net48 + net8 ✅ | ✅ |
+| 2026-11-06 | v0.7.0 sửa tay + phiên bản: `dotnet test` 96/96 (biên bản nén/đọc lại, mã kiểm tra bỏ nhiễu số thực và "-0", so đầy đủ / bản vẽ lớn theo layer, báo cáo sửa tay giới hạn 300 mã, phiên bản 30 phút + giữ 10 bản); `npm test` 91/91 (`manual_changes` lọc mã sai, câu dặn Claude đọc lại); build net48 + net8 (Wblock/SaveAs, mở DWG chỉ xem, CloseAndDiscard) ✅ | ✅ |
+| 2026-11-06 | v0.6.0 tiện ích khung chat: `dotnet test` lõi 88/88 (macro ghi/ánh xạ handle/lưu, bảng thay đổi, `@`, ghi chú dự án, mẫu lệnh, cài đặt mới, lịch sử giữ Chỉ xem + ghi chú + thay đổi); `npm test` 89/89 (ảnh `capture_view` thành khối image MCP, thẻ kế hoạch, gợi ý, bản nháp skill, ngữ cảnh mới, `promptSuggestions`); build plugin net48 + net8 (API GraphicsSystem off-screen, PreTranslateMessage) ✅ | ✅ |
+| 2026-11-06 | v0.5.0 skill trên khung chat: `dotnet test` lõi 68/68 (SkillStore: nhập .md, tên từ file, file thiếu description, trùng tên, chọn lại file đã có, thư mục SKILL.md kèm file tham khảo, bật/tắt, xóa, `skills.json`); `npm test` 75/75 (chỉ nạp skill đang bật, reload_skills giữ ngữ cảnh) | ✅ |
+| 2026-11-05 | v0.4.0 khung chat 20 tính năng: `npm test` 70/70 (nội dung tin nhắn, giao thức mới, model/effort, chuyển phiên + khôi phục lỗi, usage, rate limit, thẻ xác nhận); `dotnet test` lõi 56/56 (markdown, lịch sử, cài đặt, mẫu lệnh, bảng Excel); build plugin net48 + net8 0 warning | ✅ |
+| 2026-11-05 | **CI GitHub Actions `windows-latest`** (run 3–5, commit 3b87661): `npm ci` + `npm test` 58/58 với **named pipe Windows thật** (gồm tiến trình sidecar nối pipe), `dotnet test` lõi, build plugin net48 + net8.0-windows, make-bundle (node_modules win32-x64) + zip + latest.json, Inno Setup → `ClaudeCAD-Setup-0.3.0.exe`, upload artifact | ✅ |
+| 2026-11-05 | Phase 3: `npm test` 58/58 (thêm: phiên bản thống nhất 4 nơi, manifest đúng dll theo series); `dotnet test` 43/43 (thêm UpdateLogic); build **net48 + net8.0-windows** (AutoCAD.NET 24.1.51000 và 25.0.1) 0 warning; `make-bundle --zip` tạo bundle 2 dll + zip + latest.json | ✅ |
+| 2026-11-05 | Phase 2: 89 tool; `npm test` 56/56 (danh mục khớp handler C#); `dotnet test` 35/35 (thêm ExtensionTarget); build plugin 0 warning | ✅ |
+| 2026-11-05 | Phase 1e: `npm test` 56/56 (thêm: 3 skill đúng chuẩn Agent Skills, có "Quy trình chuẩn bị", chỉ nhắc tool có thật, JSON ví dụ hợp lệ; system prompt đủ 10 quy tắc) | ✅ |
+| 2026-11-05 | Phase 1e: **Agent SDK thật** trên Linux với plugin giả: init chỉ có `Read`, `Skill` + 72 tool `mcp__claudecad__*`, MCP server `claudecad` connected, `permissionMode: dontAsk`, 3 skill nạp qua plugin `claudecad-skills`; Claude gọi `ping` và stream tiếng Việt, `turn_end` đúng | ✅ |
+| 2026-11-05 | Dry run kịch bản 2 (bản vẽ giả lập): Claude gọi get_drawing_info → list_layers → list_styles → **một** batch 30 call (tạo layer/style theo skill, tường, cửa, dim 4 phía, text) → zoom_extents; layer A-WALL/A-DOOR/A-DIM/A-TEXT; chữ 350/250 đúng skill | ✅ (mô phỏng) |
+| 2026-11-05 | Dry run kịch bản 4: "Xóa toàn bộ đối tượng trên layer A-TEMP" → count_entities, báo 30 đối tượng, hỏi xác nhận, dừng lượt; "đồng ý" → list_entities + erase_entities | ✅ (mô phỏng) |
+| 2026-11-05 | `node bundle/make-bundle.mjs` trên Linux → bundle có dll, agent + node_modules win32-x64 (gồm `claude-agent-sdk-win32-x64`), skills, PackageContents.xml hợp lệ | ✅ |
+| 2026-11-05 | Phase 1d: 72 tool; `npm test` 42/42 (danh mục 72 tool khớp handler C#, schema hợp lệ); `dotnet build` plugin 0 warning | ✅ |
+| 2026-11-05 | Phase 1c: `npm test` 42/42 (thêm chốt xác nhận: đếm đối tượng bị ảnh hưởng kể cả trong batch, nhận diện câu xác nhận/từ chối tiếng Việt); `dotnet test` 34/34 (thêm giao điểm, fillet, chamfer); build plugin | ✅ |
+| 2026-11-05 | Phase 1b: `dotnet test` 29/29 (thêm Geometry: hình chữ nhật, đa giác, cung 3 điểm, revcloud, lineweight, hướng) ; `dotnet build` plugin | ✅ |

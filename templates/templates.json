@@ -1,0 +1,14 @@
+[
+  { "name": "luoi-truc", "title": "Lưới trục", "text": "Vẽ lưới trục {{số trục đứng=5}} trục đứng bước {{bước trục đứng=4000}}, {{số trục ngang=4}} trục ngang bước {{bước trục ngang=3600}}, kèm ký hiệu trục và kích thước trục." },
+  { "name": "mat-bang", "title": "Mặt bằng phòng", "text": "Vẽ mặt bằng phòng {{rộng=4}}x{{dài=6}}m, tường {{dày tường=220}}, cửa đi {{rộng cửa=900}} ở cạnh dài, ghi kích thước bốn phía và tên phòng \"{{tên phòng=PHÒNG NGỦ}}\"." },
+  { "name": "cot", "title": "Cột tại giao trục", "text": "Đặt cột {{kích thước cột=220x220}} tại tất cả giao điểm lưới trục, tô đặc." },
+  { "name": "cua-di", "title": "Cửa đi vào tường đang chọn", "text": "Thêm cửa đi {{rộng cửa=900}} vào bức tường đang chọn, cách góc {{khoảng cách=500}}, mở vào trong." },
+  { "name": "doi-layer", "title": "Đổi layer đối tượng đang chọn", "text": "Chuyển các đối tượng đang chọn sang layer {{layer=A-WALL}}." },
+  { "name": "doi-text", "title": "Tìm và thay text", "text": "Tìm tất cả text chứa '{{tìm=WC}}' và đổi thành '{{thay bằng=VỆ SINH}}'." },
+  { "name": "dien-tich", "title": "Đo diện tích", "text": "Đo diện tích các polyline kín đang chọn và lập bảng diện tích (m²)." },
+  { "name": "bang-toa-do", "title": "Bảng tọa độ mốc", "text": "Lập bảng tọa độ mốc từ bảng dán dưới đây (VN-2000, đơn vị m), vẽ mốc và đánh tên:\n{{dán bảng Excel vào đây}}" },
+  { "name": "tuyen-ong", "title": "Tuyến ống cấp nước", "text": "Vẽ tuyến ống cấp nước PPR D{{đường kính=25}} đi song song tường từ {{điểm đầu=điểm A}} tới {{điểm cuối=điểm B}}, ghi chú đường kính." },
+  { "name": "den", "title": "Bố trí đèn", "text": "Bố trí {{số đèn=4}} đèn đều trong phòng đang chọn, nối dây về công tắc cạnh cửa và ghi chú loại dây." },
+  { "name": "in-pdf", "title": "In PDF", "text": "Tạo layout {{tên layout=MB-01}} khổ {{khổ giấy=A3}}, viewport tỷ lệ {{tỷ lệ=1:100}} hiển thị toàn bộ bản vẽ, rồi in ra PDF." },
+  { "name": "kiem-tra", "title": "Kiểm tra bản vẽ", "text": "Kiểm tra bản vẽ: liệt kê đối tượng nằm trên layer 0, text sai chiều cao so với chuẩn, và layer không theo bảng chuẩn. Chỉ báo cáo, không sửa." }
+]

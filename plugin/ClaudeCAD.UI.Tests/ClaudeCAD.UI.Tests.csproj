@@ -1,0 +1,24 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!--
+    Windows-only UI smoke tests: builds the real WPF chat palette (no AutoCAD
+    needed — the UI layer does not touch AutoCAD types), drives it through a
+    full conversation and saves screenshots to TestResults/ui-screens.
+    Run on Windows:  dotnet test plugin/ClaudeCAD.UI.Tests
+  -->
+  <PropertyGroup>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <Nullable>disable</Nullable>
+    <IsPackable>false</IsPackable>
+    <EnableWindowsTargeting>true</EnableWindowsTargeting>
+    <PlatformTarget>x64</PlatformTarget>
+  </PropertyGroup>
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.WindowsDesktop.App" />
+    <ProjectReference Include="..\ClaudeCAD.Plugin\ClaudeCAD.Plugin.csproj" SetTargetFramework="TargetFramework=net8.0-windows" />
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.11.1" />
+    <PackageReference Include="xunit" Version="2.9.2" />
+    <PackageReference Include="xunit.runner.visualstudio" Version="2.8.2" />
+  </ItemGroup>
+</Project>

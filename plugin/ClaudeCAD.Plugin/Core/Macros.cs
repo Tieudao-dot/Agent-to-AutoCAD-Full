@@ -1,0 +1,350 @@
+using System;
+using System.Collections.Generic;
+using System.Globalization;
+using System.IO;
+using System.Linq;
+using System.Text;
+
+namespace ClaudeCAD.Plugin.Core
+{
+    /// <summary>One recorded drawing tool call of a macro.</summary>
+    public sealed class MacroCall
+    {
+        public string Tool;
+        public Dictionary<string, object> Params = new Dictionary<string, object>();
+        /// <summary>Handles the call returned when it was recorded (used to remap later calls).</summary>
+        public List<string> ResultHandles = new List<string>();
+    }
+
+    /// <summary>
+    /// A chat turn saved as a macro (palette feature "Lưu thành macro"): the drawing tool
+    /// calls Claude made, replayed directly by the plugin without Claude (no tokens).
+    /// </summary>
+    public sealed class Macro
+    {
+        public string Name = "";
+        public string Description = "";
+        public DateTime Created = DateTime.Now;
+        public string Drawing = "";
+        public List<MacroCall> Calls = new List<MacroCall>();
+        /// <summary>Lower-left corner of what the macro drew (WCS mm); null = cannot be placed at a picked point.</summary>
+        public double[] BasePoint;
+
+        public string ToJson()
+        {
+            var d = new Dictionary<string, object>
+            {
+                ["version"] = 1,
+                ["name"] = Name,
+                ["description"] = Description,
+                ["created"] = Created.ToString("o", CultureInfo.InvariantCulture),
+                ["drawing"] = Drawing,
+                ["base_point"] = BasePoint?.Cast<object>().ToList(),
+                ["calls"] = Calls.Select(c => (object)new Dictionary<string, object>
+                {
+                    ["tool"] = c.Tool,
+                    ["params"] = c.Params,
+                    ["result_handles"] = c.ResultHandles.Cast<object>().ToList(),
+                }).ToList(),
+            };
+            return JsonCodec.Serialize(d);
+        }
+
+        public static Macro FromJson(string json)
+        {
+            var d = JsonCodec.ParseObject(json);
+            string S(Dictionary<string, object> o, string k) => o.TryGetValue(k, out var v) ? v as string : null;
+            var m = new Macro { Name = S(d, "name") ?? "", Description = S(d, "description") ?? "", Drawing = S(d, "drawing") ?? "" };
+            if (DateTime.TryParse(S(d, "created"), CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out var t)) m.Created = t;
+            if (d.TryGetValue("base_point", out var bp) && bp is List<object> bl && bl.Count >= 2 && bl.All(x => x is double))
+                m.BasePoint = bl.Cast<double>().ToArray();
+            if (d.TryGetValue("calls", out var cv) && cv is List<object> cl)
+            {
+                foreach (var o in cl.OfType<Dictionary<string, object>>())
+                {
+                    var tool = S(o, "tool");
+                    if (string.IsNullOrEmpty(tool)) continue;
+                    var c = new MacroCall { Tool = tool };
+                    if (o.TryGetValue("params", out var pv) && pv is Dictionary<string, object> pd) c.Params = pd;
+                    if (o.TryGetValue("result_handles", out var hv) && hv is List<object> hl) c.ResultHandles = hl.OfType<string>().ToList();
+                    m.Calls.Add(c);
+                }
+            }
+            return m;
+        }
+    }
+
+    /// <summary>Recording and replay rules, independent of AutoCAD (unit-tested).</summary>
+    public static class MacroLogic
+    {
+        /// <summary>Tools never recorded: view changes, file operations, undo, purge.</summary>
+        public static readonly HashSet<string> NotRecorded = new HashSet<string>(StringComparer.Ordinal)
+        {
+            "zoom_extents", "zoom_window", "regen", "save_drawing", "purge_unused", "undo_last_turn", "batch_execute",
+        };
+
+        public const int MaxCalls = 2000;
+
+        public static bool ShouldRecord(string tool, bool writes) => writes && !string.IsNullOrEmpty(tool) && !NotRecorded.Contains(tool);
+
+        /// <summary>The "handles" array of a tool result (strings only).</summary>
+        public static List<string> ResultHandles(object result)
+        {
+            if (result is Dictionary<string, object> d && d.TryGetValue("handles", out var h) && h is List<object> l)
+                return l.OfType<string>().ToList();
+            return new List<string>();
+        }
+
+        /// <summary>Deep copy of a JSON value (params are recorded before the next call can change anything).</summary>
+        public static object DeepCopy(object v)
+        {
+            switch (v)
+            {
+                case Dictionary<string, object> d: return d.ToDictionary(kv => kv.Key, kv => DeepCopy(kv.Value));
+                case List<object> l: return l.Select(DeepCopy).ToList();
+                default: return v;
+            }
+        }
+
+        /// <summary>
+        /// Deep copy where the values of handle parameters (handle / handles / *_handle(s)) that are recorded
+        /// handles are replaced by the handles created on replay. Other strings (texts, layer names) are kept
+        /// even if they happen to look like a handle.
+        /// </summary>
+        public static object Remap(object v, IDictionary<string, string> map) => Remap(v, map, false);
+
+        private static object Remap(object v, IDictionary<string, string> map, bool handleValue)
+        {
+            switch (v)
+            {
+                case string s: return handleValue && map.TryGetValue(s, out var n) ? n : s;
+                case Dictionary<string, object> d: return d.ToDictionary(kv => kv.Key, kv => Remap(kv.Value, map, IsHandleKey(kv.Key)));
+                case List<object> l: return l.Select(x => Remap(x, map, handleValue)).ToList();
+                default: return v;
+            }
+        }
+
+        public static bool IsHandleKey(string k) =>
+            k == "handle" || k == "handles" || k.EndsWith("_handle", StringComparison.Ordinal) || k.EndsWith("_handles", StringComparison.Ordinal);
+
+        /// <summary>
+        /// Handles created by an earlier call of the macro that this call uses but that were not re-created
+        /// on replay (that call failed). Sending them unchanged would hit the user's own objects, so the
+        /// call must be skipped.
+        /// </summary>
+        public static List<string> Unresolved(Dictionary<string, object> p, ISet<string> createdByMacro, IDictionary<string, string> map) =>
+            HandleParams(p).Where(h => createdByMacro.Contains(h) && !map.ContainsKey(h)).Distinct(StringComparer.OrdinalIgnoreCase).ToList();
+
+        /// <summary>After a replayed call: recorded handle k ↦ new handle k (first mapping wins).</summary>
+        public static void Learn(IDictionary<string, string> map, IList<string> recorded, IList<string> replayed)
+        {
+            int n = Math.Min(recorded.Count, replayed.Count);
+            for (int i = 0; i < n; i++)
+                if (!map.ContainsKey(recorded[i])) map[recorded[i]] = replayed[i];
+        }
+
+        /// <summary>
+        /// Handles the macro uses but did not create itself (objects that existed before the turn).
+        /// Replaying the macro in another drawing fails for the calls that use them.
+        /// </summary>
+        public static List<string> ExternalHandles(Macro m)
+        {
+            var created = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            var external = new List<string>();
+            foreach (var c in m.Calls)
+            {
+                foreach (var h in HandleParams(c.Params))
+                    if (!created.Contains(h) && !external.Contains(h, StringComparer.OrdinalIgnoreCase)) external.Add(h);
+                foreach (var h in c.ResultHandles) created.Add(h);
+            }
+            return external;
+        }
+
+        /// <summary>Values of params named handle / handles / *_handle(s) (where tools take entity handles).</summary>
+        public static IEnumerable<string> HandleParams(Dictionary<string, object> p)
+        {
+            foreach (var kv in p)
+            {
+                bool named = IsHandleKey(kv.Key);
+                if (named)
+                {
+                    if (kv.Value is string s) yield return s;
+                    else if (kv.Value is List<object> l) foreach (var x in l.OfType<string>()) yield return x;
+                }
+                else if (kv.Value is Dictionary<string, object> nested)
+                    foreach (var x in HandleParams(nested)) yield return x;
+            }
+        }
+
+        /// <summary>Handles created by the macro (results that did not appear in any earlier param), in order.</summary>
+        public static List<string> CreatedHandles(Macro m)
+        {
+            var used = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            var created = new List<string>();
+            var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            foreach (var c in m.Calls)
+            {
+                foreach (var h in HandleParams(c.Params)) used.Add(h);
+                foreach (var h in c.ResultHandles)
+                    if (!used.Contains(h) && seen.Add(h)) created.Add(h);
+            }
+            return created;
+        }
+
+        /// <summary>True when any string anywhere in the value is one of the handles.</summary>
+        public static bool References(object v, ISet<string> handles)
+        {
+            if (handles.Count == 0) return false;
+            switch (v)
+            {
+                case string str: return handles.Contains(str);
+                case Dictionary<string, object> d: return d.Values.Any(x => References(x, handles));
+                case List<object> l: return l.Any(x => References(x, handles));
+                default: return false;
+            }
+        }
+
+        /// <summary>
+        /// Groups the calls into batches that can run as one batch_execute: a call starts a new batch when it
+        /// uses a handle created inside the current batch (unknown until the batch returns), when its tool
+        /// cannot run in a batch, or when the batch is full. Single-call groups run on their own.
+        /// </summary>
+        public static List<List<int>> PlanBatches(IList<MacroCall> calls, Func<string, bool> batchable, int max = 500)
+        {
+            var groups = new List<List<int>>();
+            var cur = new List<int>();
+            var created = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            void Flush()
+            {
+                if (cur.Count > 0) groups.Add(cur);
+                cur = new List<int>();
+                created.Clear();
+            }
+            for (int i = 0; i < calls.Count; i++)
+            {
+                var c = calls[i];
+                if (!batchable(c.Tool))
+                {
+                    Flush();
+                    groups.Add(new List<int> { i });
+                    continue;
+                }
+                if (cur.Count >= max || HandleParams(c.Params).Any(created.Contains)) Flush();
+                cur.Add(i);
+                foreach (var h in c.ResultHandles) created.Add(h);
+            }
+            Flush();
+            return groups;
+        }
+
+        /// <summary>Short Vietnamese list of what the macro does, e.g. "12 lệnh: draw_line ×8, add_text ×4".</summary>
+        public static string Describe(Macro m)
+        {
+            var groups = m.Calls.GroupBy(c => c.Tool).OrderByDescending(g => g.Count()).Take(4)
+                .Select(g => $"{g.Key} ×{g.Count()}");
+            return $"{m.Calls.Count} lệnh: {string.Join(", ", groups)}{(m.Calls.Select(c => c.Tool).Distinct().Count() > 4 ? ", …" : "")}";
+        }
+    }
+
+    /// <summary>Collects the drawing tool calls of the running chat turn (thread-safe).</summary>
+    public sealed class MacroRecorder
+    {
+        private readonly object _lock = new object();
+        private List<MacroCall> _calls = new List<MacroCall>();
+        private bool _overflow;
+
+        public void Clear()
+        {
+            lock (_lock) { _calls = new List<MacroCall>(); _overflow = false; }
+        }
+
+        public void Record(string tool, Dictionary<string, object> p, object result)
+        {
+            lock (_lock)
+            {
+                if (_calls.Count >= MacroLogic.MaxCalls) { _overflow = true; return; }
+                _calls.Add(new MacroCall
+                {
+                    Tool = tool,
+                    Params = (MacroLogic.DeepCopy(p ?? new Dictionary<string, object>()) as Dictionary<string, object>) ?? new Dictionary<string, object>(),
+                    ResultHandles = MacroLogic.ResultHandles(result),
+                });
+            }
+        }
+
+        /// <summary>Calls of the turn; null when nothing was recorded or the turn was too long.</summary>
+        public List<MacroCall> Take()
+        {
+            lock (_lock)
+            {
+                var r = _overflow || _calls.Count == 0 ? null : _calls;
+                _calls = new List<MacroCall>();
+                _overflow = false;
+                return r;
+            }
+        }
+    }
+
+    /// <summary>Macros as JSON files in the plugin's macros folder (next to skills).</summary>
+    public sealed class MacroStore
+    {
+        public string Root { get; }
+
+        public MacroStore(string root)
+        {
+            Root = root;
+        }
+
+        public static string FileName(string name)
+        {
+            var slug = SkillStore.Slugify(name);
+            return (slug.Length > 0 ? slug : "macro") + ".json";
+        }
+
+        public List<Macro> List()
+        {
+            var list = new List<Macro>();
+            try
+            {
+                if (!Directory.Exists(Root)) return list;
+                foreach (var f in Directory.GetFiles(Root, "*.json").OrderBy(x => x, StringComparer.OrdinalIgnoreCase))
+                {
+                    try
+                    {
+                        var m = Macro.FromJson(File.ReadAllText(f, Encoding.UTF8));
+                        if (string.IsNullOrEmpty(m.Name)) m.Name = Path.GetFileNameWithoutExtension(f);
+                        list.Add(m);
+                    }
+                    catch (Exception ex) { Logger.Warn($"macro {Path.GetFileName(f)} unreadable: {ex.Message}"); }
+                }
+            }
+            catch (Exception ex) { Logger.Warn("macros folder unreadable: " + ex.Message); }
+            return list;
+        }
+
+        public bool Exists(string name) => File.Exists(Path.Combine(Root, FileName(name)));
+
+        public string Save(Macro m)
+        {
+            if (string.IsNullOrWhiteSpace(m.Name)) throw new ArgumentException("Tên macro không được để trống.");
+            Directory.CreateDirectory(Root);
+            var file = Path.Combine(Root, FileName(m.Name));
+            File.WriteAllText(file, m.ToJson(), new UTF8Encoding(false));
+            return file;
+        }
+
+        public Macro Load(string name)
+        {
+            var file = Path.Combine(Root, FileName(name));
+            return File.Exists(file) ? Macro.FromJson(File.ReadAllText(file, Encoding.UTF8)) : null;
+        }
+
+        public bool Delete(string name)
+        {
+            var file = Path.Combine(Root, FileName(name));
+            if (!File.Exists(file)) return false;
+            File.Delete(file);
+            return true;
+        }
+    }
+}

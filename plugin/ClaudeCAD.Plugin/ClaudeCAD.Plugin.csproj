@@ -1,0 +1,109 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    ClaudeCAD.Plugin — in-process AutoCAD plugin, two builds from the same sources:
+
+      net48           → AutoCAD 2022 / 2023 / 2024 (R24.1 - R24.3, .NET Framework 4.8)
+                        output: bin\<Configuration>\ClaudeCAD.Plugin.dll
+      net8.0-windows  → AutoCAD 2025 (R25.0, .NET 8)
+                        output: bin\<Configuration>\acad2025\ClaudeCAD.Plugin.dll
+
+    AutoCAD references:
+      * Install mode (default when the AutoCAD folder exists): accoremgd/acdbmgd/acmgd
+        from the install folder, Copy Local = false.
+          net48: $(AcadDir)      default C:\Program Files\Autodesk\AutoCAD 2022
+          net8 : $(AcadDir2025)  default C:\Program Files\Autodesk\AutoCAD 2025
+      * NuGet mode (CI, Linux, no AutoCAD): official Autodesk packages as compile-only
+        references — AutoCAD.NET 24.1.51000 (2022 API) and 25.0.1 (2025 API).
+    Force a mode with -p:AcadRefSource=Install|NuGet. Build only one target with -f net48.
+  -->
+
+  <PropertyGroup>
+    <TargetFrameworks>net48;net8.0-windows</TargetFrameworks>
+    <LangVersion>10.0</LangVersion>
+    <Nullable>disable</Nullable>
+    <OutputType>Library</OutputType>
+    <AssemblyName>ClaudeCAD.Plugin</AssemblyName>
+    <RootNamespace>ClaudeCAD.Plugin</RootNamespace>
+    <PlatformTarget>x64</PlatformTarget>
+    <Platforms>x64</Platforms>
+    <Version>0.9.0</Version>
+    <Deterministic>true</Deterministic>
+    <GenerateDocumentationFile>false</GenerateDocumentationFile>
+    <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
+    <!-- Allow building the Windows-only targets from Linux/macOS. -->
+    <EnableWindowsTargeting>true</EnableWindowsTargeting>
+    <AcadDir Condition="'$(AcadDir)' == ''">C:\Program Files\Autodesk\AutoCAD 2022</AcadDir>
+    <AcadDir2025 Condition="'$(AcadDir2025)' == ''">C:\Program Files\Autodesk\AutoCAD 2025</AcadDir2025>
+  </PropertyGroup>
+
+  <!-- ===================================================== net48: AutoCAD 2022-2024 -->
+  <PropertyGroup Condition="'$(TargetFramework)' == 'net48'">
+    <OutputPath>bin\$(Configuration)\</OutputPath>
+    <DefineConstants>$(DefineConstants);ACAD_R24</DefineConstants>
+    <AcadRefDir>$(AcadDir)</AcadRefDir>
+    <AcadNuGetVersion>24.1.51000</AcadNuGetVersion>
+  </PropertyGroup>
+
+  <!-- ===================================================== net8: AutoCAD 2025 -->
+  <PropertyGroup Condition="'$(TargetFramework)' == 'net8.0-windows'">
+    <OutputPath>bin\$(Configuration)\acad2025\</OutputPath>
+    <DefineConstants>$(DefineConstants);ACAD_R25</DefineConstants>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <AcadRefDir>$(AcadDir2025)</AcadRefDir>
+    <AcadNuGetVersion>25.0.1</AcadNuGetVersion>
+    <!-- AutoCAD loads the plugin into its own process: no apphost, no runtimeconfig needed. -->
+    <EnableDynamicLoading>true</EnableDynamicLoading>
+  </PropertyGroup>
+
+  <PropertyGroup>
+    <AcadRefSource Condition="'$(AcadRefSource)' == '' And Exists('$(AcadRefDir)\acmgd.dll')">Install</AcadRefSource>
+    <AcadRefSource Condition="'$(AcadRefSource)' == ''">NuGet</AcadRefSource>
+  </PropertyGroup>
+
+  <ItemGroup Condition="'$(TargetFramework)' == 'net48'">
+    <!-- .NET Framework 4.8 reference assemblies so the project builds without the targeting pack installed. -->
+    <PackageReference Include="Microsoft.NETFramework.ReferenceAssemblies.net48" Version="1.0.3" PrivateAssets="all" />
+    <Reference Include="System" />
+    <Reference Include="System.Core" />
+    <Reference Include="Microsoft.CSharp" />
+    <Reference Include="System.Net.Http" />
+    <Reference Include="System.IO.Compression" />
+    <Reference Include="System.IO.Compression.FileSystem" />
+    <Reference Include="System.Windows.Forms" />
+    <Reference Include="System.Drawing" />
+    <Reference Include="System.Xaml" />
+    <Reference Include="WindowsBase" />
+    <Reference Include="PresentationCore" />
+    <Reference Include="PresentationFramework" />
+  </ItemGroup>
+
+  <ItemGroup Condition="'$(TargetFramework)' == 'net8.0-windows'">
+    <!-- WPF + WinForms without the WindowsDesktop SDK targets (UI is code-only, no XAML compile). -->
+    <FrameworkReference Include="Microsoft.WindowsDesktop.App" />
+  </ItemGroup>
+
+  <ItemGroup Condition="'$(AcadRefSource)' == 'NuGet'">
+    <PackageReference Include="AutoCAD.NET" Version="$(AcadNuGetVersion)" ExcludeAssets="runtime" PrivateAssets="all" />
+  </ItemGroup>
+
+  <ItemGroup Condition="'$(AcadRefSource)' == 'Install'">
+    <Reference Include="accoremgd">
+      <HintPath>$(AcadRefDir)\accoremgd.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="acdbmgd">
+      <HintPath>$(AcadRefDir)\acdbmgd.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="acmgd">
+      <HintPath>$(AcadRefDir)\acmgd.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="AdWindows">
+      <HintPath>$(AcadRefDir)\AdWindows.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+  </ItemGroup>
+
+</Project>
