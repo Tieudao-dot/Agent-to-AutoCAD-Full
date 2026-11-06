@@ -79,6 +79,33 @@ namespace ClaudeCAD.Core.Tests
         }
 
         [Fact]
+        public void Macro_calls_are_grouped_into_independent_batches()
+        {
+            MacroCall C(string tool, string created, params string[] uses) => new MacroCall
+            {
+                Tool = tool,
+                Params = uses.Length == 0 ? P(("layer", "A-WALL")) : P(("handles", uses.Cast<object>().ToList())),
+                ResultHandles = created == null ? new List<string>() : new List<string> { created },
+            };
+            var calls = new List<MacroCall>
+            {
+                C("create_layer", "L1"),
+                C("draw_line", "A1"),
+                C("draw_line", "A2"),
+                C("move_entities", "A1", "A1"),      // uses A1 created in the current batch → new batch
+                C("draw_circle", "A3"),
+                C("purge_unused", null),              // not batchable → alone
+                C("draw_line", "A4"),
+            };
+            var groups = MacroLogic.PlanBatches(calls, t => t != "purge_unused");
+            Assert.Equal(new[] { "0,1,2", "3,4", "5", "6" }, groups.Select(g => string.Join(",", g)).ToArray());
+            var capped = MacroLogic.PlanBatches(Enumerable.Range(0, 5).Select(i => C("draw_line", "X" + i)).ToList(), t => true, 2);
+            Assert.Equal(new[] { 2, 2, 1 }, capped.Select(g => g.Count).ToArray());
+            Assert.True(MacroLogic.References(P(("nested", P(("h", "A1")))), new HashSet<string> { "A1" }));
+            Assert.False(MacroLogic.References(P(("h", "A9")), new HashSet<string> { "A1" }));
+        }
+
+        [Fact]
         public void Learn_keeps_the_first_mapping()
         {
             var map = new Dictionary<string, string>();

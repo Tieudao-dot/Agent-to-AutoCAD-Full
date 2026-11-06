@@ -95,6 +95,23 @@ namespace ClaudeCAD.Plugin
         private string _rateText = "";
 
         public UndoScope Undo { get; } = new UndoScope();
+        private string _readyInfo = "";
+
+        /// <summary>CLAUDECHATSELFTEST: state of the palette, the assistant process and the paths.</summary>
+        public List<(string name, bool ok, string detail)> Diagnostics()
+        {
+            var list = new List<(string, bool, string)>
+            {
+                ("Khung chat đã mở trong phiên này", _started, _started ? "có" : "chưa (gõ CLAUDECHAT để khởi động trợ lý)"),
+                ("Tiến trình trợ lý (Node)", _sidecar.State == SidecarState.Running, _sidecar.State.ToString()),
+                ("Kết nối plugin ↔ trợ lý (named pipe)", _ipc.IsConnected, _ipc.IsConnected ? _ipc.PipeName : "chưa kết nối"),
+                ("Phiên Claude (model · đăng nhập)", _readyInfo.Contains("·"), string.IsNullOrEmpty(_readyInfo) ? "chưa có — gửi một tin nhắn thử" : _readyInfo),
+                ("node.exe", PluginPaths.NodeExecutable != null, PluginPaths.NodeExecutable ?? "không tìm thấy Node.js 18+"),
+                ("Thư mục trợ lý (agent)", PluginPaths.AgentEntry != null, PluginPaths.AgentEntry ?? "không thấy agent\\dist\\index.js"),
+                ("Thư mục skill", _skillStore != null || PluginPaths.SkillsDirectory != null, _skillStore?.Root ?? PluginPaths.SkillsDirectory ?? "không thấy"),
+            };
+            return list;
+        }
         public ToolDispatcher Dispatcher => _dispatcher;
         public bool Busy => _busy;
 
@@ -155,6 +172,7 @@ namespace ClaudeCAD.Plugin
             dm.DocumentToBeDestroyed += OnDocumentToBeDestroyed;
             dm.DocumentActivated += OnDocumentActivated;
             dm.DocumentCreated += (s, e) => WatchDoc(e.Document);
+            DrawingHistory.Instance.ObjectChanged += OnDbChanged; // one subscription to the database events for the whole plugin
             AcApp.SystemVariableChanged += OnSystemVariableChanged;
         }
 
@@ -219,29 +237,21 @@ namespace ClaudeCAD.Plugin
             d.CommandEnded += OnCommandEnded;
             d.CommandCancelled += OnCommandEnded;
             d.CommandFailed += OnCommandEnded;
-            try
-            {
-                d.Database.ObjectAppended += (s, e) => OnDbChanged(s, e, "added");
-                d.Database.ObjectErased += (s, e) => OnDbChanged(s, e, "erased");
-                d.Database.ObjectModified += (s, e) => OnDbChanged(s, e, "modified");
-            }
-            catch (Exception ex) { Logger.Warn("database events: " + ex.Message); }
+            DrawingHistory.Instance.Watch(d); // database events come from DrawingHistory.ObjectChanged
         }
 
         /// <summary>Any drawing change outside a chat turn (Properties palette, grips...) makes "Hoàn tác lượt này" unsafe.</summary>
-        private void OnDbChanged(object sender, EventArgs e, string kind)
+        private void OnDbChanged(Autodesk.AutoCAD.DatabaseServices.Database db, Autodesk.AutoCAD.DatabaseServices.DBObject obj, string kind, bool erased)
         {
-            var obj = (e as Autodesk.AutoCAD.DatabaseServices.ObjectEventArgs)?.DBObject ?? (e as Autodesk.AutoCAD.DatabaseServices.ObjectErasedEventArgs)?.DBObject;
-            if (obj is Autodesk.AutoCAD.DatabaseServices.ViewportTableRecord || obj is Autodesk.AutoCAD.DatabaseServices.Viewport) return; // pan / zoom
             if (_busy)
             {
                 // "Thêm · Sửa · Xóa" card of the turn: entities of the turn's drawing only
-                if (!(obj is Autodesk.AutoCAD.DatabaseServices.Entity) || !ReferenceEquals(sender, _turnDb)) return;
+                if (!(obj is Autodesk.AutoCAD.DatabaseServices.Entity) || !ReferenceEquals(db, _turnDb)) return;
                 string h;
                 try { h = obj.Handle.ToString(); } catch { return; }
                 if (kind == "added") _changes.Appended(h);
                 else if (kind == "modified") _changes.Modified(h);
-                else _changes.Erased(h, (e as Autodesk.AutoCAD.DatabaseServices.ObjectErasedEventArgs)?.Erased ?? true);
+                else _changes.Erased(h, erased);
                 return;
             }
             if (!_undoAvailable) return;
@@ -1143,19 +1153,37 @@ namespace ClaudeCAD.Plugin
                 var map = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
                 int ok = 0, failed = 0, n = 0;
                 string firstError = null;
-                foreach (var c in m.Calls)
+                // independent calls run together as one batch_execute (one transaction, one screen update)
+                var groups = MacroLogic.PlanBatches(m.Calls, t => _dispatcher.TryGet(t, out var def) && !def.BatchForbidden, ToolDispatcher.MaxBatchCalls);
+                foreach (var g in groups)
                 {
                     if (_macroCancel || !_busy) break;
-                    var resp = await RunMacroCall(c.Tool, MacroLogic.Remap(c.Params, map) as Dictionary<string, object>, ++n);
-                    if (resp.ok)
+                    if (g.Count == 1)
                     {
-                        ok++;
-                        MacroLogic.Learn(map, c.ResultHandles, resp.handles);
+                        var c = m.Calls[g[0]];
+                        var resp = await RunMacroCall(c.Tool, MacroLogic.Remap(c.Params, map) as Dictionary<string, object>, ++n);
+                        if (resp.ok) { ok++; MacroLogic.Learn(map, c.ResultHandles, resp.handles); }
+                        else { failed++; if (firstError == null) firstError = $"{c.Tool}: {resp.error}"; }
+                        continue;
                     }
-                    else
+                    var calls = g.Select(i => (object)new Dictionary<string, object>
                     {
-                        failed++;
-                        if (firstError == null) firstError = $"{c.Tool}: {resp.error}";
+                        ["tool"] = m.Calls[i].Tool,
+                        ["params"] = MacroLogic.Remap(m.Calls[i].Params, map),
+                    }).ToList();
+                    var batch = await RunMacroBatch(calls, ++n);
+                    if (batch.error != null)
+                    {
+                        failed += g.Count;
+                        if (firstError == null) firstError = "batch_execute: " + batch.error;
+                        continue;
+                    }
+                    for (int k = 0; k < g.Count && k < batch.results.Count; k++)
+                    {
+                        var c = m.Calls[g[k]];
+                        var r = batch.results[k];
+                        if (r.ok) { ok++; MacroLogic.Learn(map, c.ResultHandles, r.handles); }
+                        else { failed++; if (firstError == null) firstError = $"{c.Tool}: {r.error}"; }
                     }
                 }
                 string moved = "";
@@ -1189,6 +1217,44 @@ namespace ClaudeCAD.Plugin
                 _macroRunning = false;
                 _macroCancel = false;
             }
+        }
+
+        /// <summary>Runs several macro calls as one batch_execute; per-call results in order (error = the whole batch failed).</summary>
+        private async Task<(List<(bool ok, List<string> handles, string error)> results, string error)> RunMacroBatch(List<object> calls, int n)
+        {
+            AddToolLog(new ToolLogEntry { Tool = "batch_execute", State = "running" });
+            var sw = Stopwatch.StartNew();
+            var resp = await _dispatcher.HandleAsync(new Dictionary<string, object> { ["id"] = "macro-" + n, ["tool"] = "batch_execute", ["params"] = new Dictionary<string, object> { ["calls"] = calls } });
+            var log = new ToolLogEntry { Tool = "batch_execute", Ms = sw.ElapsedMilliseconds };
+            var list = new List<(bool, List<string>, string)>();
+            if (!(resp.TryGetValue("ok", out var okv) && okv is bool b && b))
+            {
+                var err = resp.TryGetValue("error", out var ev) ? ev as Dictionary<string, object> : null;
+                var msg = err != null && err.TryGetValue("message", out var mv) ? mv as string : "lỗi";
+                log.State = "error";
+                log.Error = msg?.Length > 300 ? msg.Substring(0, 300) : msg;
+                AddToolLog(log);
+                return (list, msg ?? "lỗi");
+            }
+            var result = resp.TryGetValue("result", out var rv) ? rv as Dictionary<string, object> : null;
+            var items = result != null && result.TryGetValue("results", out var rl) ? rl as List<object> : null;
+            int okCount = 0, all = 0;
+            foreach (var o in items ?? new List<object>())
+            {
+                var d = o as Dictionary<string, object>;
+                bool callOk = d != null && d.TryGetValue("ok", out var co) && co is bool cb && cb;
+                var hs = callOk ? MacroLogic.ResultHandles(d.TryGetValue("result", out var cr) ? cr : null) : new List<string>();
+                string error = null;
+                if (!callOk && d != null && d.TryGetValue("error", out var ce) && ce is Dictionary<string, object> ced && ced.TryGetValue("message", out var cm)) error = cm as string;
+                if (callOk) { okCount++; lock (_gate) foreach (var h in hs) _turnHandles.Add(h); }
+                all++;
+                list.Add((callOk, hs, error ?? (callOk ? null : "lỗi")));
+            }
+            log.State = okCount == all ? "done" : "error";
+            log.Summary = $"{okCount}/{all} lệnh OK";
+            if (okCount != all) log.Error = $"{all - okCount} lệnh lỗi";
+            AddToolLog(log);
+            return (list, null);
         }
 
         private async Task<(bool ok, List<string> handles, string error)> RunMacroCall(string tool, Dictionary<string, object> p, int n)
@@ -1576,6 +1642,7 @@ namespace ClaudeCAD.Plugin
                 case "ready":
                     {
                         string info = msg.TryGetValue("info", out var i) ? i as string : null;
+                        if (!string.IsNullOrEmpty(info)) _readyInfo = info;
                         Ui.SetConnection("Đã kết nối" + (string.IsNullOrEmpty(info) ? "" : " · " + info), true);
                         break;
                     }
@@ -1778,6 +1845,7 @@ namespace ClaudeCAD.Plugin
                 dm.DocumentActivated -= OnDocumentActivated;
                 AcApp.SystemVariableChanged -= OnSystemVariableChanged;
                 foreach (var d in _watchedDocs.ToList()) { try { d.CommandEnded -= OnCommandEnded; } catch { } Interaction.Unwatch(d); }
+                DrawingHistory.Instance.ObjectChanged -= OnDbChanged;
                 Notifier.Dispose();
                 _skillWatcher?.Dispose();
                 _skillDebounce?.Dispose();

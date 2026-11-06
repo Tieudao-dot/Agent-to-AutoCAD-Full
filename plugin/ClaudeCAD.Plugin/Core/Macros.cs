@@ -174,6 +174,52 @@ namespace ClaudeCAD.Plugin.Core
             return created;
         }
 
+        /// <summary>True when any string anywhere in the value is one of the handles.</summary>
+        public static bool References(object v, ISet<string> handles)
+        {
+            if (handles.Count == 0) return false;
+            switch (v)
+            {
+                case string str: return handles.Contains(str);
+                case Dictionary<string, object> d: return d.Values.Any(x => References(x, handles));
+                case List<object> l: return l.Any(x => References(x, handles));
+                default: return false;
+            }
+        }
+
+        /// <summary>
+        /// Groups the calls into batches that can run as one batch_execute: a call starts a new batch when it
+        /// uses a handle created inside the current batch (unknown until the batch returns), when its tool
+        /// cannot run in a batch, or when the batch is full. Single-call groups run on their own.
+        /// </summary>
+        public static List<List<int>> PlanBatches(IList<MacroCall> calls, Func<string, bool> batchable, int max = 500)
+        {
+            var groups = new List<List<int>>();
+            var cur = new List<int>();
+            var created = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            void Flush()
+            {
+                if (cur.Count > 0) groups.Add(cur);
+                cur = new List<int>();
+                created.Clear();
+            }
+            for (int i = 0; i < calls.Count; i++)
+            {
+                var c = calls[i];
+                if (!batchable(c.Tool))
+                {
+                    Flush();
+                    groups.Add(new List<int> { i });
+                    continue;
+                }
+                if (cur.Count >= max || References(c.Params, created)) Flush();
+                cur.Add(i);
+                foreach (var h in c.ResultHandles) created.Add(h);
+            }
+            Flush();
+            return groups;
+        }
+
         /// <summary>Short Vietnamese list of what the macro does, e.g. "12 lệnh: draw_line ×8, add_text ×4".</summary>
         public static string Describe(Macro m)
         {

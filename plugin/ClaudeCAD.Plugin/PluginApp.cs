@@ -146,6 +146,24 @@ namespace ClaudeCAD.Plugin
             }
         }
 
+        /// <summary>Self-test on a temporary drawing: off-screen picture, undo group, events, snapshot, versions, connection.</summary>
+        [CommandMethod("CLAUDECHATSELFTEST", CommandFlags.Session)]
+        public void SelfTestCommand()
+        {
+            var ed = AcApp.DocumentManager.MdiActiveDocument?.Editor;
+            try
+            {
+                ed?.WriteMessage("\nClaudeCAD: đang tự kiểm tra trên một bản vẽ tạm (bản vẽ của cậu không bị đụng tới)...\n");
+                var summary = SelfTest.Run();
+                AcApp.DocumentManager.MdiActiveDocument?.Editor.WriteMessage("\nClaudeCAD tự kiểm tra: " + summary + "\n");
+            }
+            catch (System.Exception ex)
+            {
+                Logger.Error("CLAUDECHATSELFTEST failed", ex);
+                AcApp.DocumentManager.MdiActiveDocument?.Editor.WriteMessage("\nClaudeCAD tự kiểm tra lỗi: " + ex.Message + "\n");
+            }
+        }
+
         /// <summary>Opens the log folder in Explorer.</summary>
         [CommandMethod("CLAUDECHATLOG", CommandFlags.Session)]
         public void OpenLog()

@@ -31,7 +31,18 @@ namespace ClaudeCAD.Plugin.Drawing
             public DrawingSnapshot Snapshot;
             public bool Compared;
             public SnapshotDiff Carried;
+            /// <summary>Layer of entities just before they were opened for write (large drawings: keeps layer counts exact without rescanning).</summary>
+            public readonly Dictionary<string, string> PreLayer = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+            /// <summary>Model space + paper space block ids (read when the snapshot is built; no transaction inside events).</summary>
+            public HashSet<ObjectId> LayoutIds = new HashSet<ObjectId>();
         }
+
+        /// <summary>
+        /// Every object change of every open drawing (viewports / pan / zoom excluded), raised once for all
+        /// listeners — the chat controller uses it for the turn's change card and the "Hoàn tác lượt này"
+        /// safety, instead of subscribing to the database events itself. kind = added | modified | erased.
+        /// </summary>
+        public event Action<Database, DBObject, string, bool> ObjectChanged;
 
         private readonly Dictionary<Database, State> _states = new Dictionary<Database, State>();
         private bool _started;
@@ -54,9 +65,9 @@ namespace ClaudeCAD.Plugin.Drawing
             if (_started) return;
             _started = true;
             var dm = AcApp.DocumentManager;
-            dm.DocumentCreated += (s, e) => Watch(e.Document);
+            dm.DocumentCreated += (s, e) => { Watch(e.Document); ScheduleCompare(e.Document); };
             dm.DocumentToBeDestroyed += (s, e) => Forget(e.Document);
-            foreach (Document d in dm) Watch(d);
+            foreach (Document d in dm) { Watch(d); ScheduleCompare(d); }
             CleanOldSnapshots();
             CleanOldVersions();
         }
@@ -70,6 +81,20 @@ namespace ClaudeCAD.Plugin.Drawing
             db.ObjectAppended += (s, e) => On(db, e.DBObject, "added", true);
             db.ObjectModified += (s, e) => On(db, e.DBObject, "modified", true);
             db.ObjectErased += (s, e) => On(db, e.DBObject, "erased", e.Erased);
+            db.ObjectOpenedForModify += (s, e) => OnOpenedForModify(db, e.DBObject);
+        }
+
+        /// <summary>Large drawings only: remember the layer before a modification so layer counts stay exact.</summary>
+        private void OnOpenedForModify(Database db, DBObject obj)
+        {
+            try
+            {
+                if (!(obj is Entity e) || obj is Viewport) return;
+                if (!_states.TryGetValue(db, out var st) || st.Snapshot == null || st.Snapshot.Full) return;
+                var h = e.Handle.ToString();
+                if (!st.PreLayer.ContainsKey(h) && st.PreLayer.Count < MaxDirty) st.PreLayer[h] = e.Layer;
+            }
+            catch { /* never throw into AutoCAD */ }
         }
 
         private void Forget(Document doc)
@@ -79,15 +104,69 @@ namespace ClaudeCAD.Plugin.Drawing
 
         private void On(Database db, DBObject obj, string kind, bool erased)
         {
-            if (!(obj is Entity) || obj is Viewport) return;
-            if (!_states.TryGetValue(db, out var st)) return;
-            string h;
-            try { h = obj.Handle.ToString(); } catch { return; }
-            if (st.Dirty.Count < MaxDirty) st.Dirty.Add(h);
-            if (ReferenceEquals(db, TurnDb)) return; // Claude's own change
-            if (kind == "added") st.Manual.Appended(h);
-            else if (kind == "modified") st.Manual.Modified(h);
-            else st.Manual.Erased(h, erased);
+            try
+            {
+                if (obj is ViewportTableRecord || obj is Viewport) return; // pan / zoom
+                var listeners = ObjectChanged;
+                if (listeners != null)
+                    foreach (Action<Database, DBObject, string, bool> l in listeners.GetInvocationList())
+                    {
+                        try { l(db, obj, kind, erased); }
+                        catch (Exception ex) { Logger.Warn("object change listener failed: " + ex.Message); }
+                    }
+                if (!(obj is Entity ent)) return;
+                if (!_states.TryGetValue(db, out var st)) return;
+                string h = obj.Handle.ToString();
+                if (st.Dirty.Count < MaxDirty) st.Dirty.Add(h);
+                TrackLayerCount(st, ent, h, kind, erased);
+                if (ReferenceEquals(db, TurnDb)) return; // Claude's own change
+                if (kind == "added") st.Manual.Appended(h);
+                else if (kind == "modified") st.Manual.Modified(h);
+                else st.Manual.Erased(h, erased);
+            }
+            catch (Exception ex)
+            {
+                Logger.Warn("drawing change tracking failed: " + ex.Message); // never throw into AutoCAD
+            }
+        }
+
+        /// <summary>Large drawings: keep the per-layer counts of the snapshot exact from the events (no rescans).</summary>
+        private static void TrackLayerCount(State st, Entity e, string h, string kind, bool erased)
+        {
+            var snap = st.Snapshot;
+            if (snap == null || snap.Full) return;
+            void Add(string layer, int d)
+            {
+                if (string.IsNullOrEmpty(layer)) return;
+                snap.LayerCounts[layer] = Math.Max(0, (snap.LayerCounts.TryGetValue(layer, out var n) ? n : 0) + d);
+            }
+            if (!st.LayoutIds.Contains(e.OwnerId)) return;
+            var layer = e.Layer;
+            switch (kind)
+            {
+                case "added": Add(layer, +1); break;
+                case "erased": Add(layer, erased ? -1 : +1); break;
+                default:
+                    if (st.PreLayer.TryGetValue(h, out var before))
+                    {
+                        st.PreLayer.Remove(h);
+                        if (!string.Equals(before, layer, StringComparison.OrdinalIgnoreCase)) { Add(before, -1); Add(layer, +1); }
+                    }
+                    break;
+            }
+        }
+
+        private static HashSet<ObjectId> LayoutIds(Database db)
+        {
+            var ids = new HashSet<ObjectId>();
+            using (var tr = db.TransactionManager.StartOpenCloseTransaction())
+            {
+                var bt = (BlockTable)tr.GetObject(db.BlockTableId, OpenMode.ForRead);
+                foreach (ObjectId id in bt)
+                    if (tr.GetObject(id, OpenMode.ForRead) is BlockTableRecord btr && btr.IsLayout) ids.Add(id);
+                tr.Commit();
+            }
+            return ids;
         }
 
         private State Get(Document doc)
@@ -139,6 +218,7 @@ namespace ClaudeCAD.Plugin.Drawing
             catch (Exception ex) { Logger.Warn("snapshot unreadable: " + ex.Message); }
             if (baseline == null) return;
             var now = Build(doc.Database, key, baseline.Entries.Keys);
+            st.LayoutIds = LayoutIds(doc.Database);
             var diff = SnapshotDiff.Compare(baseline, now);
             st.Snapshot = now;
             st.Dirty.Clear();
@@ -191,13 +271,16 @@ namespace ClaudeCAD.Plugin.Drawing
             if (doc == null || doc.IsDisposed) return;
             var st = Get(doc);
             EnsureCompared(doc, st, key, path); // a macro run must not overwrite an uncompared snapshot
-            if (st.Snapshot == null || !st.Snapshot.Full || st.Snapshot.Entries.Count > DrawingSnapshot.FullLimit * 1.2)
+            if (st.Snapshot == null || (st.Snapshot.Full && st.Snapshot.Entries.Count > DrawingSnapshot.FullLimit * 1.2))
             {
                 var tracked = new HashSet<string>(st.Dirty, StringComparer.OrdinalIgnoreCase);
                 if (st.Snapshot != null) foreach (var h in st.Snapshot.Entries.Keys) if (tracked.Count < DrawingSnapshot.MaxTracked) tracked.Add(h);
                 st.Snapshot = Build(doc.Database, key, tracked);
+                st.LayoutIds = LayoutIds(doc.Database);
             }
-            else Refresh(doc.Database, st.Snapshot, st.Dirty);
+            else if (st.Snapshot.Full) Refresh(doc.Database, st.Snapshot, st.Dirty);
+            else RefreshLarge(doc.Database, st.Snapshot, st.Dirty); // only the changed objects; counts kept by the events
+            st.PreLayer.Clear();
             st.Dirty.Clear();
             st.Snapshot.Time = DateTime.Now;
             st.Snapshot.DrawingKey = key;
@@ -277,6 +360,33 @@ namespace ClaudeCAD.Plugin.Drawing
             s.EntityCount = s.Entries.Count;
         }
 
+        /// <summary>Large drawing: update / add entries of the changed objects (up to MaxTracked), drop erased ones.</summary>
+        private static void RefreshLarge(Database db, DrawingSnapshot s, IEnumerable<string> handles)
+        {
+            using (var tr = db.TransactionManager.StartOpenCloseTransaction())
+            {
+                var layoutOwner = new Dictionary<ObjectId, bool>();
+                foreach (var h in handles.ToList())
+                {
+                    try
+                    {
+                        if (!db.TryGetObjectId(new Handle(Convert.ToInt64(h, 16)), out var id) || id.IsNull || id.IsErased) { s.Entries.Remove(h); continue; }
+                        if (!(tr.GetObject(id, OpenMode.ForRead) is Entity e) || e is Viewport) continue;
+                        if (!layoutOwner.TryGetValue(e.OwnerId, out var isLayout))
+                        {
+                            isLayout = tr.GetObject(e.OwnerId, OpenMode.ForRead) is BlockTableRecord btr && btr.IsLayout;
+                            layoutOwner[e.OwnerId] = isLayout;
+                        }
+                        if (!isLayout) continue;
+                        if (s.Entries.ContainsKey(h) || s.Entries.Count < DrawingSnapshot.MaxTracked) s.Entries[h] = Entry(tr, e);
+                    }
+                    catch { s.Entries.Remove(h); }
+                }
+                tr.Commit();
+            }
+            s.EntityCount = s.LayerCounts.Values.Sum();
+        }
+
         private static SnapshotEntry Entry(Transaction tr, Entity e) => new SnapshotEntry
         {
             Type = e.GetType().Name,
@@ -332,6 +442,54 @@ namespace ClaudeCAD.Plugin.Drawing
             }
             catch { /* some objects cannot report a property: extents still count */ }
             return parts;
+        }
+
+        // ------------------------------------------------------------------ compare while AutoCAD is idle
+
+        private readonly Queue<Document> _toCompare = new Queue<Document>();
+        private bool _idleHooked;
+
+        /// <summary>Key of a saved drawing as the chat history uses it (null for unsaved drawings).</summary>
+        public static string KeyOf(Document doc)
+        {
+            try { return doc != null && doc.IsNamedDrawing ? ChatTranscript.KeyFor(doc.Name) : null; } catch { return null; }
+        }
+
+        /// <summary>
+        /// A drawing that was chatted about before was opened: compare it with its snapshot as soon as AutoCAD
+        /// is idle, so the first chat message does not wait for the comparison.
+        /// </summary>
+        public void ScheduleCompare(Document doc)
+        {
+            var key = KeyOf(doc);
+            if (key == null) return;
+            bool hasBaseline;
+            try { hasBaseline = File.Exists(LocalFile(key)) || (SideFile(doc.Name) is string sf && File.Exists(sf)); } catch { hasBaseline = false; }
+            if (!hasBaseline) return;
+            _toCompare.Enqueue(doc);
+            if (_idleHooked) return;
+            _idleHooked = true;
+            AcApp.Idle += OnIdle;
+        }
+
+        private void OnIdle(object sender, EventArgs e)
+        {
+            try
+            {
+                if (_toCompare.Count == 0) { AcApp.Idle -= OnIdle; _idleHooked = false; return; }
+                var doc = _toCompare.Peek();
+                if (doc == null || doc.IsDisposed) { _toCompare.Dequeue(); return; }
+                // wait until no command is running in that drawing
+                if (!string.IsNullOrEmpty(doc.CommandInProgress) || !doc.Editor.IsQuiescent) return;
+                _toCompare.Dequeue();
+                var st = Get(doc);
+                if (!st.Compared && !ReferenceEquals(doc.Database, TurnDb)) EnsureCompared(doc, st, KeyOf(doc), doc.Name);
+            }
+            catch (Exception ex)
+            {
+                Logger.Warn("idle snapshot compare failed: " + ex.Message);
+                if (_toCompare.Count > 0) _toCompare.Dequeue();
+            }
         }
 
         // ------------------------------------------------------------------ snapshot files
@@ -435,6 +593,27 @@ namespace ClaudeCAD.Plugin.Drawing
         public VersionStore Versions(string key) => new VersionStore(VersionsRoot, key);
 
         /// <summary>
+        /// No unsaved changes (DBMOD = 0): the DWG on disk is exactly what is open, so copying the file is
+        /// enough and takes milliseconds instead of a full database copy.
+        /// </summary>
+        private static bool TryCopySavedFile(Document doc, string target)
+        {
+            try
+            {
+                if (doc != AcApp.DocumentManager.MdiActiveDocument || !doc.IsNamedDrawing || !File.Exists(doc.Name)) return false;
+                if (Convert.ToInt32(AcApp.GetSystemVariable("DBMOD")) != 0) return false;
+                File.Copy(doc.Name, target, false);
+                return true;
+            }
+            catch (Exception ex)
+            {
+                Logger.Info("version: file copy not possible, copying the database instead (" + ex.Message + ")");
+                try { if (File.Exists(target)) File.Delete(target); } catch { }
+                return false;
+            }
+        }
+
+        /// <summary>
         /// Before the first change of a chat turn: copy the whole drawing when the newest copy is at least
         /// 30 minutes old. The copy is a separate DWG (Wblock of the database); the open drawing is untouched.
         /// </summary>
@@ -446,10 +625,13 @@ namespace ClaudeCAD.Plugin.Drawing
             var now = DateTime.Now;
             if (!store.IsDue(now)) return null;
             var file = store.NewFile(now, out var id);
-            using (doc.LockDocument())
-            using (var copy = doc.Database.Wblock())
+            if (!TryCopySavedFile(doc, file))
             {
-                copy.SaveAs(file, DwgVersion.Current);
+                using (doc.LockDocument())
+                using (var copy = doc.Database.Wblock())
+                {
+                    copy.SaveAs(file, DwgVersion.Current);
+                }
             }
             store.Register(id, now, label);
             Logger.Info($"version saved: {file}");
