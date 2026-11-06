@@ -203,6 +203,37 @@ namespace ClaudeCAD.UI.Tests
         }
 
         [Fact]
+        public void RendersLayerScope()
+        {
+            Sta(() =>
+            {
+                var c = new ChatControl { Width = 400, Height = 700 };
+                c.ApplySettings(new PaletteSettings());
+                c.SetDark(true);
+                c.LoadTranscript(new ChatTranscript { DrawingName = "Nha-pho.dwg" }, false);
+                c.LayerSource = () => new List<LayerRow>
+                {
+                    new LayerRow { Name = "0", Rgb = 0xFFFFFF, Count = 3 },
+                    new LayerRow { Name = "A-WALL", Rgb = 0xFFFFFF, Count = 120, Current = true },
+                    new LayerRow { Name = "A-DOOR", Rgb = 0xFFFF00, Count = 8 },
+                    new LayerRow { Name = "A-TEXT", Rgb = 0x00FF00, Count = 45, Locked = true },
+                    new LayerRow { Name = "A-TEMP", Rgb = 0xFF0000, Count = 0, On = false },
+                };
+                c.AddUserMessage(new ChatEntry { Role = "user", Text = "Đổi màu các layer này sang đỏ", Layers = { "A-WALL", "A-DOOR" } });
+                c.SetSelectionChip(new PickedSelection
+                {
+                    Handles = { "1", "2", "3", "4" },
+                    HandleLayers = { "A-WALL", "A-WALL", "A-DOOR", "A-TEXT" },
+                    Summary = "3 LINE, 1 TEXT",
+                }, true);
+                c.SetLayerScopeForTest(new Dictionary<string, int> { ["A-WALL"] = 120, ["A-DOOR"] = 8 });
+                c.ShowLayerPicker();
+                Shot(c, "palette-layers");
+            });
+            Assert.True(new FileInfo(Path.Combine(OutDir, "palette-layers.png")).Length > 5_000);
+        }
+
+        [Fact]
         public void ReloadsPersistedTranscript()
         {
             Sta(() =>

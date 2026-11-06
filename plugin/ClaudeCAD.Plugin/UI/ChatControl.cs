@@ -19,6 +19,11 @@ namespace ClaudeCAD.Plugin.UI
         public string Text;
         public List<ImageAttachment> Images = new List<ImageAttachment>();
         public bool IncludeSelection;
+        /// <summary>Layers unticked under the selection chip: their objects are not sent.</summary>
+        public List<string> ExcludedLayers = new List<string>();
+        /// <summary>Layers chosen in the layer picker ("Layer: A-WALL, A-DOOR").</summary>
+        public List<string> Layers = new List<string>();
+        public Dictionary<string, int> LayerCounts = new Dictionary<string, int>();
     }
 
     /// <summary>
@@ -66,6 +71,8 @@ namespace ClaudeCAD.Plugin.UI
         public event Action OpenVersionsFolderRequested;
         /// <summary>Layer / block / style names of the active drawing for "@" (called on the UI thread).</summary>
         public Func<List<MentionItem>> MentionSource;
+        /// <summary>Layers of the active drawing with object counts for the layer picker (UI thread).</summary>
+        public Func<List<LayerRow>> LayerSource;
 
         // ------------------------------------------------------------ layout
         private readonly StackPanel _messages = new StackPanel { Margin = new Thickness(6) };
@@ -93,6 +100,17 @@ namespace ClaudeCAD.Plugin.UI
         private TextBlock _versionBannerText;
         private List<VersionInfo> _versions = new List<VersionInfo>();
         private bool _viewingVersion;
+        // layer scope
+        private Button _layersBtn;
+        private Border _layerPanel;
+        private TextBox _layerSearch;
+        private StackPanel _layerList;
+        private TextBlock _layerPanelInfo;
+        private List<LayerRow> _layerRows = new List<LayerRow>();
+        private readonly HashSet<string> _layerPicked = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        private readonly List<string> _layerScope = new List<string>();
+        private readonly Dictionary<string, int> _layerScopeCounts = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
+        private readonly HashSet<string> _excludedLayers = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         // v0.6
         private readonly Button _capture, _macrosBtn, _notesBtn;
         private readonly ToggleButton _readOnlyBtn;
@@ -176,6 +194,9 @@ namespace ClaudeCAD.Plugin.UI
             _skillsBtn = MakeButton("Skill", "Danh sách skill: bật/tắt, sửa, xóa");
             _skillsBtn.Click += (s, e) => { RefreshSkillsPanel(); _skillsPopup.IsOpen = !_skillsPopup.IsOpen; };
             ctxBar.Children.Add(_skillsBtn);
+            _layersBtn = MakeButton("Layer", "Chọn layer để chat chỉnh sửa (đổi màu, nét, khóa... hoặc sửa các đối tượng trên layer)");
+            _layersBtn.Click += (s, e) => ToggleLayerPanel();
+            ctxBar.Children.Insert(ctxBar.Children.IndexOf(_addSkill), _layersBtn);
             _macrosBtn = MakeButton("Macro", "Macro đã lưu: chạy lại các lượt vẽ ưng ý mà không cần Claude (không tốn token)");
             _macrosBtn.Click += (s, e) => { RefreshMacrosPanel(); _macrosPopup.IsOpen = !_macrosPopup.IsOpen; };
             ctxBar.Children.Add(_macrosBtn);
@@ -208,6 +229,11 @@ namespace ClaudeCAD.Plugin.UI
             Theme.Ref(_versionBanner, Border.BorderBrushProperty, Theme.Accent);
             DockPanel.SetDock(_versionBanner, Dock.Top);
             root.Children.Add(_versionBanner);
+
+            // ---- layer picker (inline: it has a search box)
+            _layerPanel = BuildLayerPanel();
+            DockPanel.SetDock(_layerPanel, Dock.Top);
+            root.Children.Add(_layerPanel);
 
             // ---- project notes editor (inline: text boxes in WPF popups get no keys inside a PaletteSet)
             _notesPanel = BuildNotesPanel();
@@ -660,9 +686,14 @@ namespace ClaudeCAD.Plugin.UI
                 Text = text,
                 Images = _images.ToList(),
                 IncludeSelection = _selection != null && _selection.Count > 0 && _selectionIncluded,
+                ExcludedLayers = _excludedLayers.ToList(),
+                Layers = _layerScope.ToList(),
+                LayerCounts = new Dictionary<string, int>(_layerScopeCounts),
             };
             _input.Clear();
             _images.Clear();
+            ClearLayerScope();
+            _layerPanel.Visibility = Visibility.Collapsed;
             ClearSuggestionsCore();
             _mentionPopup.IsOpen = false;
             _settings.AddHistory(text);
@@ -713,6 +744,7 @@ namespace ClaudeCAD.Plugin.UI
         {
             _selection = sel != null && sel.Count > 0 ? sel : null;
             if (explicitPick || _selection == null) _selectionIncluded = true;
+            _excludedLayers.Clear();
             RefreshChips();
         });
 
@@ -755,11 +787,23 @@ namespace ClaudeCAD.Plugin.UI
             _chips.Children.Clear();
             if (_selection != null)
             {
+                var layers = _selection.Layers;
+                int kept = LayerSelection.Filter(_selection.Handles, _selection.HandleLayers, _excludedLayers).Count;
+                string onLayers = layers.Count > 0 ? $" trên {layers.Count} layer" : "";
                 var label = _selectionIncluded
-                    ? $"Kèm {_selection.Count} đối tượng đang chọn ({_selection.Summary})"
+                    ? (kept == _selection.Count
+                        ? $"Kèm {_selection.Count} đối tượng đang chọn{onLayers} ({_selection.Summary})"
+                        : $"Kèm {kept}/{_selection.Count} đối tượng đang chọn (bỏ {_excludedLayers.Count} layer)")
                     : $"Không kèm {_selection.Count} đối tượng đang chọn";
                 _chips.Children.Add(Chip(label, () => { _selectionIncluded = !_selectionIncluded; RefreshChips(); },
                     _selectionIncluded ? "✕" : "+", () => ZoomRequested?.Invoke(_selection.Handles)));
+                if (_selectionIncluded && layers.Count > 0) _chips.Children.Add(SelectionLayerRow(layers));
+            }
+            if (_layerScope.Count > 0)
+            {
+                int total = _layerScope.Sum(l => _layerScopeCounts.TryGetValue(l, out var n) ? n : 0);
+                var label = $"Layer: {LayerSelection.Label(_layerScope)} · {total} đối tượng";
+                _chips.Children.Add(Chip(label, () => { ClearLayerScope(); RefreshChips(); }, "✕", () => OpenLayerPanel()));
             }
             foreach (var img in _images.ToList())
             {
@@ -768,6 +812,193 @@ namespace ClaudeCAD.Plugin.UI
             }
             _chips.Visibility = _chips.Children.Count > 0 ? Visibility.Visible : Visibility.Collapsed;
         }
+
+        /// <summary>One small toggle per layer of the selection (tick = its objects are sent) + "Cả layer".</summary>
+        private UIElement SelectionLayerRow(Dictionary<string, int> layers)
+        {
+            var row = new WrapPanel { Margin = new Thickness(6, 0, 0, 4) };
+            var head = MutedText("Layer: ");
+            head.FontSize = 11;
+            row.Children.Add(head);
+            foreach (var kv in layers.Take(12))
+            {
+                var name = kv.Key;
+                bool on = !_excludedLayers.Contains(name);
+                var b = new ToggleButton
+                {
+                    Content = $"{(on ? "☑" : "☐")} {name} {kv.Value}",
+                    IsChecked = on,
+                    FontSize = 11,
+                    Padding = new Thickness(6, 0, 6, 1),
+                    Margin = new Thickness(0, 0, 4, 2),
+                    ToolTip = on ? $"Bỏ tick: không gửi {kv.Value} đối tượng trên {name}" : $"Tick: gửi kèm {kv.Value} đối tượng trên {name}",
+                    Cursor = Cursors.Hand,
+                };
+                b.Click += (s, e) =>
+                {
+                    if (_excludedLayers.Contains(name)) _excludedLayers.Remove(name); else _excludedLayers.Add(name);
+                    if (_excludedLayers.Count >= layers.Count) _excludedLayers.Remove(name); // keep at least one layer
+                    RefreshChips();
+                };
+                row.Children.Add(b);
+            }
+            if (layers.Count > 12)
+            {
+                var more = MutedText($"… +{layers.Count - 12} layer");
+                more.FontSize = 11;
+                row.Children.Add(more);
+            }
+            var whole = SmallButton("→ Cả layer", "Dùng toàn bộ các layer đã tick (mọi đối tượng trên chúng), không chỉ phần đang chọn");
+            whole.Click += (s, e) =>
+            {
+                SetLayerScope(layers.Keys.Where(l => !_excludedLayers.Contains(l)).ToList(), null);
+                _selectionIncluded = false;
+                RefreshChips();
+            };
+            row.Children.Add(whole);
+            return row;
+        }
+
+        // ---------------------------------------------------------------- layer picker
+
+        private Border BuildLayerPanel()
+        {
+            var p = new StackPanel { Margin = new Thickness(8) };
+            var head = new DockPanel { Margin = new Thickness(0, 0, 0, 4) };
+            var close = SmallButton("Đóng", "Đóng danh sách layer");
+            close.Margin = new Thickness(0);
+            var apply = SmallButton("Dùng layer đã chọn", "Gửi kèm các layer đã tick với tin nhắn tiếp theo");
+            var none = SmallButton("Bỏ chọn", "Bỏ tick tất cả");
+            foreach (var b in new[] { close, apply, none }) { DockPanel.SetDock(b, Dock.Right); head.Children.Add(b); }
+            var title = new TextBlock { Text = "Chọn layer để chat chỉnh sửa", FontWeight = FontWeights.SemiBold, VerticalAlignment = VerticalAlignment.Center };
+            Theme.Ref(title, TextBlock.ForegroundProperty, Theme.Fg);
+            head.Children.Add(title);
+            p.Children.Add(head);
+            _layerSearch = InputBox();
+            _layerSearch.Margin = new Thickness(0, 2, 0, 4);
+            _layerSearch.ToolTip = "Lọc theo tên layer (gõ vài chữ, ví dụ: wall, A-D)";
+            _layerSearch.TextChanged += (s, e) => RenderLayerRows();
+            p.Children.Add(_layerSearch);
+            _layerPanelInfo = MutedText("");
+            _layerPanelInfo.FontSize = 11;
+            _layerPanelInfo.TextWrapping = TextWrapping.Wrap;
+            p.Children.Add(_layerPanelInfo);
+            _layerList = new StackPanel();
+            p.Children.Add(new ScrollViewer { Content = _layerList, MaxHeight = 260, VerticalScrollBarVisibility = ScrollBarVisibility.Auto, Margin = new Thickness(0, 4, 0, 0) });
+            var border = new Border { Child = p, BorderThickness = new Thickness(1), CornerRadius = new CornerRadius(4), Margin = new Thickness(6, 0, 6, 4), Visibility = Visibility.Collapsed };
+            Theme.Ref(border, Border.BackgroundProperty, Theme.CardBg);
+            Theme.Ref(border, Border.BorderBrushProperty, Theme.Border);
+            close.Click += (s, e) => border.Visibility = Visibility.Collapsed;
+            none.Click += (s, e) => { _layerPicked.Clear(); RenderLayerRows(); };
+            apply.Click += (s, e) =>
+            {
+                border.Visibility = Visibility.Collapsed;
+                SetLayerScope(_layerRows.Where(r => _layerPicked.Contains(r.Name)).Select(r => r.Name).ToList(), _layerRows);
+                RefreshChips();
+                _input.Focus();
+                if (_layerScope.Count > 0) _toolStatus.Text = $"Đã chọn {_layerScope.Count} layer — gõ yêu cầu, ví dụ \"đổi màu sang đỏ\" hoặc \"tăng chiều cao chữ lên 300\".";
+            };
+            return border;
+        }
+
+        private void ToggleLayerPanel()
+        {
+            if (_layerPanel.Visibility == Visibility.Visible) { _layerPanel.Visibility = Visibility.Collapsed; return; }
+            OpenLayerPanel();
+        }
+
+        /// <summary>Opens the layer picker (also used by the UI tests).</summary>
+        public void ShowLayerPicker() => Ui(OpenLayerPanel);
+
+        private void OpenLayerPanel()
+        {
+            try { _layerRows = LayerSource?.Invoke() ?? new List<LayerRow>(); }
+            catch (Exception ex) { Logger.Warn("layer list unavailable: " + ex.Message); _layerRows = new List<LayerRow>(); }
+            _layerPicked.Clear();
+            foreach (var l in _layerScope) _layerPicked.Add(l);
+            _layerSearch.Text = "";
+            RenderLayerRows();
+            _layerPanel.Visibility = Visibility.Visible;
+            _layerSearch.Focus();
+        }
+
+        private void RenderLayerRows()
+        {
+            _layerList.Children.Clear();
+            var rows = LayerSelection.Search(_layerRows, _layerSearch.Text);
+            int pickedObjects = _layerRows.Where(r => _layerPicked.Contains(r.Name)).Sum(r => r.Count);
+            _layerPanelInfo.Text = _layerRows.Count == 0
+                ? "Không đọc được layer của bản vẽ đang mở."
+                : $"{_layerRows.Count} layer · đã tick {_layerPicked.Count} layer ({pickedObjects} đối tượng). Đang hiện {rows.Count}.";
+            foreach (var r in rows.Take(300))
+            {
+                var name = r.Name;
+                var line = new DockPanel { Margin = new Thickness(0, 0, 0, 1) };
+                var count = MutedText(r.Count + (string.IsNullOrEmpty(r.State) ? "" : " · " + r.State));
+                count.FontSize = 11;
+                DockPanel.SetDock(count, Dock.Right);
+                line.Children.Add(count);
+                var swatch = new Border
+                {
+                    Width = 10, Height = 10, Margin = new Thickness(0, 0, 6, 0), BorderThickness = new Thickness(1), VerticalAlignment = VerticalAlignment.Center,
+                    Background = new SolidColorBrush(Color.FromRgb((byte)(r.Rgb >> 16), (byte)(r.Rgb >> 8), (byte)r.Rgb)),
+                };
+                Theme.Ref(swatch, Border.BorderBrushProperty, Theme.Border);
+                var label = new TextBlock { Text = name, FontWeight = r.Current ? FontWeights.SemiBold : FontWeights.Normal, TextTrimming = TextTrimming.CharacterEllipsis };
+                Theme.Ref(label, TextBlock.ForegroundProperty, r.Count == 0 ? Theme.MutedFg : Theme.Fg);
+                var content = new StackPanel { Orientation = Orientation.Horizontal };
+                content.Children.Add(swatch);
+                content.Children.Add(label);
+                var check = new CheckBox { Content = content, IsChecked = _layerPicked.Contains(name), VerticalAlignment = VerticalAlignment.Center };
+                check.Checked += (s, e) => { _layerPicked.Add(name); UpdateLayerInfo(); };
+                check.Unchecked += (s, e) => { _layerPicked.Remove(name); UpdateLayerInfo(); };
+                line.Children.Add(check);
+                _layerList.Children.Add(line);
+            }
+            if (rows.Count > 300)
+            {
+                var more = MutedText($"… còn {rows.Count - 300} layer — gõ để lọc.");
+                more.FontSize = 11;
+                _layerList.Children.Add(more);
+            }
+        }
+
+        private void UpdateLayerInfo()
+        {
+            int pickedObjects = _layerRows.Where(r => _layerPicked.Contains(r.Name)).Sum(r => r.Count);
+            _layerPanelInfo.Text = $"{_layerRows.Count} layer · đã tick {_layerPicked.Count} layer ({pickedObjects} đối tượng).";
+        }
+
+        /// <summary>Layers sent with the next message; counts from the picker rows (or the selection when converting).</summary>
+        private void SetLayerScope(List<string> names, List<LayerRow> rows)
+        {
+            _layerScope.Clear();
+            _layerScopeCounts.Clear();
+            if (rows == null)
+            {
+                try { rows = LayerSource?.Invoke(); } catch { rows = null; }
+            }
+            foreach (var n in names)
+            {
+                _layerScope.Add(n);
+                var r = rows?.FirstOrDefault(x => string.Equals(x.Name, n, StringComparison.OrdinalIgnoreCase));
+                if (r != null) _layerScopeCounts[n] = r.Count;
+            }
+        }
+
+        private void ClearLayerScope()
+        {
+            _layerScope.Clear();
+            _layerScopeCounts.Clear();
+        }
+
+        /// <summary>Test / controller hook: choose layers as if ticked in the picker.</summary>
+        public void SetLayerScopeForTest(Dictionary<string, int> layers) => Ui(() =>
+        {
+            ClearLayerScope();
+            foreach (var kv in layers) { _layerScope.Add(kv.Key); _layerScopeCounts[kv.Key] = kv.Value; }
+            RefreshChips();
+        });
 
         private UIElement Chip(string text, Action toggle, string toggleText, Action click, ImageSource thumb = null)
         {
@@ -928,6 +1159,7 @@ namespace ClaudeCAD.Plugin.UI
             var extras = new List<string>();
             if (e.SelectionCount > 0) extras.Add($"kèm {e.SelectionCount} đối tượng");
             if (e.ImageCount > 0) extras.Add($"kèm {e.ImageCount} ảnh");
+            if (e.Layers.Count > 0) extras.Add($"layer {LayerSelection.Label(e.Layers, 2)}");
             var footer = new StackPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Right, Margin = new Thickness(0, 3, 0, 0) };
             if (extras.Count > 0) { var x = MutedText(string.Join(" · ", extras) + "  "); x.FontSize = 11; footer.Children.Add(x); }
             var copy = SmallButton("Copy", "Copy tin nhắn");

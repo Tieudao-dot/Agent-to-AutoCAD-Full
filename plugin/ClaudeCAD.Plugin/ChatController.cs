@@ -142,6 +142,7 @@ namespace ClaudeCAD.Plugin
             ui.SkillDraftAddRequested += f => Guard("add draft", () => MainThread.Post(() => ImportSkillFiles(new[] { f })));
             ui.PlanAnswered += (id, kind) => Guard("plan", () => AnswerPlan(id, kind));
             ui.MentionSource = () => Interaction.DrawingNames(AcApp.DocumentManager.MdiActiveDocument);
+            ui.LayerSource = () => Interaction.LayerRows(AcApp.DocumentManager.MdiActiveDocument);
             ui.VersionOpenRequested += id => Guard("open version", () => MainThread.Post(() => OpenVersion(id)));
             ui.VersionCloseRequested += () => Guard("close version", () => MainThread.Post(CloseVersions));
             ui.OpenVersionsFolderRequested += () => Guard("versions folder", OpenVersionsFolder);
@@ -566,12 +567,29 @@ namespace ClaudeCAD.Plugin
             int selCount = 0;
             if (m.IncludeSelection && _selection != null && _selection.Count > 0)
             {
-                selCount = _selection.Count;
-                attachments["selection"] = new Dictionary<string, object>
+                // layers unticked under the selection chip are left out
+                var kept = LayerSelection.Filter(_selection.Handles, _selection.HandleLayers, m.ExcludedLayers);
+                var keptSet = new HashSet<string>(kept, StringComparer.OrdinalIgnoreCase);
+                var keptLayers = _selection.HandleLayers.Count == _selection.Handles.Count
+                    ? LayerSelection.CountByLayer(_selection.Handles.Select((h, i) => keptSet.Contains(h) ? _selection.HandleLayers[i] : null).Where(l => l != null))
+                    : new Dictionary<string, int>();
+                selCount = kept.Count;
+                var selDict = new Dictionary<string, object>
                 {
-                    ["handles"] = _selection.Handles.Cast<object>().ToList(),
-                    ["count"] = _selection.Count,
-                    ["summary"] = _selection.Summary,
+                    ["handles"] = kept.Cast<object>().ToList(),
+                    ["count"] = kept.Count,
+                    ["summary"] = kept.Count == _selection.Count ? _selection.Summary : $"{kept.Count} đối tượng",
+                };
+                if (keptLayers.Count > 0) selDict["layers"] = keptLayers.ToDictionary(kv => kv.Key, kv => (object)kv.Value);
+                if (kept.Count > 0) attachments["selection"] = selDict;
+            }
+            if (m.Layers.Count > 0)
+            {
+                attachments["layers"] = new Dictionary<string, object>
+                {
+                    ["names"] = m.Layers.Cast<object>().ToList(),
+                    ["counts"] = m.Layers.ToDictionary(l => l, l => (object)(m.LayerCounts.TryGetValue(l, out var n) ? n : 0)),
+                    ["total"] = m.Layers.Sum(l => m.LayerCounts.TryGetValue(l, out var n) ? n : 0),
                 };
             }
             if (m.Images.Count > 0)
@@ -600,7 +618,7 @@ namespace ClaudeCAD.Plugin
             if (confirm != null) payload["confirm"] = confirm;
             if (plan != null) payload["plan"] = plan;
 
-            var entry = new ChatEntry { Role = "user", Text = m.Text, SelectionCount = selCount, ImageCount = m.Images.Count };
+            var entry = new ChatEntry { Role = "user", Text = m.Text, SelectionCount = selCount, ImageCount = m.Images.Count, Layers = m.Layers.ToList() };
             _lastPayload = payload;
             _lastUserEntry = entry;
             _settings.AddHistory(m.Text);
@@ -659,7 +677,7 @@ namespace ClaudeCAD.Plugin
         private void Retry()
         {
             if (_busy || _lastPayload == null) return;
-            var copy = new ChatEntry { Role = "user", Text = _lastUserEntry?.Text ?? "", SelectionCount = _lastUserEntry?.SelectionCount ?? 0, ImageCount = _lastUserEntry?.ImageCount ?? 0 };
+            var copy = new ChatEntry { Role = "user", Text = _lastUserEntry?.Text ?? "", SelectionCount = _lastUserEntry?.SelectionCount ?? 0, ImageCount = _lastUserEntry?.ImageCount ?? 0, Layers = _lastUserEntry?.Layers?.ToList() ?? new List<string>() };
             if (!_ipc.IsConnected)
             {
                 Ui.AddErrorCard("Vẫn chưa kết nối được với trợ lý.", true);

@@ -65,6 +65,14 @@ Phần giao diện của palette `CLAUDECHAT` sau đợt nâng cấp. Code: `plu
 | 32 | Biên bản sau mỗi lượt | Không cần làm gì. Cuối mỗi lượt chat, plugin lưu biên bản của bản vẽ; lần sau mở lại (hôm sau, AutoCAD khác) so với bản vẽ hiện tại → báo phần sửa tay như trên. ⚙ **Lưu biên bản cạnh bản vẽ** để máy khác cũng so được. | Biên bản = mỗi đối tượng: layer, loại, mã kiểm tra (khung bao, độ dài, chữ, block, thuộc tính, màu, nét…), nén gzip. Lưu ở `%LocalAppData%\ClaudeCAD\snapshots`, ghi đè mỗi lượt, tự xóa sau 90 ngày không dùng; tùy chọn thêm `.claudecad\<tên>.dwg.snap.gz` cạnh DWG. Bản vẽ > 20.000 đối tượng: chỉ so số lượng theo layer + các đối tượng Claude/cậu đã đụng tới. Bấm **New** xóa biên bản. Không ghi gì vào file DWG. |
 | 33 | Lịch sử phiên bản | Tự động: ngay trước khi chat sửa bản vẽ, nếu bản sao gần nhất đã cũ hơn **30 phút** thì plugin lưu một bản sao DWG. Giữ **10 bản** gần nhất. Nút **Phiên bản (N)** → **Xem**: mở bản sao trong **tab chỉ xem**; thanh trên cùng có **Đóng — về bản hiện tại**. Tắt trong ⚙. | Bản sao bằng `Database.Wblock()` + `SaveAs` → bản vẽ đang mở không bị đụng tới. Lưu ở `%LocalAppData%\ClaudeCAD\versions\v-<mã bản vẽ>\`. Chỉ lưu khi **chat** sửa (sửa tay không tạo phiên bản), bỏ qua bản vẽ chưa lưu (Drawing1). Khi đang xem bản cũ, ô chat bị khóa. Xref đường dẫn tương đối có thể không hiện trong bản sao. |
 
+## G. v0.8.0 — chọn layer rồi chat chỉnh sửa
+
+| # | Tính năng | Cách dùng | Ghi chú |
+| --- | --- | --- | --- |
+| 34 | Layer của phần đang chọn | Quét chọn đối tượng (nút **Chọn đối tượng** hoặc chọn sẵn trên bản vẽ) → chip "Kèm 128 đối tượng đang chọn trên 3 layer", dưới đó là từng layer kèm số đối tượng: **☑ A-WALL 120 · ☑ A-DOOR 8 · ☑ A-TEXT 0**. Bỏ tick layer nào thì đối tượng trên layer đó không được gửi. **→ Cả layer**: dùng toàn bộ các layer đã tick (mọi đối tượng trên chúng) thay vì chỉ phần đang chọn. | Chọn bằng nút **Chọn đối tượng**: đọc layer tới 20.000 đối tượng; chọn sẵn trên bản vẽ: tới 2.000 (để AutoCAD không khựng khi quét chọn). |
+| 35 | Chọn layer trong khung chat | Nút **Layer** → danh sách mọi layer của bản vẽ: ô lọc theo tên, ô màu, số đối tượng, trạng thái (hiện hành / tắt / đóng băng / khóa / xref) → tick → **Dùng layer đã chọn** → chip "Layer: A-WALL, A-DOOR · 128 đối tượng". | Chip được gửi kèm tin nhắn tiếp theo rồi tự bỏ (như vùng chọn). |
+| 36 | Claude hiểu theo câu | "Đổi màu sang đỏ", "khóa lại", "tắt đi", "đổi tên thành…" → sửa **thuộc tính layer**, làm luôn. "Tăng chiều cao chữ lên 300", "dời sang phải 500", "xóa hết" → sửa **các đối tượng trên layer**: quá 20 đối tượng thì vẫn hiện thẻ **Đồng ý / Hủy** (kèm Xem trước). Câu mơ hồ thì Claude hỏi lại một câu. | `attachments.layers` + `selection.layers`; quy tắc trong system prompt. |
+
 ## Kiểm chứng
 
 - Lõi thuần (markdown, lịch sử, cài đặt, mẫu lệnh, bảng Excel) có unit test chạy mọi OS: `dotnet test plugin/ClaudeCAD.Core.Tests`.

@@ -15,8 +15,12 @@ namespace ClaudeCAD.Plugin.Drawing
     public sealed class PickedSelection
     {
         public List<string> Handles = new List<string>();
+        /// <summary>Layer of each handle (same order as Handles); empty when the selection was too large to analyse.</summary>
+        public List<string> HandleLayers = new List<string>();
         public string Summary = "";
         public int Count => Handles.Count;
+        /// <summary>Objects per layer, most first (empty when not analysed).</summary>
+        public Dictionary<string, int> Layers => LayerSelection.CountByLayer(HandleLayers);
     }
 
     /// <summary>
@@ -55,13 +59,15 @@ namespace ClaudeCAD.Plugin.Drawing
 
         /// <summary>Selections larger than this are sent by handle without opening every object.</summary>
         public const int DescribeLimit = 2000;
+        /// <summary>"Chọn đối tượng" (explicit pick): objects are opened to read their layer up to this many.</summary>
+        public const int PickDescribeLimit = 20000;
 
-        internal static PickedSelection Describe(Document doc, IEnumerable<ObjectId> ids)
+        internal static PickedSelection Describe(Document doc, IEnumerable<ObjectId> ids, int limit = DescribeLimit)
         {
             var sel = new PickedSelection();
             var byType = new Dictionary<string, int>();
             var all = ids as ObjectId[] ?? ids.ToArray();
-            if (all.Length > DescribeLimit)
+            if (all.Length > limit)
             {
                 // Ctrl+A on a big drawing: do not open thousands of objects on the UI thread
                 foreach (var id in all) if (!id.IsNull && !id.IsErased) sel.Handles.Add(id.Handle.ToString());
@@ -75,6 +81,7 @@ namespace ClaudeCAD.Plugin.Drawing
                     if (id.IsNull || id.IsErased) continue;
                     if (!(tr.GetObject(id, OpenMode.ForRead) is Entity e)) continue;
                     sel.Handles.Add(e.Handle.ToString());
+                    sel.HandleLayers.Add(e.Layer);
                     var t = Acad.TypeName(e);
                     byType[t] = byType.TryGetValue(t, out var n) ? n + 1 : 1;
                 }
@@ -93,8 +100,9 @@ namespace ClaudeCAD.Plugin.Drawing
             var opts = new PromptSelectionOptions { MessageForAdding = "\nChọn đối tượng gửi cho Claude (Enter để xong): " };
             var res = ed.GetSelection(opts);
             if (res.Status != PromptStatus.OK || res.Value == null) return;
-            var sel = Describe(doc, res.Value.GetObjectIds());
-            ed.WriteMessage($"\nClaudeCAD: đã chọn {sel.Count} đối tượng để gửi kèm tin nhắn.\n");
+            var sel = Describe(doc, res.Value.GetObjectIds(), PickDescribeLimit);
+            var layers = sel.Layers;
+            ed.WriteMessage($"\nClaudeCAD: đã chọn {sel.Count} đối tượng" + (layers.Count > 0 ? $" trên {layers.Count} layer ({string.Join(", ", layers.Keys.Take(5))}{(layers.Count > 5 ? ", …" : "")})" : "") + " để gửi kèm tin nhắn.\n");
             SelectionPicked?.Invoke(sel);
         }
 
@@ -260,6 +268,50 @@ namespace ClaudeCAD.Plugin.Drawing
                 tr.Commit();
             }
             return list;
+        }
+
+        // ------------------------------------------------------------------ layer picker
+
+        /// <summary>Every layer of the drawing with its color (RGB), state and number of objects in model/paper space.</summary>
+        public static List<LayerRow> LayerRows(Document doc)
+        {
+            var rows = new List<LayerRow>();
+            if (doc == null) return rows;
+            var db = doc.Database;
+            var counts = new Dictionary<ObjectId, int>();
+            using (var tr = db.TransactionManager.StartOpenCloseTransaction())
+            {
+                var bt = (BlockTable)tr.GetObject(db.BlockTableId, OpenMode.ForRead);
+                foreach (ObjectId btrId in bt)
+                {
+                    if (!(tr.GetObject(btrId, OpenMode.ForRead) is BlockTableRecord btr) || !btr.IsLayout) continue;
+                    foreach (ObjectId id in btr)
+                    {
+                        if (!(tr.GetObject(id, OpenMode.ForRead) is Entity e) || e is Viewport) continue;
+                        counts[e.LayerId] = counts.TryGetValue(e.LayerId, out var n) ? n + 1 : 1;
+                    }
+                }
+                var lt = (LayerTable)tr.GetObject(db.LayerTableId, OpenMode.ForRead);
+                foreach (ObjectId id in lt)
+                {
+                    if (!(tr.GetObject(id, OpenMode.ForRead) is LayerTableRecord l) || l.IsErased) continue;
+                    int rgb = 0xFFFFFF;
+                    try { var c = l.Color.ColorValue; rgb = (c.R << 16) | (c.G << 8) | c.B; } catch { }
+                    rows.Add(new LayerRow
+                    {
+                        Name = l.Name,
+                        Rgb = rgb,
+                        Count = counts.TryGetValue(id, out var n) ? n : 0,
+                        On = !l.IsOff,
+                        Frozen = l.IsFrozen,
+                        Locked = l.IsLocked,
+                        Current = id == db.Clayer,
+                        Xref = l.IsDependent,
+                    });
+                }
+                tr.Commit();
+            }
+            return rows.OrderBy(r => r.Xref).ThenBy(r => r.Name, StringComparer.OrdinalIgnoreCase).ToList();
         }
 
         // ------------------------------------------------------------------ one point for a macro

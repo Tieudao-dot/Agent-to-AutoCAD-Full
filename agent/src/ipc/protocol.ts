@@ -170,9 +170,20 @@ export interface ImageAttachment {
 }
 
 export interface UserAttachments {
-  /** Objects the user selected in the drawing. */
-  selection?: { handles: string[]; count?: number; summary?: string };
+  /** Objects the user selected in the drawing (layers = objects per layer of the selection). */
+  selection?: { handles: string[]; count?: number; summary?: string; layers?: Record<string, number> };
   images?: ImageAttachment[];
+  /** Layers the user ticked in the palette's layer picker: the request is about them. */
+  layers?: { names: string[]; counts?: Record<string, number>; total?: number };
+}
+
+function countMap(v: unknown): Record<string, number> | undefined {
+  if (typeof v !== 'object' || v === null || Array.isArray(v)) return undefined;
+  const out: Record<string, number> = {};
+  for (const [k, n] of Object.entries(v as Record<string, unknown>).slice(0, 2000)) {
+    if (k && typeof n === 'number' && n >= 0) out[k] = Math.floor(n);
+  }
+  return Object.keys(out).length ? out : undefined;
 }
 
 export interface UserContext {
@@ -298,11 +309,25 @@ function parseAttachments(v: unknown): UserAttachments | undefined {
   const out: UserAttachments = {};
   const sel = a.selection as Record<string, unknown> | undefined;
   if (sel && Array.isArray(sel.handles)) {
+    const layers = countMap(sel.layers);
     out.selection = {
       handles: sel.handles.filter((h): h is string => typeof h === 'string'),
       ...(typeof sel.count === 'number' ? { count: sel.count } : {}),
       ...(typeof sel.summary === 'string' ? { summary: sel.summary } : {}),
+      ...(layers ? { layers } : {}),
     };
+  }
+  const lay = a.layers as Record<string, unknown> | undefined;
+  if (lay && Array.isArray(lay.names)) {
+    const names = lay.names.filter((n): n is string => typeof n === 'string' && n.length > 0 && n.length <= 255).slice(0, 500);
+    if (names.length) {
+      const counts = countMap(lay.counts);
+      out.layers = {
+        names,
+        ...(counts ? { counts } : {}),
+        ...(typeof lay.total === 'number' && lay.total >= 0 ? { total: Math.floor(lay.total) } : {}),
+      };
+    }
   }
   if (Array.isArray(a.images)) {
     const imgs = a.images.filter(
@@ -311,7 +336,7 @@ function parseAttachments(v: unknown): UserAttachments | undefined {
     );
     if (imgs.length) out.images = imgs.map((i) => ({ media_type: i.media_type, data: i.data }));
   }
-  return out.selection || out.images ? out : undefined;
+  return out.selection || out.images || out.layers ? out : undefined;
 }
 
 function parseContext(v: unknown): UserContext | undefined {

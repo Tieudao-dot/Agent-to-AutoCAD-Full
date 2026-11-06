@@ -154,6 +154,73 @@ namespace ClaudeCAD.Plugin.Core
     }
 
     // =====================================================================================
+    // Chọn layer để chat chỉnh sửa
+    // =====================================================================================
+
+    /// <summary>One layer of the drawing for the palette's layer picker.</summary>
+    public sealed class LayerRow
+    {
+        public string Name;
+        public int Rgb = 0xFFFFFF;
+        public int Count;
+        public bool On = true, Frozen, Locked, Current, Xref;
+
+        public string State
+        {
+            get
+            {
+                var s = new List<string>();
+                if (Current) s.Add("hiện hành");
+                if (!On) s.Add("tắt");
+                if (Frozen) s.Add("đóng băng");
+                if (Locked) s.Add("khóa");
+                if (Xref) s.Add("xref");
+                return string.Join(", ", s);
+            }
+        }
+    }
+
+    public static class LayerSelection
+    {
+        /// <summary>Objects per layer, most first (ties by name).</summary>
+        public static Dictionary<string, int> CountByLayer(IEnumerable<string> layers)
+        {
+            var d = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
+            foreach (var l in layers ?? Enumerable.Empty<string>())
+            {
+                var k = string.IsNullOrEmpty(l) ? "0" : l;
+                d[k] = d.TryGetValue(k, out var n) ? n + 1 : 1;
+            }
+            return d.OrderByDescending(kv => kv.Value).ThenBy(kv => kv.Key, StringComparer.OrdinalIgnoreCase)
+                    .ToDictionary(kv => kv.Key, kv => kv.Value, StringComparer.OrdinalIgnoreCase);
+        }
+
+        /// <summary>Handles whose layer is not excluded (layers unknown → everything is kept).</summary>
+        public static List<string> Filter(IList<string> handles, IList<string> layers, ICollection<string> excluded)
+        {
+            if (excluded == null || excluded.Count == 0 || layers == null || layers.Count != handles.Count) return handles.ToList();
+            var ex = new HashSet<string>(excluded, StringComparer.OrdinalIgnoreCase);
+            var r = new List<string>();
+            for (int i = 0; i < handles.Count; i++) if (!ex.Contains(string.IsNullOrEmpty(layers[i]) ? "0" : layers[i])) r.Add(handles[i]);
+            return r;
+        }
+
+        /// <summary>"A-WALL, A-DOOR, A-DIM +2".</summary>
+        public static string Label(IEnumerable<string> names, int max = 3)
+        {
+            var l = names.ToList();
+            return string.Join(", ", l.Take(max)) + (l.Count > max ? $" +{l.Count - max}" : "");
+        }
+
+        /// <summary>Layers whose name contains every word of the query (case-insensitive).</summary>
+        public static List<LayerRow> Search(IEnumerable<LayerRow> rows, string query)
+        {
+            var words = (query ?? "").Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
+            return rows.Where(r => words.All(w => r.Name.IndexOf(w, StringComparison.OrdinalIgnoreCase) >= 0)).ToList();
+        }
+    }
+
+    // =====================================================================================
     // @ — gõ tên layer / block / kiểu chữ có trong bản vẽ
     // =====================================================================================
 

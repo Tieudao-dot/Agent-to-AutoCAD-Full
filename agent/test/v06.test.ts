@@ -183,3 +183,38 @@ describe('manual edits (v0.7)', () => {
     assert.ok(SYSTEM_PROMPT.includes('Manual edits between turns'));
   });
 });
+
+describe('layer scope', () => {
+  it('parses picked layers and the selection breakdown', () => {
+    const m = parsePluginMessage({
+      type: 'user_message',
+      text: 'đổi màu sang đỏ',
+      attachments: {
+        selection: { handles: ['1A', '1B'], count: 2, layers: { 'A-WALL': 2, bad: 'x' } },
+        layers: { names: ['A-WALL', '', 'A-DOOR', 3], counts: { 'A-WALL': 120, 'A-DOOR': 8 }, total: 128 },
+      },
+    }) as { attachments?: unknown };
+    assert.deepEqual(m.attachments, {
+      selection: { handles: ['1A', '1B'], count: 2, layers: { 'A-WALL': 2 } },
+      layers: { names: ['A-WALL', 'A-DOOR'], counts: { 'A-WALL': 120, 'A-DOOR': 8 }, total: 128 },
+    });
+    const onlyLayers = parsePluginMessage({ type: 'user_message', text: 'khóa lại', attachments: { layers: { names: ['A-TEMP'] } } }) as { attachments?: unknown };
+    assert.deepEqual(onlyLayers.attachments, { layers: { names: ['A-TEMP'] } });
+  });
+
+  it('explains layers vs objects to Claude', () => {
+    const all = contextPreamble({
+      type: 'user_message',
+      text: 'đổi màu sang đỏ',
+      attachments: {
+        selection: { handles: ['1A'], count: 1, layers: { 'A-WALL': 1 } },
+        layers: { names: ['A-WALL', 'A-DOOR'], counts: { 'A-WALL': 120, 'A-DOOR': 8 }, total: 128 },
+      },
+    }).join('\n');
+    assert.match(all, /theo layer: A-WALL 1/);
+    assert.match(all, /Layer người dùng chọn: A-WALL \(120 đối tượng\), A-DOOR \(8 đối tượng\) — tổng 128 đối tượng/);
+    assert.match(all, /set_layer_props on each layer, no confirmation needed/);
+    assert.match(all, /request_confirmation/);
+    assert.ok(SYSTEM_PROMPT.includes('Changing the properties of layers the user chose'));
+  });
+});

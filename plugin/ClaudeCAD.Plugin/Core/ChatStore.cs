@@ -31,6 +31,8 @@ namespace ClaudeCAD.Plugin.Core
         public int SelectionCount;
         /// <summary>Net drawing changes of the turn (assistant entries; null = none).</summary>
         public ChangeSummary Changes;
+        /// <summary>Layers the user chose for this request (user entries).</summary>
+        public List<string> Layers = new List<string>();
     }
 
     /// <summary>
@@ -93,6 +95,7 @@ namespace ClaudeCAD.Plugin.Core
                     ["selection"] = e.SelectionCount,
                     ["handles"] = e.Handles.Cast<object>().ToList(),
                     ["changes"] = e.Changes?.ToDict(),
+                    ["layers"] = e.Layers.Count > 0 ? e.Layers.Cast<object>().ToList() : null,
                     ["tools"] = e.Tools.Select(t => (object)new Dictionary<string, object>
                     {
                         ["tool"] = t.Tool, ["state"] = t.State, ["ms"] = t.Ms, ["summary"] = t.Summary, ["error"] = t.Error,
@@ -129,6 +132,7 @@ namespace ClaudeCAD.Plugin.Core
                     if (DateTime.TryParse(S(o, "time"), CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out var tm)) e.Time = tm;
                     if (o.TryGetValue("handles", out var hv) && hv is List<object> hl) e.Handles = hl.OfType<string>().ToList();
                     if (o.TryGetValue("changes", out var cv) && cv is Dictionary<string, object> cd) e.Changes = ChangeSummary.FromDict(cd);
+                    if (o.TryGetValue("layers", out var lv) && lv is List<object> ll) e.Layers = ll.OfType<string>().ToList();
                     if (o.TryGetValue("tools", out var tv) && tv is List<object> tl)
                         foreach (var to in tl.OfType<Dictionary<string, object>>())
                             e.Tools.Add(new ToolLogEntry { Tool = S(to, "tool"), State = S(to, "state"), Ms = (long)N(to, "ms"), Summary = S(to, "summary"), Error = S(to, "error") });
@@ -152,6 +156,7 @@ namespace ClaudeCAD.Plugin.Core
                 sb.AppendLine();
                 if (e.SelectionCount > 0) sb.AppendLine($"_Kèm {e.SelectionCount} đối tượng đang chọn_").AppendLine();
                 if (e.ImageCount > 0) sb.AppendLine($"_Kèm {e.ImageCount} ảnh_").AppendLine();
+                if (e.Layers.Count > 0) sb.AppendLine($"_Layer đã chọn: {string.Join(", ", e.Layers)}_").AppendLine();
                 sb.AppendLine(e.Text);
                 sb.AppendLine();
                 if (e.Changes != null && !e.Changes.IsEmpty)

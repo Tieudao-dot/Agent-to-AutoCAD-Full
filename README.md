@@ -179,6 +179,12 @@ Chi tiết: [`docs/palette-features.md`](docs/palette-features.md) mục E.
 - **Phiên bản (N)**: bản sao bản vẽ trước khi chat sửa (30 phút một lần, giữ 10 bản) → **Xem** mở tab chỉ xem → **Đóng — về bản hiện tại**.
 - Chi tiết: [`docs/palette-features.md`](docs/palette-features.md) mục F.
 
+### v0.8 — chọn layer rồi chat
+
+- Quét chọn đối tượng → khung chat hiện các layer của chúng (bỏ tick được, hoặc **→ Cả layer**).
+- Nút **Layer** → tick layer cần sửa → gõ "đổi màu sang đỏ", "khóa lại", "tăng chiều cao chữ lên 300"... Claude tự hiểu sửa layer hay sửa đối tượng trên layer; sửa nhiều đối tượng vẫn hỏi Đồng ý / Hủy.
+- Chi tiết: [`docs/palette-features.md`](docs/palette-features.md) mục G.
+
 ## 5. Đóng gói bundle (autoloader)
 
 Xem [`bundle/README.md`](bundle/README.md) (thêm ở phase sau): tạo `ClaudeCAD.bundle` đặt vào `%AppData%\Autodesk\ApplicationPlugins` để AutoCAD tự nạp, không cần NETLOAD.

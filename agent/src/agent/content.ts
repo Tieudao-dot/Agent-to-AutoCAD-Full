@@ -53,9 +53,21 @@ export function contextPreamble(msg: UserMessage): string[] {
     const n = sel.count ?? sel.handles.length;
     const listed = sel.handles.slice(0, MAX_LISTED_HANDLES).join(', ');
     const more = sel.handles.length > MAX_LISTED_HANDLES ? ` … (+${sel.handles.length - MAX_LISTED_HANDLES})` : '';
+    const byLayer = sel.layers ? Object.entries(sel.layers).map(([l, c]) => `${l} ${c}`).join(', ') : '';
     lines.push(
-      `[Đối tượng người dùng đang chọn: ${n}${sel.summary ? ` (${sel.summary})` : ''}. ` +
-        `"mấy cái này / các đối tượng này / chúng" refers to them. Handles: ${listed}${more}]`,
+      `[Đối tượng người dùng đang chọn: ${n}${sel.summary ? ` (${sel.summary})` : ''}${byLayer ? `, theo layer: ${byLayer}` : ''}. ` +
+        `"mấy cái này / các đối tượng này / chúng / phần đang chọn" refers to them (only these objects, not the whole layers). Handles: ${listed}${more}]`,
+    );
+  }
+  const lay = msg.attachments?.layers;
+  if (lay && lay.names.length > 0) {
+    const list = lay.names.map((l) => (lay.counts && l in lay.counts ? `${l} (${lay.counts[l]} đối tượng)` : l)).join(', ');
+    lines.push(
+      `[Layer người dùng chọn: ${list}${typeof lay.total === 'number' ? ` — tổng ${lay.total} đối tượng` : ''}. ` +
+        '"layer này / các layer đã chọn" and an unqualified request refer to them. Decide from the wording: layer properties ' +
+        '(color, linetype, lineweight, on/off, freeze, lock, plot, rename) → set_layer_props on each layer, no confirmation needed; ' +
+        'the objects on them (text height, move, erase, change...) → find them with list_entities / count_entities filtered by layer, ' +
+        'then modify (more than 20 objects → request_confirmation with the handles first). If the wording fits both, ask one short question.]',
     );
   }
   if (msg.edited) {

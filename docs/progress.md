@@ -127,3 +127,13 @@ Chi tiết: `docs/palette-features.md` mục E. Cloud: `dotnet test` 88/88, `npm
 - **Lịch sử phiên bản**: bản sao DWG trước khi chat sửa, tối đa 30 phút một lần, giữ 10 bản; **Phiên bản (N) ▸ Xem** mở tab chỉ xem, **Đóng — về bản hiện tại**.
 
 Cloud: `dotnet test` 96/96, `npm test` 91/91, build plugin net48 + net8 ✅. Cần test trên AutoCAD: V7-1 … V7-6 trong `docs/test-log.md`.
+
+## v0.8.0 — chọn layer rồi chat chỉnh sửa ✅ code xong
+
+Theo lựa chọn của người dùng (cả hai cách chọn; Claude tự hiểu theo câu; giữ xác nhận trừ khi chỉ đổi thuộc tính):
+
+- Chip vùng chọn hiện các layer của phần đã chọn kèm số đối tượng, bỏ tick để loại layer, **→ Cả layer** để dùng toàn bộ layer.
+- Nút **Layer**: danh sách layer có lọc, màu, số đối tượng, trạng thái → tick → chip "Layer: …".
+- Claude phân biệt sửa thuộc tính layer (làm luôn) với sửa đối tượng trên layer (quá 20 thì thẻ Đồng ý / Hủy).
+
+Cloud: `dotnet test` 98/98, `npm test` 93/93, build plugin net48 + net8 ✅. Cần test trên AutoCAD: L-1 … L-4 trong `docs/test-log.md`.

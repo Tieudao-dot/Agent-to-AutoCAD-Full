@@ -197,6 +197,39 @@ namespace ClaudeCAD.Core.Tests
             Assert.Equal(end.Length, c2);
         }
 
+        // ------------------------------------------------------------------ layer scope
+
+        [Fact]
+        public void Layer_counts_filter_and_labels()
+        {
+            var layers = new List<string> { "A-WALL", "A-DOOR", "A-WALL", "", "a-wall" };
+            var counts = LayerSelection.CountByLayer(layers);
+            Assert.Equal(new[] { "A-WALL", "0", "A-DOOR" }, counts.Keys.ToArray());
+            Assert.Equal(3, counts["a-wall"]);
+
+            var handles = new List<string> { "1", "2", "3", "4", "5" };
+            Assert.Equal(new[] { "2", "4" }, LayerSelection.Filter(handles, layers, new[] { "a-wall" }));
+            Assert.Equal(handles, LayerSelection.Filter(handles, layers, new string[0]));
+            Assert.Equal(handles, LayerSelection.Filter(handles, new List<string>(), new[] { "A-WALL" })); // layers unknown → keep all
+
+            Assert.Equal("A, B, C +2", LayerSelection.Label(new[] { "A", "B", "C", "D", "E" }));
+            var rows = new[] { new LayerRow { Name = "A-WALL" }, new LayerRow { Name = "A-WALL-EX" }, new LayerRow { Name = "M-DUCT" } };
+            Assert.Equal(new[] { "A-WALL", "A-WALL-EX" }, LayerSelection.Search(rows, "wall").Select(r => r.Name).ToArray());
+            Assert.Equal(new[] { "A-WALL-EX" }, LayerSelection.Search(rows, "wall ex").Select(r => r.Name).ToArray());
+            Assert.Equal(3, LayerSelection.Search(rows, "").Count);
+            Assert.Equal("hiện hành, khóa", new LayerRow { Current = true, Locked = true }.State);
+        }
+
+        [Fact]
+        public void User_entry_keeps_chosen_layers()
+        {
+            var t = new ChatTranscript { DrawingKey = "k" };
+            t.Entries.Add(new ChatEntry { Role = "user", Text = "đổi màu sang đỏ", Layers = { "A-WALL", "A-DOOR" } });
+            var back = ChatTranscript.FromJson(t.ToJson());
+            Assert.Equal(new[] { "A-WALL", "A-DOOR" }, back.Entries[0].Layers);
+            Assert.Contains("Layer đã chọn: A-WALL, A-DOOR", back.ToMarkdown());
+        }
+
         // ------------------------------------------------------------------ project notes
 
         [Fact]
