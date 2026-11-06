@@ -46,6 +46,22 @@ namespace ClaudeCAD.Plugin.UI
         public event Action<string> SkillEditRequested;
         public event Action<string> SkillDeleteRequested;
         public event Action OpenSkillsFolderRequested;
+        // v0.6: look at the drawing, read-only, project notes, macros, templates, skill drafts, plans
+        public event Action CaptureScreenRequested;
+        public event Action<bool> ReadOnlyToggled;
+        public event Action NotesRequested;
+        public event Action<string, string> NotesSaved;            // project-folder notes, drawing notes
+        public event Action<ChatEntry, string> MacroSaveRequested;  // turn, name
+        public event Action<string, bool> MacroRunRequested;        // name, at a picked point
+        public event Action<string> MacroDeleteRequested;
+        public event Action OpenMacrosFolderRequested;
+        public event Action<string, string> TemplateSaveRequested;  // title, text
+        public event Action CreateSkillFromChatRequested;
+        public event Action<string> SkillDraftOpenRequested;        // SKILL.md of the draft
+        public event Action<string> SkillDraftAddRequested;
+        public event Action<string, string> PlanAnswered;           // id, go | edit | cancel
+        /// <summary>Layer / block / style names of the active drawing for "@" (called on the UI thread).</summary>
+        public Func<List<MentionItem>> MentionSource;
 
         // ------------------------------------------------------------ layout
         private readonly StackPanel _messages = new StackPanel { Margin = new Thickness(6) };
@@ -65,7 +81,22 @@ namespace ClaudeCAD.Plugin.UI
         private List<SkillInfo> _skills = new List<SkillInfo>();
         private List<string> _standardNames = new List<string>(PaletteSettings.Standards);
         private ComboBox _model, _effort, _theme;
-        private CheckBox _notify;
+        private CheckBox _notify, _visualCheck, _planFirst, _suggestCheck, _hotkey;
+        // v0.6
+        private readonly Button _capture, _macrosBtn, _notesBtn;
+        private readonly ToggleButton _readOnlyBtn;
+        private readonly WrapPanel _suggestions = new WrapPanel { Margin = new Thickness(0, 0, 0, 4), Visibility = Visibility.Collapsed };
+        private readonly Popup _macrosPopup, _mentionPopup;
+        private readonly Border _notesPanel;
+        private readonly StackPanel _macroRows = new StackPanel();
+        private readonly ListBox _mentionList;
+        private TextBox _notesFolder, _notesDrawing;
+        private TextBlock _notesFolderLabel;
+        private List<Macro> _macros = new List<Macro>();
+        private List<MentionItem> _mentionCache;
+        private int _mentionStart = -1;
+        private bool _suppressReadOnlyEvent;
+        private string _lastUserText = "";
 
         // ------------------------------------------------------------ state
         private PaletteSettings _settings = new PaletteSettings();
@@ -134,10 +165,25 @@ namespace ClaudeCAD.Plugin.UI
             _skillsBtn = MakeButton("Skill", "Danh sách skill: bật/tắt, sửa, xóa");
             _skillsBtn.Click += (s, e) => { RefreshSkillsPanel(); _skillsPopup.IsOpen = !_skillsPopup.IsOpen; };
             ctxBar.Children.Add(_skillsBtn);
+            _macrosBtn = MakeButton("Macro", "Macro đã lưu: chạy lại các lượt vẽ ưng ý mà không cần Claude (không tốn token)");
+            _macrosBtn.Click += (s, e) => { RefreshMacrosPanel(); _macrosPopup.IsOpen = !_macrosPopup.IsOpen; };
+            ctxBar.Children.Add(_macrosBtn);
+            _notesBtn = MakeButton("Ghi chú", "Ghi chú dự án gửi kèm mọi tin nhắn (cao độ, chiều dày tường, khung tên...)");
+            _notesBtn.Click += (s, e) => NotesRequested?.Invoke();
+            ctxBar.Children.Add(_notesBtn);
+            _readOnlyBtn = new ToggleButton { Content = "🔓 Sửa được", ToolTip = "Chỉ xem: Claude chỉ được đọc, đo, hỏi đáp — không sửa bản vẽ này", MinWidth = 40, Margin = new Thickness(4, 0, 0, 0), Padding = new Thickness(8, 2, 8, 2) };
+            _readOnlyBtn.Checked += (s, e) => { PaintReadOnly(); if (!_suppressReadOnlyEvent) ReadOnlyToggled?.Invoke(true); };
+            _readOnlyBtn.Unchecked += (s, e) => { PaintReadOnly(); if (!_suppressReadOnlyEvent) ReadOnlyToggled?.Invoke(false); };
+            ctxBar.Children.Add(_readOnlyBtn);
             _standard.SelectionChanged += (s, e) => OnSettingsUi();
             _scale.SelectionChanged += (s, e) => OnSettingsUi();
             DockPanel.SetDock(ctxBar, Dock.Top);
             root.Children.Add(ctxBar);
+
+            // ---- project notes editor (inline: text boxes in WPF popups get no keys inside a PaletteSet)
+            _notesPanel = BuildNotesPanel();
+            DockPanel.SetDock(_notesPanel, Dock.Top);
+            root.Children.Add(_notesPanel);
 
             // ---- bottom: tool status, chips, input, action buttons
             var bottom = new DockPanel { Margin = new Thickness(6, 2, 6, 6) };
@@ -146,6 +192,8 @@ namespace ClaudeCAD.Plugin.UI
             _toolStatus.Margin = new Thickness(0, 0, 0, 4);
             DockPanel.SetDock(_toolStatus, Dock.Top);
             bottom.Children.Add(_toolStatus);
+            DockPanel.SetDock(_suggestions, Dock.Top);
+            bottom.Children.Add(_suggestions);
             DockPanel.SetDock(_chips, Dock.Top);
             bottom.Children.Add(_chips);
 
@@ -157,7 +205,9 @@ namespace ClaudeCAD.Plugin.UI
             _pickSel = MakeButton("Chọn đối tượng", "Quét chọn đối tượng trên bản vẽ để gửi kèm tin nhắn");
             _pickPt = MakeButton("Lấy điểm", "Bấm điểm trên bản vẽ để chèn tọa độ vào tin nhắn (Enter để xong)");
             _addImg = MakeButton("Ảnh", "Đính kèm ảnh phác thảo / ảnh scan (hoặc dán Ctrl+V, kéo thả vào khung chat)");
-            foreach (var b in new[] { _pickSel, _pickPt, _addImg }) { b.Margin = new Thickness(0, 0, 4, 0); left.Children.Add(b); }
+            _capture = MakeButton("Chụp", "Chụp vùng bản vẽ đang xem gửi kèm tin nhắn, để chỉ cho Claude \"chỗ này sai\"");
+            _capture.Click += (s, e) => CaptureScreenRequested?.Invoke();
+            foreach (var b in new[] { _pickSel, _pickPt, _addImg, _capture }) { b.Margin = new Thickness(0, 0, 4, 0); left.Children.Add(b); }
             actions.Children.Add(left);
             _pickSel.Click += (s, e) => PickSelectionRequested?.Invoke();
             _pickPt.Click += (s, e) => PickPointRequested?.Invoke();
@@ -180,7 +230,7 @@ namespace ClaudeCAD.Plugin.UI
             Theme.Ref(_input, TextBoxBase.CaretBrushProperty, Theme.Fg);
             Theme.Ref(_input, BorderBrushProperty, Theme.Border);
             _input.PreviewKeyDown += OnInputKeyDown;
-            _input.TextChanged += (s, e) => UpdateSlashPopup();
+            _input.TextChanged += (s, e) => { UpdateSlashPopup(); UpdateMentionPopup(); };
             DataObject.AddPastingHandler(_input, OnPasting);
             bottom.Children.Add(_input);
             DockPanel.SetDock(bottom, Dock.Bottom);
@@ -212,19 +262,50 @@ namespace ClaudeCAD.Plugin.UI
             skillsHead.Children.Add(_skillsHeader);
             var skillsStack = new StackPanel { Margin = new Thickness(10), Width = 340 };
             skillsStack.Children.Add(skillsHead);
+            var fromChat = SmallButton("✨ Tạo skill từ cuộc chat này", "Claude soạn SKILL.md từ các chuẩn cậu đã chỉnh trong cuộc chat; cậu xem lại rồi thêm vào plugin");
+            fromChat.HorizontalAlignment = HorizontalAlignment.Left;
+            fromChat.Margin = new Thickness(0, 0, 0, 8);
+            fromChat.Click += (s, e) => { _skillsPopup.IsOpen = false; CreateSkillFromChatRequested?.Invoke(); };
+            skillsStack.Children.Add(fromChat);
             skillsStack.Children.Add(new ScrollViewer { Content = _skillRows, MaxHeight = 360, VerticalScrollBarVisibility = ScrollBarVisibility.Auto });
             var skillsBorder = new Border { BorderThickness = new Thickness(1), CornerRadius = new CornerRadius(4), Child = skillsStack };
             Theme.Ref(skillsBorder, Border.BackgroundProperty, Theme.InputBg);
             Theme.Ref(skillsBorder, Border.BorderBrushProperty, Theme.Border);
             _skillsPopup = new Popup { PlacementTarget = _skillsBtn, Placement = PlacementMode.Bottom, StaysOpen = false, Child = skillsBorder };
 
+            // ---- macros popup
+            var macrosHead = new DockPanel { Margin = new Thickness(0, 0, 0, 6) };
+            var macrosFolder = SmallButton("Mở thư mục", "Mở thư mục macro trong Explorer");
+            macrosFolder.Margin = new Thickness(0);
+            macrosFolder.Click += (s, e) => OpenMacrosFolderRequested?.Invoke();
+            DockPanel.SetDock(macrosFolder, Dock.Right);
+            macrosHead.Children.Add(macrosFolder);
+            var macrosTitle = new TextBlock { Text = "Macro — chạy lại không cần Claude", FontWeight = FontWeights.SemiBold, VerticalAlignment = VerticalAlignment.Center };
+            Theme.Ref(macrosTitle, TextBlock.ForegroundProperty, Theme.Fg);
+            macrosHead.Children.Add(macrosTitle);
+            var macrosStack = new StackPanel { Margin = new Thickness(10), Width = 340 };
+            macrosStack.Children.Add(macrosHead);
+            macrosStack.Children.Add(new ScrollViewer { Content = _macroRows, MaxHeight = 360, VerticalScrollBarVisibility = ScrollBarVisibility.Auto });
+            var macrosBorder = new Border { BorderThickness = new Thickness(1), CornerRadius = new CornerRadius(4), Child = macrosStack };
+            Theme.Ref(macrosBorder, Border.BackgroundProperty, Theme.InputBg);
+            Theme.Ref(macrosBorder, Border.BorderBrushProperty, Theme.Border);
+            _macrosPopup = new Popup { PlacementTarget = _macrosBtn, Placement = PlacementMode.Bottom, StaysOpen = false, Child = macrosBorder };
+
+
+            // ---- @ names popup
+            _mentionList = new ListBox { MaxHeight = 240, MinWidth = 240, BorderThickness = new Thickness(1) };
+            Theme.Ref(_mentionList, BackgroundProperty, Theme.InputBg);
+            Theme.Ref(_mentionList, ForegroundProperty, Theme.Fg);
+            Theme.Ref(_mentionList, BorderBrushProperty, Theme.Border);
+            _mentionList.MouseDoubleClick += (s, e) => AcceptMention();
+            _mentionPopup = new Popup { PlacementTarget = _input, Placement = PlacementMode.Top, StaysOpen = false, Child = _mentionList };
+
             // popups must be in the logical tree for the theme resources to resolve
-            DockPanel.SetDock(_slashPopup, Dock.Top);
-            DockPanel.SetDock(_settingsPopup, Dock.Top);
-            DockPanel.SetDock(_skillsPopup, Dock.Top);
-            root.Children.Add(_slashPopup);
-            root.Children.Add(_settingsPopup);
-            root.Children.Add(_skillsPopup);
+            foreach (var pop in new[] { _slashPopup, _settingsPopup, _skillsPopup, _macrosPopup, _mentionPopup })
+            {
+                DockPanel.SetDock(pop, Dock.Top);
+                root.Children.Add(pop);
+            }
 
             // ---- middle: history
             _scroll = new ScrollViewer
@@ -296,6 +377,19 @@ namespace ClaudeCAD.Plugin.UI
             _notify = new CheckBox { Content = "Thông báo Windows khi lượt xong lúc tớ đang ở cửa sổ khác", Margin = new Thickness(0, 8, 0, 0), IsChecked = true };
             Theme.Ref(_notify, ForegroundProperty, Theme.Fg);
             p.Children.Add(_notify);
+            CheckBox Check(string text, string tip)
+            {
+                var c = new CheckBox { Content = text, ToolTip = tip, Margin = new Thickness(0, 6, 0, 0), IsChecked = true };
+                Theme.Ref(c, ForegroundProperty, Theme.Fg);
+                c.Checked += (s, e) => OnSettingsUi();
+                c.Unchecked += (s, e) => OnSettingsUi();
+                p.Children.Add(c);
+                return c;
+            }
+            _visualCheck = Check("Claude tự nhìn bản vẽ để kiểm tra sau khi vẽ việc lớn", "Claude chụp vùng vừa vẽ (capture_view) để tự soát lỗi; tốn thêm ít token cho mỗi ảnh");
+            _planFirst = Check("Trình bày kế hoạch trước khi làm việc nhiều bước", "Thẻ kế hoạch có nút Làm / Sửa kế hoạch trước khi Claude vẽ việc lớn");
+            _suggestCheck = Check("Gợi ý bước tiếp theo sau mỗi câu trả lời", "2–3 nút gợi ý dưới câu trả lời; bấm là gửi");
+            _hotkey = Check("Phím tắt Ctrl+Shift+Space mở khung chat", "Trong AutoCAD: Ctrl+Shift+Space mở palette và đặt con trỏ vào ô nhập (lệnh tắt: CC)");
             _model.SelectionChanged += (s, e) => OnSettingsUi();
             _effort.SelectionChanged += (s, e) => OnSettingsUi();
             _theme.SelectionChanged += (s, e) => OnSettingsUi();
@@ -352,6 +446,10 @@ namespace ClaudeCAD.Plugin.UI
                 _effort.SelectedIndex = Math.Max(0, Array.IndexOf(PaletteSettings.Efforts, s.Effort));
                 _theme.SelectedIndex = s.Theme == "dark" ? 1 : s.Theme == "light" ? 2 : 0;
                 _notify.IsChecked = s.Notify;
+                _visualCheck.IsChecked = s.VisualCheck;
+                _planFirst.IsChecked = s.PlanFirst;
+                _suggestCheck.IsChecked = s.Suggestions;
+                _hotkey.IsChecked = s.Hotkey;
                 FontSize = s.FontSize;
                 _history = new InputHistoryCursor(s.History);
             }
@@ -370,6 +468,11 @@ namespace ClaudeCAD.Plugin.UI
             _settings.Effort = PaletteSettings.Efforts[Math.Max(0, _effort.SelectedIndex)];
             _settings.Theme = _theme.SelectedIndex == 1 ? "dark" : _theme.SelectedIndex == 2 ? "light" : "auto";
             _settings.Notify = _notify.IsChecked == true;
+            _settings.VisualCheck = _visualCheck.IsChecked == true;
+            _settings.PlanFirst = _planFirst.IsChecked == true;
+            _settings.Suggestions = _suggestCheck.IsChecked == true;
+            _settings.Hotkey = _hotkey.IsChecked == true;
+            if (!_settings.Suggestions) ClearSuggestionsCore();
             SettingsChanged?.Invoke(_settings.Clone());
         }
 
@@ -414,6 +517,17 @@ namespace ClaudeCAD.Plugin.UI
 
         private void OnInputKeyDown(object sender, KeyEventArgs e)
         {
+            if (_mentionPopup.IsOpen)
+            {
+                switch (e.Key)
+                {
+                    case Key.Down: _mentionList.SelectedIndex = Math.Min(_mentionList.Items.Count - 1, _mentionList.SelectedIndex + 1); _mentionList.ScrollIntoView(_mentionList.SelectedItem); e.Handled = true; return;
+                    case Key.Up: _mentionList.SelectedIndex = Math.Max(0, _mentionList.SelectedIndex - 1); _mentionList.ScrollIntoView(_mentionList.SelectedItem); e.Handled = true; return;
+                    case Key.Enter:
+                    case Key.Tab: AcceptMention(); e.Handled = true; return;
+                    case Key.Escape: _mentionPopup.IsOpen = false; e.Handled = true; return;
+                }
+            }
             if (_slashPopup.IsOpen)
             {
                 switch (e.Key)
@@ -489,6 +603,8 @@ namespace ClaudeCAD.Plugin.UI
             };
             _input.Clear();
             _images.Clear();
+            ClearSuggestionsCore();
+            _mentionPopup.IsOpen = false;
             _settings.AddHistory(text);
             _history = new InputHistoryCursor(_settings.History);
             RefreshChips();
@@ -741,6 +857,7 @@ namespace ClaudeCAD.Plugin.UI
         private void AddUserCore(ChatEntry e)
         {
             EndAssistantCore();
+            _lastUserText = e.Text ?? "";
             foreach (var b in _openConfirmButtons) b.IsEnabled = false; // answered by typing instead
             _openConfirmButtons.Clear();
             var tb = new TextBox { Text = e.Text, IsReadOnly = true, TextWrapping = TextWrapping.Wrap, BorderThickness = new Thickness(0), Background = Brushes.Transparent, Padding = new Thickness(0) };
@@ -756,6 +873,16 @@ namespace ClaudeCAD.Plugin.UI
             var copy = SmallButton("Copy", "Copy tin nhắn");
             copy.Click += (s, a) => SafeCopy(e.Text);
             footer.Children.Add(copy);
+            var saveTpl = SmallButton("☆ Mẫu", "Lưu tin nhắn này thành mẫu lệnh (gõ / để dùng lại)");
+            saveTpl.Click += (s, a) =>
+            {
+                saveTpl.IsEnabled = false;
+                var first = (e.Text ?? "").Replace("\r", " ").Replace("\n", " ").Trim();
+                var editor = InlinePrompt("Tên mẫu:", first.Length > 40 ? first.Substring(0, 40).TrimEnd() : first, "Lưu",
+                    title => TemplateSaveRequested?.Invoke(title, e.Text), () => saveTpl.IsEnabled = true);
+                stack.Children.Add(editor);
+            };
+            footer.Children.Add(saveTpl);
             var edit = SmallButton("Sửa", "Sửa và gửi lại (hoàn tác lượt trước nếu nó đã thay đổi bản vẽ)");
             edit.Click += (s, a) => EditLastRequested?.Invoke();
             footer.Children.Add(edit);
@@ -804,10 +931,10 @@ namespace ClaudeCAD.Plugin.UI
         });
 
         /// <summary>Turn finished: final markdown, buttons "Xem kết quả" / "Hoàn tác lượt này".</summary>
-        public void EndAssistant(ChatEntry e, bool canUndo) => Ui(() =>
+        public void EndAssistant(ChatEntry e, bool canUndo, bool canSaveMacro = false) => Ui(() =>
         {
             if (_current == null) _current = NewAssistant();
-            _current.Finish(e, canUndo);
+            _current.Finish(e, canUndo, canSaveMacro);
             _current = null;
             ScrollToEnd();
         });
@@ -915,6 +1042,7 @@ namespace ClaudeCAD.Plugin.UI
             _send.IsEnabled = !busy;
             _stop.IsEnabled = busy;
             _pickSel.IsEnabled = _pickPt.IsEnabled = !busy;
+            foreach (var b in _macroRows.Children.OfType<FrameworkElement>().SelectMany(r => FindButtons(r)).Where(b => (b.Tag as string) == "run")) b.IsEnabled = !busy;
             if (_lastEditButton != null) _lastEditButton.IsEnabled = !busy;
             if (!busy) _toolStatus.Text = "";
         });
@@ -923,6 +1051,398 @@ namespace ClaudeCAD.Plugin.UI
         {
             try { Clipboard.SetText(text ?? ""); } catch { }
         }
+
+
+        // ================================================================= v0.6: suggestions, read-only, notes, @, macros, cards
+
+        private static IEnumerable<Button> FindButtons(DependencyObject root)
+        {
+            foreach (var child in LogicalTreeHelper.GetChildren(root).OfType<DependencyObject>())
+            {
+                if (child is Button b) yield return b;
+                foreach (var x in FindButtons(child)) yield return x;
+            }
+        }
+
+        private TextBox InputBox(double minWidth = 120)
+        {
+            var tb = new TextBox { MinWidth = minWidth, FontSize = 12, Padding = new Thickness(2) };
+            Theme.Ref(tb, BackgroundProperty, Theme.InputBg);
+            Theme.Ref(tb, ForegroundProperty, Theme.Fg);
+            Theme.Ref(tb, TextBoxBase.CaretBrushProperty, Theme.Fg);
+            Theme.Ref(tb, BorderBrushProperty, Theme.Border);
+            return tb;
+        }
+
+        /// <summary>Small inline editor (label, text box, OK / Hủy) that removes itself when done.</summary>
+        private FrameworkElement InlinePrompt(string label, string initial, string okText, Action<string> ok, Action cancelled = null)
+        {
+            var row = new DockPanel { Margin = new Thickness(0, 4, 0, 0) };
+            var l = MutedText(label + " ");
+            l.FontSize = 11;
+            DockPanel.SetDock(l, Dock.Left);
+            row.Children.Add(l);
+            var okB = SmallButton(okText, okText);
+            var cancel = SmallButton("Hủy", "Hủy");
+            cancel.Margin = new Thickness(0);
+            DockPanel.SetDock(cancel, Dock.Right);
+            DockPanel.SetDock(okB, Dock.Right);
+            row.Children.Add(cancel);
+            row.Children.Add(okB);
+            var tb = InputBox();
+            tb.Text = initial ?? "";
+            tb.Margin = new Thickness(0, 0, 6, 0);
+            row.Children.Add(tb);
+            void Close() { if (row.Parent is Panel p) p.Children.Remove(row); }
+            void Ok()
+            {
+                var v = tb.Text.Trim();
+                if (v.Length == 0) return;
+                Close();
+                ok(v);
+            }
+            okB.Click += (s, e) => Ok();
+            cancel.Click += (s, e) => { Close(); cancelled?.Invoke(); };
+            tb.KeyDown += (s, e) =>
+            {
+                if (e.Key == Key.Enter) { e.Handled = true; Ok(); }
+                else if (e.Key == Key.Escape) { e.Handled = true; Close(); cancelled?.Invoke(); }
+            };
+            tb.Loaded += (s, e) => { tb.Focus(); tb.SelectAll(); };
+            return row;
+        }
+
+        // ---------------------------------------------------------------- next-step suggestions
+
+        /// <summary>Adds next-step buttons under the last reply (at most 4, duplicates ignored).</summary>
+        public void AddSuggestions(IEnumerable<string> items) => Ui(() =>
+        {
+            if (!_settings.Suggestions || items == null) return; // the controller drops stale ones
+            var existing = _suggestions.Children.OfType<Button>().Select(b => b.Tag as string).ToList();
+            foreach (var raw in items)
+            {
+                var text = (raw ?? "").Replace("\r", " ").Replace("\n", " ").Trim();
+                if (text.Length == 0 || text.Length > 200) continue;
+                if (existing.Any(x => string.Equals(x, text, StringComparison.OrdinalIgnoreCase))) continue;
+                if (existing.Count >= 4) break;
+                existing.Add(text);
+                var label = new TextBlock { Text = "→ " + text, TextTrimming = TextTrimming.CharacterEllipsis, MaxWidth = 300, FontSize = 12 };
+                Theme.Ref(label, TextBlock.ForegroundProperty, Theme.Fg);
+                var b = new Button { Content = label, Tag = text, ToolTip = "Bấm để gửi: " + text + "\nChuột phải: đưa vào ô nhập để sửa trước khi gửi", Padding = new Thickness(8, 1, 8, 2), Margin = new Thickness(0, 0, 4, 4), BorderThickness = new Thickness(1), Cursor = Cursors.Hand };
+                Theme.Ref(b, BackgroundProperty, Theme.ChipBg);
+                Theme.Ref(b, BorderBrushProperty, Theme.Border);
+                b.Click += (s, e) =>
+                {
+                    if (_busy) return;
+                    _input.Text = text;
+                    SubmitInput();
+                };
+                b.MouseRightButtonUp += (s, e) => { e.Handled = true; ClearSuggestionsCore(); SetInputText(text); };
+                _suggestions.Children.Add(b);
+            }
+            _suggestions.Visibility = _suggestions.Children.Count > 0 ? Visibility.Visible : Visibility.Collapsed;
+        });
+
+        public void ClearSuggestions() => Ui(ClearSuggestionsCore);
+
+        private void ClearSuggestionsCore()
+        {
+            _suggestions.Children.Clear();
+            _suggestions.Visibility = Visibility.Collapsed;
+        }
+
+        // ---------------------------------------------------------------- read-only ("Chỉ xem")
+
+        public void SetReadOnly(bool on) => Ui(() =>
+        {
+            _suppressReadOnlyEvent = true;
+            try { _readOnlyBtn.IsChecked = on; }
+            finally { _suppressReadOnlyEvent = false; }
+            PaintReadOnly();
+        });
+
+        private void PaintReadOnly()
+        {
+            bool on = _readOnlyBtn.IsChecked == true;
+            _readOnlyBtn.Content = on ? "🔒 Chỉ xem" : "🔓 Sửa được";
+            _readOnlyBtn.FontWeight = on ? FontWeights.SemiBold : FontWeights.Normal;
+            _readOnlyBtn.ToolTip = on
+                ? "Đang bật Chỉ xem: Claude chỉ đọc, đo, hỏi đáp — không sửa bản vẽ này. Bấm để cho phép sửa."
+                : "Bấm để bật Chỉ xem: Claude chỉ được đọc, đo, hỏi đáp — không sửa bản vẽ này";
+            if (on) Theme.Ref(_readOnlyBtn, ForegroundProperty, Theme.ErrorFg);
+            else _readOnlyBtn.ClearValue(ForegroundProperty);
+        }
+
+        // ---------------------------------------------------------------- project notes
+
+        private Border BuildNotesPanel()
+        {
+            var p = new StackPanel { Margin = new Thickness(8) };
+            var head = new DockPanel { Margin = new Thickness(0, 0, 0, 4) };
+            var close = SmallButton("Đóng", "Đóng (không lưu)");
+            close.Margin = new Thickness(0);
+            var save = SmallButton("Lưu", "Lưu ghi chú — gửi kèm từ tin nhắn tiếp theo");
+            DockPanel.SetDock(close, Dock.Right);
+            DockPanel.SetDock(save, Dock.Right);
+            head.Children.Add(close);
+            head.Children.Add(save);
+            var title = new TextBlock { Text = "Ghi chú gửi kèm mọi tin nhắn", FontWeight = FontWeights.SemiBold, VerticalAlignment = VerticalAlignment.Center };
+            Theme.Ref(title, TextBlock.ForegroundProperty, Theme.Fg);
+            head.Children.Add(title);
+            p.Children.Add(head);
+            var hint = MutedText("Ví dụ: cao độ ±0.000 = +3.200; tường bao 220, tường ngăn 110; khung tên công ty X ở layout A3.");
+            hint.FontSize = 11;
+            hint.TextWrapping = TextWrapping.Wrap;
+            p.Children.Add(hint);
+            TextBox Box()
+            {
+                var tb = InputBox();
+                tb.AcceptsReturn = true;
+                tb.TextWrapping = TextWrapping.Wrap;
+                tb.Height = 72;
+                tb.VerticalScrollBarVisibility = ScrollBarVisibility.Auto;
+                tb.MaxLength = ProjectNotes.MaxChars;
+                tb.Margin = new Thickness(0, 2, 0, 4);
+                return tb;
+            }
+            _notesFolderLabel = MutedText("");
+            _notesFolderLabel.FontSize = 11;
+            _notesFolderLabel.TextWrapping = TextWrapping.Wrap;
+            _notesFolderLabel.Margin = new Thickness(0, 6, 0, 0);
+            p.Children.Add(_notesFolderLabel);
+            _notesFolder = Box();
+            p.Children.Add(_notesFolder);
+            var dl = MutedText("Riêng bản vẽ này");
+            dl.FontSize = 11;
+            p.Children.Add(dl);
+            _notesDrawing = Box();
+            p.Children.Add(_notesDrawing);
+            var border = new Border { Child = p, BorderThickness = new Thickness(1), CornerRadius = new CornerRadius(4), Margin = new Thickness(6, 0, 6, 4), Visibility = Visibility.Collapsed };
+            Theme.Ref(border, Border.BackgroundProperty, Theme.CardBg);
+            Theme.Ref(border, Border.BorderBrushProperty, Theme.Border);
+            close.Click += (s, e) => border.Visibility = Visibility.Collapsed;
+            save.Click += (s, e) =>
+            {
+                border.Visibility = Visibility.Collapsed;
+                NotesSaved?.Invoke(_notesFolder.IsEnabled ? _notesFolder.Text : null, _notesDrawing.Text);
+            };
+            return border;
+        }
+
+        /// <summary>Opens the notes editor. folderFile = null when the drawing was never saved.</summary>
+        public void ShowNotes(string folderText, string drawingText, string folderFile) => Ui(() =>
+        {
+            if (_notesPanel.Visibility == Visibility.Visible) { _notesPanel.Visibility = Visibility.Collapsed; return; }
+            _notesFolder.Text = folderText ?? "";
+            _notesDrawing.Text = drawingText ?? "";
+            _notesFolder.IsEnabled = folderFile != null;
+            _notesFolderLabel.Text = folderFile != null
+                ? "Dự án — dùng chung cho mọi bản vẽ trong thư mục (file " + System.IO.Path.GetFileName(folderFile) + " cạnh bản vẽ)"
+                : "Dự án — lưu bản vẽ trước để có ghi chú chung cho cả thư mục";
+            _notesPanel.Visibility = Visibility.Visible;
+            (folderFile != null ? _notesFolder : _notesDrawing).Focus();
+        });
+
+        public void SetNotesIndicator(bool any) => Ui(() =>
+        {
+            _notesBtn.Content = any ? "Ghi chú •" : "Ghi chú";
+            _notesBtn.FontWeight = any ? FontWeights.SemiBold : FontWeights.Normal;
+        });
+
+        // ---------------------------------------------------------------- @ names
+
+        private void UpdateMentionPopup()
+        {
+            if (!Mentions.TryGetToken(_input.Text, _input.CaretIndex, out var start, out var q))
+            {
+                _mentionPopup.IsOpen = false;
+                _mentionCache = null;
+                return;
+            }
+            if (_mentionCache == null || start != _mentionStart)
+            {
+                try { _mentionCache = MentionSource?.Invoke() ?? new List<MentionItem>(); }
+                catch (Exception ex) { Logger.Warn("@ names unavailable: " + ex.Message); _mentionCache = new List<MentionItem>(); }
+            }
+            _mentionStart = start;
+            _mentionList.Items.Clear();
+            foreach (var m in Mentions.Filter(_mentionCache, q))
+            {
+                var row = new StackPanel { Orientation = Orientation.Horizontal };
+                row.Children.Add(new TextBlock { Text = m.Name, FontWeight = FontWeights.SemiBold, Margin = new Thickness(0, 0, 8, 0) });
+                row.Children.Add(MutedText(m.KindLabel));
+                _mentionList.Items.Add(new ListBoxItem { Content = row, Tag = m });
+            }
+            if (_mentionList.Items.Count == 0) { _mentionPopup.IsOpen = false; return; }
+            _mentionList.SelectedIndex = 0;
+            _mentionPopup.IsOpen = true;
+        }
+
+        private void AcceptMention()
+        {
+            if (!(_mentionList.SelectedItem is ListBoxItem item) || !(item.Tag is MentionItem m)) return;
+            _mentionPopup.IsOpen = false;
+            if (!Mentions.TryGetToken(_input.Text, _input.CaretIndex, out var start, out _)) return;
+            var text = Mentions.Insert(_input.Text, start, _input.CaretIndex, m.Name, out var caret);
+            _mentionCache = null;
+            _input.Text = text;
+            _input.CaretIndex = Math.Min(caret, text.Length);
+            _input.Focus();
+        }
+
+        // ---------------------------------------------------------------- macros
+
+        public void SetMacros(List<Macro> macros) => Ui(() =>
+        {
+            _macros = macros ?? new List<Macro>();
+            _macrosBtn.Content = _macros.Count > 0 ? $"Macro ({_macros.Count})" : "Macro";
+            RefreshMacrosPanel();
+        });
+
+        private void RefreshMacrosPanel()
+        {
+            _macroRows.Children.Clear();
+            if (_macros.Count == 0)
+            {
+                var t = MutedText("Chưa có macro. Sau một lượt vẽ ưng ý, bấm \"Lưu macro\" dưới câu trả lời của Claude.");
+                t.TextWrapping = TextWrapping.Wrap;
+                _macroRows.Children.Add(t);
+                return;
+            }
+            foreach (var m in _macros)
+            {
+                var row = new DockPanel { Margin = new Thickness(0, 0, 0, 8) };
+                var buttons = new StackPanel { Orientation = Orientation.Horizontal, VerticalAlignment = VerticalAlignment.Top };
+                var name = m.Name;
+                var run = SmallButton("▶ Chạy", "Vẽ lại đúng như lúc lưu (cùng tọa độ)");
+                run.Tag = "run";
+                run.IsEnabled = !_busy;
+                run.Click += (s, e) => { _macrosPopup.IsOpen = false; MacroRunRequested?.Invoke(name, false); };
+                var at = SmallButton("📍 Tại điểm", m.BasePoint != null ? "Chọn điểm chèn trên bản vẽ: macro được dời tới đó" : "Macro này không có điểm gốc (không tạo đối tượng mới)");
+                at.Tag = "run";
+                at.IsEnabled = !_busy && m.BasePoint != null;
+                at.Click += (s, e) => { _macrosPopup.IsOpen = false; MacroRunRequested?.Invoke(name, true); };
+                var del = SmallButton("Xóa", "Xóa macro");
+                del.Margin = new Thickness(0);
+                del.Click += (s, e) => MacroDeleteRequested?.Invoke(name);
+                buttons.Children.Add(run);
+                buttons.Children.Add(at);
+                buttons.Children.Add(del);
+                DockPanel.SetDock(buttons, Dock.Right);
+                row.Children.Add(buttons);
+                var info = new StackPanel();
+                var title = new TextBlock { Text = m.Name, FontWeight = FontWeights.SemiBold, TextTrimming = TextTrimming.CharacterEllipsis };
+                Theme.Ref(title, TextBlock.ForegroundProperty, Theme.Fg);
+                info.Children.Add(title);
+                var d = MutedText(MacroLogic.Describe(m) + " · " + m.Created.ToString("dd/MM/yyyy"));
+                d.FontSize = 11;
+                d.ToolTip = string.IsNullOrEmpty(m.Description) ? null : m.Description;
+                info.Children.Add(d);
+                row.Children.Add(info);
+                _macroRows.Children.Add(row);
+            }
+        }
+
+        // ---------------------------------------------------------------- screenshot of the view
+
+        public void AddImagePng(byte[] png) => Ui(() =>
+        {
+            var bmp = new System.Windows.Media.Imaging.BitmapImage();
+            using (var ms = new System.IO.MemoryStream(png))
+            {
+                bmp.BeginInit();
+                bmp.CacheOption = System.Windows.Media.Imaging.BitmapCacheOption.OnLoad;
+                bmp.StreamSource = ms;
+                bmp.EndInit();
+            }
+            bmp.Freeze();
+            AddImage(ImageAttachment.FromBitmap(bmp));
+            _toolStatus.Text = "Đã chụp vùng đang xem — gõ yêu cầu (ví dụ \"chỗ này sai, sửa lại\") rồi gửi.";
+            _input.Focus();
+        });
+
+        // ---------------------------------------------------------------- cards: skill draft, plan
+
+        private Border Card(UIElement content, string tag)
+        {
+            var b = new Border { Child = content, BorderThickness = new Thickness(1), CornerRadius = new CornerRadius(6), Padding = new Thickness(10, 6, 10, 6), Margin = new Thickness(0, 4, 0, 4), Tag = tag };
+            Theme.Ref(b, Border.BackgroundProperty, Theme.CardBg);
+            Theme.Ref(b, Border.BorderBrushProperty, Theme.Accent);
+            return b;
+        }
+
+        private void PlaceCard(Border b)
+        {
+            if (_current != null) _current.AddCard(b);
+            else { b.Margin = new Thickness(0, 4, 24, 4); _messages.Children.Add(b); }
+            ScrollToEnd();
+        }
+
+        /// <summary>Claude drafted a SKILL.md from the conversation: review it, then add it to the plugin.</summary>
+        public void AddSkillDraftCard(string name, string description, string file) => Ui(() =>
+        {
+            var stack = new StackPanel();
+            var t = new TextBlock { Text = "Bản nháp skill: " + name, FontWeight = FontWeights.SemiBold, TextWrapping = TextWrapping.Wrap };
+            Theme.Ref(t, TextBlock.ForegroundProperty, Theme.Fg);
+            stack.Children.Add(t);
+            if (!string.IsNullOrEmpty(description))
+            {
+                var d = MutedText(description);
+                d.TextWrapping = TextWrapping.Wrap;
+                d.FontSize = 11;
+                stack.Children.Add(d);
+            }
+            var row = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(0, 6, 0, 0) };
+            var open = new Button { Content = "Xem / sửa", Padding = new Thickness(10, 2, 10, 2), Margin = new Thickness(0, 0, 6, 0), ToolTip = "Mở SKILL.md bản nháp để xem và sửa trước khi thêm" };
+            var add = new Button { Content = "Thêm vào plugin", Padding = new Thickness(10, 2, 10, 2), FontWeight = FontWeights.SemiBold, ToolTip = "Thêm skill này (như + Add skill)" };
+            var status = MutedText("");
+            open.Click += (s, e) => SkillDraftOpenRequested?.Invoke(file);
+            add.Click += (s, e) => { add.IsEnabled = false; status.Text = "  → đã gửi yêu cầu thêm"; SkillDraftAddRequested?.Invoke(file); };
+            row.Children.Add(open);
+            row.Children.Add(add);
+            row.Children.Add(status);
+            stack.Children.Add(row);
+            PlaceCard(Card(stack, "skill-draft"));
+        });
+
+        /// <summary>Plan card ("Làm" / "Sửa kế hoạch" / "Bỏ") before a big multi-step task.</summary>
+        public void AddPlanCard(string id, string summary, List<string> steps) => Ui(() =>
+        {
+            var stack = new StackPanel();
+            var t = new TextBlock { Text = "Kế hoạch: " + summary, FontWeight = FontWeights.SemiBold, TextWrapping = TextWrapping.Wrap };
+            Theme.Ref(t, TextBlock.ForegroundProperty, Theme.Fg);
+            stack.Children.Add(t);
+            int i = 0;
+            foreach (var step in steps ?? new List<string>())
+            {
+                var st = new TextBlock { Text = $"{++i}. {step}", TextWrapping = TextWrapping.Wrap, Margin = new Thickness(8, 2, 0, 0) };
+                Theme.Ref(st, TextBlock.ForegroundProperty, Theme.Fg);
+                stack.Children.Add(st);
+            }
+            var row = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(0, 6, 0, 0) };
+            var go = new Button { Content = "Làm", Padding = new Thickness(14, 2, 14, 2), Margin = new Thickness(0, 0, 6, 0), FontWeight = FontWeights.SemiBold, ToolTip = "Claude thực hiện đúng kế hoạch này" };
+            var edit = new Button { Content = "Sửa kế hoạch", Padding = new Thickness(10, 2, 10, 2), Margin = new Thickness(0, 0, 6, 0), ToolTip = "Gõ điều cần đổi, Claude lập lại kế hoạch" };
+            var drop = new Button { Content = "Bỏ", Padding = new Thickness(10, 2, 10, 2), ToolTip = "Không làm" };
+            var answer = MutedText("");
+            void Done(string kind, string label)
+            {
+                go.IsEnabled = edit.IsEnabled = drop.IsEnabled = false;
+                answer.Text = "  → " + label;
+                PlanAnswered?.Invoke(id, kind);
+            }
+            go.Click += (s, e) => Done("go", "làm theo kế hoạch");
+            edit.Click += (s, e) => Done("edit", "sửa kế hoạch");
+            drop.Click += (s, e) => Done("cancel", "đã bỏ");
+            _openConfirmButtons.Add(go);
+            _openConfirmButtons.Add(edit);
+            _openConfirmButtons.Add(drop);
+            row.Children.Add(go);
+            row.Children.Add(edit);
+            row.Children.Add(drop);
+            row.Children.Add(answer);
+            stack.Children.Add(row);
+            PlaceCard(Card(stack, "plan"));
+        });
 
         // ================================================================= one assistant turn
 
@@ -936,6 +1456,9 @@ namespace ClaudeCAD.Plugin.UI
             private readonly List<(ToolLogEntry entry, TextBlock row)> _tools = new List<(ToolLogEntry, TextBlock)>();
             private readonly WrapPanel _actions = new WrapPanel { Margin = new Thickness(0, 4, 0, 0) };
             private readonly StackPanel _cards = new StackPanel();
+            private readonly StackPanel _changes = new StackPanel();
+            private readonly StackPanel _prompts = new StackPanel();
+            private readonly string _userText;
             private readonly DispatcherTimer _renderTimer;
             private Button _undo;
             private bool _dirty;
@@ -945,6 +1468,7 @@ namespace ClaudeCAD.Plugin.UI
             public AssistantView(ChatControl owner)
             {
                 _owner = owner;
+                _userText = owner._lastUserText ?? "";
                 _md.FontSize = owner.FontSize;
                 _md.HandleLinkClicked += h => owner.ZoomRequested?.Invoke(h);
                 _toolsExpander = new Expander { Header = MutedText("Thao tác"), Content = _toolRows, Visibility = Visibility.Collapsed, Margin = new Thickness(0, 2, 0, 0) };
@@ -952,7 +1476,9 @@ namespace ClaudeCAD.Plugin.UI
                 stack.Children.Add(_toolsExpander);
                 stack.Children.Add(_md);
                 stack.Children.Add(_cards);
+                stack.Children.Add(_changes);
                 stack.Children.Add(_actions);
+                stack.Children.Add(_prompts);
                 Root = new Border { CornerRadius = new CornerRadius(6), Padding = new Thickness(8, 5, 8, 5), Margin = new Thickness(0, 4, 24, 4), HorizontalAlignment = HorizontalAlignment.Stretch, Child = stack, Tag = this };
                 Theme.Ref(Root, Border.BackgroundProperty, Theme.AssistantBg);
                 _renderTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(150) };
@@ -1023,12 +1549,13 @@ namespace ClaudeCAD.Plugin.UI
                 _toolsExpander.Header = h;
             }
 
-            public void Finish(ChatEntry e, bool canUndo)
+            public void Finish(ChatEntry e, bool canUndo, bool canSaveMacro = false)
             {
                 _text.Clear();
                 _text.Append(e.Text ?? "");
                 Flush();
                 _actions.Children.Clear();
+                ShowChanges(e.Changes);
                 if (e.Handles.Count > 0)
                 {
                     var view = SmallButton($"Xem kết quả ({e.Handles.Count})", "Zoom tới và tô sáng các đối tượng vừa vẽ / sửa");
@@ -1042,6 +1569,55 @@ namespace ClaudeCAD.Plugin.UI
                 var copy = SmallButton("Copy", "Copy câu trả lời");
                 copy.Click += (s, a) => SafeCopy(MarkdownLite.ToPlainText(e.Text ?? ""));
                 _actions.Children.Add(copy);
+                if (canSaveMacro)
+                {
+                    var save = SmallButton("💾 Lưu macro", "Lưu các thao tác vẽ của lượt này để chạy lại sau mà không cần Claude (không tốn token)");
+                    save.Click += (s, a) =>
+                    {
+                        save.IsEnabled = false;
+                        var first = _userText.Replace("\r", " ").Replace("\n", " ").Trim();
+                        _prompts.Children.Add(_owner.InlinePrompt("Tên macro:", first.Length > 40 ? first.Substring(0, 40).TrimEnd() : first, "Lưu",
+                            name => { save.Content = "✓ Đã lưu macro"; _owner.MacroSaveRequested?.Invoke(e, name); },
+                            () => save.IsEnabled = true));
+                    };
+                    _actions.Children.Add(save);
+                }
+            }
+
+            /// <summary>"Thêm 15 · Sửa 3 · Xóa 0" with one clickable row per kind and layer.</summary>
+            private void ShowChanges(ChangeSummary c)
+            {
+                _changes.Children.Clear();
+                if (c == null || c.IsEmpty) return;
+                var box = new StackPanel();
+                var head = new TextBlock { Text = "Thay đổi: " + c.Headline, FontWeight = FontWeights.SemiBold, FontSize = 11 };
+                Theme.Ref(head, TextBlock.ForegroundProperty, Theme.Fg);
+                box.Children.Add(head);
+                foreach (var r in c.Rows.Take(8))
+                {
+                    var row = new TextBlock { Text = $"• {ChangeSummary.KindLabel(r.Kind)} {r.Count} trên {r.Layer}", FontSize = 11, Margin = new Thickness(6, 1, 0, 0) };
+                    if (r.Kind != "erased" && r.Handles.Count > 0)
+                    {
+                        Theme.Ref(row, TextBlock.ForegroundProperty, Theme.LinkFg);
+                        row.Cursor = Cursors.Hand;
+                        row.ToolTip = "Bấm để xem trên bản vẽ";
+                        var hs = r.Handles;
+                        row.MouseLeftButtonUp += (s, a) => _owner.ZoomRequested?.Invoke(hs);
+                    }
+                    else Theme.Ref(row, TextBlock.ForegroundProperty, Theme.MutedFg);
+                    box.Children.Add(row);
+                }
+                if (c.Rows.Count > 8)
+                {
+                    var more = MutedText($"… và {c.Rows.Count - 8} dòng nữa");
+                    more.FontSize = 11;
+                    more.Margin = new Thickness(6, 1, 0, 0);
+                    box.Children.Add(more);
+                }
+                var b = new Border { Child = box, BorderThickness = new Thickness(1), CornerRadius = new CornerRadius(4), Padding = new Thickness(8, 3, 8, 4), Margin = new Thickness(0, 4, 0, 0) };
+                Theme.Ref(b, Border.BackgroundProperty, Theme.CardBg);
+                Theme.Ref(b, Border.BorderBrushProperty, Theme.Border);
+                _changes.Children.Add(b);
             }
 
             public void SetUndo(bool available)

@@ -33,6 +33,8 @@ namespace ClaudeCAD.Plugin.Drawing
             RegisterLayouts(d);
             RegisterXrefs(d);
             RegisterTrimExtend(d);
+            // v0.6: Claude looks at the drawing
+            RegisterCapture(d);
         }
 
         private static void RegisterSystem(ToolDispatcher d, ITurnHost host)

@@ -70,6 +70,18 @@ namespace ClaudeCAD.Plugin
         private int _chatGen;                               // bumped by NewChat / drawing switch
         private (string id, bool yes)? _pendingConfirm;     // feature 11
 
+        // v0.6: macros, change summary, suggestions, plans
+        private readonly MacroRecorder _recorder = new MacroRecorder();
+        private readonly ChangeTracker _changes = new ChangeTracker();
+        private readonly System.Runtime.CompilerServices.ConditionalWeakTable<ChatEntry, List<MacroCall>> _turnMacros =
+            new System.Runtime.CompilerServices.ConditionalWeakTable<ChatEntry, List<MacroCall>>();
+        private MacroStore _macroStore;
+        private Autodesk.AutoCAD.DatabaseServices.Database _turnDb;
+        private bool _macroRunning;
+        private volatile bool _macroCancel;
+        private readonly List<string> _turnSuggestions = new List<string>();
+        private (string id, string kind)? _pendingPlan;
+
         // usage (feature 14)
         private string _usageText = "";
         private string _rateText = "";
@@ -108,6 +120,20 @@ namespace ClaudeCAD.Plugin
             ui.SkillEditRequested += n => Guard("edit skill", () => EditSkill(n));
             ui.SkillDeleteRequested += n => Guard("delete skill", () => MainThread.Post(() => DeleteSkill(n)));
             ui.OpenSkillsFolderRequested += () => Guard("skills folder", OpenSkillsFolder);
+            ui.CaptureScreenRequested += () => Guard("capture", () => MainThread.Post(CaptureScreen));
+            ui.ReadOnlyToggled += on => Guard("read-only", () => SetReadOnly(on));
+            ui.NotesRequested += () => Guard("notes", OpenNotes);
+            ui.NotesSaved += (f, d) => Guard("notes", () => SaveNotes(f, d));
+            ui.MacroSaveRequested += (e, n) => Guard("save macro", () => MainThread.Post(() => SaveMacro(e, n)));
+            ui.MacroRunRequested += (n, at) => Guard("run macro", () => MainThread.Post(() => RunMacro(n, at)));
+            ui.MacroDeleteRequested += n => Guard("delete macro", () => MainThread.Post(() => DeleteMacro(n)));
+            ui.OpenMacrosFolderRequested += () => Guard("macros folder", OpenMacrosFolder);
+            ui.TemplateSaveRequested += (t, x) => Guard("save template", () => SaveTemplate(t, x));
+            ui.CreateSkillFromChatRequested += () => Guard("skill from chat", CreateSkillFromChat);
+            ui.SkillDraftOpenRequested += f => Guard("open draft", () => OpenFile(f));
+            ui.SkillDraftAddRequested += f => Guard("add draft", () => MainThread.Post(() => ImportSkillFiles(new[] { f })));
+            ui.PlanAnswered += (id, kind) => Guard("plan", () => AnswerPlan(id, kind));
+            ui.MentionSource = () => Interaction.DrawingNames(AcApp.DocumentManager.MdiActiveDocument);
 
             Interaction.SelectionPicked += sel => { _selection = sel; Ui.SetSelectionChip(sel, true); _palette.FocusInput(); };
             Interaction.ImpliedSelectionChanged += sel => { if (!_busy) { _selection = sel; Ui.SetSelectionChip(sel, false); } };
@@ -135,6 +161,8 @@ namespace ClaudeCAD.Plugin
                 ApplyTheme();
                 Ui.SetTemplates(QuickTemplates.LoadAll(PluginPaths.TemplatesFile, QuickTemplates.UserFile));
                 InitSkills();
+                _macroStore = new MacroStore(MacrosRoot);
+                Ui.SetMacros(_macroStore.List());
                 foreach (Document d in AcApp.DocumentManager) WatchDoc(d);
                 LoadTranscriptFor(AcApp.DocumentManager.MdiActiveDocument);
                 _ipc.Start();
@@ -159,6 +187,13 @@ namespace ClaudeCAD.Plugin
             });
         }
 
+        /// <summary>CC / Ctrl+Shift+Space: show the palette and put the caret in the input box.</summary>
+        public void FocusInput()
+        {
+            ShowPalette();
+            _palette.FocusInput();
+        }
+
         public void RestartSidecar()
         {
             ShowPalette();
@@ -174,19 +209,30 @@ namespace ClaudeCAD.Plugin
             d.CommandFailed += OnCommandEnded;
             try
             {
-                d.Database.ObjectAppended += OnDbChanged;
-                d.Database.ObjectErased += OnDbChanged;
-                d.Database.ObjectModified += OnDbChanged;
+                d.Database.ObjectAppended += (s, e) => OnDbChanged(s, e, "added");
+                d.Database.ObjectErased += (s, e) => OnDbChanged(s, e, "erased");
+                d.Database.ObjectModified += (s, e) => OnDbChanged(s, e, "modified");
             }
             catch (Exception ex) { Logger.Warn("database events: " + ex.Message); }
         }
 
         /// <summary>Any drawing change outside a chat turn (Properties palette, grips...) makes "Hoàn tác lượt này" unsafe.</summary>
-        private void OnDbChanged(object sender, EventArgs e)
+        private void OnDbChanged(object sender, EventArgs e, string kind)
         {
-            if (_busy || !_undoAvailable) return;
             var obj = (e as Autodesk.AutoCAD.DatabaseServices.ObjectEventArgs)?.DBObject ?? (e as Autodesk.AutoCAD.DatabaseServices.ObjectErasedEventArgs)?.DBObject;
             if (obj is Autodesk.AutoCAD.DatabaseServices.ViewportTableRecord || obj is Autodesk.AutoCAD.DatabaseServices.Viewport) return; // pan / zoom
+            if (_busy)
+            {
+                // "Thêm · Sửa · Xóa" card of the turn: entities of the turn's drawing only
+                if (!(obj is Autodesk.AutoCAD.DatabaseServices.Entity) || !ReferenceEquals(sender, _turnDb)) return;
+                string h;
+                try { h = obj.Handle.ToString(); } catch { return; }
+                if (kind == "added") _changes.Appended(h);
+                else if (kind == "modified") _changes.Modified(h);
+                else _changes.Erased(h, (e as Autodesk.AutoCAD.DatabaseServices.ObjectErasedEventArgs)?.Erased ?? true);
+                return;
+            }
+            if (!_undoAvailable) return;
             _undoAvailable = false;
             Ui.SetUndoAvailable(false);
         }
@@ -203,6 +249,11 @@ namespace ClaudeCAD.Plugin
             _settings.Theme = s.Theme;
             _settings.Notify = s.Notify;
             _settings.FontSize = s.FontSize;
+            _settings.VisualCheck = s.VisualCheck;
+            _settings.PlanFirst = s.PlanFirst;
+            _settings.Suggestions = s.Suggestions;
+            _settings.Hotkey = s.Hotkey;
+            PluginApp.HotkeyEnabled = s.Hotkey;
             _settings.Save();
             if (oldModel != s.Model || oldEffort != s.Effort) SendOptions();
             if (oldTheme != s.Theme) ApplyTheme();
@@ -294,11 +345,23 @@ namespace ClaudeCAD.Plugin
                 InitialDirectory = _skillStore.Root,
             };
             if (dlg.ShowDialog() != true) return;
+            ImportSkillFiles(dlg.FileNames);
+        }
+
+        /// <summary>Imports skill files (+ Add skill, or a draft Claude wrote): conflict prompt, status notes, reload.</summary>
+        private void ImportSkillFiles(IEnumerable<string> files)
+        {
+            if (_skillStore == null) InitSkills();
+            if (!_skillStore.IsWritable())
+            {
+                Ui.AddErrorCard($"Không ghi được vào thư mục skill của plugin ({_skillStore.Root}).", false);
+                return;
+            }
             if (_skillWatcher != null) _skillWatcher.EnableRaisingEvents = false; // our own copies are not "edits"
             var added = new List<string>();
             try
             {
-                foreach (var file in dlg.FileNames)
+                foreach (var file in files)
                 {
                     var r = _skillStore.Import(file, false);
                     if (r.Status == SkillImportStatus.Conflict)
@@ -398,12 +461,16 @@ namespace ClaudeCAD.Plugin
             SaveTranscript();
             _chatGen++;
             _pendingConfirm = null;
+            _pendingPlan = null;
             _transcriptDoc = doc;
             _transcript = _store.Load(KeyFor(doc), SafeDocName(doc));
             _undoAvailable = false;
             _selection = null;
             Ui.SetSelectionChip(null, false);
             Ui.LoadTranscript(_transcript, false);
+            Ui.SetReadOnly(_transcript.ReadOnly);
+            Ui.ClearSuggestions();
+            UpdateNotesIndicator();
             SendSwitchSession();
         }
 
@@ -466,7 +533,7 @@ namespace ClaudeCAD.Plugin
         }
 
         /// <summary>Builds and sends the user_message (main thread).</summary>
-        private void Send(ComposedMessage m, bool edited, string confirm = null)
+        private void Send(ComposedMessage m, bool edited, string confirm = null, string plan = null)
         {
             if (_busy) return;
             Document doc = AcApp.DocumentManager.MdiActiveDocument;
@@ -492,9 +559,16 @@ namespace ClaudeCAD.Plugin
             var ctx = new Dictionary<string, object>();
             if (!string.IsNullOrEmpty(_settings.Standard)) ctx["standard"] = _settings.Standard;
             if (!string.IsNullOrEmpty(_settings.Scale)) ctx["scale"] = _settings.Scale;
+            if (_transcript?.ReadOnly == true) ctx["read_only"] = true;
+            var notes = NotesFor(doc);
+            if (notes != null) ctx["notes"] = notes;
+            if (!_settings.VisualCheck) ctx["visual_check"] = false;
+            if (!_settings.PlanFirst) ctx["plan_first"] = false;
+            if (!_settings.Suggestions) ctx["suggestions"] = false;
             if (ctx.Count > 0) payload["context"] = ctx;
             if (edited) payload["edited"] = true;
             if (confirm != null) payload["confirm"] = confirm;
+            if (plan != null) payload["plan"] = plan;
 
             var entry = new ChatEntry { Role = "user", Text = m.Text, SelectionCount = selCount, ImageCount = m.Images.Count };
             _lastPayload = payload;
@@ -505,7 +579,7 @@ namespace ClaudeCAD.Plugin
             StartTurn(doc, payload, entry);
         }
 
-        private void StartTurn(Document doc, Dictionary<string, object> payload, ChatEntry userEntry)
+        private void StartTurn(Document doc, Dictionary<string, object> payload, ChatEntry userEntry, bool toAgent = true)
         {
             lock (_gate)
             {
@@ -520,15 +594,21 @@ namespace ClaudeCAD.Plugin
                 _turnHandles.Clear();
                 _lastError = null;
                 _foreignChangeDuringTurn = false;
+                _turnDb = doc?.Database;
+                _turnSuggestions.Clear();
                 _transcript?.Entries.Add(userEntry);
             }
+            _recorder.Clear();
+            _changes.Clear();
+            Ui.ClearSuggestions();
             _undoAvailable = false;
             Ui.SetUndoAvailable(false);
             SaveTranscript();
             Ui.AddUserMessage(userEntry);
             Ui.SetBusy(true);
-            Ui.SetToolStatus("Claude đang suy nghĩ...");
+            Ui.SetToolStatus(toAgent ? "Claude đang suy nghĩ..." : "Đang chạy macro...");
             Ui.BeginAssistant();
+            if (!toAgent) return;
             _ipc.SendAsync(payload).ContinueWith(t =>
             {
                 if (!t.Result) EndTurn("Gửi tin nhắn thất bại: mất kết nối với trợ lý.", true);
@@ -569,6 +649,7 @@ namespace ClaudeCAD.Plugin
         private void Cancel()
         {
             if (!_busy) return;
+            if (_macroRunning) { _macroCancel = true; Ui.SetToolStatus("Đang dừng macro..."); return; }
             int seq = _turnSeq;
             Ui.SetToolStatus("Đang dừng...");
             _ipc.Send(new Dictionary<string, object> { ["type"] = "cancel" });
@@ -587,6 +668,7 @@ namespace ClaudeCAD.Plugin
             }
             _chatGen++;
             _pendingConfirm = null;
+            _pendingPlan = null;
             if (_transcript != null)
             {
                 _transcript.Entries.Clear();
@@ -606,10 +688,16 @@ namespace ClaudeCAD.Plugin
             HashSet<string> handles;
             DateTime started;
             int gen;
+            Autodesk.AutoCAD.DatabaseServices.Database turnDb;
+            List<string> suggestions;
             lock (_gate)
             {
                 if (!_busy) return;
                 _busy = false;
+                turnDb = _turnDb;
+                _turnDb = null;
+                suggestions = _turnSuggestions.ToList();
+                _turnSuggestions.Clear();
                 assistant = _assistant;
                 _assistant = null;
                 handles = new HashSet<string>(_turnHandles, StringComparer.OrdinalIgnoreCase);
@@ -626,6 +714,8 @@ namespace ClaudeCAD.Plugin
             {
                 bool wrote = Undo.IsOpen && !_foreignChangeDuringTurn;
                 Undo.End();
+                var macroCalls = _recorder.Take();
+                var changes = BuildChangeSummary(turnDb);
                 if (gen != _chatGen)
                 {
                     // New chat / drawing switch happened meanwhile: the old reply belongs nowhere
@@ -643,8 +733,11 @@ namespace ClaudeCAD.Plugin
                 bool empty = assistant == null || (assistant.Text.Length == 0 && assistant.Tools.Count == 0);
                 if (!empty)
                 {
+                    assistant.Changes = changes;
+                    bool canMacro = macroCalls != null;
+                    if (canMacro) { _turnMacros.Remove(assistant); _turnMacros.Add(assistant, macroCalls); }
                     _transcript?.Entries.Add(assistant);
-                    Ui.EndAssistant(assistant, wrote);
+                    Ui.EndAssistant(assistant, wrote, canMacro);
                 }
                 else Ui.DiscardAssistant();
                 // an agent error without any reply (login, rate limit, crash) becomes a retry card
@@ -656,10 +749,12 @@ namespace ClaudeCAD.Plugin
                 }
                 SaveTranscript();
                 Ui.SetBusy(false);
+                if (_settings.Suggestions && suggestions.Count > 0 && string.IsNullOrEmpty(errorNote)) Ui.AddSuggestions(suggestions);
                 if (usage != null) ShowUsage(usage);
                 MaybeNotify(assistant, errorNote, started);
                 if (_pendingSwitch) { _pendingSwitch = false; LoadTranscriptFor(AcApp.DocumentManager.MdiActiveDocument); }
                 if (_pendingConfirm.HasValue) { var c = _pendingConfirm.Value; _pendingConfirm = null; AnswerConfirm(c.id, c.yes); }
+                if (_pendingPlan.HasValue) { var pp = _pendingPlan.Value; _pendingPlan = null; AnswerPlan(pp.id, pp.kind); }
             }));
         }
 
@@ -734,6 +829,422 @@ namespace ClaudeCAD.Plugin
             }
         }
 
+        // ================================================================= v0.6: look at the drawing, read-only, notes
+
+        /// <summary>"Chụp": the current view as an image attachment of the next message.</summary>
+        private void CaptureScreen()
+        {
+            var doc = AcApp.DocumentManager.MdiActiveDocument;
+            if (doc == null) { Ui.SetToolStatus("Không có bản vẽ nào đang mở."); return; }
+            try
+            {
+                var r = Capture.Render(doc, null, null, 1280, null);
+                Ui.AddImagePng(r.Png);
+            }
+            catch (Exception ex)
+            {
+                Logger.Error("capture failed", ex);
+                Ui.AddNote("Không chụp được bản vẽ: " + ex.Message, true);
+            }
+        }
+
+        private void SetReadOnly(bool on)
+        {
+            if (_transcript == null) return;
+            if (_transcript.ReadOnly == on) return;
+            _transcript.ReadOnly = on;
+            SaveTranscript();
+            var name = string.IsNullOrEmpty(_transcript.DrawingName) ? "bản vẽ này" : _transcript.DrawingName;
+            Ui.AddNote(on
+                ? $"🔒 Đã bật Chỉ xem cho {name}: Claude chỉ đọc, đo, hỏi đáp — mọi lệnh sửa bản vẽ đều bị chặn."
+                : $"🔓 Đã tắt Chỉ xem: Claude được sửa {name}.");
+        }
+
+        private string DrawingPathOf(Document d)
+        {
+            try { return d != null && d.IsNamedDrawing ? d.Name : null; } catch { return null; }
+        }
+
+        private void OpenNotes()
+        {
+            var path = DrawingPathOf(_transcriptDoc);
+            Ui.ShowNotes(ProjectNotes.LoadFolder(path), _transcript?.Notes ?? "", ProjectNotes.FolderFile(path));
+        }
+
+        private void SaveNotes(string folderText, string drawingText)
+        {
+            var path = DrawingPathOf(_transcriptDoc);
+            if (folderText != null && path != null)
+            {
+                try { ProjectNotes.SaveFolder(path, folderText); }
+                catch (Exception ex)
+                {
+                    Ui.AddErrorCard($"Không ghi được ghi chú dự án cạnh bản vẽ ({ProjectNotes.FolderFile(path)}): {ex.Message}. Ghi chú riêng bản vẽ vẫn được lưu.", false);
+                }
+            }
+            if (_transcript != null)
+            {
+                _transcript.Notes = ProjectNotes.Clip(drawingText);
+                SaveTranscript();
+            }
+            UpdateNotesIndicator();
+            Ui.SetToolStatus("Đã lưu ghi chú — Claude nhận kèm từ tin nhắn tiếp theo.");
+        }
+
+        private string NotesFor(Document doc) =>
+            ProjectNotes.Combine(ProjectNotes.LoadFolder(DrawingPathOf(doc)), doc == _transcriptDoc ? _transcript?.Notes : null);
+
+        private void UpdateNotesIndicator() => Ui.SetNotesIndicator(NotesFor(_transcriptDoc) != null);
+
+        // ================================================================= v0.6: change summary ("Thêm · Sửa · Xóa")
+
+        private ChangeSummary BuildChangeSummary(Autodesk.AutoCAD.DatabaseServices.Database db)
+        {
+            var snap = _changes.Snapshot();
+            _changes.Clear();
+            if (snap.Count == 0 || db == null || db.IsDisposed) return null;
+            var items = new List<(string, string, string)>();
+            var layoutOwner = new Dictionary<Autodesk.AutoCAD.DatabaseServices.ObjectId, bool>();
+            try
+            {
+                using (var tr = db.TransactionManager.StartOpenCloseTransaction())
+                {
+                    foreach (var (kind, h) in snap)
+                    {
+                        try
+                        {
+                            var id = Acad.IdFromHandle(db, h, true);
+                            if (!(tr.GetObject(id, Autodesk.AutoCAD.DatabaseServices.OpenMode.ForRead, true) is Autodesk.AutoCAD.DatabaseServices.Entity ent)) continue;
+                            if (!layoutOwner.TryGetValue(ent.OwnerId, out var isLayout))
+                            {
+                                isLayout = tr.GetObject(ent.OwnerId, Autodesk.AutoCAD.DatabaseServices.OpenMode.ForRead, true) is Autodesk.AutoCAD.DatabaseServices.BlockTableRecord btr && btr.IsLayout;
+                                layoutOwner[ent.OwnerId] = isLayout;
+                            }
+                            if (isLayout) items.Add((kind, ent.Layer, h)); // not entities inside block definitions
+                        }
+                        catch { /* purged or never committed */ }
+                    }
+                    tr.Commit();
+                }
+            }
+            catch (Exception ex)
+            {
+                Logger.Warn("change summary failed: " + ex.Message);
+                return null;
+            }
+            var s = ChangeSummary.Build(items);
+            return s.IsEmpty ? null : s;
+        }
+
+        // ================================================================= v0.6: macros
+
+        /// <summary>%AppData%\ClaudeCAD\macros: per user, survives plugin updates.</summary>
+        private static string MacrosRoot =>
+            Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "ClaudeCAD", "macros");
+
+        private void SaveMacro(ChatEntry entry, string name)
+        {
+            if (_macroStore == null) _macroStore = new MacroStore(MacrosRoot);
+            if (entry == null || !_turnMacros.TryGetValue(entry, out var calls))
+            {
+                Ui.AddNote("Không còn dữ liệu thao tác của lượt này để lưu macro (chỉ lưu được các lượt từ khi mở khung chat).", true);
+                return;
+            }
+            var m = new Macro
+            {
+                Name = name.Trim(),
+                Description = UserTextBefore(entry),
+                Drawing = _transcript?.DrawingName ?? "",
+                Calls = calls.Select(c => new MacroCall { Tool = c.Tool, Params = (Dictionary<string, object>)MacroLogic.DeepCopy(c.Params), ResultHandles = c.ResultHandles.ToList() }).ToList(),
+            };
+            m.BasePoint = BasePointOf(AcApp.DocumentManager.MdiActiveDocument, MacroLogic.CreatedHandles(m));
+            if (_macroStore.Exists(m.Name))
+            {
+                var answer = System.Windows.MessageBox.Show($"Đã có macro \"{m.Name}\". Thay bằng lượt này?", "ClaudeCAD — macro", System.Windows.MessageBoxButton.YesNo, System.Windows.MessageBoxImage.Question);
+                if (answer != System.Windows.MessageBoxResult.Yes) { Ui.SetToolStatus("Giữ nguyên macro cũ."); return; }
+            }
+            try { _macroStore.Save(m); }
+            catch (Exception ex) { Ui.AddErrorCard("Không lưu được macro: " + ex.Message, false); return; }
+            var external = MacroLogic.ExternalHandles(m);
+            Ui.AddNote($"✓ Đã lưu macro \"{m.Name}\" ({MacroLogic.Describe(m)}). Bấm Macro ▸ ▶ Chạy để vẽ lại mà không cần Claude"
+                + (m.BasePoint != null ? ", hoặc 📍 Tại điểm để đặt ở chỗ khác." : ".")
+                + (external.Count > 0 ? $" Lưu ý: macro dùng {external.Count} đối tượng có sẵn trong bản vẽ này; ở bản vẽ khác các lệnh đó sẽ báo lỗi." : ""));
+            Ui.SetMacros(_macroStore.List());
+        }
+
+        private string UserTextBefore(ChatEntry entry)
+        {
+            var list = _transcript?.Entries;
+            if (list == null) return "";
+            int i = list.IndexOf(entry);
+            for (int k = (i < 0 ? list.Count : i) - 1; k >= 0; k--)
+                if (list[k].Role == "user") return list[k].Text ?? "";
+            return "";
+        }
+
+        /// <summary>Lower-left corner of the entities among the handles (null if none is a visible entity).</summary>
+        private static double[] BasePointOf(Document doc, IEnumerable<string> handles)
+        {
+            if (doc == null) return null;
+            Autodesk.AutoCAD.DatabaseServices.Extents3d? ext = null;
+            using (var tr = doc.TransactionManager.StartOpenCloseTransaction())
+            {
+                foreach (var h in handles)
+                {
+                    try
+                    {
+                        var id = Acad.IdFromHandle(doc.Database, h);
+                        if (!(tr.GetObject(id, Autodesk.AutoCAD.DatabaseServices.OpenMode.ForRead) is Autodesk.AutoCAD.DatabaseServices.Entity e)) continue;
+                        var x = EntityInfo.Extents(e);
+                        if (!x.HasValue) continue;
+                        if (ext.HasValue) { var a = ext.Value; a.AddExtents(x.Value); ext = a; } else ext = x;
+                    }
+                    catch { }
+                }
+                tr.Commit();
+            }
+            return ext.HasValue ? new[] { Math.Round(ext.Value.MinPoint.X, 3), Math.Round(ext.Value.MinPoint.Y, 3) } : null;
+        }
+
+        private static List<string> EntityHandlesOnly(Document doc, IEnumerable<string> handles)
+        {
+            var list = new List<string>();
+            using (var tr = doc.TransactionManager.StartOpenCloseTransaction())
+            {
+                foreach (var h in handles)
+                {
+                    try
+                    {
+                        var id = Acad.IdFromHandle(doc.Database, h);
+                        if (tr.GetObject(id, Autodesk.AutoCAD.DatabaseServices.OpenMode.ForRead) is Autodesk.AutoCAD.DatabaseServices.Entity) list.Add(h);
+                    }
+                    catch { }
+                }
+                tr.Commit();
+            }
+            return list;
+        }
+
+        private void RunMacro(string name, bool atPoint)
+        {
+            if (_busy) { Ui.SetToolStatus("Đợi lượt hiện tại xong rồi chạy macro."); return; }
+            if (_macroStore == null) _macroStore = new MacroStore(MacrosRoot);
+            Macro m;
+            try { m = _macroStore.Load(name); }
+            catch (Exception ex) { Ui.AddErrorCard($"Không đọc được macro \"{name}\": {ex.Message}", false); return; }
+            if (m == null || m.Calls.Count == 0) { Ui.AddNote($"Macro \"{name}\" không còn hoặc trống.", true); Ui.SetMacros(_macroStore.List()); return; }
+            var doc = AcApp.DocumentManager.MdiActiveDocument;
+            if (doc == null) { Ui.SetToolStatus("Không có bản vẽ nào đang mở."); return; }
+            if (doc != _transcriptDoc) LoadTranscriptFor(doc);
+            if (_transcript?.ReadOnly == true)
+            {
+                Ui.AddErrorCard("Bản vẽ này đang bật 🔒 Chỉ xem — tắt Chỉ xem rồi chạy macro.", false);
+                return;
+            }
+            if (atPoint)
+            {
+                if (m.BasePoint == null) return;
+                Interaction.PickOnePoint(pt => MainThread.Post(() => StartMacro(m, pt)));
+                return;
+            }
+            StartMacro(m, null);
+        }
+
+        /// <summary>Replays a macro as one turn (one undo group) without Claude: handles created by earlier calls are remapped.</summary>
+        private async void StartMacro(Macro m, Autodesk.AutoCAD.Geometry.Point3d? at)
+        {
+            try
+            {
+                if (_busy) return;
+                var doc = AcApp.DocumentManager.MdiActiveDocument;
+                if (doc == null) return;
+                if (doc != _transcriptDoc) LoadTranscriptFor(doc);
+                var entry = new ChatEntry { Role = "user", Text = $"▶ Chạy macro \"{m.Name}\"" + (at.HasValue ? " tại " + Interaction.FormatPoints(new[] { at.Value }) : "") };
+                _macroRunning = true;
+                _macroCancel = false;
+                StartTurn(doc, null, entry, toAgent: false);
+                var map = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+                int ok = 0, failed = 0, n = 0;
+                string firstError = null;
+                foreach (var c in m.Calls)
+                {
+                    if (_macroCancel || !_busy) break;
+                    var resp = await RunMacroCall(c.Tool, MacroLogic.Remap(c.Params, map) as Dictionary<string, object>, ++n);
+                    if (resp.ok)
+                    {
+                        ok++;
+                        MacroLogic.Learn(map, c.ResultHandles, resp.handles);
+                    }
+                    else
+                    {
+                        failed++;
+                        if (firstError == null) firstError = $"{c.Tool}: {resp.error}";
+                    }
+                }
+                string moved = "";
+                if (at.HasValue && m.BasePoint != null && ok > 0 && !_macroCancel && _busy)
+                {
+                    var created = MacroLogic.CreatedHandles(m).Select(h => map.TryGetValue(h, out var nh) ? nh : null).Where(h => h != null).ToList();
+                    var ents = EntityHandlesOnly(doc, created);
+                    if (ents.Count > 0)
+                    {
+                        var disp = new List<object> { at.Value.X - m.BasePoint[0], at.Value.Y - m.BasePoint[1] };
+                        var mv = await RunMacroCall("move_entities", new Dictionary<string, object> { ["handles"] = ents.Cast<object>().ToList(), ["displacement"] = disp }, ++n);
+                        moved = mv.ok ? ", đã dời tới " + Interaction.FormatPoints(new[] { at.Value }) : ", không dời được: " + mv.error;
+                    }
+                }
+                var text = $"Đã chạy macro **{m.Name}**: {ok}/{m.Calls.Count} lệnh OK"
+                    + (failed > 0 ? $", {failed} lỗi (lỗi đầu: {firstError})" : "")
+                    + moved
+                    + (_macroCancel ? " — đã dừng giữa chừng" : "")
+                    + ". Không dùng Claude, không tốn token. Gõ U một lần nếu cậu muốn hoàn tác cả macro.";
+                lock (_gate) { if (_busy) _assistantText.Append(text); }
+                Ui.AppendAssistant(text);
+                EndTurn(null, false);
+            }
+            catch (Exception ex)
+            {
+                Logger.Error("macro replay failed", ex);
+                EndTurn("Macro bị lỗi: " + ex.Message, false);
+            }
+            finally
+            {
+                _macroRunning = false;
+                _macroCancel = false;
+            }
+        }
+
+        private async Task<(bool ok, List<string> handles, string error)> RunMacroCall(string tool, Dictionary<string, object> p, int n)
+        {
+            var running = new ToolLogEntry { Tool = tool, State = "running" };
+            AddToolLog(running);
+            var sw = Stopwatch.StartNew();
+            var resp = await _dispatcher.HandleAsync(new Dictionary<string, object> { ["id"] = "macro-" + n, ["tool"] = tool, ["params"] = p ?? new Dictionary<string, object>() });
+            bool ok = resp.TryGetValue("ok", out var okv) && okv is bool b && b;
+            var log = new ToolLogEntry { Tool = tool, State = ok ? "done" : "error", Ms = sw.ElapsedMilliseconds };
+            var handles = new List<string>();
+            string error = null;
+            if (ok)
+            {
+                handles = MacroLogic.ResultHandles(resp.TryGetValue("result", out var r) ? r : null);
+                lock (_gate) foreach (var h in handles) _turnHandles.Add(h);
+                if (handles.Count > 0) log.Summary = handles.Count + " đối tượng";
+            }
+            else
+            {
+                var err = resp.TryGetValue("error", out var ev) ? ev as Dictionary<string, object> : null;
+                error = err != null && err.TryGetValue("message", out var mv) ? mv as string : "lỗi";
+                log.Error = error?.Length > 300 ? error.Substring(0, 300) : error;
+            }
+            AddToolLog(log);
+            return (ok, handles, error);
+        }
+
+        private void AddToolLog(ToolLogEntry entry)
+        {
+            lock (_gate)
+            {
+                var a = _assistant;
+                if (a != null)
+                {
+                    int idx = entry.State == "running" ? -1 : a.Tools.FindIndex(x => x.State == "running" && x.Tool == entry.Tool);
+                    if (idx >= 0) a.Tools[idx] = entry; else a.Tools.Add(entry);
+                }
+            }
+            Ui.UpdateTool(entry);
+        }
+
+        private void DeleteMacro(string name)
+        {
+            var answer = System.Windows.MessageBox.Show($"Xóa macro \"{name}\"?", "ClaudeCAD — macro", System.Windows.MessageBoxButton.YesNo, System.Windows.MessageBoxImage.Warning);
+            if (answer != System.Windows.MessageBoxResult.Yes) return;
+            if (_macroStore == null) _macroStore = new MacroStore(MacrosRoot);
+            _macroStore.Delete(name);
+            Ui.SetMacros(_macroStore.List());
+            Ui.SetToolStatus($"Đã xóa macro \"{name}\".");
+        }
+
+        private void OpenMacrosFolder()
+        {
+            Directory.CreateDirectory(MacrosRoot);
+            Process.Start("explorer.exe", "\"" + MacrosRoot + "\"");
+        }
+
+        // ================================================================= v0.6: templates, skill drafts, plans
+
+        private void SaveTemplate(string title, string text)
+        {
+            try
+            {
+                var t = QuickTemplates.SaveUser(QuickTemplates.UserFile, title, text);
+                Ui.SetTemplates(QuickTemplates.LoadAll(PluginPaths.TemplatesFile, QuickTemplates.UserFile));
+                Ui.AddNote($"✓ Đã lưu mẫu lệnh /{t.Name} — gõ / rồi chọn \"{t.Title}\" để dùng lại.");
+            }
+            catch (Exception ex)
+            {
+                Ui.AddErrorCard("Không lưu được mẫu lệnh: " + ex.Message, false);
+            }
+        }
+
+        private void CreateSkillFromChat()
+        {
+            if (_busy) { Ui.SetToolStatus("Đợi lượt hiện tại xong đã."); return; }
+            if (_transcript == null || _transcript.Entries.Count(e => e.Role == "user") == 0)
+            {
+                Ui.AddNote("Chưa có cuộc chat nào để tạo skill. Làm vài yêu cầu, chỉnh chuẩn theo ý cậu, rồi bấm lại.", true);
+                return;
+            }
+            MainThread.Post(() => Send(new ComposedMessage
+            {
+                Text = "Tạo skill từ cuộc chat này: soạn một SKILL.md ghi lại các chuẩn, quy ước và thông số tớ đã dùng hoặc đã chỉnh trong cuộc chat " +
+                       "(layer, màu, nét, chiều cao chữ, kiểu kích thước, ký hiệu, trình tự làm). Gọi propose_skill để tớ xem lại; không vẽ gì.",
+            }, false));
+        }
+
+        private static string SkillDraftsRoot =>
+            Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "ClaudeCAD", "skill-drafts");
+
+        private void ShowSkillDraft(string name, string description, string content)
+        {
+            var slug = SkillStore.Slugify(name);
+            if (slug.Length == 0) slug = "skill-moi";
+            if (string.IsNullOrWhiteSpace(content)) { Ui.AddNote("Claude gửi bản nháp skill trống.", true); return; }
+            var dir = Path.Combine(SkillDraftsRoot, slug);
+            Directory.CreateDirectory(dir);
+            var file = Path.Combine(dir, "SKILL.md");
+            File.WriteAllText(file, content.Replace("\r\n", "\n"), new UTF8Encoding(false));
+            Ui.AddSkillDraftCard(slug, description, file);
+            _transcript?.Entries.Add(new ChatEntry { Role = "note", Text = $"Bản nháp skill {slug}: {file}" });
+            SaveTranscript();
+        }
+
+        private static void OpenFile(string file)
+        {
+            if (string.IsNullOrEmpty(file) || !File.Exists(file)) return;
+            try { Process.Start(new ProcessStartInfo(file) { UseShellExecute = true }); }
+            catch { Process.Start("notepad.exe", "\"" + file + "\""); }
+        }
+
+        private void AnswerPlan(string id, string kind)
+        {
+            if (_busy) { _pendingPlan = (id, kind); return; } // the card arrived before the turn ended
+            switch (kind)
+            {
+                case "go":
+                    MainThread.Post(() => Send(new ComposedMessage { Text = "Làm theo kế hoạch." }, false, null, "approved"));
+                    break;
+                case "edit":
+                    Ui.SetInputText("Sửa kế hoạch: ");
+                    Ui.SetToolStatus("Gõ điều cần đổi trong kế hoạch rồi gửi — Claude lập lại kế hoạch.");
+                    break;
+                default:
+                    Ui.AddNote("Đã bỏ kế hoạch — Claude không làm gì thêm.");
+                    _transcript?.Entries.Add(new ChatEntry { Role = "note", Text = "Người dùng bỏ kế hoạch." });
+                    SaveTranscript();
+                    break;
+            }
+        }
+
         // ================================================================= export (18)
 
         private void Export()
@@ -780,6 +1291,11 @@ namespace ClaudeCAD.Plugin
                 return _turnDoc;
             }
         }
+
+        /// <summary>"Chỉ xem" of the drawing whose chat is shown (the turn's drawing).</summary>
+        public bool ReadOnly => _transcript?.ReadOnly == true;
+
+        public void RecordCall(string tool, Dictionary<string, object> parameters, object result) => _recorder.Record(tool, parameters, result);
 
         // ================================================================= IPC events
 
@@ -900,6 +1416,40 @@ namespace ClaudeCAD.Plugin
                 case "session_reset":
                     Ui.SetConnection("Đã kết nối · phiên mới", true);
                     break;
+                case "suggestions":
+                    {
+                        var items = msg.TryGetValue("items", out var iv) && iv is List<object> il ? il.OfType<string>().ToList() : new List<string>();
+                        string source = msg.TryGetValue("source", out var sv) ? sv as string : "tool";
+                        if (!_settings.Suggestions || items.Count == 0) break;
+                        lock (_gate)
+                        {
+                            if (_busy)
+                            {
+                                // shown when the turn ends; a late SDK prediction of an older turn is dropped
+                                if (source != "sdk") _turnSuggestions.AddRange(items);
+                                break;
+                            }
+                        }
+                        Ui.AddSuggestions(items);
+                        break;
+                    }
+                case "plan_request":
+                    {
+                        string id = msg.TryGetValue("id", out var iv) ? iv as string : "";
+                        string summary = msg.TryGetValue("summary", out var sv) ? sv as string : "";
+                        var steps = msg.TryGetValue("steps", out var stv) && stv is List<object> sl ? sl.OfType<string>().ToList() : new List<string>();
+                        Ui.AddPlanCard(id, summary, steps);
+                        Ui.Enqueue(() => _transcript?.Entries.Add(new ChatEntry { Role = "note", Text = "Kế hoạch: " + summary + (steps.Count > 0 ? "\n" + string.Join("\n", steps.Select((x, i) => $"{i + 1}. {x}")) : "") }));
+                        break;
+                    }
+                case "skill_draft":
+                    {
+                        string name = msg.TryGetValue("name", out var nv) ? nv as string : "";
+                        string description = msg.TryGetValue("description", out var dv) ? dv as string : "";
+                        string content = msg.TryGetValue("content", out var cv) ? cv as string : "";
+                        Ui.Enqueue(() => Guard("skill draft", () => ShowSkillDraft(name, description, content)));
+                        break;
+                    }
                 default:
                     Logger.Warn("IPC unknown message type: " + (type ?? "(none)"));
                     break;

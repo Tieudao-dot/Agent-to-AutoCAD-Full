@@ -230,6 +230,62 @@ namespace ClaudeCAD.Plugin.Drawing
             }
         }
 
+        // ------------------------------------------------------------------ @ names (layers, blocks, styles)
+
+        /// <summary>Names the user can insert with "@": layers, blocks, text / dimension styles, layouts.</summary>
+        public static List<MentionItem> DrawingNames(Document doc)
+        {
+            var list = new List<MentionItem>();
+            if (doc == null) return list;
+            var db = doc.Database;
+            using (var tr = db.TransactionManager.StartOpenCloseTransaction())
+            {
+                void Table(ObjectId tableId, string kind, Func<SymbolTableRecord, bool> keep)
+                {
+                    var table = (SymbolTable)tr.GetObject(tableId, OpenMode.ForRead);
+                    foreach (ObjectId id in table)
+                    {
+                        if (list.Count >= 5000) return;
+                        if (!(tr.GetObject(id, OpenMode.ForRead) is SymbolTableRecord r) || r.IsErased || !keep(r)) continue;
+                        list.Add(new MentionItem { Name = r.Name, Kind = kind });
+                    }
+                }
+                Table(db.LayerTableId, "layer", r => !r.Name.Contains("|")); // xref layers are noise
+                Table(db.BlockTableId, "block", r => r is BlockTableRecord b && !b.IsLayout && !b.IsAnonymous && !b.IsFromExternalReference && !b.Name.Contains("|"));
+                Table(db.TextStyleTableId, "text_style", r => r.Name.Length > 0 && !r.Name.Contains("|"));
+                Table(db.DimStyleTableId, "dim_style", r => !r.Name.Contains("|"));
+                var layouts = (DBDictionary)tr.GetObject(db.LayoutDictionaryId, OpenMode.ForRead);
+                foreach (DBDictionaryEntry e in layouts)
+                    if (!e.Key.Equals("Model", StringComparison.OrdinalIgnoreCase)) list.Add(new MentionItem { Name = e.Key, Kind = "layout" });
+                tr.Commit();
+            }
+            return list;
+        }
+
+        // ------------------------------------------------------------------ one point for a macro
+
+        private static Action<Point3d> _onePoint;
+
+        /// <summary>Asks for one point in the drawing (CLAUDECAD_MACROPT) and calls back with it (WCS).</summary>
+        public static void PickOnePoint(Action<Point3d> then)
+        {
+            _onePoint = then;
+            Start(OnePointCommand);
+        }
+
+        public const string OnePointCommand = "CLAUDECAD_MACROPT";
+
+        internal static void RunOnePoint()
+        {
+            var cb = _onePoint;
+            _onePoint = null;
+            var doc = AcApp.DocumentManager.MdiActiveDocument;
+            if (doc == null || cb == null) return;
+            var r = doc.Editor.GetPoint(new PromptPointOptions("\nChọn điểm chèn cho macro (góc trái dưới): "));
+            if (r.Status != PromptStatus.OK) return;
+            cb(r.Value.TransformBy(doc.Editor.CurrentUserCoordinateSystem));
+        }
+
         // ------------------------------------------------------------------ undo the last turn
 
         /// <summary>
@@ -256,6 +312,13 @@ namespace ClaudeCAD.Plugin.Drawing
         {
             try { Interaction.RunPick(); }
             catch (System.Exception ex) { Logger.Error("CLAUDECAD_PICK failed", ex); }
+        }
+
+        [CommandMethod(Interaction.OnePointCommand, CommandFlags.Modal | CommandFlags.NoHistory)]
+        public void OnePoint()
+        {
+            try { Interaction.RunOnePoint(); }
+            catch (System.Exception ex) { Logger.Error("CLAUDECAD_MACROPT failed", ex); }
         }
 
         [CommandMethod(Interaction.PointCommand, CommandFlags.Modal | CommandFlags.NoHistory)]

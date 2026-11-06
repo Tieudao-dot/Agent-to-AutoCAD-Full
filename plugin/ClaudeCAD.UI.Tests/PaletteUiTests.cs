@@ -127,6 +127,74 @@ namespace ClaudeCAD.UI.Tests
             Assert.True(new FileInfo(Path.Combine(OutDir, "palette-light.png")).Length > 10_000);
         }
 
+        /// <summary>v0.6: plan card, change summary, macro button, next-step buttons, skill draft, notes, read-only.</summary>
+        private static ChatControl NewFeatures(bool dark)
+        {
+            var c = new ChatControl { Width = 400, Height = 1000 };
+            c.ApplySettings(new PaletteSettings { Standard = "ve-kien-truc", Scale = "1:100" });
+            c.SetDark(dark);
+            c.SetConnection("Đã kết nối · Opus 5.5 · Claude login", true);
+            c.SetMacros(new List<Macro>
+            {
+                new Macro { Name = "Khung tên A3", Calls = { new MacroCall { Tool = "draw_rectangle" }, new MacroCall { Tool = "add_text" } }, BasePoint = new[] { 0.0, 0.0 } },
+            });
+            c.MentionSource = () => new List<MentionItem> { new MentionItem { Name = "A-WALL", Kind = "layer" } };
+            c.LoadTranscript(new ChatTranscript { DrawingName = "Nha-pho.dwg" }, false);
+            c.SetReadOnly(false);
+            c.SetNotesIndicator(true);
+
+            c.AddUserMessage(new ChatEntry { Role = "user", Text = "Vẽ mặt bằng tầng 1 nhà phố 5x20m" });
+            c.BeginAssistant();
+            c.UpdateTool(new ToolLogEntry { Tool = "get_drawing_info", State = "done", Ms = 40 });
+            c.AppendAssistant("Việc này nhiều bước, tớ đề xuất kế hoạch trước:");
+            c.AddPlanCard("plan-1", "Mặt bằng tầng 1 nhà phố 5×20 m, tỷ lệ 1:100", new List<string>
+            {
+                "Lưới trục A–D, 1–5 (bước 4 m / 5 m), layer A-AXIS",
+                "Tường bao 220, tường ngăn 110 (theo ghi chú dự án)",
+                "Cửa đi D1 900, cửa sổ S1 1200; ghi kích thước 2 lớp",
+            });
+            c.EndAssistant(new ChatEntry { Role = "assistant", Text = "Việc này nhiều bước, tớ đề xuất kế hoạch trước:" }, false);
+
+            c.AddUserMessage(new ChatEntry { Role = "user", Text = "Làm theo kế hoạch." });
+            c.BeginAssistant();
+            c.UpdateTool(new ToolLogEntry { Tool = "batch_execute", State = "done", Ms = 900, Summary = "120 lệnh OK, 96 đối tượng" });
+            c.UpdateTool(new ToolLogEntry { Tool = "capture_view", State = "done", Ms = 310, Summary = "ảnh 1024×410" });
+            var a = new ChatEntry
+            {
+                Role = "assistant",
+                Text = "Đã vẽ xong mặt bằng tầng 1; tớ đã nhìn lại bản vẽ và sửa 2 chữ bị đè. Gõ U một lần nếu cậu muốn hoàn tác cả lượt này.",
+                Handles = { "2F4A" },
+                Changes = ChangeSummary.Build(new[]
+                {
+                    ("added", "A-WALL", "1"), ("added", "A-WALL", "2"), ("added", "A-DOOR", "3"), ("added", "A-DIM", "4"),
+                    ("modified", "A-TEXT", "5"), ("erased", "A-TEMP", "6"),
+                }),
+            };
+            c.EndAssistant(a, true, true);
+            c.AddSuggestions(new[] { "Ghi tên phòng và diện tích", "Bố trí thiết bị vệ sinh", "Vẽ mặt cắt A-A" });
+
+            c.AddUserMessage(new ChatEntry { Role = "user", Text = "Tạo skill từ cuộc chat này" });
+            c.BeginAssistant();
+            c.AppendAssistant("Tớ đã soạn skill **chuan-nha-pho** từ các chuẩn trong cuộc chat.");
+            c.AddSkillDraftCard("chuan-nha-pho", "Chuẩn vẽ nhà phố: layer A-*, tường 220/110, chữ 250 cho 1:100.", @"C:\temp\SKILL.md");
+            c.EndAssistant(new ChatEntry { Role = "assistant", Text = "Tớ đã soạn skill **chuan-nha-pho** từ các chuẩn trong cuộc chat." }, false);
+            return c;
+        }
+
+        [Fact]
+        public void RendersNewFeatureCards()
+        {
+            Sta(() =>
+            {
+                Shot(NewFeatures(true), "palette-v06-dark");
+                var light = NewFeatures(false);
+                light.SetReadOnly(true);
+                light.ShowNotes("Cao độ ±0.000 = +3.200\nTường bao 220, tường ngăn 110", "Bản vẽ tầng 1", @"D:\DuAn\ClaudeCAD-ghichu.md");
+                Shot(light, "palette-v06-light");
+            });
+            Assert.True(new FileInfo(Path.Combine(OutDir, "palette-v06-dark.png")).Length > 10_000);
+        }
+
         [Fact]
         public void ReloadsPersistedTranscript()
         {

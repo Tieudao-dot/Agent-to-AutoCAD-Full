@@ -43,6 +43,10 @@ namespace ClaudeCAD.Plugin.Drawing
         /// <summary>Returns the drawing of the current turn or throws ToolException (ACAD_ERROR).</summary>
         Document ResolveDocument();
         UndoScope Undo { get; }
+        /// <summary>"Chỉ xem" is on for the drawing of the turn: every write is refused.</summary>
+        bool ReadOnly { get; }
+        /// <summary>A successful drawing call of the turn (for "Lưu thành macro").</summary>
+        void RecordCall(string tool, Dictionary<string, object> parameters, object result);
     }
 
     /// <summary>
@@ -53,6 +57,16 @@ namespace ClaudeCAD.Plugin.Drawing
     public sealed class ToolDispatcher
     {
         public const int MaxBatchCalls = 500;
+
+        /// <summary>Writes still allowed in "Chỉ xem" mode (they only change the view).</summary>
+        public static readonly HashSet<string> ReadOnlyAllowed = new HashSet<string>(StringComparer.Ordinal) { "zoom_extents", "zoom_window" };
+
+        public const string ReadOnlyMessage =
+            "The user turned on \"Chỉ xem\" (read-only) for this drawing: you may only read, measure, look at and explain it. " +
+            "Do not try other tools to change it; tell the user in Vietnamese that you did not change anything and that they can turn off \"Chỉ xem\" (🔒 in the palette) if they want changes.";
+
+        // batch calls that succeeded; recorded only when the whole batch committed (main thread only)
+        private readonly List<(string tool, Dictionary<string, object> p, object result)> _pendingRecords = new List<(string, Dictionary<string, object>, object)>();
 
         private readonly Dictionary<string, ToolDef> _tools = new Dictionary<string, ToolDef>(StringComparer.Ordinal);
         private readonly ITurnHost _host;
@@ -173,21 +187,34 @@ namespace ClaudeCAD.Plugin.Drawing
             if (def.NoDocument) return def.Handler(null, p);
             var doc = _host.ResolveDocument();
             bool writes = def.Writes || (def.Name == "batch_execute" && BatchWrites(p));
+            // undo_last_turn is registered as a read (it only queues U) but it changes the drawing
+            if ((writes || def.Name == "undo_last_turn") && _host.ReadOnly && !ReadOnlyAllowed.Contains(def.Name))
+                throw new ToolException(ErrorCodes.ReadOnly, $"{def.Name}: {ReadOnlyMessage}");
 
             if (def.NoTransaction)
             {
                 if (writes) _host.Undo.EnsureStarted(doc);
                 var ctx0 = new ToolContext(doc, null, writes, this);
-                return def.Handler(ctx0, p);
+                var r0 = def.Handler(ctx0, p);
+                if (MacroLogic.ShouldRecord(def.Name, writes)) _host.RecordCall(def.Name, p.Raw, r0);
+                return r0;
             }
 
             if (!writes) return RunInTransaction(doc, def, p, false);
 
             _host.Undo.EnsureStarted(doc);
+            _pendingRecords.Clear();
+            object result;
             using (doc.LockDocument())
             {
-                return RunInTransaction(doc, def, p, true);
+                result = RunInTransaction(doc, def, p, true);
             }
+            if (def.Name == "batch_execute")
+                foreach (var (t, bp, br) in _pendingRecords) _host.RecordCall(t, bp, br);
+            else if (MacroLogic.ShouldRecord(def.Name, true))
+                _host.RecordCall(def.Name, p.Raw, result);
+            _pendingRecords.Clear();
+            return result;
         }
 
         private object RunInTransaction(Document doc, ToolDef def, Params p, bool writable)
@@ -278,6 +305,7 @@ namespace ClaudeCAD.Plugin.Drawing
                                 ctx.ResetCache();
                             }
                             nested.Commit();
+                            if (MacroLogic.ShouldRecord(tool, def.Writes)) _pendingRecords.Add((tool, p.Raw, r));
                             results.Add(new Dictionary<string, object> { ["index"] = i, ["tool"] = tool, ["ok"] = true, ["result"] = r });
                         }
                     }

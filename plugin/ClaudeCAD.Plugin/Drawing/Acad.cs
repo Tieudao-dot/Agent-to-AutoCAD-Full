@@ -37,7 +37,10 @@ namespace ClaudeCAD.Plugin.Drawing
 
         // ---------------------------------------------------------------- lookup
 
-        public static ObjectId IdFromHandle(Database db, string handle)
+        public static ObjectId IdFromHandle(Database db, string handle) => IdFromHandle(db, handle, false);
+
+        /// <summary>allowErased: also resolve erased objects (change summary of a turn).</summary>
+        public static ObjectId IdFromHandle(Database db, string handle, bool allowErased)
         {
             long value;
             try
@@ -48,7 +51,7 @@ namespace ClaudeCAD.Plugin.Drawing
             {
                 throw ToolException.Invalid($"'{handle}' is not a valid handle (hex string).");
             }
-            if (!db.TryGetObjectId(new Handle(value), out var id) || id.IsNull || id.IsErased)
+            if (!db.TryGetObjectId(new Handle(value), out var id) || id.IsNull || (id.IsErased && !allowErased))
                 throw new ToolException(ErrorCodes.EntityNotFound,
                     $"No entity with handle {handle} (erased or never existed). Call list_entities to get current handles.");
             return id;

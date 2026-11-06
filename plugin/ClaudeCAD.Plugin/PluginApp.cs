@@ -17,6 +17,9 @@ namespace ClaudeCAD.Plugin
     {
         private static ChatController _controller;
 
+        /// <summary>Ctrl+Shift+Space opens the palette (setting "Phím tắt").</summary>
+        internal static bool HotkeyEnabled = true;
+
         internal static ChatController Controller
         {
             get
@@ -33,6 +36,8 @@ namespace ClaudeCAD.Plugin
                 MainThread.Initialize();
                 Logger.Info($"ClaudeCAD {DrawingService.PluginVersion} loaded into AutoCAD {AcApp.Version}");
                 AcApp.QuitWillStart += (s, e) => Shutdown();
+                HotkeyEnabled = PaletteSettings.Load().Hotkey;
+                AcApp.PreTranslateMessage += OnPreTranslateMessage;
                 var ed = AcApp.DocumentManager.MdiActiveDocument?.Editor;
                 ed?.WriteMessage("\nClaudeCAD đã nạp. Gõ CLAUDECHAT để mở khung chat.\n");
             }
@@ -44,10 +49,30 @@ namespace ClaudeCAD.Plugin
 
         public void Terminate() => Shutdown();
 
+        private const int WM_KEYDOWN = 0x0100;
+        private const int VK_SPACE = 0x20;
+
+        /// <summary>Ctrl+Shift+Space anywhere in AutoCAD: open the chat palette and focus the input box.</summary>
+        private static void OnPreTranslateMessage(object sender, PreTranslateMessageEventArgs e)
+        {
+            try
+            {
+                if (!HotkeyEnabled || e.Message.message != WM_KEYDOWN || e.Message.wParam.ToInt64() != VK_SPACE) return;
+                if (System.Windows.Forms.Control.ModifierKeys != (System.Windows.Forms.Keys.Control | System.Windows.Forms.Keys.Shift)) return;
+                e.Handled = true;
+                Controller.FocusInput();
+            }
+            catch (System.Exception ex)
+            {
+                Logger.Error("hotkey failed", ex);
+            }
+        }
+
         private static void Shutdown()
         {
             try
             {
+                try { AcApp.PreTranslateMessage -= OnPreTranslateMessage; } catch { }
                 _controller?.Dispose();
                 _controller = null;
             }
@@ -72,6 +97,20 @@ namespace ClaudeCAD.Plugin
             {
                 Logger.Error("CLAUDECHAT failed", ex);
                 AcApp.DocumentManager.MdiActiveDocument?.Editor.WriteMessage("\nClaudeCAD lỗi: " + ex.Message + "\n");
+            }
+        }
+
+        /// <summary>Short command: open the palette with the caret in the input box (also Ctrl+Shift+Space).</summary>
+        [CommandMethod("CC", CommandFlags.Session)]
+        public void ClaudeChatShort()
+        {
+            try
+            {
+                PluginApp.Controller.FocusInput();
+            }
+            catch (System.Exception ex)
+            {
+                Logger.Error("CC failed", ex);
             }
         }
 
