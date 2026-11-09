@@ -1645,8 +1645,14 @@ namespace ClaudeCAD.Plugin
             });
         }
 
-        /// <summary>The "Bắt đầu" card: node, assistant, Claude sign-in, skills — with Login / Self-test buttons.</summary>
-        public void ShowWelcome()
+        /// <summary>
+        /// The "Bắt đầu" card: node, assistant, Claude sign-in, skills — with Login / Self-test buttons.
+        /// autoLogin (first AutoCAD start after installing): when this Windows user is not signed in yet, the
+        /// browser sign-in opens by itself, so the user only confirms there.
+        /// </summary>
+        public void ShowWelcome() => ShowWelcome(false);
+
+        public void ShowWelcome(bool autoLogin)
         {
             ShowPalette();
             ClaudeAuth.StatusAsync().ContinueWith(t =>
@@ -1661,6 +1667,7 @@ namespace ClaudeCAD.Plugin
                     ("Skill", _skillStore != null, _skillStore == null ? "" : $"{_skillStore.Scan().Count} skill trong plugin"),
                 };
                 Ui.AddWelcomeCard(checks, auth.LoggedIn != true);
+                if (autoLogin && auth.LoggedIn == false) Ui.Enqueue(Login); // not when the state is unknown
             });
         }
 

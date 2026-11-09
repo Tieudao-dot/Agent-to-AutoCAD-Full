@@ -164,3 +164,12 @@ Cần test trên máy thật: I-1 … I-5 trong `docs/test-log.md`.
 - **Toast** trong khung chat; **giới hạn sử dụng AI**: cảnh báo khi sắp hết, thẻ trong chat khi hết (giờ làm mới, đếm ngược, tự gửi lại, dùng API key).
 
 Cloud: `dotnet test` 106/106, `npm test` 95/95, build ✅. Cần test: T-1, T-2, R-1, A-1, A-2.
+
+## v0.9.3 — đăng nhập ngay trong bộ cài ✅ code xong
+
+- Trang cuối bộ cài: ô **Đăng nhập Claude ngay** (`claude.exe auth login` đi kèm, chạy dưới tài khoản Windows của người dùng, ẩn khi đã đăng nhập, bỏ qua khi cài ngầm) — không cần mở AutoCAD.
+- Lần đầu mở AutoCAD mà chưa đăng nhập: plugin tự mở trang đăng nhập.
+- Bộ cài bỏ ~2.200 file `.map`; trang phát hành ghi kích thước + SHA-256 của Setup.exe.
+- Sửa chữ bị cắt trong ⚙ và tiêu đề bảng chọn layer.
+
+Cần test: I-6, I-7.

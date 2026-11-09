@@ -106,6 +106,23 @@ if (!values['skip-npm']) {
   });
   const winBin = path.join(agentOut, 'node_modules', '@anthropic-ai', 'claude-agent-sdk-win32-x64');
   if (!fs.existsSync(winBin)) fail('the win32-x64 Claude Code binary package was not installed (npm too old? needs npm >= 9)');
+  if (!fs.existsSync(path.join(winBin, 'claude.exe'))) fail('claude.exe missing in the win32-x64 package (the installer and "Đăng nhập Claude" run it)');
+}
+
+// Source maps (*.map, ~2,200 files) are only for debugging the libraries: not shipped. Fewer files = faster
+// install, less antivirus scanning, smaller setup.
+{
+  let removed = 0;
+  const walk = (dir) => {
+    if (!fs.existsSync(dir)) return;
+    for (const e of fs.readdirSync(dir, { withFileTypes: true })) {
+      const p = path.join(dir, e.name);
+      if (e.isDirectory()) walk(p);
+      else if (e.name.endsWith('.map')) { fs.rmSync(p); removed++; }
+    }
+  };
+  walk(agentOut);
+  if (removed) console.log(`make-bundle: removed ${removed} source maps`);
 }
 
 // Node.js for Windows next to the plugin (Contents\node\node.exe): the user does not install Node

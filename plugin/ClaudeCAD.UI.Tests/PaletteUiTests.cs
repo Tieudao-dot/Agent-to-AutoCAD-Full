@@ -5,6 +5,7 @@ using System.Linq;
 using System.Threading;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Documents;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Threading;
@@ -231,6 +232,64 @@ namespace ClaudeCAD.UI.Tests
                 Shot(c, "palette-layers");
             });
             Assert.True(new FileInfo(Path.Combine(OutDir, "palette-layers.png")).Length > 5_000);
+        }
+
+        /// <summary>Sign-in flow screens: first start card, settings ▸ Tài khoản AI, sign-in in progress, signed in, API key editor.</summary>
+        [Fact]
+        public void RendersLoginFlow()
+        {
+            Sta(() =>
+            {
+                // 1. first start: "Bắt đầu" card with "Đăng nhập Claude"
+                var c1 = new ChatControl { Width = 400, Height = 520 };
+                c1.ApplySettings(new PaletteSettings());
+                c1.SetDark(true);
+                c1.SetConnection("Đã kết nối · trợ lý sẵn sàng", true);
+                c1.LoadTranscript(new ChatTranscript(), false);
+                c1.AddWelcomeCard(new List<(string, bool?, string)>
+                {
+                    ("Node.js", true, "đi kèm plugin"),
+                    ("Trợ lý (sidecar)", true, "sẵn sàng"),
+                    ("Tài khoản Claude", false, "chưa đăng nhập Claude"),
+                    ("Skill", true, "3 skill trong plugin"),
+                }, true);
+                Shot(c1, "login-1-bat-dau");
+
+                // 2. ⚙ settings ▸ Tài khoản AI (the popup content rendered on its own)
+                var c2 = new ChatControl { Width = 400, Height = 300 };
+                c2.ApplySettings(new PaletteSettings());
+                c2.SetDark(true);
+                c2.SetAccountStatus("Đang dùng: chưa đăng nhập Claude");
+                var popup = (System.Windows.Controls.Primitives.Popup)typeof(ChatControl)
+                    .GetField("_settingsPopup", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance).GetValue(c2);
+                var panel = (FrameworkElement)popup.Child;
+                popup.Child = null;
+                var host = new Border { Width = 320, Height = 640, Child = panel, Background = Brushes.Transparent };
+                host.SetValue(TextElement.FontFamilyProperty, new FontFamily("Segoe UI"));
+                Theme.Apply(host.Resources, true);
+                Shot(host, "login-2-cai-dat-tai-khoan");
+
+                // 3. after clicking: note while the browser sign-in runs, then 4. signed in
+                var c3 = new ChatControl { Width = 400, Height = 420 };
+                c3.ApplySettings(new PaletteSettings());
+                c3.SetDark(true);
+                c3.SetConnection("Đã kết nối · trợ lý sẵn sàng", true);
+                c3.LoadTranscript(new ChatTranscript(), false);
+                c3.AddNote("Đang mở cửa sổ đăng nhập Claude: trình duyệt sẽ mở trang đăng nhập — chọn tài khoản Pro/Max, đồng ý, rồi quay lại AutoCAD. Cửa sổ đen tự đóng khi xong.");
+                Shot(c3, "login-3-dang-dang-nhap");
+                c3.AddNote("✓ Đã đăng nhập Claude. Trợ lý khởi động lại với tài khoản này — cậu gõ yêu cầu được rồi.");
+                c3.SetConnection("Đã kết nối · claude-opus-5-5 · Claude login", true);
+                Shot(c3, "login-4-da-dang-nhap");
+
+                // 5. "Dùng API key" editor
+                var c5 = new ChatControl { Width = 400, Height = 420 };
+                c5.ApplySettings(new PaletteSettings());
+                c5.SetDark(true);
+                c5.LoadTranscript(new ChatTranscript(), false);
+                c5.ShowApiKeyPanel(null);
+                Shot(c5, "login-5-api-key");
+            });
+            Assert.True(File.Exists(Path.Combine(OutDir, "login-2-cai-dat-tai-khoan.png")));
         }
 
         [Fact]

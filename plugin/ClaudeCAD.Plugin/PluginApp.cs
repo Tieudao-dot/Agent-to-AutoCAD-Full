@@ -97,7 +97,7 @@ namespace ClaudeCAD.Plugin
                     {
                         System.IO.Directory.CreateDirectory(System.IO.Path.GetDirectoryName(FirstStartFlag));
                         System.IO.File.WriteAllText(FirstStartFlag, DateTime.Now.ToString("o"));
-                        Controller.ShowWelcome();
+                        Controller.ShowWelcome(autoLogin: true);
                     }
                     catch (System.Exception ex) { Logger.Error("first start failed", ex); }
                 };
