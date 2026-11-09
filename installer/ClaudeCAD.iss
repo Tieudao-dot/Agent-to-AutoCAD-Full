@@ -210,7 +210,7 @@ end;
 { percent-encoding of the UTF-8 bytes (device / user names may be Vietnamese); Pascal Script has no nested routines }
 function Pct(b: Integer): String;
 begin
-  Result := '%' + IntToHex(b, 2);
+  Result := '%' + Copy('0123456789ABCDEF', (b shr 4) + 1, 1) + Copy('0123456789ABCDEF', (b and 15) + 1, 1);
 end;
 
 function UrlEncode(const S: String): String;
@@ -259,7 +259,7 @@ begin
   Result := '';
   p := Pos('"' + Name + '":"', Json);
   if p = 0 then exit;
-  Rest := Copy(Json, p + Length(Name) + 4, MaxInt);
+  Rest := Copy(Json, p + Length(Name) + 4, Length(Json));
   p := Pos('"', Rest);
   if p > 0 then Result := Copy(Rest, 1, p - 1);
 end;
@@ -422,7 +422,6 @@ begin
   { the owner gets the email as soon as the page opens (once per run; "Gửi lại yêu cầu" sends again) }
   if (KeyPage <> nil) and (CurPageID = KeyPage.ID) then
   begin
-    KeyEdit.SetFocus;
     if not Requested then SendRequest();
   end;
 end;
