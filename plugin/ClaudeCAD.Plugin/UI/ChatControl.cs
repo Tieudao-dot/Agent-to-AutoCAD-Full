@@ -444,6 +444,9 @@ namespace ClaudeCAD.Plugin.UI
             return b;
         }
 
+        /// <summary>Check box label that wraps instead of being cut off in narrow panels.</summary>
+        private static TextBlock Wrapped(string text) => new TextBlock { Text = text, TextWrapping = TextWrapping.Wrap };
+
         private static TextBlock MutedText(string text)
         {
             var t = new TextBlock { Text = text, VerticalAlignment = VerticalAlignment.Center, TextTrimming = TextTrimming.CharacterEllipsis };
@@ -461,7 +464,7 @@ namespace ClaudeCAD.Plugin.UI
 
         private FrameworkElement BuildSettingsPanel()
         {
-            var p = new StackPanel { Margin = new Thickness(10), MinWidth = 220 };
+            var p = new StackPanel { Margin = new Thickness(10), Width = 300 };
             var border = new Border { BorderThickness = new Thickness(1), Child = p, CornerRadius = new CornerRadius(4) };
             Theme.Ref(border, Border.BackgroundProperty, Theme.InputBg);
             Theme.Ref(border, Border.BorderBrushProperty, Theme.Border);
@@ -485,12 +488,12 @@ namespace ClaudeCAD.Plugin.UI
             fonts.Children.Add(minus);
             fonts.Children.Add(plus);
             p.Children.Add(fonts);
-            _notify = new CheckBox { Content = "Thông báo Windows khi lượt xong lúc tớ đang ở cửa sổ khác", Margin = new Thickness(0, 8, 0, 0), IsChecked = true };
+            _notify = new CheckBox { Content = Wrapped("Thông báo Windows khi lượt xong lúc tớ đang ở cửa sổ khác"), Margin = new Thickness(0, 8, 0, 0), IsChecked = true };
             Theme.Ref(_notify, ForegroundProperty, Theme.Fg);
             p.Children.Add(_notify);
             CheckBox Check(string text, string tip)
             {
-                var c = new CheckBox { Content = text, ToolTip = tip, Margin = new Thickness(0, 6, 0, 0), IsChecked = true };
+                var c = new CheckBox { Content = Wrapped(text), ToolTip = tip, Margin = new Thickness(0, 6, 0, 0), IsChecked = true };
                 Theme.Ref(c, ForegroundProperty, Theme.Fg);
                 c.Checked += (s, e) => OnSettingsUi();
                 c.Unchecked += (s, e) => OnSettingsUi();
@@ -930,15 +933,15 @@ namespace ClaudeCAD.Plugin.UI
         private Border BuildLayerPanel()
         {
             var p = new StackPanel { Margin = new Thickness(8) };
-            var head = new DockPanel { Margin = new Thickness(0, 0, 0, 4) };
-            var close = SmallButton("Đóng", "Đóng danh sách layer");
-            close.Margin = new Thickness(0);
+            // title on its own line (it was cut off when it shared the line with the buttons)
+            var title = new TextBlock { Text = "Chọn layer để chat chỉnh sửa", FontWeight = FontWeights.SemiBold, TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 0, 0, 4) };
+            Theme.Ref(title, TextBlock.ForegroundProperty, Theme.Fg);
+            p.Children.Add(title);
+            var head = new WrapPanel { Margin = new Thickness(0, 0, 0, 4) };
             var apply = SmallButton("Dùng layer đã chọn", "Gửi kèm các layer đã tick với tin nhắn tiếp theo");
             var none = SmallButton("Bỏ chọn", "Bỏ tick tất cả");
-            foreach (var b in new[] { close, apply, none }) { DockPanel.SetDock(b, Dock.Right); head.Children.Add(b); }
-            var title = new TextBlock { Text = "Chọn layer để chat chỉnh sửa", FontWeight = FontWeights.SemiBold, VerticalAlignment = VerticalAlignment.Center };
-            Theme.Ref(title, TextBlock.ForegroundProperty, Theme.Fg);
-            head.Children.Add(title);
+            var close = SmallButton("Đóng", "Đóng danh sách layer");
+            foreach (var b in new[] { apply, none, close }) head.Children.Add(b);
             p.Children.Add(head);
             _layerSearch = InputBox();
             _layerSearch.Margin = new Thickness(0, 2, 0, 4);

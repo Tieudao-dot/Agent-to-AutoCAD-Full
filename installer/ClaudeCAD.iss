@@ -1,9 +1,9 @@
 ﻿; Inno Setup script: builds ClaudeCAD-Setup-<version>.exe from bundle\out\ClaudeCAD.bundle.
-; Build on Windows:  "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" /DAppVersion=0.9.2 installer\ClaudeCAD.iss
+; Build on Windows:  "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" /DAppVersion=0.9.3 installer\ClaudeCAD.iss
 ; (CI does this in .github/workflows/build.yml.)
 
 #ifndef AppVersion
-  #define AppVersion "0.9.2"
+  #define AppVersion "0.9.3"
 #endif
 #define BundleDir "..\bundle\out\ClaudeCAD.bundle"
 
@@ -37,8 +37,16 @@ Source: "{#BundleDir}\*"; DestDir: "{app}"; Excludes: "Contents\skills\*"; Flags
 ; skills: never overwrite files the user may have edited
 Source: "{#BundleDir}\Contents\skills\*"; DestDir: "{app}\Contents\skills"; Flags: recursesubdirs createallsubdirs onlyifdoesntexist uninsneveruninstall
 
+#define ClaudeExe "{app}\Contents\agent\node_modules\@anthropic-ai\claude-agent-sdk-win32-x64\claude.exe"
+
+[Run]
+; Sign in now (no AutoCAD needed): the Claude Code bundled with the plugin opens the browser; the user only
+; confirms. runasoriginaluser: the credentials must land in the profile of the person using the PC, not of an
+; admin account typed into UAC. skipifsilent: /VERYSILENT installs never open a browser. Hidden when signed in.
+Filename: "{#ClaudeExe}"; Parameters: "auth login --claudeai"; Description: "Đăng nhập Claude ngay (trình duyệt mở ra, bấm đồng ý một lần — không cần mở AutoCAD)"; Flags: postinstall runasoriginaluser skipifsilent nowait; Check: NeedsLogin
+
 [Messages]
-FinishedLabel=ClaudeCAD đã được cài. Mở AutoCAD 2022–2025: khung chat sẽ tự mở với nút "Đăng nhập Claude" (đăng nhập một lần trên trình duyệt). Sau đó cứ gõ yêu cầu bằng tiếng Việt.
+FinishedLabel=ClaudeCAD đã được cài.%n%nĐể dùng ngay: giữ ô "Đăng nhập Claude ngay" rồi bấm Finish — trình duyệt mở trang cấp quyền, cậu bấm đồng ý bằng tài khoản Claude Pro/Max (một cửa sổ đen hiện lên trong lúc đăng nhập và tự đóng khi xong). Sau đó mở AutoCAD 2022–2025 là dùng được.%n%nNếu bỏ qua bước này, lần đầu mở AutoCAD plugin sẽ tự mở trang đăng nhập.
 
 [Code]
 #if FileExists(AddBackslash(SourcePath) + BundleDir + "\Contents\node\node.exe")
@@ -81,6 +89,32 @@ begin
             for k := 0 to GetArrayLength(Profiles) - 1 do
               AddTrustedPath(Base + '\' + Rel + '\' + Products[j] + '\Profiles\' + Profiles[k] + '\Variables', Entry);
   end;
+end;
+
+{ True when this Windows user is not signed in to Claude yet (no API key, "claude auth status" says loggedIn false). }
+var
+  LoginChecked, LoginNeeded: Boolean;
+
+function NeedsLogin(): Boolean;
+var
+  ResultCode: Integer;
+  TmpFile, Exe: String;
+  Text: AnsiString;
+begin
+  { evaluated several times while the finish page is shown: run "claude auth status" only once }
+  if LoginChecked then begin Result := LoginNeeded; exit; end;
+  LoginChecked := True;
+  LoginNeeded := False;
+  Result := False;
+  if GetEnv('ANTHROPIC_API_KEY') <> '' then exit;
+  Exe := ExpandConstant('{#ClaudeExe}');
+  if not FileExists(Exe) then exit;
+  Result := True;
+  TmpFile := ExpandConstant('{tmp}\authstatus.json');
+  if ExecAsOriginalUser(ExpandConstant('{cmd}'), '/C ""' + Exe + '" auth status --json > "' + TmpFile + '" 2>&1"', '', SW_HIDE, ewWaitUntilTerminated, ResultCode) then
+    if LoadStringFromFile(TmpFile, Text) then
+      if Pos('"loggedIn": true', String(Text)) > 0 then Result := False;
+  LoginNeeded := Result;
 end;
 
 function NodeMajor(): Integer;

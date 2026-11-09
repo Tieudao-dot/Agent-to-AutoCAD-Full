@@ -8,11 +8,16 @@
 - Các bản trước và file khác (`ClaudeCAD-<version>.zip`, `install.ps1`, `latest.json`): [trang phát hành](https://github.com/Tieudao-dot/Agent-to-Autocad/releases).
 - File bộ cài không nằm trực tiếp trong thư mục này vì GitHub không nhận file lớn hơn 100 MB trong repo (bộ cài khoảng 140 MB vì kèm sẵn Node.js và Claude Code). CI tự build và đăng bộ cài mỗi khi có phiên bản mới trên `main`.
 
+## Kiểm tra file tải về
+
+Trang [phát hành](https://github.com/Tieudao-dot/Agent-to-Autocad/releases/latest) ghi kích thước và mã SHA-256 của `ClaudeCAD-Setup.exe`. Nếu bộ cài báo "The source file is corrupted", mở PowerShell trong thư mục chứa file và chạy `Get-FileHash .\ClaudeCAD-Setup.exe` — mã khác với trang phát hành nghĩa là file tải về bị hỏng: tải lại vào ổ máy (không chạy từ ổ mạng / USB), hoặc tạm tắt phần mềm diệt virus khi cài.
+
 ## Cài đặt (3 bước)
 
 1. Tải `ClaudeCAD-Setup.exe` ở link trên.
 2. Chạy file. Nếu Windows hiện "Windows protected your PC" → **More info → Run anyway** (bộ cài chưa ký số). Không cần quyền admin, không cần cài Node.js hay Claude Code. Nên đóng AutoCAD trước khi cài.
-3. Mở AutoCAD 2022–2025: khung chat tự mở với thẻ **Bắt đầu** → bấm **Đăng nhập Claude**, đăng nhập tài khoản Claude Pro/Max trên trình duyệt (một lần trên mỗi máy). Xong — gõ yêu cầu bằng tiếng Việt.
+3. Trang cuối bộ cài: giữ ô **Đăng nhập Claude ngay** rồi bấm **Finish** → trình duyệt mở trang cấp quyền, bấm **đồng ý** bằng tài khoản Claude Pro/Max (một cửa sổ đen hiện lên và tự đóng khi xong). Không cần mở AutoCAD. Máy đã đăng nhập sẵn thì ô này không hiện.
+4. Mở AutoCAD 2022–2025 là dùng được. (Nếu đã bỏ qua bước 3, lần đầu mở AutoCAD plugin tự mở trang đăng nhập.)
 
 Sau khi cài: gõ `CLAUDECHATSELFTEST` để tự kiểm tra (báo cáo ✓/✗ mở trong Notepad). Mở khung chat: `CLAUDECHAT`, `CC` hoặc **Ctrl+Shift+Space**.
 
@@ -50,7 +55,8 @@ Windows **Settings → Apps → ClaudeCAD for AutoCAD → Uninstall** (hoặc `i
 
 | Phiên bản | Nội dung chính |
 | --- | --- |
-| **0.9.2** | **Toast** thông báo ngay trong khung chat; **giới hạn sử dụng AI** báo thẳng trong cuộc chat (cảnh báo khi sắp hết, thẻ khi hết với giờ làm mới và nút tự gửi lại); **Gửi báo cáo lỗi** (một file .zip trên Desktop: thông tin máy, log, tự kiểm tra, log cài đặt — không có chat, bản vẽ, API key); bộ cài luôn ghi log cài đặt; mục **Tài khoản AI** trong ⚙: xem đang dùng tài khoản nào, **Đổi tài khoản**, **Đăng xuất**, **Dùng API key** (lưu mã hóa). |
+| **0.9.3** | **Đăng nhập Claude ngay trong bộ cài** (ô "Đăng nhập Claude ngay" ở trang cuối — trình duyệt mở, bấm đồng ý, không cần mở AutoCAD); lần đầu mở AutoCAD mà chưa đăng nhập thì plugin **tự mở** trang đăng nhập; bộ cài bỏ ~2.200 file `.map` không cần thiết (nhẹ hơn, ít bị diệt virus quét chặn); chữ trong ⚙ và bảng chọn layer không còn bị cắt; trang phát hành ghi kích thước + SHA-256 của bộ cài. |
+| 0.9.2 | **Toast** thông báo ngay trong khung chat; **giới hạn sử dụng AI** báo thẳng trong cuộc chat (cảnh báo khi sắp hết, thẻ khi hết với giờ làm mới và nút tự gửi lại); **Gửi báo cáo lỗi** (một file .zip trên Desktop: thông tin máy, log, tự kiểm tra, log cài đặt — không có chat, bản vẽ, API key); bộ cài luôn ghi log cài đặt; mục **Tài khoản AI** trong ⚙: xem đang dùng tài khoản nào, **Đổi tài khoản**, **Đăng xuất**, **Dùng API key** (lưu mã hóa). |
 | 0.9.1 | Cài 3 bước: kèm Node.js, nút **Đăng nhập Claude** ngay trong khung chat (không cần cài Claude Code / mở terminal), tự thêm thư mục plugin vào danh sách tin cậy của AutoCAD (hết cảnh báo SECURELOAD), thẻ **Bắt đầu** lần đầu mở AutoCAD, link tải cố định. |
 | 0.9.0 | Lệnh `CLAUDECHATSELFTEST`; so biên bản lúc AutoCAD rảnh, lưu phiên bản nhanh, bản vẽ lớn cập nhật dần, macro chạy theo lô; sửa 14 lỗi từ lượt soát code thứ ba. |
 | 0.8.0 | Chọn layer rồi chat chỉnh sửa: layer của vùng chọn (bỏ tick, → Cả layer), nút **Layer**. |
