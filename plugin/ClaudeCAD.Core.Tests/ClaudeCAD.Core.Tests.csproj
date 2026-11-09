@@ -25,6 +25,7 @@
     <Compile Include="..\ClaudeCAD.Plugin\Core\ChatExtras.cs" Link="Core\ChatExtras.cs" />
     <Compile Include="..\ClaudeCAD.Plugin\Core\DrawingHistoryCore.cs" Link="Core\DrawingHistoryCore.cs" />
     <Compile Include="..\ClaudeCAD.Plugin\Core\Diagnostics.cs" Link="Core\Diagnostics.cs" />
+    <Compile Include="..\ClaudeCAD.Plugin\Core\License.cs" Link="Core\License.cs" />
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.11.1" />

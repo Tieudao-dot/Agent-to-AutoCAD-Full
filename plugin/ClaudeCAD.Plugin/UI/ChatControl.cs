@@ -82,6 +82,9 @@ namespace ClaudeCAD.Plugin.UI
         public event Action ReportRequested;
         /// <summary>Usage limit card: true = send the request again automatically when the limit resets.</summary>
         public event Action<bool> LimitAutoRetryToggled;
+        // v0.9.4: activation
+        public event Action ActivationRequestRequested;
+        public event Action<string> ActivationKeySubmitted;
         /// <summary>"sk-ant-…AbCd" of the saved key, or null (shown in the API key editor).</summary>
         public Func<string> ApiKeyMask;
         /// <summary>Layer / block / style names of the active drawing for "@" (called on the UI thread).</summary>
@@ -2015,6 +2018,104 @@ namespace ClaudeCAD.Plugin.UI
             card.Margin = new Thickness(0, 4, 24, 4);
             _messages.Children.Add(card);
             ScrollToEnd();
+        });
+
+        // ---------------------------------------------------------------- card: activation (v0.9.4)
+
+        private TextBlock _activationStatus;
+        private TextBox _activationKey;
+        private Button _activationGo, _activationAsk;
+
+        /// <summary>
+        /// This machine has no licence: machine code (copy), the owner's contact, "Gửi yêu cầu kích hoạt" (emails the
+        /// owner a key) and a box for the key the owner sends back. Only the newest card is live.
+        /// </summary>
+        public void AddActivationCard(string machine, string device, string contact, string status) => Ui(() =>
+        {
+            var stack = new StackPanel();
+            var title = new TextBlock { Text = "🔒 Kích hoạt ClaudeCAD", FontWeight = FontWeights.SemiBold, FontSize = FontSize + 1 };
+            Theme.Ref(title, TextBlock.ForegroundProperty, Theme.Fg);
+            stack.Children.Add(title);
+            var intro = new TextBlock { Text = "Máy này cần key kích hoạt để dùng plugin. " + contact + " để nhận key, rồi dán key vào ô dưới.", TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 3, 0, 0) };
+            Theme.Ref(intro, TextBlock.ForegroundProperty, Theme.Fg);
+            stack.Children.Add(intro);
+
+            var codeRow = new WrapPanel { Margin = new Thickness(0, 6, 0, 0) };
+            var code = new TextBox { Text = machine, IsReadOnly = true, FontFamily = new FontFamily("Consolas"), FontWeight = FontWeights.SemiBold, Padding = new Thickness(4, 1, 4, 1), BorderThickness = new Thickness(1), VerticalAlignment = VerticalAlignment.Center, ToolTip = "Mã máy: gửi mã này cho chủ plugin" };
+            Theme.Ref(code, BackgroundProperty, Theme.InputBg);
+            Theme.Ref(code, ForegroundProperty, Theme.Fg);
+            Theme.Ref(code, BorderBrushProperty, Theme.Border);
+            var copy = SmallButton("Sao chép", "Sao chép mã máy");
+            copy.Margin = new Thickness(6, 0, 0, 0);
+            copy.VerticalAlignment = VerticalAlignment.Center;
+            copy.Click += (s, e) =>
+            {
+                try { Clipboard.SetText($"Mã máy ClaudeCAD: {machine} ({device})"); copy.Content = "✓ Đã chép"; }
+                catch { code.SelectAll(); code.Focus(); }
+            };
+            var label = MutedText("Mã máy: ");
+            codeRow.Children.Add(label);
+            codeRow.Children.Add(code);
+            codeRow.Children.Add(copy);
+            stack.Children.Add(codeRow);
+            var dev = MutedText("Thiết bị: " + device);
+            dev.FontSize = 11;
+            stack.Children.Add(dev);
+
+            var keyRow = new DockPanel { Margin = new Thickness(0, 8, 0, 0), LastChildFill = true };
+            var go = new Button { Content = "Kích hoạt", Padding = new Thickness(12, 2, 12, 2), Margin = new Thickness(6, 0, 0, 0), FontWeight = FontWeights.SemiBold };
+            DockPanel.SetDock(go, Dock.Right);
+            keyRow.Children.Add(go);
+            var key = new TextBox { Padding = new Thickness(3, 2, 3, 2), FontFamily = new FontFamily("Consolas"), ToolTip = "Key dạng XXXX-XXXX-XXXX-XXXX (hoặc mã kích hoạt offline bắt đầu bằng CCL1|)" };
+            Theme.Ref(key, BackgroundProperty, Theme.InputBg);
+            Theme.Ref(key, ForegroundProperty, Theme.Fg);
+            Theme.Ref(key, BorderBrushProperty, Theme.Border);
+            keyRow.Children.Add(key);
+            stack.Children.Add(keyRow);
+
+            var buttons = new WrapPanel { Margin = new Thickness(0, 6, 0, 0) };
+            var ask = new Button { Content = "Gửi yêu cầu kích hoạt", Padding = new Thickness(10, 2, 10, 2), Margin = new Thickness(0, 0, 6, 4), ToolTip = "Gửi mã máy và tên thiết bị tới email của chủ plugin" };
+            buttons.Children.Add(ask);
+            stack.Children.Add(buttons);
+            var st = MutedText(status ?? "");
+            st.TextWrapping = TextWrapping.Wrap;
+            st.TextTrimming = TextTrimming.None;
+            st.FontSize = 11;
+            stack.Children.Add(st);
+
+            void Submit()
+            {
+                var k = key.Text.Trim();
+                if (k.Length == 0) { SetActivationStatus("Dán key chủ plugin gửi cho cậu vào ô trên.", true); return; }
+                go.IsEnabled = false;
+                SetActivationStatus("Đang kích hoạt...", false);
+                ActivationKeySubmitted?.Invoke(k);
+            }
+            go.Click += (s, e) => Submit();
+            key.KeyDown += (s, e) => { if (e.Key == Key.Enter) { e.Handled = true; Submit(); } };
+            ask.Click += (s, e) => { ask.IsEnabled = false; SetActivationStatus("Đang gửi yêu cầu...", false); ActivationRequestRequested?.Invoke(); };
+
+            _activationStatus = st;
+            _activationKey = key;
+            _activationGo = go;
+            _activationAsk = ask;
+            var card = Card(stack, "activation");
+            card.Margin = new Thickness(0, 4, 24, 4);
+            Theme.Ref(card, Border.BorderBrushProperty, Theme.ErrorFg);
+            _messages.Children.Add(card);
+            ScrollToEnd();
+            key.Focus();
+        });
+
+        /// <summary>Status line of the activation card; done = activated (inputs locked).</summary>
+        public void SetActivationStatus(string text, bool error, bool done = false) => Ui(() =>
+        {
+            if (_activationStatus == null) return;
+            _activationStatus.Text = text ?? "";
+            Theme.Ref(_activationStatus, TextBlock.ForegroundProperty, error ? Theme.ErrorFg : done ? Theme.Accent : Theme.MutedFg);
+            if (_activationGo != null) _activationGo.IsEnabled = !done;
+            if (_activationAsk != null) _activationAsk.IsEnabled = !done;
+            if (_activationKey != null) _activationKey.IsReadOnly = done;
         });
 
         // ---------------------------------------------------------------- cards: skill draft, plan

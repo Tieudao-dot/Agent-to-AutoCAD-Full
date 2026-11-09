@@ -12,12 +12,12 @@
 
 Trang [phát hành](https://github.com/Tieudao-dot/Agent-to-Autocad/releases/latest) ghi kích thước và mã SHA-256 của `ClaudeCAD-Setup.exe`. Nếu bộ cài báo "The source file is corrupted", mở PowerShell trong thư mục chứa file và chạy `Get-FileHash .\ClaudeCAD-Setup.exe` — mã khác với trang phát hành nghĩa là file tải về bị hỏng: tải lại vào ổ máy (không chạy từ ổ mạng / USB), hoặc tạm tắt phần mềm diệt virus khi cài.
 
-## Cài đặt (3 bước)
+## Cài đặt (4 bước)
 
 1. Tải `ClaudeCAD-Setup.exe` ở link trên.
 2. Chạy file. Nếu Windows hiện "Windows protected your PC" → **More info → Run anyway** (bộ cài chưa ký số). Không cần quyền admin, không cần cài Node.js hay Claude Code. Nên đóng AutoCAD trước khi cài.
-3. Trang cuối bộ cài: giữ ô **Đăng nhập Claude ngay** rồi bấm **Finish** → trình duyệt mở trang cấp quyền, bấm **đồng ý** bằng tài khoản Claude Pro/Max (một cửa sổ đen hiện lên và tự đóng khi xong). Không cần mở AutoCAD. Máy đã đăng nhập sẵn thì ô này không hiện.
-4. Mở AutoCAD 2022–2025 là dùng được. (Nếu đã bỏ qua bước 3, lần đầu mở AutoCAD plugin tự mở trang đăng nhập.)
+3. **Kích hoạt:** bộ cài hiện **mã máy** và dòng *"Liên hệ Zalo owner: 0344644415"*. Chủ plugin tự nhận email có tên máy và key; nhắn Zalo cho chủ plugin để nhận key, dán vào ô **Key kích hoạt** rồi bấm **Next**. Key dùng vĩnh viễn trên máy đó. Máy đã kích hoạt rồi (cài đè, cập nhật) thì không hỏi lại.
+4. Trang cuối bộ cài: giữ ô **Đăng nhập Claude ngay** rồi bấm **Finish** → trình duyệt mở trang cấp quyền, bấm **đồng ý** bằng tài khoản Claude Pro/Max (một cửa sổ đen hiện lên và tự đóng khi xong). Không cần mở AutoCAD. Máy đã đăng nhập sẵn thì ô này không hiện. Sau đó mở AutoCAD 2022–2025 là dùng được (nếu bỏ qua bước này, lần đầu mở AutoCAD plugin tự mở trang đăng nhập).
 
 Sau khi cài: gõ `CLAUDECHATSELFTEST` để tự kiểm tra (báo cáo ✓/✗ mở trong Notepad). Mở khung chat: `CLAUDECHAT`, `CC` hoặc **Ctrl+Shift+Space**.
 
@@ -28,8 +28,14 @@ Sau khi cài: gõ `CLAUDECHATSELFTEST` để tự kiểm tra (báo cáo ✓/✗ 
 
 ## Cài cho nhiều máy
 
-- Cài ngầm, không hỏi gì: `ClaudeCAD-Setup.exe /VERYSILENT` (mỗi máy vẫn cần bấm **Đăng nhập Claude** một lần).
+- Cài ngầm, không hỏi gì: `ClaudeCAD-Setup.exe /VERYSILENT /KEY=XXXX-XXXX-XXXX-XXXX` (key của đúng máy đó; mỗi máy vẫn cần bấm **Đăng nhập Claude** một lần).
 - Hoặc bằng PowerShell: giải nén `ClaudeCAD-<version>.zip`, đặt `install.ps1` cạnh thư mục `ClaudeCAD.bundle`, chạy `powershell -ExecutionPolicy Bypass -File install.ps1`.
+
+## Cấp key (chủ plugin)
+
+- Mỗi lần có máy chạy bộ cài (hoặc mở khung chat khi chưa kích hoạt), Gmail của chủ plugin nhận email **"[ClaudeCAD] Yêu cầu kích hoạt: <tên máy> (<user>)"** có mã máy và **KEY**. Đồng ý thì gửi key cho người đó qua Zalo; không đồng ý thì bỏ qua — không có key thì không cài và không dùng được.
+- Key chỉ dùng được trên đúng máy có mã đó, vĩnh viễn. Cài lại Windows / thay mainboard thì mã máy đổi, cần key mới.
+- Máy không có mạng, cài máy chủ kích hoạt, tạo key bằng tay: [`activation/README.md`](../activation/README.md).
 
 ## Khi có lỗi trên máy khác
 
@@ -55,7 +61,8 @@ Windows **Settings → Apps → ClaudeCAD for AutoCAD → Uninstall** (hoặc `i
 
 | Phiên bản | Nội dung chính |
 | --- | --- |
-| **0.9.3** | **Đăng nhập Claude ngay trong bộ cài** (ô "Đăng nhập Claude ngay" ở trang cuối — trình duyệt mở, bấm đồng ý, không cần mở AutoCAD); lần đầu mở AutoCAD mà chưa đăng nhập thì plugin **tự mở** trang đăng nhập; bộ cài bỏ ~2.200 file `.map` không cần thiết (nhẹ hơn, ít bị diệt virus quét chặn); chữ trong ⚙ và bảng chọn layer không còn bị cắt; trang phát hành ghi kích thước + SHA-256 của bộ cài. |
+| **0.9.4** | **Khóa bằng key theo máy:** bộ cài hiện mã máy + "Liên hệ Zalo owner: 0344644415", tự gửi email cho chủ plugin (tên máy, user Windows, mã máy, key); chỉ cài tiếp khi nhập đúng key. Plugin kiểm tra giấy phép mỗi lần mở AutoCAD (chép thư mục / cài bằng .zip cũng bị hỏi key), thẻ **🔒 Kích hoạt** trong khung chat. Key vĩnh viễn; cập nhật không hỏi lại. |
+| 0.9.3 | **Đăng nhập Claude ngay trong bộ cài** (ô "Đăng nhập Claude ngay" ở trang cuối — trình duyệt mở, bấm đồng ý, không cần mở AutoCAD); lần đầu mở AutoCAD mà chưa đăng nhập thì plugin **tự mở** trang đăng nhập; bộ cài bỏ ~2.200 file `.map` không cần thiết (nhẹ hơn, ít bị diệt virus quét chặn); chữ trong ⚙ và bảng chọn layer không còn bị cắt; trang phát hành ghi kích thước + SHA-256 của bộ cài. |
 | 0.9.2 | **Toast** thông báo ngay trong khung chat; **giới hạn sử dụng AI** báo thẳng trong cuộc chat (cảnh báo khi sắp hết, thẻ khi hết với giờ làm mới và nút tự gửi lại); **Gửi báo cáo lỗi** (một file .zip trên Desktop: thông tin máy, log, tự kiểm tra, log cài đặt — không có chat, bản vẽ, API key); bộ cài luôn ghi log cài đặt; mục **Tài khoản AI** trong ⚙: xem đang dùng tài khoản nào, **Đổi tài khoản**, **Đăng xuất**, **Dùng API key** (lưu mã hóa). |
 | 0.9.1 | Cài 3 bước: kèm Node.js, nút **Đăng nhập Claude** ngay trong khung chat (không cần cài Claude Code / mở terminal), tự thêm thư mục plugin vào danh sách tin cậy của AutoCAD (hết cảnh báo SECURELOAD), thẻ **Bắt đầu** lần đầu mở AutoCAD, link tải cố định. |
 | 0.9.0 | Lệnh `CLAUDECHATSELFTEST`; so biên bản lúc AutoCAD rảnh, lưu phiên bản nhanh, bản vẽ lớn cập nhật dần, macro chạy theo lô; sửa 14 lỗi từ lượt soát code thứ ba. |

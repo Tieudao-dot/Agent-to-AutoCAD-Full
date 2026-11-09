@@ -19,7 +19,8 @@ Kiến trúc: AutoCAD nạp `ClaudeCAD.Plugin.dll` → lệnh `CLAUDECHAT` mở 
 
 1. Tải **[ClaudeCAD-Setup.exe](https://github.com/Tieudao-dot/Agent-to-Autocad/releases/latest/download/ClaudeCAD-Setup.exe)** (luôn là bản mới nhất).
 2. Chạy file. Windows có thể hiện "Windows protected your PC" → bấm **More info → Run anyway**. Không cần quyền admin, không cần cài Node.js hay Claude Code.
-3. Trang cuối bộ cài: giữ ô **Đăng nhập Claude ngay** → **Finish** → bấm **đồng ý** trên trình duyệt (tài khoản Pro/Max, một lần trên mỗi máy, không cần mở AutoCAD). Mở AutoCAD 2022–2025 là dùng được; nếu bỏ qua bước này, lần đầu mở AutoCAD plugin tự mở trang đăng nhập.
+3. **Kích hoạt:** bộ cài hiện mã máy và *"Liên hệ Zalo owner: 0344644415"* — nhắn Zalo để nhận key (riêng cho máy đó, vĩnh viễn), dán vào ô key rồi **Next**. Chi tiết: [`activation/`](activation/README.md).
+4. Trang cuối bộ cài: giữ ô **Đăng nhập Claude ngay** → **Finish** → bấm **đồng ý** trên trình duyệt (tài khoản Pro/Max, một lần trên mỗi máy, không cần mở AutoCAD). Mở AutoCAD 2022–2025 là dùng được; nếu bỏ qua bước này, lần đầu mở AutoCAD plugin tự mở trang đăng nhập.
 
 Hướng dẫn đầy đủ, cập nhật, báo lỗi, đổi tài khoản AI, gỡ cài đặt và lịch sử phiên bản: [`bo-cai/`](bo-cai/README.md). Có lỗi trên máy nào: **⚙ ▸ Gửi báo cáo lỗi** rồi gửi file .zip trên Desktop.
 

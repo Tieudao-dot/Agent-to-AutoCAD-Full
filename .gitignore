@@ -15,3 +15,7 @@ bundle/out/
 agent/dist-test/
 tmp-log-*/
 skills/skills.json
+
+# v0.9.4 activation secrets: the filled-in Apps Script and the RSA private key never go into the repo
+activation/*.gs
+*.pem

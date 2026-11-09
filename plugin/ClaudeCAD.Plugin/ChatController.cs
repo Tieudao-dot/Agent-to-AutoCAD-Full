@@ -113,6 +113,7 @@ namespace ClaudeCAD.Plugin
         {
             var list = new List<(string, bool, string)>
             {
+                ("Kích hoạt (key theo máy)", Activation.IsActivated, Activation.StatusText),
                 ("Khung chat đã mở trong phiên này", _started, _started ? "có" : "chưa (gõ CLAUDECHAT để khởi động trợ lý)"),
                 ("Tiến trình trợ lý (Node)", _sidecar.State == SidecarState.Running, _sidecar.State.ToString()),
                 ("Kết nối plugin ↔ trợ lý (named pipe)", _ipc.IsConnected, _ipc.IsConnected ? _ipc.PipeName : "chưa kết nối"),
@@ -184,6 +185,8 @@ namespace ClaudeCAD.Plugin
             ui.ApiKeyClearRequested += () => Guard("api key", ClearApiKey);
             ui.ReportRequested += () => Guard("report", ReportBug);
             ui.LimitAutoRetryToggled += on => Guard("auto retry", () => SetAutoRetry(on));
+            ui.ActivationRequestRequested += () => Guard("activation request", RequestActivation);
+            ui.ActivationKeySubmitted += k => Guard("activation", () => SubmitActivation(k));
             ui.ApiKeyMask = () => ApiKeyStore.HasKey ? ApiKeyStore.Mask(ApiKeyStore.Load()) : null;
 
             Interaction.SelectionPicked += sel => { _selection = sel; Ui.SetSelectionChip(sel, true); _palette.FocusInput(); };
@@ -220,6 +223,7 @@ namespace ClaudeCAD.Plugin
                 _ipc.Start();
                 UpdateService.CheckInBackground(msg => { Ui.AddNote(msg); Ui.ShowToast(msg, ChatControl.ToastKind.Info, 10); }); // phase 3: daily update check
             }
+            if (!Activation.IsActivated) ShowActivationCard();
             _sidecar.EnsureStarted();
         }
 
@@ -541,6 +545,7 @@ namespace ClaudeCAD.Plugin
         private void SendComposed(ComposedMessage m)
         {
             if (_busy) return;
+            if (!RequireActivation()) { Ui.SetInputText(m.Text); return; }
             if (IsVersionDoc(AcApp.DocumentManager.MdiActiveDocument))
             {
                 Ui.SetInputText(m.Text);
@@ -591,6 +596,7 @@ namespace ClaudeCAD.Plugin
         private void Send(ComposedMessage m, bool edited, string confirm = null, string plan = null)
         {
             if (_busy) return;
+            if (!RequireActivation()) return; // retry / edit / plan answers come here without SendComposed
             CancelAutoRetry(); // a new request replaces the one waiting for the limit
             Document doc = AcApp.DocumentManager.MdiActiveDocument;
             if (RefuseOnVersionTab(doc, m.Text)) return;
@@ -1168,6 +1174,7 @@ namespace ClaudeCAD.Plugin
 
         private void RunMacro(string name, bool atPoint)
         {
+            if (!RequireActivation()) return;
             if (_busy) { Ui.SetToolStatus("Đợi lượt hiện tại xong rồi chạy macro."); return; }
             if (_macroStore == null) _macroStore = new MacroStore(MacrosRoot);
             Macro m;
@@ -1655,6 +1662,7 @@ namespace ClaudeCAD.Plugin
         public void ShowWelcome(bool autoLogin)
         {
             ShowPalette();
+            if (!Activation.IsActivated) { ShowActivationCard(); return; } // sign-in comes after the key
             ClaudeAuth.StatusAsync().ContinueWith(t =>
             {
                 var auth = t.IsFaulted ? new AuthStatus { Error = t.Exception?.GetBaseException().Message } : t.Result;
@@ -1663,11 +1671,66 @@ namespace ClaudeCAD.Plugin
                 {
                     ("Node.js", node != null, node == null ? "không thấy — cài lại bằng Setup.exe" : (node.IndexOf("ClaudeCAD.bundle", StringComparison.OrdinalIgnoreCase) >= 0 ? "đi kèm plugin" : node)),
                     ("Trợ lý (sidecar)", PluginPaths.AgentEntry != null, PluginPaths.AgentEntry == null ? "không thấy thư mục agent" : "sẵn sàng"),
+                    ("Kích hoạt", true, "mã máy " + Activation.MachineCode),
                     ("Tài khoản Claude", auth.LoggedIn, auth.Label),
                     ("Skill", _skillStore != null, _skillStore == null ? "" : $"{_skillStore.Scan().Count} skill trong plugin"),
                 };
                 Ui.AddWelcomeCard(checks, auth.LoggedIn != true);
                 if (autoLogin && auth.LoggedIn == false) Ui.Enqueue(Login); // not when the state is unknown
+            });
+        }
+
+        // ================================================================= v0.9.4: activation
+
+        private bool _activationCardShown;
+        private bool _activating;
+
+        /// <summary>False (and the activation card is shown) while this machine has no valid licence.</summary>
+        private bool RequireActivation()
+        {
+            if (Activation.IsActivated) return true;
+            ShowActivationCard(force: _activationCardShown);
+            Ui.SetToolStatus("Cần kích hoạt ClaudeCAD trên máy này trước. " + Activation.Contact + ".");
+            return false;
+        }
+
+        /// <summary>
+        /// The activation card. The first time per day on a machine without a licence the request (machine code +
+        /// device name) is emailed to the owner by itself — like the installer does — so a copied or .zip install
+        /// still reaches the owner.
+        /// </summary>
+        private void ShowActivationCard(bool force = false)
+        {
+            if (_activationCardShown && !force) return;
+            _activationCardShown = true;
+            bool auto = Activation.ShouldAutoRequest && Activation.ServiceUrl != null;
+            Ui.AddActivationCard(Activation.MachineCode, Activation.DeviceName, Activation.Contact,
+                auto ? "Đang gửi yêu cầu kích hoạt cho chủ plugin..." : "Bấm \"Gửi yêu cầu kích hoạt\" để chủ plugin nhận mã máy qua email, hoặc nhắn mã máy qua Zalo.");
+            if (auto) RequestActivation();
+        }
+
+        private void RequestActivation()
+        {
+            Activation.RequestAsync().ContinueWith(t =>
+            {
+                var (ok, msg) = t.IsFaulted ? (false, "Không gửi được yêu cầu: " + t.Exception?.GetBaseException().Message) : t.Result;
+                Ui.SetActivationStatus(msg, !ok);
+                if (ok) Ui.ShowToast("Đã gửi yêu cầu kích hoạt", ChatControl.ToastKind.Info, 5);
+            });
+        }
+
+        private void SubmitActivation(string input)
+        {
+            if (_activating) return;
+            _activating = true;
+            Activation.ActivateAsync(input).ContinueWith(t =>
+            {
+                _activating = false;
+                var (ok, msg) = t.IsFaulted ? (false, "Kích hoạt lỗi: " + t.Exception?.GetBaseException().Message) : t.Result;
+                Ui.SetActivationStatus(msg, !ok, ok);
+                if (!ok) return;
+                Ui.ShowToast("Đã kích hoạt ClaudeCAD", ChatControl.ToastKind.Success, 6);
+                Ui.Enqueue(() => ShowWelcome(autoLogin: true)); // next step: Claude sign-in (opens by itself when needed)
             });
         }
 

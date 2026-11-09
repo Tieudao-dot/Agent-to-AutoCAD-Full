@@ -173,3 +173,11 @@ Cloud: `dotnet test` 106/106, `npm test` 95/95, build ✅. Cần test: T-1, T-2,
 - Sửa chữ bị cắt trong ⚙ và tiêu đề bảng chọn layer.
 
 Cần test: I-6, I-7.
+
+## v0.9.4 — khóa bằng key theo máy ✅ code xong (chờ URL máy chủ kích hoạt)
+
+- Bộ cài: trang **Kích hoạt** (mã máy, "Liên hệ Zalo owner: 0344644415", ô key, Sao chép, Gửi lại yêu cầu); mở trang là gửi email cho chủ plugin (tên máy, user Windows, mã máy, KEY) qua Google Apps Script của chủ plugin; chỉ Next khi key đúng; `/KEY=` khi cài ngầm.
+- Plugin: kiểm tra giấy phép (RSA-2048, không cần mạng) mỗi lần mở AutoCAD; thẻ 🔒 **Kích hoạt** trong khung chat (tự gửi yêu cầu mỗi ngày một lần, dán key / mã offline); chặn gửi tin nhắn, thử lại, macro khi chưa kích hoạt; dòng "Kích hoạt" trong tự kiểm tra và báo cáo lỗi.
+- Máy chủ: `activation/apps-script/Code.gs.template` + `make-apps-script.mjs`; hướng dẫn `activation/README.md`.
+
+Cần test: K-1 … K-7.

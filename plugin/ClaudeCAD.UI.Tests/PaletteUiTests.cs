@@ -317,6 +317,60 @@ namespace ClaudeCAD.UI.Tests
             Assert.True(new FileInfo(Path.Combine(OutDir, "palette-setup.png")).Length > 5_000);
         }
 
+        /// <summary>Every element of type T under root (logical tree: works before the control was laid out).</summary>
+        private static List<T> FindAll<T>(DependencyObject root) where T : DependencyObject
+        {
+            var list = new List<T>();
+            void Walk(object o)
+            {
+                if (o is T t) list.Add(t);
+                if (o is DependencyObject d) foreach (var child in LogicalTreeHelper.GetChildren(d)) Walk(child);
+            }
+            Walk(root);
+            return list;
+        }
+
+        [Fact]
+        public void RendersActivationCard()
+        {
+            string submitted = null;
+            int asked = 0;
+            Sta(() =>
+            {
+                // 1: no licence on this machine — machine code, contact, key box; the request was emailed to the owner
+                var c = new ChatControl { Width = 400, Height = 520 };
+                c.ApplySettings(new PaletteSettings());
+                c.SetDark(false);
+                c.LoadTranscript(new ChatTranscript(), false);
+                c.ActivationKeySubmitted += k => submitted = k;
+                c.ActivationRequestRequested += () => asked++;
+                c.AddActivationCard("CC-3B28-85F3-67B7", "LAPTOP-TUAN", "Liên hệ Zalo owner: 0344644415", "Đang gửi yêu cầu kích hoạt cho chủ plugin...");
+                c.SetActivationStatus("Đã gửi yêu cầu kích hoạt cho chủ plugin. Liên hệ Zalo owner: 0344644415 để nhận key.", false);
+                Shot(c, "activation-1-request");
+
+                // 2: wrong key
+                c.SetActivationStatus("Key không đúng với máy này (mã máy CC-3B28-85F3-67B7). Kiểm tra lại key, hoặc xin key mới.", true);
+                Shot(c, "activation-2-wrong-key");
+
+                // 3: activated
+                c.SetActivationStatus("Đã kích hoạt ClaudeCAD cho máy này (vĩnh viễn). Cập nhật bản mới không cần nhập lại key.", false, true);
+                c.ShowToast("Đã kích hoạt ClaudeCAD", ChatControl.ToastKind.Success, 30);
+                Shot(c, "activation-3-done");
+
+                // the buttons raise the events
+                var buttons = FindAll<Button>(c);
+                var ask = buttons.First(b => (b.Content as string) == "Gửi yêu cầu kích hoạt");
+                c.SetActivationStatus("", false); // unlock again
+                ask.RaiseEvent(new RoutedEventArgs(System.Windows.Controls.Primitives.ButtonBase.ClickEvent));
+                var box = FindAll<TextBox>(c).Last(t => !t.IsReadOnly);
+                box.Text = "7K2M-9QXR-4TBN-H8WZ";
+                buttons.First(b => (b.Content as string) == "Kích hoạt").RaiseEvent(new RoutedEventArgs(System.Windows.Controls.Primitives.ButtonBase.ClickEvent));
+            });
+            Assert.Equal(1, asked);
+            Assert.Equal("7K2M-9QXR-4TBN-H8WZ", submitted);
+            Assert.True(new FileInfo(Path.Combine(OutDir, "activation-1-request.png")).Length > 5_000);
+        }
+
         [Fact]
         public void ReloadsPersistedTranscript()
         {

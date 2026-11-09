@@ -1,0 +1,139 @@
+/**
+ * ClaudeCAD — máy chủ kích hoạt (Google Apps Script, miễn phí, chạy trên tài khoản Google của chủ plugin).
+ *
+ * Bộ cài / plugin gọi web app này:
+ *   ?action=request&machine=CC-XXXX-XXXX-XXXX&device=...&user=...&from=...
+ *       → tạo key cho mã máy đó và GỬI EMAIL cho chủ plugin (người dùng KHÔNG nhận được key).
+ *   ?action=activate&machine=CC-XXXX-XXXX-XXXX&key=XXXX-XXXX-XXXX-XXXX
+ *       → key đúng: trả về giấy phép đã ký (plugin tự kiểm tra bằng khóa công khai, không cần mạng nữa).
+ *
+ * BÍ MẬT: file này chứa khóa riêng để ký giấy phép. Không chia sẻ, không đưa lên GitHub.
+ * Mất file này / lộ file này → báo người phát triển để đổi cặp khóa trong bản plugin mới.
+ *
+ * Tạo key bằng tay (máy không có mạng): sửa MAY_THU_CONG bên dưới rồi chạy hàm taoKeyThuCong
+ * (nút ▶ Run) — key và mã kích hoạt offline được gửi vào email của cậu.
+ */
+
+var EMAIL = '{{EMAIL}}';
+var SECRET = '{{SECRET}}';
+var PRIVATE_KEY = '{{PRIVATE_KEY}}';
+var TIME_ZONE = 'Asia/Ho_Chi_Minh';
+var MAY_THU_CONG = 'CC-0000-0000-0000';
+
+var MACHINE_RE = /^CC-[0-9A-F]{4}-[0-9A-F]{4}-[0-9A-F]{4}$/;
+var B32 = '0123456789ABCDEFGHJKMNPQRSTVWXYZ'; // Crockford: no I, L, O, U
+
+function doGet(e) {
+  var p = (e && e.parameter) || {};
+  var out;
+  try {
+    var action = String(p.action || '');
+    if (action === 'request') out = handleRequest(p);
+    else if (action === 'activate') out = handleActivate(p);
+    else if (action === 'ping') out = { ok: true, service: 'ClaudeCAD activation' };
+    else out = { ok: false, error: 'Yêu cầu không hợp lệ.' };
+  } catch (err) {
+    out = { ok: false, error: 'Lỗi máy chủ kích hoạt: ' + err };
+  }
+  return ContentService.createTextOutput(JSON.stringify(out)).setMimeType(ContentService.MimeType.JSON);
+}
+
+function handleRequest(p) {
+  var machine = normMachine(p.machine);
+  if (!machine) return { ok: false, error: 'Mã máy không hợp lệ.' };
+  var device = clip(p.device, 64) || '(không rõ)';
+  var user = clip(p.user, 64) || '(không rõ)';
+  var from = clip(p.from, 40) || '';
+  // the same machine asking again within 30 minutes (Back/Next in the installer, reopening the palette): one email
+  var cache = CacheService.getScriptCache();
+  var seen = 'req:' + machine;
+  if (cache.get(seen)) return { ok: true, sent: false };
+  var key = makeKey(machine);
+  var when = Utilities.formatDate(new Date(), TIME_ZONE, 'dd/MM/yyyy HH:mm');
+  MailApp.sendEmail(EMAIL,
+    '[ClaudeCAD] Yêu cầu kích hoạt: ' + device + ' (' + user + ')',
+    'Có máy vừa xin kích hoạt ClaudeCAD.\n\n' +
+    'Thiết bị: ' + device + '\n' +
+    'Người dùng Windows: ' + user + '\n' +
+    'Mã máy: ' + machine + '\n' +
+    (from ? 'Từ: ' + from + '\n' : '') +
+    'Lúc: ' + when + '\n\n' +
+    'KEY: ' + key + '\n\n' +
+    'Đồng ý cho máy này dùng: gửi key trên cho người đó (Zalo).\n' +
+    'Không đồng ý: bỏ qua email này — không có key thì không cài và không dùng được plugin.\n' +
+    'Key chỉ dùng được trên đúng máy có mã ' + machine + ', vĩnh viễn.');
+  cache.put(seen, '1', 1800);
+  return { ok: true, sent: true };
+}
+
+function handleActivate(p) {
+  var machine = normMachine(p.machine);
+  if (!machine) return { ok: false, error: 'Mã máy không hợp lệ.' };
+  var key = normKey(p.key);
+  if (key.length !== 16 || key !== makeKey(machine).replace(/-/g, '')) {
+    return { ok: false, error: 'Key không đúng với máy này (mã máy ' + machine + '). Kiểm tra lại key, hoặc xin key mới.' };
+  }
+  return { ok: true, license: makeLicense(machine) };
+}
+
+/** XXXX-XXXX-XXXX-XXXX: the first 80 bits of HMAC-SHA256(SECRET, "CCK1|" + machine) in base32. */
+function makeKey(machine) {
+  var mac = Utilities.computeHmacSha256Signature('CCK1|' + machine, SECRET);
+  var bits = 0, value = 0, out = '';
+  for (var i = 0; i < mac.length && out.length < 16; i++) {
+    value = (value << 8) | (mac[i] & 0xff);
+    bits += 8;
+    while (bits >= 5 && out.length < 16) {
+      out += B32.charAt((value >>> (bits - 5)) & 31);
+      bits -= 5;
+    }
+    value &= (1 << bits) - 1;
+  }
+  return out.substr(0, 4) + '-' + out.substr(4, 4) + '-' + out.substr(8, 4) + '-' + out.substr(12, 4);
+}
+
+/** CCL1|<machine>|<yyyy-MM-dd>|<base64url RSA-SHA256 signature of the text before the last "|">. */
+function makeLicense(machine) {
+  var payload = 'CCL1|' + machine + '|' + Utilities.formatDate(new Date(), 'UTC', 'yyyy-MM-dd');
+  var sig = Utilities.computeRsaSha256Signature(payload, PRIVATE_KEY);
+  return payload + '|' + Utilities.base64EncodeWebSafe(sig).replace(/=+$/, '');
+}
+
+function normMachine(s) {
+  s = String(s || '').toUpperCase().replace(/\s+/g, '');
+  return MACHINE_RE.test(s) ? s : null;
+}
+
+function normKey(s) {
+  return String(s || '').toUpperCase().replace(/[\s-]/g, '').replace(/O/g, '0').replace(/[IL]/g, '1');
+}
+
+function clip(s, n) {
+  s = String(s || '').replace(/[\r\n\t]+/g, ' ').trim();
+  return s.length > n ? s.substr(0, n) : s;
+}
+
+/** Run from the editor (▶ Run): emails the key and the offline activation code for MAY_THU_CONG. */
+function taoKeyThuCong() {
+  var machine = normMachine(MAY_THU_CONG);
+  if (!machine || machine === 'CC-0000-0000-0000') throw new Error('Sửa MAY_THU_CONG ở đầu file thành mã máy cần kích hoạt (dạng CC-XXXX-XXXX-XXXX).');
+  var key = makeKey(machine);
+  var license = makeLicense(machine);
+  MailApp.sendEmail(EMAIL, '[ClaudeCAD] Key thủ công cho ' + machine,
+    'Mã máy: ' + machine + '\n\n' +
+    'KEY (máy có mạng — dán vào bộ cài hoặc khung chat): ' + key + '\n\n' +
+    'MÃ KÍCH HOẠT OFFLINE (máy không có mạng — dán nguyên dòng dưới vào ô key):\n' + license + '\n');
+  Logger.log('Key: ' + key);
+  Logger.log('Offline: ' + license);
+}
+
+/** Run once from the editor after pasting the file: checks the keys and sends a test email. */
+function kiemTra() {
+  var machine = 'CC-1234-5678-9ABC';
+  var key = makeKey(machine);
+  var act = handleActivate({ machine: machine, key: key });
+  if (!act.ok) throw new Error('Tự kiểm tra thất bại: ' + act.error);
+  MailApp.sendEmail(EMAIL, '[ClaudeCAD] Máy chủ kích hoạt hoạt động',
+    'Đã cài xong máy chủ kích hoạt ClaudeCAD.\nKey thử cho ' + machine + ': ' + key + '\n(Email này chỉ để kiểm tra.)');
+  Logger.log('OK — key thử ' + key + ', đã gửi email kiểm tra tới ' + EMAIL);
+}
