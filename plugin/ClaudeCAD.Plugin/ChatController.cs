@@ -103,7 +103,6 @@ namespace ClaudeCAD.Plugin
 
         // usage (feature 14)
         private string _usageText = "";
-        private string _rateText = "";
 
         public UndoScope Undo { get; } = new UndoScope();
         private string _readyInfo = "";
@@ -1067,7 +1066,7 @@ namespace ClaudeCAD.Plugin
             double outT = u.TryGetValue("output_tokens", out var b) && b is double y ? y : 0;
             string cost = u.TryGetValue("session_cost_usd", out var c) && c is double z ? $" · phiên ≈ ${z.ToString("0.00", CultureInfo.InvariantCulture)}" : "";
             _usageText = $"Lượt vừa rồi: ↑{Kilo(inT)} ↓{Kilo(outT)} token{cost}";
-            Ui.SetUsage(_usageText + _rateText);
+            Ui.SetUsage(_usageText);
         }
 
         private static string Kilo(double n) => n >= 1000 ? (n / 1000).ToString("0.0", CultureInfo.InvariantCulture) + "k" : n.ToString("0", CultureInfo.InvariantCulture);
@@ -2204,9 +2203,7 @@ namespace ClaudeCAD.Plugin
                         string reset = msg.TryGetValue("resets_at", out var rv) && rv is double rd
                             ? DateTimeOffset.FromUnixTimeSeconds((long)rd).LocalDateTime.ToString("HH:mm dd/MM", CultureInfo.InvariantCulture) : "";
                         string label = LimitLabel(kind);
-                        _rateText = status == "allowed" && util < 0.5 ? "" :
-                            $" · {label}{(util >= 0 ? $" {util * 100:0}%" : "")}{(status == "rejected" ? " — đã hết" : "")}{(reset.Length > 0 ? $", làm mới {reset}" : "")}";
-                        Ui.SetUsage(_usageText + _rateText);
+                        // the allowance has its own row now (the meter): the token line stays short
                         // The bar only appears once there is something worth watching (half the allowance used).
                         Ui.SetUsageMeter(label, status == "allowed" && util < 0.5 ? -1 : util, reset);
                         _rateStatus = status ?? "";

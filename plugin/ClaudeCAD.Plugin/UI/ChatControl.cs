@@ -1413,7 +1413,8 @@ namespace ClaudeCAD.Plugin.UI
             _skills = library ?? new List<SkillInfo>();
             _chatSkills = new HashSet<string>(chatSkills ?? Enumerable.Empty<string>(), StringComparer.Ordinal);
             int used = _skills.Count(k => k.Error == null && _chatSkills.Contains(k.Name));
-            _skillsBtn.Content = $"Skill ({used})";
+            MarkIcon(_skillsBtn, used > 0 ? $"đang dùng {used}" : null,
+                "Skill — skill đang dùng ở đoạn chat này (− bỏ, + dùng) và thư viện skill đã thêm");
             RefreshSkillsPanel();
         });
 
