@@ -584,6 +584,84 @@ namespace ClaudeCAD.UI.Tests
             Assert.True(new FileInfo(Path.Combine(OutDir, "shell-cai-dat.png")).Length > 5_000);
         }
 
+        /// <summary>
+        /// Compact mode (⌄): only the toolbar row, a status line and the input. The conversation is hidden,
+        /// not unloaded; a finished turn shows as one line; a card that needs a decision opens the palette.
+        /// </summary>
+        [Fact]
+        public void CompactModeKeepsTheConversationAndOpensForDecisions()
+        {
+            var events = new List<bool>();
+            bool hiddenWhenCompact = false, noteShown = false, noteCleared = false, backAfterExpand = false, openedByConfirm = false, openedByLine = false;
+            int messagesBefore = 0, messagesAfter = 0;
+            string note = null, glyphCompact = null, glyphFull = null;
+            Sta(() =>
+            {
+                var c = new ChatControl { Width = 400, Height = 640 };
+                c.ApplySettings(new PaletteSettings());
+                c.SetDark(true);
+                c.SetConnection("Đã kết nối · Nha-pho.dwg", true);
+                var t = new ChatTranscript { DrawingName = "Nha-pho.dwg" };
+                t.Entries.Add(new ChatEntry { Role = "user", Text = "Vẽ mặt bằng phòng 4x6m, tường 220, cửa đi 900" });
+                t.Entries.Add(new ChatEntry { Role = "assistant", Text = "Tớ đã vẽ xong phòng 4×6 m, tường 220 và cửa đi 900." });
+                c.LoadTranscript(t, false);
+                c.CompactChanged += on => events.Add(on);
+
+                T Field<T>(string name) => (T)typeof(ChatControl).GetField(name, System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance).GetValue(c);
+                var middle = Field<Grid>("_middle");
+                var messages = Field<StackPanel>("_messages");
+                var line = Field<Button>("_compactLine");
+                var toggle = Field<Button>("_compactBtn");
+                messagesBefore = messages.Children.Count;
+
+                // ⌄ on the toolbar
+                toggle.RaiseEvent(new RoutedEventArgs(System.Windows.Controls.Primitives.ButtonBase.ClickEvent));
+                Pump();
+                hiddenWhenCompact = c.IsCompact && middle.Visibility != Visibility.Visible;
+                glyphCompact = ((TextBlock)toggle.Content).Text;
+
+                // a turn runs and ends while compact: one line of news, the palette stays compact
+                c.AddUserMessage(new ChatEntry { Role = "user", Text = "Thêm kích thước 4 phía" });
+                c.BeginAssistant();
+                c.SetBusy(true);
+                c.AppendAssistant("Đã thêm kích thước 4 phía trên layer A-DIM.\n\nChi tiết: 8 DIMENSION.");
+                c.EndAssistant(new ChatEntry { Role = "assistant", Text = "Đã thêm kích thước 4 phía trên layer A-DIM.\n\nChi tiết: 8 DIMENSION." }, true, false);
+                c.SetBusy(false);
+                Pump();
+                noteShown = c.IsCompact && line.Visibility == Visibility.Visible;
+                note = ((TextBlock)line.Content).Text;
+                Shot(c, "shell-thu-gon");
+
+                // the status line opens the palette: the conversation is all there
+                line.RaiseEvent(new RoutedEventArgs(System.Windows.Controls.Primitives.ButtonBase.ClickEvent));
+                Pump();
+                openedByLine = !c.IsCompact && middle.Visibility == Visibility.Visible;
+                glyphFull = ((TextBlock)toggle.Content).Text;
+                messagesAfter = messages.Children.Count;
+                backAfterExpand = messagesAfter == messagesBefore + 2;
+                noteCleared = line.Visibility != Visibility.Visible;
+
+                // compact again, then Claude needs a decision: the palette opens by itself
+                c.SetCompact(true);
+                Pump();
+                c.BeginAssistant();
+                c.AddConfirmCard("c1", "Xóa 57 đối tượng trên layer A-TEMP.", 57, new List<string> { "1A" });
+                Pump();
+                openedByConfirm = !c.IsCompact && middle.Visibility == Visibility.Visible;
+            });
+            Assert.True(hiddenWhenCompact, "the conversation is still shown in compact mode");
+            Assert.Equal("⌃", glyphCompact);
+            Assert.Equal("⌄", glyphFull);
+            Assert.True(noteShown, "no status line after a turn ended in compact mode");
+            Assert.StartsWith("✓ Đã xong: Đã thêm kích thước 4 phía trên layer A-DIM.", note);
+            Assert.EndsWith("bấm để xem", note);
+            Assert.True(openedByLine, "clicking the status line did not expand the palette");
+            Assert.True(backAfterExpand, $"messages lost or duplicated: {messagesBefore} → {messagesAfter}");
+            Assert.True(noteCleared, "the status line stayed after expanding");
+            Assert.True(openedByConfirm, "a confirmation card did not open the compact palette");
+            Assert.Equal(new[] { true, false, true, false }, events);
+        }
+
         [Fact]
         public void ElapsedReadsLikeAPerson()
         {

@@ -37,6 +37,8 @@ namespace ClaudeCAD.Plugin.UI
         public event Action<ComposedMessage> SendRequested;
         /// <summary>"Bỏ" on the queued-message row: the message typed while Claude was working is dropped.</summary>
         public event Action QueueCancelRequested;
+        /// <summary>The palette went compact (true) or back to full (false): the host resizes the palette set.</summary>
+        public event Action<bool> CompactChanged;
         public event Action StopRequested;
         public event Action NewChatRequested;
         public event Action PickSelectionRequested;
@@ -130,6 +132,15 @@ namespace ClaudeCAD.Plugin.UI
         // usage meter (hạn mức) row in the toolbar
         private DockPanel _usageMeter;
         // message typed while a turn was running, waiting to be sent
+        // compact mode: only the toolbar row, a status line and the input stay visible
+        private bool _compact;
+        private Button _compactBtn;
+        private Button _compactLine;
+        private TextBlock _compactLineText;
+        private WrapPanel _ctxBar;
+        private StackPanel _leftActions;
+        private Grid _middle;
+        private Border _bottomBorder;
         // "● Đang làm · 1 phút 12 giây · 5 thao tác" while a turn runs
         private TextBlock _busyLine;
         private DispatcherTimer _busyTimer;
@@ -198,6 +209,8 @@ namespace ClaudeCAD.Plugin.UI
             _new = IconButton("⊞", "Chat mới — mở đoạn chat mới cho bản vẽ này, đoạn cũ vẫn xem lại được");
             _stop = IconButton("■", "Dừng — ngắt lượt đang chạy; phần đã vẽ xong vẫn giữ (hoàn tác bằng 1 lần U)");
             _stop.IsEnabled = false;
+            _compactBtn = IconButton("⌄", CompactTip(false));
+            _compactBtn.Click += (s, e) => SetCompact(!_compact);
             _settingsBtn.Click += (s, e) =>
             {
                 _settingsPopup.IsOpen = !_settingsPopup.IsOpen;
@@ -206,7 +219,7 @@ namespace ClaudeCAD.Plugin.UI
             _export.Click += (s, e) => ExportRequested?.Invoke();
             _new.Click += (s, e) => NewChatRequested?.Invoke();
             _stop.Click += (s, e) => StopRequested?.Invoke();
-            foreach (var b in new[] { _settingsBtn, _new, _export, _stop }) { DockPanel.SetDock(b, Dock.Right); top.Children.Add(b); }
+            foreach (var b in new[] { _settingsBtn, _compactBtn, _new, _export, _stop }) { DockPanel.SetDock(b, Dock.Right); top.Children.Add(b); }
             var statusStack = new StackPanel { VerticalAlignment = VerticalAlignment.Center };
             _connection = MutedText("Đang khởi động...");
             _usage = MutedText("");
@@ -241,6 +254,7 @@ namespace ClaudeCAD.Plugin.UI
 
             // ---- context bar (feature 9)
             var ctxBar = new WrapPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(6, 0, 6, 4) };
+            _ctxBar = ctxBar;
             ctxBar.Children.Add(MutedText("Tỷ lệ "));
             _scale = MakeCombo(PaletteSettings.Scales.Select(s => s == "" ? "Tự động" : s).ToArray(), 76);
             _scale.ToolTip = "Tỷ lệ in: quyết định chiều cao chữ và kích thước.";
@@ -274,10 +288,27 @@ namespace ClaudeCAD.Plugin.UI
             // with a thin shadow so it reads as sitting on top of the drawing.
             top.Margin = new Thickness(6, 4, 6, 2);
             ctxBar.Margin = new Thickness(6, 0, 6, 4);
+            _compactLineText = new TextBlock { TextTrimming = TextTrimming.CharacterEllipsis, FontSize = 11 };
+            Theme.Ref(_compactLineText, TextBlock.ForegroundProperty, Theme.Fg);
+            _compactLine = new Button
+            {
+                Content = _compactLineText,
+                HorizontalContentAlignment = HorizontalAlignment.Left,
+                Padding = new Thickness(8, 2, 8, 3),
+                BorderThickness = new Thickness(0, 1, 0, 0),
+                Visibility = Visibility.Collapsed,
+                ToolTip = "Bấm để mở rộng và xem đoạn chat",
+                Focusable = false,
+            };
+            Theme.Ref(_compactLine, BackgroundProperty, Theme.PanelBg);
+            Theme.Ref(_compactLine, BorderBrushProperty, Theme.Border);
+            _compactLine.Click += (s, e) => SetCompact(false);
+
             var toolbar = new StackPanel();
             toolbar.Children.Add(top);
             toolbar.Children.Add(_usageMeter);
             toolbar.Children.Add(ctxBar);
+            toolbar.Children.Add(_compactLine);
             var toolbarBorder = new Border
             {
                 Child = toolbar,
@@ -362,6 +393,7 @@ namespace ClaudeCAD.Plugin.UI
             DockPanel.SetDock(_send, Dock.Right);
             actions.Children.Add(_send);
             var left = new StackPanel { Orientation = Orientation.Horizontal };
+            _leftActions = left;
             _pickSel = MakeButton("Chọn đối tượng", "Quét chọn đối tượng trên bản vẽ để gửi kèm tin nhắn");
             _pickPt = MakeButton("Lấy điểm", "Bấm điểm trên bản vẽ để chèn tọa độ vào tin nhắn (Enter để xong)");
             _addImg = MakeButton("Ảnh", "Đính kèm ảnh phác thảo / ảnh scan (hoặc dán Ctrl+V, kéo thả vào khung chat)");
@@ -405,6 +437,7 @@ namespace ClaudeCAD.Plugin.UI
             Theme.Ref(bottomBorder, Border.BorderBrushProperty, Theme.Border);
             DockPanel.SetDock(bottomBorder, Dock.Bottom);
             root.Children.Add(bottomBorder);
+            _bottomBorder = bottomBorder;
 
             // ---- slash-template popup (feature 8)
             _slashList = new ListBox { MaxHeight = 260, MinWidth = 260, BorderThickness = new Thickness(1) };
@@ -502,6 +535,7 @@ namespace ClaudeCAD.Plugin.UI
             // toasts float over the conversation only (not over the context bar's buttons at narrow widths),
             // they never push the messages around
             var middle = new Grid();
+            _middle = middle;
             middle.Children.Add(_scroll);
             middle.Children.Add(_toasts);
             root.Children.Add(middle);
@@ -1559,7 +1593,7 @@ namespace ClaudeCAD.Plugin.UI
             }
         }
 
-        public void AddUserMessage(ChatEntry e) => Ui(() => { AddUserCore(e); ScrollToEnd(true); });
+        public void AddUserMessage(ChatEntry e) => Ui(() => { SetCompactNote(null); AddUserCore(e); ScrollToEnd(true); });
 
         private void AddUserCore(ChatEntry e)
         {
@@ -1649,6 +1683,11 @@ namespace ClaudeCAD.Plugin.UI
             if (_current == null) _current = NewAssistant();
             _current.Finish(e, canUndo, canSaveMacro);
             _current = null;
+            if (_compact)
+            {
+                var line = FirstLine(e?.Text);
+                SetCompactNote(line.Length > 0 ? "✓ Đã xong: " + line : "✓ Đã xong");
+            }
             ScrollToEnd();
         });
 
@@ -1708,6 +1747,7 @@ namespace ClaudeCAD.Plugin.UI
         {
             var stack = new StackPanel();
             stack.Children.Add(IconLine("⊗", Theme.ErrorFg, text));
+            SetCompactNote("⊗ Lượt chưa xong: " + FirstLine(text, 40));
             var row = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(0, 6, 0, 0) };
             if (canRetry)
             {
@@ -1726,6 +1766,7 @@ namespace ClaudeCAD.Plugin.UI
         /// <summary>Confirmation card with Đồng ý / Hủy / Xem trước (feature 11).</summary>
         public void AddConfirmCard(string id, string text, int? count, List<string> handles) => Ui(() =>
         {
+            ExpandForDecision();
             // Header strip with a warning glyph, the count as a large figure, one accent button.
             // The warning lives in the glyph: the card itself is not tinted.
             var head = new StackPanel { Orientation = Orientation.Horizontal };
@@ -1824,6 +1865,76 @@ namespace ClaudeCAD.Plugin.UI
             _connection.ToolTip = string.IsNullOrEmpty(text) ? null : text; // usually cut next to the buttons
             Theme.Ref(_connection, TextBlock.ForegroundProperty, ok ? Theme.MutedFg : Theme.ErrorFg);
         });
+
+        // ================================================================= compact mode
+
+        private static string CompactTip(bool compact) => compact
+            ? "Mở rộng — hiện lại đoạn chat của phiên này"
+            : "Thu gọn — palette co lại chỉ còn ô nhập, Enter gửi nhanh; bấm lại để mở rộng";
+
+        public bool IsCompact => _compact;
+
+        /// <summary>
+        /// Compact = toolbar row + a one-line status + the input. Nothing is unloaded: expanding shows the
+        /// conversation exactly as it was.
+        /// </summary>
+        public void SetCompact(bool compact) => Ui(() =>
+        {
+            if (_compact == compact) return;
+            _compact = compact;
+            var rest = compact ? Visibility.Collapsed : Visibility.Visible;
+            _middle.Visibility = rest;
+            _ctxBar.Visibility = rest;
+            _leftActions.Visibility = rest;
+            _suggestions.Visibility = rest;
+            if (compact)
+            {
+                // the inline editors need the full palette
+                _layerPanel.Visibility = Visibility.Collapsed;
+                _notesPanel.Visibility = Visibility.Collapsed;
+                _apiKeyPanel.Visibility = Visibility.Collapsed;
+                _settingsPopup.IsOpen = _skillsPopup.IsOpen = _macrosPopup.IsOpen = _versionsPopup.IsOpen = false;
+            }
+            else
+            {
+                SetCompactNote(null);
+                ScrollToEnd(true);
+            }
+            _input.MinHeight = compact ? 26 : 52;
+            // compact: the input sits right under the toolbar (a docked palette keeps its full height)
+            DockPanel.SetDock(_bottomBorder, compact ? Dock.Top : Dock.Bottom);
+            ((TextBlock)_compactBtn.Content).Text = compact ? "⌃" : "⌄";
+            _compactBtn.ToolTip = CompactTip(compact);
+            CompactChanged?.Invoke(compact);
+            _input.Focus();
+        });
+
+        /// <summary>One line of news while compact ("✓ Đã xong: …"); null clears it. Ignored when expanded.</summary>
+        private void SetCompactNote(string text)
+        {
+            if (string.IsNullOrEmpty(text) || !_compact)
+            {
+                _compactLine.Visibility = Visibility.Collapsed;
+                _compactLineText.Text = "";
+                return;
+            }
+            _compactLineText.Text = text + " · bấm để xem";
+            _compactLine.Visibility = Visibility.Visible;
+        }
+
+        /// <summary>A card that needs a decision (confirmation, plan, sign-in, activation) opens the palette.</summary>
+        private void ExpandForDecision()
+        {
+            if (_compact) SetCompact(false);
+        }
+
+        /// <summary>First line of a reply, cut for the compact status line.</summary>
+        internal static string FirstLine(string markdown, int max = 60)
+        {
+            var plain = MarkdownLite.ToPlainText(markdown ?? "");
+            var line = plain.Split('\n').Select(l => l.Trim()).FirstOrDefault(l => l.Length > 0) ?? "";
+            return line.Length <= max ? line : line.Substring(0, max).TrimEnd() + "…";
+        }
 
         private void UpdateBusyLine()
         {
@@ -2368,6 +2479,7 @@ namespace ClaudeCAD.Plugin.UI
         {
             var stack = new StackPanel();
             stack.Children.Add(IconLine("⊗", Theme.ErrorFg, title, bold: true));
+            SetCompactNote("⊗ " + FirstLine(title, 50));
             if (!string.IsNullOrEmpty(detail))
             {
                 var d = new TextBlock { Text = detail, TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 3, 0, 0) };
@@ -2482,6 +2594,7 @@ namespace ClaudeCAD.Plugin.UI
         public void AddLoginCard(string text) => Ui(() =>
         {
             var stack = new StackPanel();
+            ExpandForDecision();
             stack.Children.Add(IconLine("⚠", Theme.WarnFg, text));
             var b = new Button { Content = "Đăng nhập Claude", ToolTip = "Mở trình duyệt để đăng nhập tài khoản Claude Pro / Max; xong là gửi tin nhắn được ngay", Padding = new Thickness(12, 2, 12, 2), Margin = new Thickness(0, 6, 0, 0), FontWeight = FontWeights.SemiBold, HorizontalAlignment = HorizontalAlignment.Left };
             b.Click += (s, e) => LoginRequested?.Invoke();
@@ -2539,6 +2652,7 @@ namespace ClaudeCAD.Plugin.UI
         /// </summary>
         public void AddActivationCard(string machine, string device, string contact, string status) => Ui(() =>
         {
+            ExpandForDecision();
             // one live card: pressing Enter again while not activated brings the existing card back into view
             if (_activationCard != null && _activationCard.Parent != null && !_activationDone)
             {
@@ -2684,6 +2798,7 @@ namespace ClaudeCAD.Plugin.UI
         /// <summary>Plan card ("Làm" / "Sửa kế hoạch" / "Bỏ") before a big multi-step task.</summary>
         public void AddPlanCard(string id, string summary, List<string> steps) => Ui(() =>
         {
+            ExpandForDecision();
             var stack = new StackPanel();
             var t = new TextBlock { Text = "Kế hoạch: " + summary, FontWeight = FontWeights.SemiBold, TextWrapping = TextWrapping.Wrap };
             Theme.Ref(t, TextBlock.ForegroundProperty, Theme.Fg);

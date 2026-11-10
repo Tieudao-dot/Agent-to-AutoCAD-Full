@@ -85,3 +85,24 @@ Mỗi nút icon và mỗi nút hành động đều có tooltip dạng **"Tên �
 "Chat mới — mở đoạn chat mới cho bản vẽ này, đoạn cũ vẫn xem lại được". Nút icon không đủ chỗ ghi
 số lượng, nên khi có nội dung (Macro đã lưu, Phiên bản, Ghi chú) icon chuyển sang màu nhấn và số
 lượng nằm trong tooltip — giống nút đang bật trong AutoCAD.
+
+## 7. Thu gọn (màn F)
+
+Nút ⌄ trên thanh công cụ co palette lại tại chỗ: chỉ còn hàng công cụ, một dòng trạng thái và ô nhập.
+
+- **Không tải lại gì**: phần chat chỉ ẩn (`Visibility`), mở rộng là thấy nguyên đoạn chat của phiên.
+- **Enter gửi ngay**, Shift+Enter xuống dòng — như khi mở rộng.
+- **Dòng trạng thái** khi đang thu gọn: "● Đang làm · … · N thao tác" lúc chạy; "✓ Đã xong: <dòng đầu câu trả lời>
+  · bấm để xem" khi xong; "⊗ …" khi lỗi / hết hạn mức. Bấm dòng đó hoặc ⌃ để mở rộng.
+- **Tự mở rộng chỉ khi cần cậu quyết**: thẻ xác nhận, thẻ kế hoạch, đăng nhập, kích hoạt. Lỗi thường chỉ báo trên dòng.
+- **Kích thước**: palette nổi co chiều cao còn ~170 px và nhớ chiều cao cũ để trả lại; palette neo giữ cột của
+  AutoCAD (AutoCAD quản kích thước cột neo), ô nhập chuyển lên sát thanh công cụ.
+- Trạng thái thu gọn không lưu qua lần mở AutoCAD sau (theo lựa chọn của chủ plugin).
+
+## 8. Gửi thêm ý khi Claude đang làm
+
+Tin gõ lúc Claude bận được **xếp hàng** ở plugin và gửi khi lượt kết thúc sạch; nó không chen vào giữa lượt.
+Lý do: sidecar và cổng xác nhận tính "một tin = một lượt" (đếm đối tượng bị ảnh hưởng, câu đồng ý/từ chối,
+ghép kết quả với lượt). Chèn tin giữa lượt sẽ làm lệch các phép tính an toàn đó. Sau lỗi, hết hạn mức, Dừng,
+hoặc khi lượt vừa hỏi "đồng ý?", chữ được trả về ô nhập để người dùng tự quyết — một tin chờ không bao giờ
+tự trả lời hộ một câu hỏi xác nhận.

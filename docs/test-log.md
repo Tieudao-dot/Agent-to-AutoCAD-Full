@@ -131,6 +131,9 @@ Trạng thái: ⬜ chưa chạy · ✅ đạt · ❌ không đạt · ⚠️ đ�
 | UX-8 | Đang chạy lượt: dòng "● Đang làm · … giây · N thao tác" đếm đúng; con trỏ ở ô nhập nhấn **Esc** → lượt dừng; con trỏ ở bản vẽ nhấn Esc → không dừng lượt | ⬜ chưa chạy | |
 | UX-9 | Yêu cầu xóa > 20 đối tượng → thẻ xác nhận có số to, **⌖ Xem trên bản vẽ** chọn đúng các đối tượng (Esc bỏ chọn), **Đồng ý** → xóa; U một lần → về như cũ | ⬜ chưa chạy | |
 | UX-10 | ⚙: 5 nhóm thu gọn, bấm tiêu đề mở/đóng; chưa đăng nhập thì nhóm *Tài khoản AI* tự mở; đổi Giao diện / Model vẫn có tác dụng như trước | ⬜ chưa chạy | |
+| UX-11 | Palette **nổi**: bấm ⌄ → palette co còn hàng công cụ + ô nhập (cao ~170 px); gõ yêu cầu + Enter → Claude chạy, dòng "● Đang làm…" rồi "✓ Đã xong: … · bấm để xem"; bấm dòng đó hoặc ⌃ → palette về chiều cao cũ, đoạn chat còn nguyên | ⬜ chưa chạy | |
+| UX-12 | Palette **neo** trái/phải: bấm ⌄ → nội dung co lại, ô nhập nằm sát thanh công cụ, cột neo giữ nguyên; ⌃ mở lại bình thường | ⬜ chưa chạy | |
+| UX-13 | Đang thu gọn, yêu cầu xóa nhiều đối tượng → palette **tự mở** và hiện thẻ xác nhận; yêu cầu thường (vẽ thêm 1 đường) → palette vẫn thu gọn | ⬜ chưa chạy | |
 | R-1 | Macro có bo góc (fillet) giữa 2 đường vừa vẽ → chạy lại macro ở chỗ khác: bo góc 2 đường mới, 2 đường cũ giữ nguyên | ⬜ chưa chạy | |
 | R-2 | Bật Phiên bản, yêu cầu Claude "zoom vào khung tên rồi đổi chữ" → có phiên bản mới trước khi sửa; lượt chỉ zoom không có nút Hoàn tác | ⬜ chưa chạy | |
 | R-3 | "Vẽ lại rồi xóa đi các đường cũ" trên layer có > 20 đối tượng → Claude hỏi xác nhận trước khi xóa | ⬜ chưa chạy | |
