@@ -16,7 +16,7 @@ Trang [phát hành](https://github.com/Tieudao-dot/Agent-to-Autocad/releases/lat
 
 1. Tải `ClaudeCAD-Setup.exe` ở link trên.
 2. Chạy file. Nếu Windows hiện "Windows protected your PC" → **More info → Run anyway** (bộ cài chưa ký số). Không cần quyền admin, không cần cài Node.js hay Claude Code. Nên đóng AutoCAD trước khi cài.
-3. **Kích hoạt:** bộ cài hiện **mã máy** và dòng *"Liên hệ Zalo owner: 0344644415"*; yêu cầu được gửi tự động cho chủ plugin (email + một dòng **Chờ duyệt** trong bảng thiết bị của chủ plugin). Hai cách: **(a)** chờ chủ plugin duyệt — bấm **Next** cài tiếp không cần key, sau khi được duyệt mở AutoCAD và bấm **Kiểm tra lại** trong khung chat; **(b)** nhận **key** qua Zalo, dán vào ô **Key kích hoạt** rồi bấm **Next**. Máy đã kích hoạt rồi (cài đè, cập nhật) thì không hỏi lại.
+3. **Kích hoạt:** bộ cài hiện **mã máy** và dòng *"Liên hệ Zalo owner: 0344644415"*; yêu cầu được gửi tự động cho chủ plugin (email + một dòng **Chờ duyệt** trong bảng thiết bị của chủ plugin). Hai cách: **(a)** chờ chủ plugin duyệt — bấm **Next** cài tiếp không cần key, sau khi được duyệt mở AutoCAD là tự dùng được (hoặc bấm **Kiểm tra lại** trong khung chat để dùng ngay); **(b)** nhận **key** qua Zalo, dán vào ô **Key kích hoạt** rồi bấm **Next**. Máy đã kích hoạt rồi (cài đè, cập nhật) thì không hỏi lại.
 4. Trang cuối bộ cài: giữ ô **Đăng nhập Claude ngay** rồi bấm **Finish** → trình duyệt mở trang cấp quyền, bấm **đồng ý** bằng tài khoản Claude Pro/Max (một cửa sổ đen hiện lên và tự đóng khi xong). Không cần mở AutoCAD. Máy đã đăng nhập sẵn thì ô này không hiện. Sau đó mở AutoCAD 2022–2025 là dùng được (nếu bỏ qua bước này, lần đầu mở AutoCAD plugin tự mở trang đăng nhập).
 
 Sau khi cài: gõ `CLAUDECHATSELFTEST` để tự kiểm tra (báo cáo ✓/✗ mở trong Notepad). Mở khung chat: `CLAUDECHAT`, `CC` hoặc **Ctrl+Shift+Space**.
@@ -34,7 +34,8 @@ Sau khi cài: gõ `CLAUDECHATSELFTEST` để tự kiểm tra (báo cáo ✓/✗ 
 ## Duyệt và quản lý thiết bị (chủ plugin)
 
 - Mỗi máy chạy bộ cài (hoặc mở khung chat khi chưa kích hoạt) tự hiện thành một dòng **Chờ duyệt** trong Google Sheet **"ClaudeCAD – Thiết bị"** của chủ plugin, kèm email **"[ClaudeCAD] Yêu cầu kích hoạt: <tên máy> (<user>)"** có mã máy và **KEY** dự phòng.
-- **Cho dùng:** đổi ô **Trạng thái** của dòng đó thành `Active` → người dùng bấm **Kiểm tra lại** trong khung chat (hoặc cài tiếp) là xong, **không cần key**. Hoặc gửi KEY trong email qua Zalo.
+- **Cho dùng:** đổi ô **Trạng thái** của dòng đó thành `Active` → lần mở AutoCAD kế tiếp máy đó tự dùng được (hoặc bấm **Kiểm tra lại** để dùng ngay), **không cần key**. Hoặc gửi KEY trong email qua Zalo.
+- **Chống spam:** tối đa 30 máy mới mỗi giờ được thêm vào bảng, 10 email mỗi giờ; máy đã `Active` xin lại không gửi email thừa.
 - **Ngưng cho dùng:** đổi thành `Disabled` → máy bị khóa ở lần kiểm tra kế tiếp (plugin kiểm tra mỗi lần mở AutoCAD và ~6 giờ/lần; máy cố tình ngắt mạng cũng chỉ dùng thêm tối đa 7 ngày). Đổi lại `Active` là máy dùng tiếp ngay, không cần key mới.
 - Cột **Lần cuối dùng** và **Phiên bản** cho biết máy nào còn đang dùng plugin.
 - Key chỉ dùng được trên đúng máy có mã đó. Cài lại Windows / thay mainboard thì mã máy đổi, máy xin duyệt lại như máy mới.

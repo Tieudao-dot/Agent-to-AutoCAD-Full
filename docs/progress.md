@@ -198,4 +198,6 @@ Cần test: R-1 … R-6 (và K-1 … K-7).
 - Test: agent 119 (5 bài mới có giả lập SpreadsheetApp), core 118 (3 bài VerifyStatus với cặp khóa vứt-đi).
 - Đổi cặp khóa (chưa phát hành nên không ảnh hưởng máy nào); chủ plugin đã triển khai Apps Script gắn Google Sheet. Thử từ cloud ngày 10/11/2026: `ping` OK; `request` mã máy thử `CC-7E57-0000-0001` → email + dòng Chờ duyệt; key bịa bị từ chối; `status` trả `pending` có chữ ký khớp `LicenseLogic.PublicModulus`.
 
-Cần test trên AutoCAD thật: K-8 … K-12 (cùng K-1 … K-7, R-1 … R-6).
+- Bổ sung sau khi chủ plugin duyệt thử: **tối đa 30 máy mới/giờ** vào Sheet (chống mã máy bịa làm đầy bảng); máy đã `Active` xin lại không gửi email; **máy chờ duyệt tự hỏi trạng thái khi mở AutoCAD** (và ~6 giờ/lần) → đổi `Active` là lần mở sau tự dùng được, không cần bấm "Kiểm tra lại".
+
+Cần test trên AutoCAD thật: K-8 … K-13 (cùng K-1 … K-7, R-1 … R-6).

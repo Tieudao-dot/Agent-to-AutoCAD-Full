@@ -217,6 +217,38 @@ describe('activation service (Apps Script)', () => {
     assert.equal(st.license, undefined);
   });
 
+  it('at most 30 new machines per hour reach the sheet (made-up codes cannot fill it with junk)', () => {
+    const s = loadService();
+    const m = (i: number) => `CC-0000-0001-${i.toString(16).toUpperCase().padStart(4, '0')}`;
+    for (let i = 1; i <= 30; i++) s.get({ action: 'request', machine: m(i), device: 'x', user: 'y' });
+    assert.equal(s.sheet()!.rows.filter(r => String(r[0]).startsWith('CC-0000-0001-')).length, 30);
+    assert.equal(s.mails.length, 10); // the email limit still applies on its own
+    const r = s.get({ action: 'request', machine: m(31), device: 'x', user: 'y' });
+    assert.equal(r.ok, false);
+    assert.match(r.error, /quá nhiều máy mới/);
+    assert.equal(s.row(m(31)), undefined);
+    // a machine already in the sheet may still ask again (no new row)
+    s.cache.delete('req:' + m(12));
+    assert.doesNotMatch(s.get({ action: 'request', machine: m(12), device: 'x', user: 'y' }).error ?? '', /quá nhiều máy mới/);
+    // the next hour the limit starts again
+    for (const k of [...s.cache.keys()]) if (k.startsWith('rows:')) s.cache.set(k, '0');
+    assert.doesNotMatch(s.get({ action: 'request', machine: m(31), device: 'x', user: 'y' }).error ?? '', /quá nhiều máy mới/);
+    assert.ok(s.row(m(31)));
+  });
+
+  it('an Active machine asking again (licence lost, reinstall) gets no second email', () => {
+    const s = loadService();
+    s.get({ action: 'request', machine, device: 'PC', user: 'u' });
+    s.row(machine)![5] = 'Active';
+    s.cache.clear();
+    const r = s.get({ action: 'request', machine, device: 'PC', user: 'u' });
+    assert.equal(r.ok, true);
+    assert.equal(r.sent, false);
+    assert.equal(r.approved, true);
+    assert.equal(s.mails.length, 1);
+    assert.ok(s.get({ action: 'status', machine }).license, 'the licence comes back through ?action=status');
+  });
+
   it('status for an unknown machine is signed "pending" and adds no row', () => {
     const s = loadService();
     const r = s.get({ action: 'status', machine: 'CC-AAAA-BBBB-CCCC' });

@@ -168,8 +168,8 @@ end;
   Every machine needs the owner's permission. The key page shows the machine code and the owner's contact, and
   emails the owner (through the owner's Google Apps Script web app) the device name, the Windows user, the
   machine code and the key for it; the machine also lands in the owner's Google Sheet as "Chờ duyệt". Two ways
-  forward: the owner sets the row Active (the user installs without a key and presses "Kiểm tra lại" in the
-  palette), or the owner sends the key by Zalo and the user types it here. A right key returns a signed licence
+  forward: the owner sets the row Active (the user installs without a key; the plugin unlocks by itself at the
+  next AutoCAD start, or at once with "Kiểm tra lại"), or the owner sends the key by Zalo and the user types it here. A right key returns a signed licence
   (license.txt) plus a signed status (status.txt) in %LocalAppData%\ClaudeCAD — the plugin checks the licence at
   every AutoCAD start and re-asks the owner's Active/Disabled decision there and every ~6 hours.
   Silent installs: /KEY=XXXX-XXXX-XXXX-XXXX. }
@@ -402,7 +402,7 @@ begin
     Intro.Caption := 'ClaudeCAD chỉ dùng được khi máy này được chủ plugin cho phép. Yêu cầu được gửi tự động;' + #13#10 +
                      '{#ContactPas} để được duyệt nhanh.' + #13#10 +
                      'Có key thì dán vào ô dưới. Chưa có key vẫn bấm Next cài tiếp được — sau khi được duyệt,' + #13#10 +
-                     'mở AutoCAD và bấm "Kiểm tra lại" trong khung chat Claude.'
+                     'mở AutoCAD là tự dùng được (hoặc bấm "Kiểm tra lại" trong khung chat Claude).'
   else
     Intro.Caption := 'ClaudeCAD chỉ cài được khi có mã kích hoạt do chủ plugin cấp, riêng cho từng máy.' + #13#10 +
                      '{#ContactPas}, gửi mã máy bên dưới để nhận mã kích hoạt (dòng dài bắt đầu bằng CCL1|).';
@@ -484,7 +484,7 @@ begin
   begin
     { the sheet way: install without a key; the plugin unlocks once the owner sets the machine Active }
     Result := MsgBox('Chưa nhập key. Cài tiếp và chờ chủ plugin duyệt máy này?' + #13#10 +
-                     'Sau khi được duyệt: mở AutoCAD, bấm "Kiểm tra lại" trong khung chat Claude là dùng được.',
+                     'Sau khi được duyệt: mở AutoCAD là tự dùng được (hoặc bấm "Kiểm tra lại" trong khung chat Claude).',
                      mbConfirmation, MB_YESNO) = IDYES;
     if Result then Log('activation: continuing without a key (the owner approves via the device sheet)');
     exit;

@@ -7,7 +7,7 @@ Mỗi máy muốn dùng ClaudeCAD cần được **chủ plugin cho phép**. Ch�
 1. Người dùng chạy `ClaudeCAD-Setup.exe`. Bộ cài dừng ở trang **Kích hoạt ClaudeCAD**, hiện **mã máy** (`CC-XXXX-XXXX-XXXX`) và dòng "Liên hệ Zalo owner: 0344644415".
 2. Cùng lúc đó bộ cài gửi **tên thiết bị, user Windows và mã máy** tới máy chủ kích hoạt của chủ plugin (một Google Apps Script gắn với Google Sheet, chạy trên tài khoản Google của chủ plugin). Máy đó hiện thành một dòng **Chờ duyệt** trong trang **Thiết bị** của Sheet, và chủ plugin nhận **email** (kèm KEY dự phòng). Người dùng không nhận được key.
 3. Chủ plugin chọn một trong hai cách:
-   - **Duyệt qua Sheet (khuyên dùng):** đổi ô **Trạng thái** của dòng đó thành `Active`. Người dùng bấm **Next** cài tiếp không cần key; mở AutoCAD, khung chat hiện thẻ 🔒 — bấm **Kiểm tra lại** là máy tự nhận giấy phép và dùng được.
+   - **Duyệt qua Sheet (khuyên dùng):** đổi ô **Trạng thái** của dòng đó thành `Active`. Người dùng bấm **Next** cài tiếp không cần key; lần mở AutoCAD kế tiếp plugin tự hỏi máy chủ, nhận giấy phép và dùng được (đang mở AutoCAD thì bấm **Kiểm tra lại** trên thẻ 🔒 để dùng ngay).
    - **Gửi key qua Zalo:** gửi KEY trong email cho người đó; họ dán vào ô **Key kích hoạt** của bộ cài (hoặc khung chat). Key đúng thì máy nhận giấy phép và dòng trong Sheet tự chuyển thành `Active`.
 4. Giấy phép đã ký lưu ở `%LocalAppData%\ClaudeCAD\license.txt`; plugin kiểm tra chữ ký mỗi lần mở AutoCAD. Chép thư mục plugin sang máy khác, hoặc cài bằng `.zip` / `install.ps1`, thì khung chat chỉ hiện thẻ **🔒 Kích hoạt** (thẻ này cũng tự gửi yêu cầu cho chủ plugin, có nút Kiểm tra lại và ô dán key).
 5. Plugin **hỏi lại trạng thái** với máy chủ mỗi lần mở AutoCAD và ~6 giờ/lần (câu trả lời có chữ ký số, lưu ở `status.txt`). Nhờ đó chủ plugin khóa / mở máy từ xa được, và cột **Lần cuối dùng** + **Phiên bản** trong Sheet luôn mới (ghi tối đa 30 phút/lần).
@@ -20,7 +20,7 @@ Mỗi dòng là một máy: **Mã máy · Thiết bị · User Windows · Ngày 
 
 | Muốn | Làm |
 | --- | --- |
-| Cho máy mới dùng | Đổi **Trạng thái** thành `Active` (chọn trong danh sách thả xuống). Người dùng bấm **Kiểm tra lại** trong AutoCAD là xong — không cần key. |
+| Cho máy mới dùng | Đổi **Trạng thái** thành `Active` (chọn trong danh sách thả xuống). Lần mở AutoCAD kế tiếp máy đó tự dùng được (hoặc bấm **Kiểm tra lại** để dùng ngay) — không cần key. |
 | Ngưng cho dùng | Đổi thành `Disabled`. Máy đó bị khóa ở lần kiểm tra kế tiếp: khung chat hiện *"Máy này đã bị chủ plugin tạm khóa. Liên hệ Zalo owner: 0344644415"*; trợ lý dừng; key cũ cũng không kích hoạt lại được. |
 | Cho dùng lại | Đổi lại thành `Active`. Máy bấm **Kiểm tra lại** (hoặc đợi lần kiểm tra kế tiếp) là dùng tiếp ngay, không cần key mới. |
 | Xem máy nào còn dùng | Cột **Lần cuối dùng** (cập nhật mỗi lần máy kiểm tra, tối đa 30 phút/lần) và **Phiên bản**. |
@@ -81,5 +81,6 @@ Key vẫn riêng cho từng máy. Cài ngầm mà không có `/KEY=` thì plugin
   Bỏ `--secret` thì script tạo SECRET mới, và mọi key đã gửi trước đó đều không còn dùng được để kích hoạt máy mới. Giấy phép đã kích hoạt vẫn dùng được.
 - **Đổi cặp khóa** (lộ khóa riêng): tạo khóa mới bằng `openssl genrsa -out license-private.pem 2048`, chạy `--print-public` để lấy khóa công khai, cập nhật `LicenseLogic.PublicModulus`, rồi phát hành bản mới. Lưu ý: giấy phép cũ sẽ hết hiệu lực trên bản mới, nên mọi máy phải kích hoạt lại.
 - **Giới hạn:** mã nguồn đang công khai. Người biết lập trình có thể sửa mã để bỏ bước kiểm tra rồi tự build lại. Key + trạng thái chặn được người dùng thông thường; muốn chặn cả trường hợp này thì phải để repo ở chế độ riêng tư.
-- **Chống spam:** tối đa 10 email xin key mỗi giờ; chừa lại 5 lượt trong hạn mức email ngày (~100 với Gmail thường) cho `taoKeyThuCong` / `kiemTra`. Một máy hỏi lại trong vòng 30 phút không tạo email mới (nhưng vẫn được ghi vào Sheet). Xem các lượt xin / kích hoạt / kiểm tra ở **Thực thi** (Executions) trong trình soạn Apps Script.
+- **Chống spam:** tối đa **30 máy mới mỗi giờ** được thêm vào Sheet (mã máy bịa không làm đầy bảng được) và 10 email xin key mỗi giờ; chừa lại 5 lượt trong hạn mức email ngày (~100 với Gmail thường) cho `taoKeyThuCong` / `kiemTra`. Một máy hỏi lại trong vòng 30 phút không tạo email mới (nhưng vẫn được ghi vào Sheet); máy đã `Active` xin lại (mất giấy phép, cài lại) không tạo email — `status` trả lại giấy phép.
+- **Máy chờ duyệt** cũng hỏi `status` khi mở AutoCAD và ~6 giờ/lần, nên đổi `Active` là máy tự mở khóa ở lần mở AutoCAD kế tiếp. Xem các lượt xin / kích hoạt / kiểm tra ở **Thực thi** (Executions) trong trình soạn Apps Script.
 - **Tên thiết bị và người dùng trong email / Sheet do máy kia tự khai** — xác nhận người xin qua Zalo trước khi duyệt.

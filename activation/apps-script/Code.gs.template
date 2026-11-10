@@ -5,14 +5,15 @@
  * Google Sheet là bảng điều khiển của chủ plugin: mỗi máy cài plugin là một dòng trong trang "Thiết bị".
  * Đổi ô Trạng thái là đủ:
  *   - "Chờ duyệt" (tự thêm khi có máy mới): máy chưa dùng được.
- *   - "Active": máy được dùng — người dùng bấm "Kiểm tra lại" trong AutoCAD (hoặc cài tiếp) là tự kích hoạt.
+ *   - "Active": máy được dùng — lần mở AutoCAD kế tiếp là tự kích hoạt (hoặc bấm "Kiểm tra lại" để dùng ngay).
  *   - "Disabled": máy bị khóa ở lần kiểm tra kế tiếp (plugin kiểm tra mỗi lần mở AutoCAD và ~6 giờ/lần;
  *     máy mất mạng dùng được tối đa 7 ngày kể từ lần kiểm tra cuối rồi tự khóa tới khi có mạng).
  *   - Xóa dòng = máy quay về "Chờ duyệt" ở lần kiểm tra kế tiếp.
  *
  * Bộ cài / plugin gọi web app này:
  *   ?action=request&machine=CC-XXXX-XXXX-XXXX&device=...&user=...&from=...
- *       → thêm dòng "Chờ duyệt" vào Sheet (nếu chưa có) và GỬI EMAIL cho chủ plugin (kèm key dự phòng).
+ *       → thêm dòng "Chờ duyệt" vào Sheet (nếu chưa có; tối đa 30 máy mới mỗi giờ để chống spam) và GỬI EMAIL
+ *         cho chủ plugin (kèm key dự phòng). Máy đã Active xin lại thì không gửi email.
  *   ?action=activate&machine=CC-XXXX-XXXX-XXXX&key=XXXX-XXXX-XXXX-XXXX
  *       → key đúng và máy không bị Disabled: trả giấy phép đã ký + đặt dòng đó thành Active.
  *   ?action=status&machine=CC-XXXX-XXXX-XXXX&ver=...
@@ -38,6 +39,8 @@ var LOCKED_MSG = 'Máy này đã bị chủ plugin tạm khóa.';
 // Gmail quota of the day (≈ 100 emails) and real users could not get a key until tomorrow.
 var MAX_MAILS_PER_HOUR = 10;
 var KEEP_DAILY_QUOTA = 5; // left for taoKeyThuCong / kiemTra
+// Same reason for the sheet: made-up machine codes would otherwise fill it with junk rows.
+var MAX_NEW_DEVICES_PER_HOUR = 30;
 
 var MACHINE_RE = /^CC-[0-9A-F]{4}-[0-9A-F]{4}-[0-9A-F]{4}$/;
 var B32 = '0123456789ABCDEFGHJKMNPQRSTVWXYZ'; // Crockford: no I, L, O, U
@@ -124,7 +127,8 @@ function handleRequest(p) {
   var user = clip(p.user, 64) || '(không rõ)';
   var from = clip(p.from, 40) || '';
   var sh = getSheet();
-  if (rowStatus(sh, findRow(sh, machine)) === 'disabled') {
+  var known = rowStatus(sh, findRow(sh, machine));
+  if (known === 'disabled') {
     console.log('request refused (disabled): ' + machine);
     return { ok: false, error: LOCKED_MSG };
   }
@@ -135,8 +139,24 @@ function handleRequest(p) {
   var lock = LockService.getScriptLock();
   if (!lock.tryLock(5000)) return { ok: false, error: 'Máy chủ kích hoạt đang bận, thử lại sau ít phút.' };
   try {
+    var stamp = Utilities.formatDate(new Date(), 'UTC', 'yyyyMMddHH');
+    if (!findRow(sh, machine)) {
+      var newKey = 'rows:' + stamp;
+      var newThisHour = Number(cache.get(newKey) || 0);
+      if (newThisHour >= MAX_NEW_DEVICES_PER_HOUR) {
+        console.log('request refused (new devices per hour): ' + machine + ' ' + device);
+        return { ok: false, error: 'Có quá nhiều máy mới xin kích hoạt trong giờ này, thử lại sau.' };
+      }
+      cache.put(newKey, String(newThisHour + 1), 3600);
+    }
     upsertDevice(sh, machine, device, user); // the owner sees the machine in the sheet even when no email goes out
-    var hour = 'mails:' + Utilities.formatDate(new Date(), 'UTC', 'yyyyMMddHH');
+    if (known === 'active') {
+      // already approved (licence lost, reinstall on the same Windows): no email — ?action=status hands the licence back
+      cache.put(seen, '1', 1800);
+      console.log('request of an active machine (no email): ' + machine);
+      return { ok: true, sent: false, approved: true };
+    }
+    var hour = 'mails:' + stamp;
     var sentThisHour = Number(cache.get(hour) || 0);
     if (sentThisHour >= MAX_MAILS_PER_HOUR) {
       console.log('request refused (hourly limit): ' + machine + ' ' + device);
@@ -169,7 +189,7 @@ function sendRequestMail(machine, device, user, from) {
     'Lúc: ' + when + '\n\n' +
     'ĐỒNG Ý CHO DÙNG (chọn 1 trong 2 cách):\n' +
     '  1. Mở Google Sheet "' + SHEET_NAME + '", tìm dòng có mã máy trên, đổi Trạng thái thành Active.\n' +
-    '     Người đó bấm "Kiểm tra lại" trong AutoCAD (hoặc cài tiếp) là xong, không cần key.\n' +
+    '     Lần sau người đó mở AutoCAD là tự dùng được (hoặc bấm "Kiểm tra lại" để dùng ngay), không cần key.\n' +
     '  2. Hoặc gửi KEY dưới đây qua Zalo cho người đó:\n' +
     'KEY: ' + key + '\n\n' +
     'Không đồng ý: bỏ qua email này (máy nằm ở "Chờ duyệt" và không dùng được), ' +

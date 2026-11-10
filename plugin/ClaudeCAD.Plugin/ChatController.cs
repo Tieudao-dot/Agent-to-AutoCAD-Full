@@ -226,12 +226,11 @@ namespace ClaudeCAD.Plugin
             }
             // no Node / Claude Code process on a machine without a licence (or one the owner locked): it would run for nothing
             if (!Activation.IsActivated) ShowActivationCard();
-            else
-            {
-                if (Activation.DeviceAllowed) _sidecar.EnsureStarted();
-                else ShowLockedCard();
-                StartDeviceWatch(); // the owner's Active/Disabled decision: checked now and every ~6 hours
-            }
+            else if (Activation.DeviceAllowed) _sidecar.EnsureStarted();
+            else ShowLockedCard();
+            // the owner's Active/Disabled decision: checked now and every ~6 hours — also on a machine still waiting
+            // for approval, so a machine the owner set Active unlocks by itself at the next AutoCAD start
+            StartDeviceWatch();
         }
 
         /// <summary>CLAUDECHATUPDATE: check now and stage the update if there is one.</summary>
@@ -1810,7 +1809,10 @@ namespace ClaudeCAD.Plugin
         /// <summary>🔒 card for a licensed machine the owner locked / has not approved; one live card.</summary>
         private void ShowLockedCard() => Ui.AddLockedCard(Activation.BlockedMessage);
 
-        /// <summary>Checks the owner's decision now and then every ~6 hours (plus at every AutoCAD start).</summary>
+        /// <summary>
+        /// Checks the owner's decision now and then every ~6 hours (plus at every AutoCAD start), for activated
+        /// machines (lock / unlock) and for machines waiting for approval (Active in the sheet → licence, no key).
+        /// </summary>
         private void StartDeviceWatch()
         {
             if (Activation.ServiceUrl == null || _deviceTimer != null) return;

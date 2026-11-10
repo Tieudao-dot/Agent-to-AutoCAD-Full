@@ -2100,7 +2100,7 @@ namespace ClaudeCAD.Plugin.UI
             var intro = new TextBlock
             {
                 Text = canCheck
-                    ? "Máy này cần được chủ plugin cho phép mới dùng được plugin. " + contact + " để được duyệt; khi chủ plugin báo đã duyệt, bấm \"Kiểm tra lại\". Nếu nhận được key thì dán key vào ô dưới."
+                    ? "Máy này cần được chủ plugin cho phép mới dùng được plugin. " + contact + " để được duyệt. Được duyệt rồi thì lần mở AutoCAD sau là tự dùng được, hoặc bấm \"Kiểm tra lại\" để dùng ngay. Nếu nhận được key thì dán key vào ô dưới."
                     : "Máy này cần key kích hoạt để dùng plugin. " + contact + " để nhận key, rồi dán key vào ô dưới.",
                 TextWrapping = TextWrapping.Wrap,
                 Margin = new Thickness(0, 3, 0, 0)
