@@ -112,3 +112,10 @@ Bốn nút đính kèm dưới ô nhập dùng cùng `IconButton` với thanh c�
 ▨ Ảnh, ⛶ Chụp. Tooltip theo mẫu "Tên — giải thích ngắn". Nút **Gửi** vẫn là nút chữ, vì đó là hành động chính
 và nhãn của nó đổi thành "Gửi thêm" khi Claude đang làm. Các glyph có trong font Segoe UI Symbol của Windows;
 nếu máy nào hiện ô vuông trống thì ghi vào test-log UX-18.
+
+## 10. Thẻ "Bắt đầu" (màn C)
+`AddWelcomeCard` giữ nguyên chữ ký (danh sách kiểm tra + cần đăng nhập không) nên `ChatController.ShowWelcome`
+không đổi. Thẻ có thanh tiêu đề như nhóm Properties và ba hàng `WelcomeStep`: *done* (✓ màu `Theme.OkFg`),
+*now* (số màu nhấn, có nút), *later* (mờ). Kích hoạt lấy từ dòng "Kích hoạt", đăng nhập từ dòng "Tài khoản Claude";
+các dòng còn lại (Node.js, trợ lý, skill) chỉ hiện ⊗ khi thiếu, đủ thì gộp thành một dòng chữ nhỏ cuối thẻ.
+Bước 3 không tự gửi: *Điền vào ô nhập* chỉ đưa câu mẫu vào ô để người dùng xem rồi Enter.

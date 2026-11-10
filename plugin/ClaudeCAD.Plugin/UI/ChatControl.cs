@@ -2605,40 +2605,145 @@ namespace ClaudeCAD.Plugin.UI
             ScrollToEnd();
         });
 
-        /// <summary>First start after installing: what is ready, sign-in, self-test.</summary>
+        /// <summary>Example request of step 3 of the "Bắt đầu" card: drawn on a scratch drawing by the self-test too.</summary>
+        public const string WelcomeExample = "Vẽ lưới trục 5x4 bước 4000";
+
+        /// <summary>
+        /// First start after installing (screen C): "Bắt đầu với ClaudeCAD — 3 bước" with numbered steps
+        /// Kích hoạt → Đăng nhập Claude → Thử một yêu cầu mẫu. A finished step shows ✓, the step to do now
+        /// has its number in the accent color and its buttons, a later step is muted. The other checks
+        /// (Node.js, sidecar, skill) stay out of the way: one muted line, or a ⊗ line when one is missing.
+        /// </summary>
         public void AddWelcomeCard(List<(string name, bool? ok, string detail)> checks, bool needLogin) => Ui(() =>
         {
+            (string name, bool? ok, string detail) Find(string name) => checks.FirstOrDefault(c => c.name == name);
+            var act = Find("Kích hoạt");
+            var acc = Find("Tài khoản Claude");
+            bool activated = act.name == null || act.ok != false;
+            bool signedIn = !needLogin;
+
             var stack = new StackPanel();
-            var title = new TextBlock { Text = "Chào mừng đến với ClaudeCAD", FontWeight = FontWeights.SemiBold, FontSize = FontSize + 1 };
-            Theme.Ref(title, TextBlock.ForegroundProperty, Theme.Fg);
-            stack.Children.Add(title);
-            foreach (var (name, ok, detail) in checks)
+            var head = new TextBlock { TextWrapping = TextWrapping.Wrap };
+            head.Inlines.Add(new System.Windows.Documents.Run("Bắt đầu với ClaudeCAD") { FontWeight = FontWeights.SemiBold });
+            var sub = new System.Windows.Documents.Run(" — 3 bước, khoảng 2 phút") { FontSize = 11 };
+            sub.SetResourceReference(System.Windows.Documents.TextElement.ForegroundProperty, Theme.MutedFg);
+            head.Inlines.Add(sub);
+            Theme.Ref(head, TextBlock.ForegroundProperty, Theme.Fg);
+            var headBar = new Border { Child = head, Padding = new Thickness(8, 5, 8, 5), BorderThickness = new Thickness(0, 0, 0, 1) };
+            Theme.Ref(headBar, Border.BackgroundProperty, Theme.HeaderBg);
+            Theme.Ref(headBar, Border.BorderBrushProperty, Theme.Border);
+            stack.Children.Add(headBar);
+
+            // a missing part of the plugin comes first: nothing below works without it
+            var others = checks.Where(c => c.name != "Kích hoạt" && c.name != "Tài khoản Claude").ToList();
+            foreach (var (name, ok, detail) in others.Where(c => c.ok == false))
             {
-                var row = new TextBlock { Text = $"{(ok == true ? "✓" : ok == false ? "✗" : "…")} {name}{(string.IsNullOrEmpty(detail) ? "" : " — " + detail)}", TextWrapping = TextWrapping.Wrap, Margin = new Thickness(4, 2, 0, 0) };
-                Theme.Ref(row, TextBlock.ForegroundProperty, ok == false ? Theme.ErrorFg : Theme.Fg);
-                stack.Children.Add(row);
+                var bad = IconLine("⊗", Theme.ErrorFg, name + (string.IsNullOrEmpty(detail) ? "" : " — " + detail));
+                bad.Margin = new Thickness(8, 6, 8, 0);
+                stack.Children.Add(bad);
             }
-            var buttons = new WrapPanel { Margin = new Thickness(0, 8, 0, 0) };
-            if (needLogin)
+
+            // 1. activation
+            var s1 = WelcomeStep(1, activated ? "done" : "now", "Kích hoạt máy này",
+                activated ? (string.IsNullOrEmpty(act.detail) ? "Đã kích hoạt" : "Đã kích hoạt · " + act.detail) : "Máy này chưa có key kích hoạt.", true);
+            stack.Children.Add(s1.root);
+
+            // 2. sign-in
+            var s2 = WelcomeStep(2, signedIn ? "done" : activated ? "now" : "later", "Đăng nhập Claude",
+                signedIn ? (string.IsNullOrEmpty(acc.detail) ? "Đã đăng nhập" : acc.detail)
+                         : "Trình duyệt mở trang cấp quyền, bấm đồng ý bằng tài khoản Pro / Max.", true);
+            if (!signedIn && activated)
             {
-                var login = new Button { Content = "Đăng nhập Claude", ToolTip = "Mở trình duyệt để đăng nhập lại tài khoản Claude, rồi bấm Thử lại", Padding = new Thickness(12, 2, 12, 2), Margin = new Thickness(0, 0, 6, 4), FontWeight = FontWeights.SemiBold };
+                var row = new WrapPanel { Margin = new Thickness(0, 4, 0, 0) };
+                var login = AccentButton("Đăng nhập Claude", "Mở trình duyệt để đăng nhập tài khoản Claude Pro / Max; xong là gửi tin nhắn được ngay");
                 login.Click += (s, e) => LoginRequested?.Invoke();
-                buttons.Children.Add(login);
+                row.Children.Add(login);
+                var key = SmallButton("Dùng API key", "Dán API key Anthropic (trả theo lượng dùng) thay cho tài khoản Pro/Max");
+                key.Click += (s, e) => ShowApiKeyPanel(ApiKeyMask?.Invoke());
+                row.Children.Add(key);
+                s2.body.Children.Add(row);
             }
-            var test = new Button { Content = "Chạy tự kiểm tra", Padding = new Thickness(10, 2, 10, 2), Margin = new Thickness(0, 0, 6, 4), ToolTip = "CLAUDECHATSELFTEST: thử trên một bản vẽ tạm, mở báo cáo ✓/✗" };
+            stack.Children.Add(s2.root);
+
+            // 3. first request
+            bool ready = activated && signedIn;
+            var s3 = WelcomeStep(3, ready ? "now" : "later", "Thử một yêu cầu mẫu",
+                $"\"{WelcomeExample}\" — Claude vẽ ngay trên bản vẽ đang mở; hoàn tác bằng 1 lần U.", false);
+            var row3 = new WrapPanel { Margin = new Thickness(0, 4, 0, 0) };
+            if (ready)
+            {
+                var tryIt = AccentButton("Điền vào ô nhập", "Đưa câu mẫu vào ô nhập để cậu xem lại rồi bấm Enter");
+                tryIt.Click += (s, e) => SetInputText(WelcomeExample);
+                row3.Children.Add(tryIt);
+            }
+            var test = SmallButton("Chạy tự kiểm tra", "CLAUDECHATSELFTEST: thử trên một bản vẽ tạm, mở báo cáo ✓/✗");
             test.Click += (s, e) => SelfTestRequested?.Invoke();
-            buttons.Children.Add(test);
-            stack.Children.Add(buttons);
-            var hint = MutedText("Gõ yêu cầu bằng tiếng Việt rồi Enter, ví dụ \"vẽ lưới trục 5x4 bước 4000\". Mở nhanh khung chat: Ctrl+Shift+Space hoặc lệnh CC. Xem lại hướng dẫn này: ⚙ ▸ Hướng dẫn bắt đầu.");
+            row3.Children.Add(test);
+            s3.body.Children.Add(row3);
+            stack.Children.Add(s3.root);
+
+            var okParts = others.Where(c => c.ok != false).Select(c => string.IsNullOrEmpty(c.detail) ? c.name : c.name + " " + c.detail);
+            var hint = MutedText((okParts.Any() ? "Plugin: " + string.Join(" · ", okParts) + ". " : "")
+                + "Mở nhanh khung chat: Ctrl+Shift+Space hoặc lệnh CC. Xem lại: ⚙ ▸ Hướng dẫn bắt đầu.");
             hint.TextWrapping = TextWrapping.Wrap;
-            hint.FontSize = 11;
-            hint.Margin = new Thickness(0, 4, 0, 0);
+            hint.TextTrimming = TextTrimming.None;
+            hint.FontSize = 10;
+            hint.Margin = new Thickness(8, 4, 8, 6);
             stack.Children.Add(hint);
-            var card = Card(stack, "welcome");
-            card.Margin = new Thickness(0, 4, 0, 4);
+
+            var card = new Border { Child = stack, BorderThickness = new Thickness(1), CornerRadius = Theme.Corner, Margin = new Thickness(0, 4, 0, 4), Tag = "welcome", Effect = Theme.Shadow() };
+            Theme.Ref(card, Border.BackgroundProperty, Theme.CardBg);
+            Theme.Ref(card, Border.BorderBrushProperty, Theme.Border);
             AppendMessage(card);
             ScrollToEnd();
         });
+
+        /// <summary>
+        /// One numbered row of the "Bắt đầu" card. <paramref name="state"/>: "done" (✓ green), "now" (number in
+        /// the accent color, title in full color), "later" (all muted). Buttons go into the returned body.
+        /// </summary>
+        private (Border root, StackPanel body) WelcomeStep(int n, string state, string title, string detail, bool divider)
+        {
+            var mark = new TextBlock
+            {
+                Text = state == "done" ? "✓" : n.ToString(),
+                Width = 18,
+                TextAlignment = TextAlignment.Center,
+                FontWeight = FontWeights.Bold,
+                FontSize = 12,
+                Margin = new Thickness(0, 0, 6, 0),
+                VerticalAlignment = VerticalAlignment.Top,
+                Tag = "step-" + state,
+            };
+            Theme.Ref(mark, TextBlock.ForegroundProperty, state == "done" ? Theme.OkFg : state == "now" ? Theme.Accent : Theme.MutedFg);
+            var body = new StackPanel();
+            var t = new TextBlock { Text = title, FontWeight = FontWeights.SemiBold, TextWrapping = TextWrapping.Wrap };
+            Theme.Ref(t, TextBlock.ForegroundProperty, state == "later" ? Theme.MutedFg : Theme.Fg);
+            body.Children.Add(t);
+            var d = MutedText(detail);
+            d.TextWrapping = TextWrapping.Wrap;
+            d.TextTrimming = TextTrimming.None;
+            d.FontSize = 11;
+            d.Margin = new Thickness(0, 1, 0, 0);
+            body.Children.Add(d);
+            var line = new DockPanel();
+            DockPanel.SetDock(mark, Dock.Left);
+            line.Children.Add(mark);
+            line.Children.Add(body);
+            var root = new Border { Child = line, Padding = new Thickness(8, 7, 8, 7), BorderThickness = new Thickness(0, 0, 0, divider ? 1 : 0) };
+            Theme.Ref(root, Border.BorderBrushProperty, Theme.Border);
+            return (root, body);
+        }
+
+        /// <summary>The one accent button of a card (Đồng ý, Đăng nhập Claude…), same look as the confirmation card.</summary>
+        private static Button AccentButton(string text, string tip)
+        {
+            var b = new Button { Content = text, ToolTip = tip, Padding = new Thickness(10, 2, 10, 2), Margin = new Thickness(0, 0, 6, 4), FontWeight = FontWeights.SemiBold, FontSize = 11, Cursor = Cursors.Hand };
+            Theme.Ref(b, BackgroundProperty, Theme.PressBg);
+            Theme.Ref(b, ForegroundProperty, Theme.AccentFg);
+            Theme.Ref(b, BorderBrushProperty, Theme.Accent);
+            return b;
+        }
 
         // ---------------------------------------------------------------- card: activation (v0.9.4)
 

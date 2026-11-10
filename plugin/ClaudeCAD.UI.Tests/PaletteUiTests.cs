@@ -234,6 +234,64 @@ namespace ClaudeCAD.UI.Tests
             Assert.True(new FileInfo(Path.Combine(OutDir, "palette-layers.png")).Length > 5_000);
         }
 
+        /// <summary>Screen C: "Bắt đầu" card with three numbered steps; the step to do now carries the buttons.</summary>
+        [Fact]
+        public void WelcomeCardWalksThroughThreeSteps()
+        {
+            string[] marksBefore = null, marksAfter = null;
+            int login = 0, loginButtons = 0, fillButtonsBefore = 0;
+            string filled = null, missingLine = null;
+            Sta(() =>
+            {
+                var checks = new List<(string, bool?, string)>
+                {
+                    ("Node.js", true, "đi kèm plugin"),
+                    ("Trợ lý (sidecar)", false, "không thấy thư mục agent"),
+                    ("Kích hoạt", true, "mã máy CC-3B28-85F3-67B7"),
+                    ("Tài khoản Claude", false, "chưa đăng nhập Claude"),
+                    ("Skill", true, "3 skill trong plugin"),
+                };
+                var c = new ChatControl { Width = 380, Height = 520 };
+                c.ApplySettings(new PaletteSettings());
+                c.SetDark(true);
+                c.LoadTranscript(new ChatTranscript(), false);
+                c.LoginRequested += () => login++;
+                c.AddWelcomeCard(checks, true);
+                Pump();
+                Shot(c, "bat-dau-1-chua-dang-nhap");
+                marksBefore = FindAll<TextBlock>(c).Where(t => (t.Tag as string ?? "").StartsWith("step-")).Select(t => (string)t.Tag).ToArray();
+                var card = FindAll<Border>(c).First(b => (b.Tag as string) == "welcome");
+                var loginBtn = FindAll<Button>(card).Where(b => (b.Content as string) == "Đăng nhập Claude").ToList();
+                loginButtons = loginBtn.Count;
+                loginBtn.First().RaiseEvent(new RoutedEventArgs(System.Windows.Controls.Primitives.ButtonBase.ClickEvent));
+                fillButtonsBefore = FindAll<Button>(card).Count(b => (b.Content as string) == "Điền vào ô nhập");
+                missingLine = FindAll<TextBlock>(card).Select(t => t.Text).FirstOrDefault(t => t != null && t.StartsWith("Trợ lý (sidecar) — "));
+
+                var d = new ChatControl { Width = 380, Height = 420 };
+                d.ApplySettings(new PaletteSettings());
+                d.SetDark(false);
+                d.LoadTranscript(new ChatTranscript(), false);
+                d.AddWelcomeCard(new List<(string, bool?, string)>
+                {
+                    ("Kích hoạt", true, "mã máy CC-3B28-85F3-67B7"),
+                    ("Tài khoản Claude", true, "Claude Pro · cau@example.com"),
+                }, false);
+                Pump();
+                marksAfter = FindAll<TextBlock>(d).Where(t => (t.Tag as string ?? "").StartsWith("step-")).Select(t => (string)t.Tag).ToArray();
+                FindAll<Button>(d).First(b => (b.Content as string) == "Điền vào ô nhập").RaiseEvent(new RoutedEventArgs(System.Windows.Controls.Primitives.ButtonBase.ClickEvent));
+                Pump();
+                filled = ((TextBox)typeof(ChatControl).GetField("_input", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance).GetValue(d)).Text;
+                Shot(d, "bat-dau-2-da-dang-nhap");
+            });
+            Assert.Equal(new[] { "step-done", "step-now", "step-later" }, marksBefore);
+            Assert.Equal(1, loginButtons);
+            Assert.Equal(1, login);
+            Assert.Equal(0, fillButtonsBefore); // step 3 has no "try it" until signed in
+            Assert.Equal("Trợ lý (sidecar) — không thấy thư mục agent", missingLine);
+            Assert.Equal(new[] { "step-done", "step-done", "step-now" }, marksAfter);
+            Assert.Equal(ChatControl.WelcomeExample, filled);
+        }
+
         /// <summary>Sign-in flow screens: first start card, settings ▸ Tài khoản AI, sign-in in progress, signed in, API key editor.</summary>
         [Fact]
         public void RendersLoginFlow()
