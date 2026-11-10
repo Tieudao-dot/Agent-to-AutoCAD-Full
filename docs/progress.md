@@ -174,7 +174,7 @@ Cloud: `dotnet test` 106/106, `npm test` 95/95, build ✅. Cần test: T-1, T-2,
 
 Cần test: I-6, I-7.
 
-## v0.9.4 — khóa bằng key theo máy ✅ code xong (chờ URL máy chủ kích hoạt)
+## v0.9.4 — khóa bằng key theo máy ✅ code xong, máy chủ kích hoạt đã chạy (URL trong `activation/activation.json`)
 
 - Bộ cài: trang **Kích hoạt** (mã máy, "Liên hệ Zalo owner: 0344644415", ô key, Sao chép, Gửi lại yêu cầu); mở trang là gửi email cho chủ plugin (tên máy, user Windows, mã máy, KEY) qua Google Apps Script của chủ plugin; chỉ Next khi key đúng; `/KEY=` khi cài ngầm.
 - Plugin: kiểm tra giấy phép (RSA-2048, không cần mạng) mỗi lần mở AutoCAD; thẻ 🔒 **Kích hoạt** trong khung chat (tự gửi yêu cầu mỗi ngày một lần, dán key / mã offline); chặn gửi tin nhắn, thử lại, macro khi chưa kích hoạt; dòng "Kích hoạt" trong tự kiểm tra và báo cáo lỗi.
@@ -196,5 +196,6 @@ Cần test: R-1 … R-6 (và K-1 … K-7).
 - **Plugin**: `LicenseLogic.VerifyStatus` (chữ ký, đúng máy, hạn **7 ngày** `StatusMaxAgeDays`, chặn ngày tương lai); `Activation` lưu `status.txt`, `CheckStatusAsync`, luật mở khóa `IsAllowed` = giấy phép + trạng thái active/offline còn hạn (build không có URL giữ nguyên như cũ); kiểm tra khi mở AutoCAD + mỗi 6 giờ; `Disabled` → thẻ 🔒 "Máy này đã bị chủ plugin tạm khóa…", trợ lý dừng, giấy phép **không** bị xóa (mở lại `Active` là chạy tiếp); thẻ kích hoạt thêm nút **Kiểm tra lại**; dán được 2 dòng CCL1+CCS1.
 - **Bộ cài**: trang key cho **Next không cần key** (hộp thoại xác nhận, chờ duyệt qua Sheet); lưu `status.txt` khi kích hoạt bằng key; nhận 2 dòng offline.
 - Test: agent 119 (5 bài mới có giả lập SpreadsheetApp), core 118 (3 bài VerifyStatus với cặp khóa vứt-đi).
+- Đổi cặp khóa (chưa phát hành nên không ảnh hưởng máy nào); chủ plugin đã triển khai Apps Script gắn Google Sheet. Thử từ cloud ngày 10/11/2026: `ping` OK; `request` mã máy thử `CC-7E57-0000-0001` → email + dòng Chờ duyệt; key bịa bị từ chối; `status` trả `pending` có chữ ký khớp `LicenseLogic.PublicModulus`.
 
 Cần test trên AutoCAD thật: K-8 … K-12 (cùng K-1 … K-7, R-1 … R-6).
