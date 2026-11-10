@@ -109,8 +109,8 @@ var
 
 function NeedsLogin(): Boolean;
 var
-  ResultCode: Integer;
-  TmpFile, Exe: String;
+  ResultCode, i: Integer;
+  TmpFile, DoneFile, Exe: String;
   Text: AnsiString;
 begin
   { evaluated several times while the finish page is shown: run "claude auth status" only once }
@@ -123,9 +123,19 @@ begin
   if not FileExists(Exe) then exit;
   Result := True;
   TmpFile := ExpandConstant('{tmp}\authstatus.json');
-  if ExecAsOriginalUser(ExpandConstant('{cmd}'), '/C ""' + Exe + '" auth status --json > "' + TmpFile + '" 2>&1"', '', SW_HIDE, ewWaitUntilTerminated, ResultCode) then
-    if LoadStringFromFile(TmpFile, Text) then
+  DoneFile := ExpandConstant('{tmp}\authstatus.done');
+  { at most ~15 s: a "claude auth status" that hangs must not freeze the finish page (then the box is shown) }
+  if ExecAsOriginalUser(ExpandConstant('{cmd}'), '/C ""' + Exe + '" auth status --json > "' + TmpFile + '" 2>&1 & echo done> "' + DoneFile + '""', '', SW_HIDE, ewNoWait, ResultCode) then
+  begin
+    for i := 1 to 30 do
+    begin
+      if FileExists(DoneFile) then break;
+      Sleep(500);
+    end;
+    if FileExists(DoneFile) and LoadStringFromFile(TmpFile, Text) then
       if Pos('"loggedIn": true', String(Text)) > 0 then Result := False;
+    if not FileExists(DoneFile) then Log('sign-in check: no answer within 15 s, the box is shown');
+  end;
   LoginNeeded := Result;
 end;
 

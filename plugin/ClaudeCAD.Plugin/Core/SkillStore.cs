@@ -25,6 +25,39 @@ namespace ClaudeCAD.Plugin.Core
 
     public enum SkillImportStatus { Added, Updated, AlreadyAdded, Conflict, Invalid }
 
+    /// <summary>
+    /// Skills per chat (v0.9.4): the library is every skill ever added (the plugin's skill folder); each chat
+    /// uses a subset ("−" / "+"). A new chat starts with the skills of the most recent chat.
+    /// </summary>
+    public static class SkillSelection
+    {
+        /// <summary>Valid, distinct names, order kept.</summary>
+        public static List<string> Clean(IEnumerable<string> names) =>
+            (names ?? Enumerable.Empty<string>()).Where(SkillStore.IsValidName).Distinct(StringComparer.Ordinal).ToList();
+
+        /// <summary>
+        /// Skills a chat uses: its own choice, else the most recent chat's, else (first run after updating from a
+        /// version without per-chat skills) the skills the user had added and enabled — never the shipped samples.
+        /// Only skills that still exist and are readable are kept.
+        /// </summary>
+        public static List<string> ForChat(List<string> chat, List<string> last, IEnumerable<SkillInfo> library)
+        {
+            var lib = (library ?? Enumerable.Empty<SkillInfo>()).Where(k => k.Error == null).ToList();
+            var names = new HashSet<string>(lib.Select(k => k.Name), StringComparer.Ordinal);
+            var pick = chat ?? last ?? lib.Where(k => k.Enabled && !k.Builtin).Select(k => k.Name).ToList();
+            return Clean(pick).Where(names.Contains).ToList();
+        }
+
+        /// <summary>"+" (use = true) / "−" (use = false) on one skill.</summary>
+        public static List<string> Toggle(List<string> current, string name, bool use)
+        {
+            var list = Clean(current ?? new List<string>());
+            list.Remove(name);
+            if (use && SkillStore.IsValidName(name)) list.Add(name);
+            return list;
+        }
+    }
+
     public sealed class SkillImportResult
     {
         public SkillImportStatus Status;

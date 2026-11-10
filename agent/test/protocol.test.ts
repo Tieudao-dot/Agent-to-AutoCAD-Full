@@ -136,3 +136,11 @@ describe('v0.9.4: big messages and timeouts', () => {
     assert.equal(timeoutFor('batch_execute', { calls: Array.from({ length: 5000 }, () => ({ tool: 'draw_line' })) }), 300_000);
   });
 });
+
+describe('v0.9.4: skills per chat in user_message', () => {
+  it('keeps valid, distinct skill names only', () => {
+    const m = parsePluginMessage({ type: 'user_message', text: 'x', skills: ['ve-kien-truc', 've-kien-truc', '../etc', 'Ve Mep', 42, 'khung-ten-a3'] });
+    assert.deepEqual((m as { skills?: string[] }).skills, ['ve-kien-truc', 'khung-ten-a3']);
+    assert.equal('skills' in parsePluginMessage({ type: 'user_message', text: 'x' }), false);
+  });
+});

@@ -11,7 +11,7 @@ import { toSdkUserMessage } from './content.js';
 import type { ToolBridge } from '../tools/common.js';
 import { MCP_SERVER_NAME, createCadServer } from '../tools/index.js';
 import { InputQueue } from './inputQueue.js';
-import { SKILLS_PLUGIN_NAME, enabledSkills, prepareSkillsPlugin } from './skills.js';
+import { SKILLS_PLUGIN_NAME, enabledSkills, librarySkills, prepareSkillsPlugin } from './skills.js';
 import { SYSTEM_PROMPT } from './systemPrompt.js';
 
 export type QueryFn = typeof sdkQuery;
@@ -88,6 +88,11 @@ export class AgentSession {
   // next-step buttons: Claude called suggest_next_steps this turn → the SDK's predicted prompt is not shown too
   private toolSuggested = false;
   private suggestionsOn = true;
+  // skills per chat: the list the palette sent (undefined = an older plugin → skills.json), the list the
+  // running Claude process was started with, and the list of the previous message of this conversation
+  private chatSkills?: string[];
+  private loadedSkillsKey?: string;
+  private lastSentSkills?: string[];
 
   constructor(private readonly cfg: SessionConfig) {
     this.defaultModel = cfg.model;
@@ -95,10 +100,6 @@ export class AgentSession {
 
   get busy(): boolean {
     return this.turnActive;
-  }
-
-  get currentSessionId(): string | undefined {
-    return this.sessionId;
   }
 
   /** Text of the user message of the current/last turn (used by the confirmation gate). */
@@ -109,10 +110,6 @@ export class AgentSession {
   /** True when the current turn was started by the "Đồng ý" button of a confirmation card. */
   get lastUserConfirmed(): boolean {
     return this.lastConfirm === 'yes';
-  }
-
-  get info(): string {
-    return this.initInfo;
   }
 
   /**
@@ -140,7 +137,8 @@ export class AgentSession {
       if (req.type === 'suggestions') this.toolSuggested = true;
       this.cfg.emit(req);
     });
-    const plugin = prepareSkillsPlugin(this.cfg.skillsDir, this.cfg.workDir);
+    const plugin = prepareSkillsPlugin(this.cfg.skillsDir, this.cfg.workDir, this.chatSkills);
+    this.loadedSkillsKey = skillsKey(this.chatSkills);
     if (plugin) this.cfg.log(`skills loaded: ${plugin.skills.join(', ') || '(none)'}`);
 
     const options: Options = {
@@ -213,6 +211,19 @@ export class AgentSession {
       this.cancelRequested = false;
       this.textBlockOpen = false;
     }
+    // Skills per chat: the skill list is fixed when a Claude process starts, so a changed list ("−" / "+" in
+    // the palette, or another drawing's chat) restarts it — resuming the SAME conversation, context kept.
+    let removed: string[] = [];
+    let added: string[] = [];
+    if (msg.skills) {
+      if (this.q && this.loadedSkillsKey !== skillsKey(msg.skills)) this.closeQuery();
+      this.chatSkills = msg.skills;
+      if (this.lastSentSkills) {
+        removed = this.lastSentSkills.filter((x) => !msg.skills!.includes(x));
+        added = msg.skills.filter((x) => !this.lastSentSkills!.includes(x));
+      }
+      this.lastSentSkills = msg.skills;
+    }
     try {
       this.ensureStarted();
     } catch (err) {
@@ -230,7 +241,11 @@ export class AgentSession {
     this.lastConfirm = msg.confirm;
     this.turnId = msg.turn_id;
     this.pending = msg;
-    this.input!.push(toSdkUserMessage(msg));
+    this.input!.push(toSdkUserMessage({
+      ...msg,
+      ...(removed.length ? { skills_removed: removed } : {}),
+      ...(added.length ? { skills_added: added } : {}),
+    }));
   }
 
   /** Model / effort from the palette's settings; applied live when a query is running. */
@@ -261,7 +276,8 @@ export class AgentSession {
   reloadSkills(): void {
     if (this.turnActive) this.reloadPending = true;
     else this.closeQuery(); // sessionId is kept → resumed on the next message
-    this.cfg.emit({ type: 'skills_reloaded', skills: enabledSkills(this.cfg.skillsDir) });
+    const loaded = this.chatSkills ? librarySkills(this.cfg.skillsDir).filter((x) => this.chatSkills!.includes(x)) : enabledSkills(this.cfg.skillsDir);
+    this.cfg.emit({ type: 'skills_reloaded', skills: loaded });
   }
 
   /** Per-drawing conversations: continue the given session (or a fresh one) on the next message. */
@@ -273,6 +289,7 @@ export class AgentSession {
     this.closeQuery();
     this.turnActive = false;
     this.turnAsked = false;
+    this.lastSentSkills = undefined; // another conversation: no "skills removed / added" note for it
     this.sessionId = sessionId;
   }
 
@@ -307,6 +324,7 @@ export class AgentSession {
     this.sessionId = undefined;
     this.turnActive = false;
     this.turnAsked = false;
+    this.lastSentSkills = undefined;
     this.cfg.emit({ type: 'session_reset' });
   }
 
@@ -468,4 +486,9 @@ export class AgentSession {
         return;
     }
   }
+}
+
+/** Same skills in any order → same key; undefined (skills.json) has its own key. */
+function skillsKey(list: string[] | undefined): string {
+  return list ? [...list].sort().join(',') : '(enabled)';
 }

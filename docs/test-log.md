@@ -133,6 +133,14 @@ Trạng thái: ⬜ chưa chạy · ✅ đạt · ❌ không đạt · ⚠️ đ�
 | R-4 | Hết giới hạn, bật "Tự gửi lại", chuyển sang bản vẽ khác → toast "Đã hủy tự gửi lại", không gửi gì vào bản vẽ mới | ⬜ chưa chạy | |
 | R-5 | Nút Chụp / Claude tự kiểm tra bằng ảnh 20 lần liên tiếp → AutoCAD không chậm dần | ⬜ chưa chạy | |
 | R-6 | Gửi báo cáo lỗi → mở các file log trong .zip: không có nội dung tin nhắn / chữ trong bản vẽ | ⬜ chưa chạy | |
+| S-1 | + Add skill → chọn 3 file .md cùng lúc → cả 3 vào thư viện và có dấu ✓ trong đoạn chat hiện tại | ⬜ chưa chạy | |
+| S-2 | Bấm − một skill → Skill (N) giảm, skill nằm ở phần Thư viện; yêu cầu tiếp theo Claude không theo chuẩn của skill đó | ⬜ chưa chạy | |
+| S-3 | Chat mới / mở bản vẽ khác chưa có chat → dùng đúng các skill của đoạn chat gần nhất | ⬜ chưa chạy | |
+| S-4 | Hai bản vẽ, mỗi bản một bộ skill khác nhau → chuyển qua lại, danh sách đúng của từng bản vẽ | ⬜ chưa chạy | |
+| S-5 | Sửa SKILL.md rồi lưu → chỉ 1 toast "Skill đã thay đổi" | ⬜ chưa chạy | |
+| D-1 | Đổi tài khoản / lưu API key → trợ lý khởi động lại; Task Manager không còn sót tiến trình claude.exe cũ; khung chat không đứng, không hiện "Mất kết nối" | ⬜ chưa chạy | |
+| D-2 | `CLAUDECHATSELFTEST` đạt hết → thư mục `%TEMP%\ClaudeCAD-selftest-*` bị xóa, ảnh `selftest-*.png` nằm cạnh báo cáo; có mục ✗ → thư mục được giữ | ⬜ chưa chạy | |
+| D-3 | Mở ⚙ hai lần trong 30 giây → lần hai hiện tài khoản ngay | ⬜ chưa chạy | |
 | I-1 | Tải `ClaudeCAD-Setup.exe` từ link releases/latest, chạy trên máy **chưa có Node.js và Claude Code** → cài xong không hỏi gì thêm (ngoài SmartScreen) | ⬜ chưa chạy | |
 | I-2 | Mở AutoCAD lần đầu sau khi cài → không có cảnh báo SECURELOAD; khung chat tự mở với thẻ **Bắt đầu** (Node đi kèm ✓, trợ lý ✓, tài khoản ✗) | ⬜ chưa chạy | |
 | I-3 | Bấm **Đăng nhập Claude** → cửa sổ đen + trình duyệt đăng nhập Pro/Max → "✓ Đã đăng nhập Claude", gửi tin nhắn được ngay | ⬜ chưa chạy | |

@@ -130,7 +130,7 @@ Lệnh AutoCAD:
 
 Palette: Enter gửi, Shift+Enter xuống dòng, **Stop** hủy lượt đang chạy, **New** tạo phiên chat mới. Sau mỗi lượt, gõ `U` một lần trong AutoCAD (hoặc nút **Hoàn tác lượt này**) là hoàn tác toàn bộ thay đổi của lượt đó.
 
-**Skill (v0.5.0):** nút **+ Add skill** trên khung chat → chọn file `.md` trong máy (mặc định mở thư mục skill của plugin) → plugin chép vào `Contents\skills\<tên>\SKILL.md`, ghi vào `Contents\skills\skills.json` và báo "✓ Đã thêm skill …". Nút **Skill (N)** mở danh sách để bật/tắt, sửa, xóa; ô **Chuẩn** tự liệt kê các skill đang bật. Chi tiết: [`skills/README.md`](skills/README.md).
+**Skill (v0.9.4: theo từng đoạn chat):** nút **+ Add skill** trên khung chat → chọn một hoặc nhiều file `.md` → plugin chép vào thư viện `Contents\skills\<tên>\SKILL.md` và dùng luôn trong đoạn chat hiện tại. Nút **Skill (N)** mở danh sách: *Đang dùng trong đoạn chat này* (nút **−** bỏ khỏi đoạn chat) và *Thư viện* (nút **+** để dùng), nút **Sửa**. Đoạn chat mới dùng skill của đoạn chat gần nhất. Chi tiết: [`skills/README.md`](skills/README.md).
 
 Từ v0.4.0 khung chat có thêm 20 tính năng — chọn đối tượng / lấy điểm gửi kèm, handle bấm được để zoom, **Xem kết quả**, đính kèm ảnh, dán bảng Excel, mẫu lệnh `/`, chọn chuẩn + tỷ lệ in, ↑↓ gọi lại tin, thẻ xác nhận có nút, nhật ký thao tác, **Thử lại**, mức dùng + chọn model/effort, thông báo Windows, Markdown, lịch sử theo bản vẽ, Copy/Xuất, sáng/tối + cỡ chữ, **Sửa** và gửi lại. Hướng dẫn: [`docs/palette-features.md`](docs/palette-features.md).
 
@@ -183,7 +183,7 @@ Tool mới: `add_text`, `add_mtext`, `add_dim_linear`, `add_dim_aligned`, `add_d
 - "Vẽ cả mặt bằng tầng 1 nhà 5x20m" → thẻ **Kế hoạch** → **Làm**. Vẽ xong, Claude tự **nhìn bản vẽ** (`capture_view`) để soát lỗi; dưới câu trả lời có bảng **Thay đổi: Thêm · Sửa · Xóa** và các nút gợi ý bước tiếp theo.
 - Nút **Chụp**: gửi vùng đang xem kèm câu "chỗ này sai, sửa lại".
 - **💾 Lưu macro** sau một lượt ưng ý → **Macro (N) ▸ ▶ Chạy / 📍 Tại điểm** vẽ lại không cần Claude.
-- **☆ Mẫu** lưu tin nhắn thành mẫu `/`; **Skill (N) ▸ ✨ Tạo skill từ cuộc chat này**.
+- **☆ Mẫu** lưu tin nhắn thành mẫu `/`.
 - **🔒 Chỉ xem** cho bản vẽ quan trọng; **Ghi chú** cho thông số cố định của dự án; gõ **@** để chọn tên layer/block.
 
 Chi tiết: [`docs/palette-features.md`](docs/palette-features.md) mục E.

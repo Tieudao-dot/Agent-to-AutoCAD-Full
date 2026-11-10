@@ -190,6 +190,24 @@ Cần test: K-1 … K-7.
 
 Cần test: R-1 … R-6 (và K-1 … K-7).
 
+### v0.9.4 — skill theo từng đoạn chat ✅
+
+- Thư viện skill (thư mục skill của plugin) + danh sách skill riêng cho từng đoạn chat (`ChatTranscript.Skills`); chat mới dùng skill của chat gần nhất (`PaletteSettings.LastSkills`); lần đầu sau cập nhật: các skill cậu đã thêm và đang bật (không gồm skill mẫu).
+- Bảng **Skill (N)**: *Đang dùng* (−) / *Thư viện* (+), Sửa; bỏ Xóa, Mở thư mục, "Tạo skill từ cuộc chat" và ô Chuẩn.
+- `user_message.skills`: trợ lý nạp đúng danh sách, đổi danh sách → khởi động lại Claude và nối tiếp cuộc chat; dặn Claude khi skill bị bỏ / thêm.
+- Sửa lỗi nạp lại skill 2 lần (một đồng hồ có khóa).
+
+Cần test: S-1 … S-5.
+
+### v0.9.4 — đợt 3 (dọn dẹp, chạy bền hơn) ✅
+
+- Sự kiện AutoCAD (chuyển / đóng / tạo bản vẽ, kết thúc lệnh, đối tượng đổi, biến hệ thống, chọn đối tượng / điểm) có lớp bắt lỗi: lỗi của plugin không làm AutoCAD "Fatal error"; đóng khung chat gỡ đủ các sự kiện.
+- Khởi động lại trợ lý: tắt cả cây tiến trình (taskkill /T trên 2022–2024, Kill(true) trên 2025), chạy nền.
+- ⚙ nhớ trạng thái tài khoản 30 giây; bộ cài kiểm tra đăng nhập tối đa ~15 giây.
+- Tự kiểm tra xóa thư mục thử khi đạt (giữ ảnh), dọn thư mục cũ hơn 7 ngày; mẫu lệnh ghi file tạm rồi thay; lưu lịch sử chat cắt + ghi trong một khóa; tự gửi lại bật lại khi lại hết giới hạn; chỉ dùng claude.exe; dọn code thừa phía trợ lý.
+
+Cần test: D-1 … D-3.
+
 ### v0.9.4 — quản lý thiết bị qua Google Sheet ✅ code xong (nhánh `claude/device-management`)
 
 - **Máy chủ** (`Code.gs.template`, giờ gắn với Google Sheet "ClaudeCAD – Thiết bị", tạo từ Tiện ích mở rộng → Apps Script): `request` thêm dòng **Chờ duyệt** (+ email như cũ, nay hướng dẫn cả 2 cách duyệt); `activate` từ chối máy `Disabled` (kể cả key đúng) và đặt dòng thành `Active`; **mới** `?action=status` trả trạng thái có chữ ký `CCS1|máy|trạng thái|ngày|chữ ký` (máy `Active` nhận kèm giấy phép → duyệt qua Sheet không cần key), cập nhật **Lần cuối dùng** + **Phiên bản** (≤ 30 phút/lần); `caiDat` tự kẻ bảng + dropdown; `kiemTra` tự kiểm tra cả vòng status; `taoKeyThuCong` thêm mã miễn kiểm tra (`CCS1|…|offline|`) cho máy không có mạng + ghi vào Sheet.

@@ -47,10 +47,9 @@ namespace ClaudeCAD.Plugin.UI
         public event Action<PaletteSettings> SettingsChanged;
         // skills (+ Add skill / Skill list)
         public event Action AddSkillRequested;
+        /// <summary>"+" (true) / "−" (false): use the skill in the current chat or not; the library keeps it.</summary>
         public event Action<string, bool> SkillToggled;
         public event Action<string> SkillEditRequested;
-        public event Action<string> SkillDeleteRequested;
-        public event Action OpenSkillsFolderRequested;
         // v0.6: look at the drawing, read-only, project notes, macros, templates, skill drafts, plans
         public event Action CaptureScreenRequested;
         public event Action<bool> ReadOnlyToggled;
@@ -61,7 +60,6 @@ namespace ClaudeCAD.Plugin.UI
         public event Action<string> MacroDeleteRequested;
         public event Action OpenMacrosFolderRequested;
         public event Action<string, string> TemplateSaveRequested;  // title, text
-        public event Action CreateSkillFromChatRequested;
         public event Action<string> SkillDraftOpenRequested;        // SKILL.md of the draft
         public event Action<string> SkillDraftAddRequested;
         public event Action<string, string> PlanAnswered;           // id, go | edit | cancel
@@ -99,7 +97,7 @@ namespace ClaudeCAD.Plugin.UI
         private readonly TextBox _input;
         private readonly Button _send, _stop, _new, _export, _settingsBtn, _pickSel, _pickPt, _addImg;
         private readonly TextBlock _connection, _usage, _toolStatus;
-        private readonly ComboBox _standard, _scale;
+        private readonly ComboBox _scale;
         private readonly WrapPanel _chips = new WrapPanel { Margin = new Thickness(0, 0, 0, 4) };
         private readonly Popup _slashPopup;
         private readonly ListBox _slashList;
@@ -109,7 +107,7 @@ namespace ClaudeCAD.Plugin.UI
         private readonly TextBlock _skillsHeader;
         private Button _addSkill, _skillsBtn;
         private List<SkillInfo> _skills = new List<SkillInfo>();
-        private List<string> _standardNames = new List<string>(PaletteSettings.Standards);
+        private HashSet<string> _chatSkills = new HashSet<string>(StringComparer.Ordinal);
         private ComboBox _model, _effort, _theme;
         private CheckBox _notify, _visualCheck, _planFirst, _suggestCheck, _hotkey, _versionsCheck, _sideSnapshot;
         private Button _versionsBtn;
@@ -208,19 +206,15 @@ namespace ClaudeCAD.Plugin.UI
 
             // ---- context bar (feature 9)
             var ctxBar = new WrapPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(6, 0, 6, 4) };
-            ctxBar.Children.Add(MutedText("Chuẩn "));
-            _standard = MakeCombo(PaletteSettings.Standards.Select(PaletteSettings.StandardLabel).ToArray(), 104);
-            _standard.ToolTip = "Chuẩn vẽ (skill) áp dụng cho mọi yêu cầu. Tự động = Claude tự chọn skill phù hợp.";
-            ctxBar.Children.Add(_standard);
-            ctxBar.Children.Add(MutedText("  Tỷ lệ "));
+            ctxBar.Children.Add(MutedText("Tỷ lệ "));
             _scale = MakeCombo(PaletteSettings.Scales.Select(s => s == "" ? "Tự động" : s).ToArray(), 76);
             _scale.ToolTip = "Tỷ lệ in: quyết định chiều cao chữ và kích thước.";
             ctxBar.Children.Add(_scale);
-            _addSkill = MakeButton("+ Add skill", "Thêm skill từ file .md trong máy (mặc định mở thư mục skill của plugin)");
+            _addSkill = MakeButton("+ Add skill", "Thêm skill từ file .md trong máy (chọn được nhiều file cùng lúc): skill vào thư viện và dùng luôn trong đoạn chat này");
             _addSkill.Margin = new Thickness(6, 0, 0, 0);
             _addSkill.Click += (s, e) => AddSkillRequested?.Invoke();
             ctxBar.Children.Add(_addSkill);
-            _skillsBtn = MakeButton("Skill", "Danh sách skill: bật/tắt, sửa, xóa");
+            _skillsBtn = MakeButton("Skill", "Skill của đoạn chat này (− bỏ, + dùng) và thư viện skill đã thêm");
             _skillsBtn.Click += (s, e) => { RefreshSkillsPanel(); _skillsPopup.IsOpen = !_skillsPopup.IsOpen; };
             ctxBar.Children.Add(_skillsBtn);
             _layersBtn = MakeButton("Layer", "Chọn layer để chat chỉnh sửa (đổi màu, nét, khóa... hoặc sửa các đối tượng trên layer)");
@@ -239,7 +233,6 @@ namespace ClaudeCAD.Plugin.UI
             _readOnlyBtn.Checked += (s, e) => { PaintReadOnly(); if (!_suppressReadOnlyEvent) ReadOnlyToggled?.Invoke(true); };
             _readOnlyBtn.Unchecked += (s, e) => { PaintReadOnly(); if (!_suppressReadOnlyEvent) ReadOnlyToggled?.Invoke(false); };
             ctxBar.Children.Add(_readOnlyBtn);
-            _standard.SelectionChanged += (s, e) => OnSettingsUi();
             _scale.SelectionChanged += (s, e) => OnSettingsUi();
             DockPanel.SetDock(ctxBar, Dock.Top);
             root.Children.Add(ctxBar);
@@ -342,22 +335,14 @@ namespace ClaudeCAD.Plugin.UI
             _skillsHeader = new TextBlock { FontWeight = FontWeights.SemiBold, VerticalAlignment = VerticalAlignment.Center };
             Theme.Ref(_skillsHeader, TextBlock.ForegroundProperty, Theme.Fg);
             var skillsHead = new DockPanel { Margin = new Thickness(0, 0, 0, 6) };
-            var openFolder = SmallButton("Mở thư mục", "Mở thư mục skill của plugin trong Explorer");
-            openFolder.Click += (s, e) => OpenSkillsFolderRequested?.Invoke();
-            var addInPanel = SmallButton("+ Add skill", "Thêm skill từ file .md");
+            var addInPanel = SmallButton("+ Add skill", "Thêm skill từ file .md (chọn được nhiều file): vào thư viện và dùng luôn trong đoạn chat này");
+            addInPanel.Margin = new Thickness(0);
             addInPanel.Click += (s, e) => AddSkillRequested?.Invoke();
-            DockPanel.SetDock(openFolder, Dock.Right);
             DockPanel.SetDock(addInPanel, Dock.Right);
-            skillsHead.Children.Add(openFolder);
             skillsHead.Children.Add(addInPanel);
             skillsHead.Children.Add(_skillsHeader);
             var skillsStack = new StackPanel { Margin = new Thickness(10), Width = 340 };
             skillsStack.Children.Add(skillsHead);
-            var fromChat = SmallButton("✨ Tạo skill từ cuộc chat này", "Claude soạn SKILL.md từ các chuẩn cậu đã chỉnh trong cuộc chat; cậu xem lại rồi thêm vào plugin");
-            fromChat.HorizontalAlignment = HorizontalAlignment.Left;
-            fromChat.Margin = new Thickness(0, 0, 0, 8);
-            fromChat.Click += (s, e) => { _skillsPopup.IsOpen = false; CreateSkillFromChatRequested?.Invoke(); };
-            skillsStack.Children.Add(fromChat);
             skillsStack.Children.Add(new ScrollViewer { Content = _skillRows, MaxHeight = 360, VerticalScrollBarVisibility = ScrollBarVisibility.Auto });
             var skillsBorder = new Border { BorderThickness = new Thickness(1), CornerRadius = new CornerRadius(4), Child = skillsStack };
             Theme.Ref(skillsBorder, Border.BackgroundProperty, Theme.InputBg);
@@ -606,7 +591,6 @@ namespace ClaudeCAD.Plugin.UI
             _suppressSettingsEvents = true;
             try
             {
-                _standard.SelectedIndex = Math.Max(0, _standardNames.IndexOf(s.Standard));
                 _scale.SelectedIndex = Math.Max(0, Array.IndexOf(PaletteSettings.Scales, s.Scale));
                 _model.SelectedIndex = Math.Max(0, Array.IndexOf(PaletteSettings.Models, s.Model));
                 _effort.SelectedIndex = Math.Max(0, Array.IndexOf(PaletteSettings.Efforts, s.Effort));
@@ -630,7 +614,6 @@ namespace ClaudeCAD.Plugin.UI
         private void OnSettingsUi()
         {
             if (_suppressSettingsEvents) return;
-            _settings.Standard = _standardNames[Math.Max(0, Math.Min(_standardNames.Count - 1, _standard.SelectedIndex))];
             _settings.Scale = PaletteSettings.Scales[Math.Max(0, _scale.SelectedIndex)];
             _settings.Model = PaletteSettings.Models[Math.Max(0, _model.SelectedIndex)];
             _settings.Effort = PaletteSettings.Efforts[Math.Max(0, _effort.SelectedIndex)];
@@ -1110,90 +1093,94 @@ namespace ClaudeCAD.Plugin.UI
 
         // ================================================================= skills
 
-        /// <summary>Skill list from the plugin's skill folder (skills.json): panel rows + the Chuẩn selector.</summary>
-        public void SetSkills(List<SkillInfo> skills) => Ui(() =>
+        /// <summary>The library (every skill added so far) and the skills the current chat uses.</summary>
+        public void SetSkills(List<SkillInfo> library, IEnumerable<string> chatSkills) => Ui(() =>
         {
-            _skills = skills ?? new List<SkillInfo>();
-            var usable = _skills.Where(k => k.Enabled && k.Error == null).ToList();
-            _skillsBtn.Content = $"Skill ({usable.Count})";
-            _suppressSettingsEvents = true;
-            try
-            {
-                _standardNames = new List<string> { "" };
-                _standardNames.AddRange(usable.Select(k => k.Name));
-                _standard.Items.Clear();
-                foreach (var n in _standardNames) _standard.Items.Add(StandardLabelFor(n));
-                _standard.SelectedIndex = Math.Max(0, _standardNames.IndexOf(_settings.Standard));
-            }
-            finally
-            {
-                _suppressSettingsEvents = false;
-            }
+            _skills = library ?? new List<SkillInfo>();
+            _chatSkills = new HashSet<string>(chatSkills ?? Enumerable.Empty<string>(), StringComparer.Ordinal);
+            int used = _skills.Count(k => k.Error == null && _chatSkills.Contains(k.Name));
+            _skillsBtn.Content = $"Skill ({used})";
             RefreshSkillsPanel();
         });
 
-        private string StandardLabelFor(string name)
-        {
-            if (string.IsNullOrEmpty(name)) return "Tự động";
-            if (SkillStore.BuiltinNames.Contains(name)) return PaletteSettings.StandardLabel(name);
-            var k = _skills.FirstOrDefault(s => s.Name == name);
-            var t = k?.Title ?? name;
-            return t.Length > 22 ? t.Substring(0, 21) + "…" : t;
-        }
-
         private void RefreshSkillsPanel()
         {
-            int on = _skills.Count(k => k.Enabled && k.Error == null);
-            _skillsHeader.Text = $"Skill của plugin — {on}/{_skills.Count} đang bật";
+            var used = _skills.Where(k => k.Error == null && _chatSkills.Contains(k.Name)).ToList();
+            var rest = _skills.Where(k => !used.Contains(k)).ToList();
+            _skillsHeader.Text = $"Skill — {used.Count} đang dùng · thư viện {_skills.Count}";
             _skillRows.Children.Clear();
             if (_skills.Count == 0)
             {
-                _skillRows.Children.Add(MutedText("Chưa có skill nào. Bấm + Add skill để thêm file .md."));
+                _skillRows.Children.Add(Wrapped("Thư viện chưa có skill nào. Bấm + Add skill để thêm file .md (chọn được nhiều file)."));
                 return;
             }
-            foreach (var k in _skills)
+            _skillRows.Children.Add(SectionTitle("ĐANG DÙNG TRONG ĐOẠN CHAT NÀY"));
+            if (used.Count == 0)
             {
-                var row = new DockPanel { Margin = new Thickness(0, 0, 0, 8) };
-                var check = new CheckBox { IsChecked = k.Enabled, IsEnabled = k.Error == null, VerticalAlignment = VerticalAlignment.Top, Margin = new Thickness(0, 2, 6, 0), ToolTip = k.Enabled ? "Đang bật — bỏ chọn để tắt" : "Đang tắt — chọn để bật" };
-                var name = k.Name;
-                check.Checked += (s, e) => SkillToggled?.Invoke(name, true);
-                check.Unchecked += (s, e) => SkillToggled?.Invoke(name, false);
-                DockPanel.SetDock(check, Dock.Left);
-                row.Children.Add(check);
-
-                var buttons = new StackPanel { Orientation = Orientation.Horizontal, VerticalAlignment = VerticalAlignment.Top };
-                var edit = SmallButton("Sửa", "Mở SKILL.md để sửa; lưu file là Claude dùng bản mới từ tin nhắn tiếp theo");
-                edit.Click += (s, e) => SkillEditRequested?.Invoke(name);
-                var del = SmallButton("Xóa", "Xóa skill khỏi plugin");
-                del.Margin = new Thickness(0);
-                del.Click += (s, e) => SkillDeleteRequested?.Invoke(name);
-                buttons.Children.Add(edit);
-                buttons.Children.Add(del);
-                DockPanel.SetDock(buttons, Dock.Right);
-                row.Children.Add(buttons);
-
-                var info = new StackPanel();
-                var title = new TextBlock { Text = k.Name + (k.Title != null && k.Title != k.Name ? "  ·  " + k.Title : ""), FontWeight = FontWeights.SemiBold, TextTrimming = TextTrimming.CharacterEllipsis };
-                Theme.Ref(title, TextBlock.ForegroundProperty, Theme.Fg);
-                info.Children.Add(title);
-                string status = k.Error != null ? "⚠ " + k.Error
-                    : (k.Builtin ? "Skill mẫu" : "Đã thêm" + (k.Added.HasValue ? " " + k.Added.Value.ToString("dd/MM/yyyy") : ""))
-                      + (k.Enabled ? " · đang bật" : " · đã tắt");
-                var st = new TextBlock { Text = status, FontSize = 11, TextWrapping = TextWrapping.Wrap };
-                Theme.Ref(st, TextBlock.ForegroundProperty, k.Error != null ? Theme.ErrorFg : Theme.MutedFg);
-                info.Children.Add(st);
-                if (!string.IsNullOrEmpty(k.Description))
-                {
-                    var d = MutedText(k.Description);
-                    d.FontSize = 11;
-                    d.TextWrapping = TextWrapping.Wrap;
-                    d.MaxHeight = 30;
-                    d.ToolTip = k.Description + (string.IsNullOrEmpty(k.Source) ? "" : "\n\nNguồn: " + k.Source);
-                    info.Children.Add(d);
-                }
-                row.Children.Add(info);
-                _skillRows.Children.Add(row);
+                var none = MutedText("Chưa dùng skill nào — bấm + ở skill bên dưới, hoặc + Add skill.");
+                none.FontSize = 11;
+                none.TextWrapping = TextWrapping.Wrap;
+                none.Margin = new Thickness(0, 0, 0, 8);
+                _skillRows.Children.Add(none);
             }
+            foreach (var k in used) _skillRows.Children.Add(SkillRow(k, true));
+            if (rest.Count > 0)
+            {
+                _skillRows.Children.Add(SectionTitle("THƯ VIỆN (chưa dùng trong đoạn chat này)"));
+                foreach (var k in rest) _skillRows.Children.Add(SkillRow(k, false));
+            }
+        }
+
+        private static TextBlock SectionTitle(string text)
+        {
+            var t = MutedText(text);
+            t.FontSize = 10;
+            t.FontWeight = FontWeights.SemiBold;
+            t.Margin = new Thickness(0, 2, 0, 4);
+            return t;
+        }
+
+        /// <summary>One skill: name · title, description, [Sửa] and "−" (in use) or "+" (library only).</summary>
+        private UIElement SkillRow(SkillInfo k, bool inUse)
+        {
+            var row = new DockPanel { Margin = new Thickness(0, 0, 0, 8) };
+            var name = k.Name;
+            var buttons = new StackPanel { Orientation = Orientation.Horizontal, VerticalAlignment = VerticalAlignment.Top };
+            var edit = SmallButton("Sửa", "Mở SKILL.md để sửa; lưu file là Claude dùng bản mới từ tin nhắn tiếp theo");
+            edit.Click += (s, e) => SkillEditRequested?.Invoke(name);
+            buttons.Children.Add(edit);
+            var toggle = SmallButton(inUse ? "−" : "+", inUse
+                ? "Không dùng skill này trong đoạn chat hiện tại (vẫn giữ trong thư viện)"
+                : "Dùng skill này trong đoạn chat hiện tại");
+            toggle.MinWidth = 24;
+            toggle.FontWeight = FontWeights.Bold;
+            toggle.Margin = new Thickness(0);
+            toggle.IsEnabled = k.Error == null;
+            toggle.Click += (s, e) => SkillToggled?.Invoke(name, !inUse);
+            buttons.Children.Add(toggle);
+            DockPanel.SetDock(buttons, Dock.Right);
+            row.Children.Add(buttons);
+
+            var info = new StackPanel();
+            var title = new TextBlock { Text = (inUse ? "✓ " : "") + k.Name + (k.Title != null && k.Title != k.Name ? "  ·  " + k.Title : ""), FontWeight = inUse ? FontWeights.SemiBold : FontWeights.Normal, TextTrimming = TextTrimming.CharacterEllipsis };
+            Theme.Ref(title, TextBlock.ForegroundProperty, Theme.Fg);
+            info.Children.Add(title);
+            string status = k.Error != null ? "⚠ " + k.Error
+                : k.Builtin ? "Skill mẫu đi kèm plugin" : "Đã thêm" + (k.Added.HasValue ? " " + k.Added.Value.ToString("dd/MM/yyyy") : "");
+            var st = new TextBlock { Text = status, FontSize = 11, TextWrapping = TextWrapping.Wrap };
+            Theme.Ref(st, TextBlock.ForegroundProperty, k.Error != null ? Theme.ErrorFg : Theme.MutedFg);
+            info.Children.Add(st);
+            if (!string.IsNullOrEmpty(k.Description))
+            {
+                var d = MutedText(k.Description);
+                d.FontSize = 11;
+                d.TextWrapping = TextWrapping.Wrap;
+                d.MaxHeight = 30;
+                d.ToolTip = k.Description + (string.IsNullOrEmpty(k.Source) ? "" : "\n\nNguồn: " + k.Source);
+                info.Children.Add(d);
+            }
+            row.Children.Add(info);
+            return row;
         }
 
         // ================================================================= history rendering

@@ -398,3 +398,70 @@ describe('v0.9.4 review fixes', () => {
     assert.ok(allowed.includes('Read(./claudecad-skills/**)'));
   });
 });
+
+describe('skills per chat', () => {
+  function library(names: string[]): string {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'claudecad-skills-'));
+    for (const n of names) {
+      fs.mkdirSync(path.join(dir, n));
+      fs.writeFileSync(path.join(dir, n, 'SKILL.md'), `---\nname: ${n}\ndescription: Skill ${n} dùng khi vẽ ${n}.\n---\n# ${n}\n`);
+    }
+    // skills.json says ve-mep is off: per-chat lists ignore it
+    fs.writeFileSync(path.join(dir, 'skills.json'), JSON.stringify({ skills: [{ name: 've-mep', enabled: false }] }));
+    return dir;
+  }
+
+  it('loads exactly the chat\'s skills, restarts Claude (same conversation) when the list changes, tells Claude about − / +', async () => {
+    const texts: string[] = [];
+    const starts: any[] = [];
+    const fn = ((params: { prompt: AsyncIterable<SDKUserMessage>; options: any }) => {
+      starts.push(params.options);
+      const gen = (async function* () {
+        for await (const m of params.prompt) {
+          texts.push(String(m.message.content));
+          yield init;
+          yield result();
+        }
+      })();
+      return Object.assign(gen, { interrupt: async () => {}, close: () => {} });
+    }) as unknown as QueryFn;
+    const dir = library(['khung-ten', 've-kien-truc', 've-mep']);
+    const { s } = makeSession(fn, dir);
+    const sent = (skills: string[]) => s.sendMessage({ type: 'user_message', text: 'vẽ', skills });
+
+    sent(['ve-kien-truc', 'khung-ten']);
+    await tick();
+    assert.equal(starts.length, 1);
+    assert.deepEqual(starts[0].skills, ['claudecad-skills:khung-ten', 'claudecad-skills:ve-kien-truc']);
+
+    sent(['khung-ten', 've-kien-truc']); // same skills, other order: no restart
+    await tick();
+    assert.equal(starts.length, 1);
+
+    sent(['khung-ten', 've-kien-truc', 've-mep']); // "+" ve-mep (off in skills.json: the chat's list wins)
+    await tick();
+    assert.equal(starts.length, 2);
+    assert.ok(starts[1].skills.includes('claudecad-skills:ve-mep'));
+    assert.equal(starts[1].resume, 's1'); // same conversation
+    assert.match(texts.at(-1)!, /vừa thêm skill vào đoạn chat này: "ve-mep"/);
+
+    sent(['ve-mep']); // "−" khung-ten and ve-kien-truc
+    await tick();
+    assert.equal(starts.length, 3);
+    assert.deepEqual(starts[2].skills, ['claudecad-skills:ve-mep']);
+    assert.match(texts.at(-1)!, /đã bỏ skill khỏi đoạn chat này: "khung-ten", "ve-kien-truc" — from now on do not apply/);
+
+    s.switchTo('other-drawing'); // another chat: no − / + note for its first message
+    sent(['khung-ten']);
+    await tick();
+    assert.doesNotMatch(texts.at(-1)!, /đã bỏ skill|vừa thêm skill/);
+  });
+
+  it('an older plugin without a list still gets the enabled skills', async () => {
+    const { fn, calls } = fakeQuery(async () => {});
+    const dir = library(['ve-kien-truc', 've-mep']);
+    const { s } = makeSession(fn, dir);
+    s.sendMessage({ type: 'user_message', text: 'x' });
+    assert.deepEqual(calls.options.skills, ['claudecad-skills:ve-kien-truc']);
+  });
+});

@@ -50,6 +50,8 @@ namespace ClaudeCAD.Plugin.Core
         public bool ReadOnly;
         /// <summary>Notes of this drawing sent with every message (project-folder notes live next to the DWG).</summary>
         public string Notes = "";
+        /// <summary>Skills used in this chat ("−" removes one, "+" adds one from the library). null = not chosen yet.</summary>
+        public List<string> Skills;
         public List<ChatEntry> Entries = new List<ChatEntry>();
 
         public static string KeyFor(string drawingPath)
@@ -86,6 +88,7 @@ namespace ClaudeCAD.Plugin.Core
                 ["session_id"] = SessionId,
                 ["read_only"] = ReadOnly,
                 ["notes"] = Notes ?? "",
+                ["skills"] = Skills?.Cast<object>().ToList(),
                 ["entries"] = Entries.Select(e => (object)new Dictionary<string, object>
                 {
                     ["role"] = e.Role,
@@ -118,6 +121,7 @@ namespace ClaudeCAD.Plugin.Core
                 ReadOnly = d.TryGetValue("read_only", out var ro) && ro is bool rb && rb,
                 Notes = S(d, "notes") ?? "",
             };
+            if (d.TryGetValue("skills", out var sk) && sk is List<object> skl) t.Skills = SkillSelection.Clean(skl.OfType<string>());
             if (d.TryGetValue("entries", out var ev) && ev is List<object> list)
             {
                 foreach (var o in list.OfType<Dictionary<string, object>>())
@@ -218,11 +222,10 @@ namespace ClaudeCAD.Plugin.Core
                 lock (_io)
                 {
                     Directory.CreateDirectory(_dir);
-                    t.Trim();
                     var file = Path.Combine(_dir, ChatTranscript.FileNameFor(t.DrawingKey));
                     var tmp = file + "." + Guid.NewGuid().ToString("N") + ".tmp";
                     string json;
-                    lock (t) json = t.ToJson();
+                    lock (t) { t.Trim(); json = t.ToJson(); } // trimmed and serialized as one step
                     File.WriteAllText(tmp, json, new UTF8Encoding(false));
                     if (File.Exists(file)) File.Replace(tmp, file, null, true);
                     else File.Move(tmp, file);

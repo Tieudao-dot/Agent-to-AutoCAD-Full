@@ -100,7 +100,7 @@ namespace ClaudeCAD.Plugin.Core
             {
                 ["templates"] = list.Select(t => (object)new Dictionary<string, object> { ["name"] = t.Name, ["title"] = t.Title, ["text"] = t.Text }).ToList(),
             });
-            File.WriteAllText(userFile, json, new UTF8Encoding(false));
+            WriteSafely(userFile, json);
             return tpl;
         }
 
@@ -113,8 +113,17 @@ namespace ClaudeCAD.Plugin.Core
             {
                 ["templates"] = list.Select(t => (object)new Dictionary<string, object> { ["name"] = t.Name, ["title"] = t.Title, ["text"] = t.Text }).ToList(),
             });
-            File.WriteAllText(userFile, json, new UTF8Encoding(false));
+            WriteSafely(userFile, json);
             return true;
+        }
+
+        /// <summary>Temp file then replace: a crash or power cut while saving never leaves a half-written templates.json.</summary>
+        private static void WriteSafely(string file, string text)
+        {
+            var tmp = file + "." + Guid.NewGuid().ToString("N") + ".tmp";
+            File.WriteAllText(tmp, text, new UTF8Encoding(false));
+            if (File.Exists(file)) File.Replace(tmp, file, null, true);
+            else File.Move(tmp, file);
         }
 
         private static string Shorten(string s, int n)

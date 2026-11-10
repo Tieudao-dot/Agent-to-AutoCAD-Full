@@ -76,7 +76,7 @@ namespace ClaudeCAD.UI.Tests
                 new SkillInfo { Name = "ve-mep", Title = "Vẽ điện nước", Description = "Chuẩn MEP...", Builtin = true, Enabled = false },
                 new SkillInfo { Name = "ve-ket-cau", Title = "Vẽ kết cấu", Description = "Chuẩn kết cấu của công ty", Added = DateTime.Now, Source = @"D:\chuan\ket-cau.md" },
                 new SkillInfo { Name = "sai-ten", Error = "Thiếu dòng description" },
-            });
+            }, new[] { "ve-kien-truc", "ve-ket-cau" });
             c.SetConnection("Đã kết nối · Opus 5.5 · Claude login", true);
             c.SetUsage("Lượt vừa rồi: ↑12.3k ↓1.1k token · phiên ≈ $0.08 · hạn mức 5 giờ 41%");
 
@@ -394,6 +394,45 @@ namespace ClaudeCAD.UI.Tests
             Assert.Equal(1, buttons);
             Assert.Equal(1, moreAfterClick); // 150 → 60 shown → 120 shown, still 30 older
             Assert.Equal(1, cards);
+        }
+
+        [Fact]
+        public void RendersSkillsPerChat()
+        {
+            var toggles = new List<(string, bool)>();
+            int inUse = 0, library = 0;
+            Sta(() =>
+            {
+                var c = new ChatControl { Width = 400, Height = 300 };
+                c.ApplySettings(new PaletteSettings());
+                c.SetDark(false);
+                c.SkillToggled += (n, on) => toggles.Add((n, on));
+                c.SetSkills(new List<SkillInfo>
+                {
+                    new SkillInfo { Name = "ve-kien-truc", Title = "Vẽ kiến trúc theo chuẩn", Description = "Chuẩn vẽ kiến trúc: layer A-*, tường 220/110, cửa, kích thước.", Builtin = true },
+                    new SkillInfo { Name = "ve-mep", Title = "Vẽ điện nước", Description = "Chuẩn MEP: ống, thiết bị, ký hiệu.", Builtin = true },
+                    new SkillInfo { Name = "khung-ten-a3", Title = "Khung tên công ty A3", Description = "Khung tên, logo, ô ký của công ty.", Added = new DateTime(2026, 11, 10), Source = @"D:\chuan\khung-ten.md" },
+                    new SkillInfo { Name = "ve-ket-cau", Title = "Vẽ kết cấu", Description = "Chuẩn kết cấu: dầm, cột, móng.", Added = new DateTime(2026, 11, 8) },
+                }, new[] { "khung-ten-a3", "ve-kien-truc" });
+                var popup = (System.Windows.Controls.Primitives.Popup)typeof(ChatControl)
+                    .GetField("_skillsPopup", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance).GetValue(c);
+                var panel = (FrameworkElement)popup.Child;
+                popup.Child = null;
+                var host = new Border { Width = 362, Height = 520, Child = panel, Background = Brushes.Transparent };
+                host.SetValue(TextElement.FontFamilyProperty, new FontFamily("Segoe UI"));
+                Theme.Apply(host.Resources, false);
+                Shot(host, "skills-1-theo-doan-chat");
+                var buttons = FindAll<Button>(panel);
+                inUse = buttons.Count(b => (b.Content as string) == "−");
+                library = buttons.Count(b => (b.Content as string) == "+");
+                buttons.First(b => (b.Content as string) == "−").RaiseEvent(new RoutedEventArgs(System.Windows.Controls.Primitives.ButtonBase.ClickEvent));
+                buttons.First(b => (b.Content as string) == "+").RaiseEvent(new RoutedEventArgs(System.Windows.Controls.Primitives.ButtonBase.ClickEvent));
+                Assert.DoesNotContain(buttons, b => (b.Content as string) == "Xóa" || (b.Content as string) == "Mở thư mục");
+            });
+            Assert.Equal(2, inUse);
+            Assert.Equal(2, library);
+            Assert.Equal(("ve-kien-truc", false), toggles[0]); // in-use rows come in library order
+            Assert.False(toggles[1].Item2 == false);
         }
 
         [Fact]

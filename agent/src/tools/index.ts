@@ -45,8 +45,3 @@ export function createCadServer(bridge: ToolBridge, version: string, emit?: (msg
     tools: [...buildTools(bridge), ...(emit ? interactionTools(emit) : [])],
   });
 }
-
-/** Fully-qualified names as Claude Code sees them: mcp__claudecad__<tool>. */
-export function qualifiedToolNames(bridge: ToolBridge): string[] {
-  return buildTools(bridge).map((t) => `mcp__${MCP_SERVER_NAME}__${t.name}`);
-}
