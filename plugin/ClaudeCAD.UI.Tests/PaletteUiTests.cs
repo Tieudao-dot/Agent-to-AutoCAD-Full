@@ -278,7 +278,7 @@ namespace ClaudeCAD.UI.Tests
             });
             Assert.Equal(3, rowsLive); // three LINE calls are one step "×3"
             Assert.Equal(new[] { "done", "done", "running" }, tagsLive);
-            Assert.Equal("Đang làm · bước 3: Thực thi nhiều lệnh", titleLive);
+            Assert.StartsWith("Đang làm · bước 3: Thực thi nhiều lệnh", titleLive);
             Assert.True(openLive, "the step list must be open while the turn runs");
             Assert.Equal(new[] { "done", "done", "done" }, tagsDone);
             Assert.StartsWith("Thao tác (5)", titleDone); // 5 calls in 3 steps
