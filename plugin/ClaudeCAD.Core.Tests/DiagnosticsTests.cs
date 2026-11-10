@@ -95,5 +95,17 @@ namespace ClaudeCAD.Core.Tests
             Assert.DoesNotContain("hunter2pass", r);
             Assert.Contains("gateway.example.com", r);
         }
+
+        [Fact]
+        public void Already_summarized_log_lines_keep_their_summary()
+        {
+            // v0.9.4 logs write summaries; the bug report must not summarize them again into "{}"
+            var line = "12:00:01.234 IPC   [7] -> " + Diagnostics.SummarizeMessage("{\"id\":\"req-6\",\"type\":\"tool_call\",\"tool\":\"add_text\",\"params\":{\"text\":\"x\"}}");
+            var r = Diagnostics.StripChatContent(line);
+            Assert.Equal(line, r);
+            Assert.Contains("{tool_call add_text id=req-6}", r);
+            // a full JSON line with the thread id (CLAUDECAD_LOG_FULL=1, or older logs) is still summarized
+            Assert.DoesNotContain("BÍ MẬT", Diagnostics.StripChatContent("12:00:01.234 IPC   [7] <- {\"type\":\"user_message\",\"text\":\"BÍ MẬT\"}"));
+        }
     }
 }

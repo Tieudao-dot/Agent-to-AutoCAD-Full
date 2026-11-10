@@ -448,7 +448,9 @@ export function parsePluginMessage(value: unknown): PluginToSidecar {
  */
 export class LineDecoder {
   private readonly decoder = new StringDecoder('utf8');
-  private buffer = '';
+  /** Pieces of the current (unfinished) line: a big message is joined once, not re-scanned at every chunk. */
+  private parts: string[] = [];
+  private partsLength = 0;
   private first = true;
   /** After an over-long line: drop everything up to its end, then read normally again. */
   private skipping = false;
@@ -463,33 +465,41 @@ export class LineDecoder {
       if (text.charCodeAt(0) === 0xfeff) text = text.slice(1);
       this.first = false;
     }
-    if (this.skipping) {
-      const nl = text.indexOf('\n');
-      if (nl < 0) return [];
-      text = text.slice(nl + 1);
-      this.skipping = false;
-    }
-    this.buffer += text;
     const lines: string[] = [];
-    let idx: number;
-    while ((idx = this.buffer.indexOf('\n')) >= 0) {
-      let line = this.buffer.slice(0, idx);
-      this.buffer = this.buffer.slice(idx + 1);
+    let start = 0;
+    let nl: number;
+    while ((nl = text.indexOf('\n', start)) >= 0) {
+      const piece = text.slice(start, nl);
+      start = nl + 1;
+      if (this.skipping) {
+        this.skipping = false; // the end of the over-long line
+        continue;
+      }
+      let line = this.parts.length ? this.parts.join('') + piece : piece;
+      this.parts = [];
+      this.partsLength = 0;
       if (line.endsWith('\r')) line = line.slice(0, -1);
       if (line.trim().length > 0) lines.push(line);
     }
-    if (this.buffer.length > this.maxLineLength) {
-      this.buffer = '';
-      this.skipping = true; // the rest of this line must not be read as a new message
-      throw new ProtocolError(`line longer than ${this.maxLineLength} characters`);
+    const rest = text.slice(start);
+    if (rest.length > 0 && !this.skipping) {
+      this.parts.push(rest);
+      this.partsLength += rest.length;
+      if (this.partsLength > this.maxLineLength) {
+        this.parts = [];
+        this.partsLength = 0;
+        this.skipping = true; // the rest of this line must not be read as a new message
+        throw new ProtocolError(`line longer than ${this.maxLineLength} characters`);
+      }
     }
     return lines;
   }
 
   /** Remaining partial line at end of stream (normally empty). */
   flush(): string[] {
-    const rest = this.buffer + this.decoder.end();
-    this.buffer = '';
+    const rest = this.parts.join('') + this.decoder.end();
+    this.parts = [];
+    this.partsLength = 0;
     return rest.trim().length > 0 ? [rest] : [];
   }
 }

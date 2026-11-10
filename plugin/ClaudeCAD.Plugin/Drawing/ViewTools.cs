@@ -43,7 +43,9 @@ namespace ClaudeCAD.Plugin.Drawing
         }
 
         /// <summary>Sets the current view to a WCS window (plan view assumed, like ZOOM W).</summary>
-        private static void ZoomTo(ToolContext ctx, Point3d min, Point3d max, double margin) => ZoomTo(ctx.Doc, min, max, margin);
+        // Claude's zooms are not in the turn's undo group (v0.9.4): they must not push an undo step either, or the
+        // U queued by undo_last_turn would revert the zoom instead of the previous turn
+        private static void ZoomTo(ToolContext ctx, Point3d min, Point3d max, double margin) => ZoomTo(ctx.Doc, min, max, margin, recordUndo: false);
 
         /// <summary>Shared with the palette (Xem kết quả / handle links).</summary>
         internal static void ZoomTo(Document doc, Point3d min, Point3d max, double margin, bool recordUndo = true)

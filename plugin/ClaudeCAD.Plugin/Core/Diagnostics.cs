@@ -31,7 +31,8 @@ namespace ClaudeCAD.Plugin.Core
         private static readonly Regex JsonOk = new Regex(@"""ok""\s*:\s*(true|false)", RegexOptions.Compiled);
         private static readonly Regex JsonCode = new Regex(@"""code""\s*:\s*""([A-Za-z_]+)""", RegexOptions.Compiled);
         // plugin log: "12:00:01.234 IPC   -> {...}" ; sidecar log: "... -> {...}" / "... <- {...}"
-        private static readonly Regex MessageLine = new Regex(@"^(?<head>.*?(?:IPC\s+\S+|->|<-)) (?<body>\{.*)$", RegexOptions.Compiled);
+        // body = a JSON object ({"...): a line already summarized ("{tool_call add_text id=req-6} [..]") is left alone
+        private static readonly Regex MessageLine = new Regex(@"^(?<head>.*?(?:IPC\s+\S+|->|<-)) (?<body>\{"".*)$", RegexOptions.Compiled);
 
         /// <summary>
         /// One IPC / sidecar JSON message → what is needed to debug it (type, tool, id, ok / error code, size), without

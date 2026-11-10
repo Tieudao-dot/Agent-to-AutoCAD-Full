@@ -66,7 +66,9 @@ async function main(): Promise<void> {
         log(`confirmation gate blocked ${tool}`);
         return { id: 'local', ok: false, error: { code: 'INVALID_PARAMS', message: block } };
       }
-      return rpc.call(tool, params);
+      const resp = await rpc.call(tool, params);
+      session?.noteResult(tool, params, resp);
+      return resp;
     },
     status: (tool, state, extra) => conn.send({ type: 'tool_status', tool, state, ...(extra ?? {}) }),
   };
@@ -115,7 +117,9 @@ async function main(): Promise<void> {
     log(`invalid message dropped: ${err.message} ${truncate(line, 200)}`);
     // A user_message that could not be read (e.g. several large photos over the size limit) would leave the
     // palette waiting for a turn_end that never comes. While no turn runs, an unreadable line can only be one.
-    if (!session.busy && (line === '' || line.includes('"user_message"'))) {
+    // A user_message is only sent when the palette considers the previous turn over, so even while this side is
+    // still busy with an abandoned turn, ending the palette's (new) turn is right.
+    if (line.includes('"user_message"') || (line === '' && !session.busy)) {
       conn.send({ type: 'turn_end', error: 'Trợ lý không đọc được tin nhắn (có thể do ảnh đính kèm quá lớn). Bớt ảnh hoặc dùng ảnh nhỏ hơn rồi gửi lại.' });
     }
   });

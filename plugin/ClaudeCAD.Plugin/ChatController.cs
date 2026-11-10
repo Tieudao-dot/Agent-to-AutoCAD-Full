@@ -368,10 +368,13 @@ namespace ClaudeCAD.Plugin
         /// File watcher events come on several threads at once: one timer, pushed back 1.5 s by every event,
         /// so one save = one reload (two unlocked timers both fired before: two toasts, two restarts).
         /// </summary>
+        private bool _disposed;
+
         private void ScheduleSkillReload()
         {
             lock (_skillDebounceLock)
             {
+                if (_disposed) return; // a watcher event still in flight while AutoCAD closes
                 if (_skillDebounce == null)
                     _skillDebounce = new System.Threading.Timer(_ => Ui.Enqueue(() =>
                     {
@@ -379,7 +382,8 @@ namespace ClaudeCAD.Plugin
                         ReloadSkillsInAgent();
                         Ui.ShowToast("Skill đã thay đổi — Claude dùng bản mới từ tin nhắn tiếp theo.", ChatControl.ToastKind.Info);
                     }), null, System.Threading.Timeout.Infinite, System.Threading.Timeout.Infinite);
-                _skillDebounce.Change(1500, System.Threading.Timeout.Infinite);
+                try { _skillDebounce.Change(1500, System.Threading.Timeout.Infinite); }
+                catch (ObjectDisposedException) { }
             }
         }
 
@@ -397,12 +401,14 @@ namespace ClaudeCAD.Plugin
         /// Skills of the current chat: its own list ("−" / "+"), else those of the most recent chat (first time:
         /// the skills the user had added and enabled before; never the shipped samples). Missing skills are dropped.
         /// </summary>
-        private List<string> ChatSkills()
-        {
-            var list = SkillSelection.ForChat(_transcript?.Skills, _settings.LastSkills, _library);
-            if (_transcript != null && _transcript.Skills == null) _transcript.Skills = list.ToList();
-            return list;
-        }
+        private List<string> ChatSkills() => SkillSelection.ForChat(_transcript?.Skills, _settings.LastSkills, _library);
+
+        /// <summary>
+        /// The chat's choice as the user made it, before dropping skills that are missing or broken right now
+        /// (a SKILL.md being edited must not fall out of the chat for good). Stored on send / − / + / import only,
+        /// so a drawing without a chat of its own keeps following the most recent chat until it is used.
+        /// </summary>
+        private List<string> ChatSkillChoice() => SkillSelection.Choice(_transcript?.Skills, _settings.LastSkills, _library);
 
         /// <summary>The chat's skill list changed (or a message was sent): it is the "most recent chat" for new chats.</summary>
         private void RememberChatSkills(List<string> list)
@@ -480,7 +486,7 @@ namespace ClaudeCAD.Plugin
             if (added.Count == 0) return;
             _library = _skillStore.Scan();
             // a skill added with "+ Add skill" is used in the current chat right away
-            var list = ChatSkills();
+            var list = ChatSkillChoice();
             foreach (var n in added) list = SkillSelection.Toggle(list, n, true);
             RememberChatSkills(list);
             SaveTranscript();
@@ -492,7 +498,7 @@ namespace ClaudeCAD.Plugin
         private void ToggleSkill(string name, bool use)
         {
             if (_transcript == null) { Ui.SetToolStatus("Mở một bản vẽ trước."); return; }
-            var list = SkillSelection.Toggle(ChatSkills(), name, use);
+            var list = SkillSelection.Toggle(ChatSkillChoice(), name, use);
             RememberChatSkills(list);
             SaveTranscript();
             RefreshSkills();
@@ -576,6 +582,13 @@ namespace ClaudeCAD.Plugin
         {
             if (_busy) return;
             if (!RequireActivation()) { Ui.SetInputText(m.Text); return; }
+            if (DateTime.UtcNow < _restartingUntil)
+            {
+                // the old assistant is being stopped: a message now would start a turn that dies with it
+                Ui.SetInputText(m.Text);
+                Ui.SetToolStatus("Trợ lý đang khởi động lại — đợi vài giây rồi gửi lại.");
+                return;
+            }
             if (IsVersionDoc(AcApp.DocumentManager.MdiActiveDocument))
             {
                 Ui.SetInputText(m.Text);
@@ -635,9 +648,8 @@ namespace ClaudeCAD.Plugin
             var payload = new Dictionary<string, object> { ["type"] = "user_message", ["text"] = m.Text };
             if (doc != null) payload["drawing"] = SafeDocName(doc);
             // the skills of this chat: the assistant loads exactly these (and tells Claude about "−" / "+")
-            var chatSkills = ChatSkills();
-            payload["skills"] = chatSkills.Cast<object>().ToList();
-            RememberChatSkills(chatSkills); // this chat is now the most recent one
+            payload["skills"] = ChatSkills().Cast<object>().ToList();
+            RememberChatSkills(ChatSkillChoice()); // this chat is now the most recent one
             var attachments = new Dictionary<string, object>();
             int selCount = 0;
             if (m.IncludeSelection && _selection != null && _selection.Count > 0)
@@ -837,10 +849,9 @@ namespace ClaudeCAD.Plugin
             catch (Exception ex) { Logger.Warn("snapshot reset failed: " + ex.Message); }
             if (_transcript != null)
             {
-                var keep = ChatSkills(); // a new chat starts with the skills of the most recent chat
                 _transcript.Entries.Clear();
                 _transcript.SessionId = null;
-                _transcript.Skills = keep;
+                _transcript.Skills = null; // a new chat starts with the skills of the most recent chat (LastSkills)
                 SaveTranscript();
                 Ui.LoadTranscript(_transcript, false);
             }
@@ -923,7 +934,8 @@ namespace ClaudeCAD.Plugin
                 // an agent error without any reply (login, rate limit, crash) becomes a retry card
                 if (string.IsNullOrEmpty(errorNote) && empty && !string.IsNullOrEmpty(_lastError)) errorNote = _lastError;
                 // the usage limit already has its own card for this turn: no second, generic "Lượt bị lỗi" card
-                if (_limitHitTurn == _turnSeq) errorNote = null;
+                bool limitHit = _limitHitTurn == _turnSeq;
+                if (limitHit) errorNote = null;
                 else _rearmAutoRetry = false; // the resent request went through
                 if (!string.IsNullOrEmpty(errorNote))
                 {
@@ -932,9 +944,9 @@ namespace ClaudeCAD.Plugin
                 }
                 SaveTranscript();
                 Ui.SetBusy(false);
-                if (_settings.Suggestions && suggestions.Count > 0 && string.IsNullOrEmpty(errorNote)) Ui.AddSuggestions(suggestions);
+                if (_settings.Suggestions && suggestions.Count > 0 && string.IsNullOrEmpty(errorNote) && !limitHit) Ui.AddSuggestions(suggestions);
                 if (usage != null) ShowUsage(usage);
-                MaybeNotify(assistant, errorNote, started);
+                if (!limitHit) MaybeNotify(assistant, errorNote, started); // a turn stopped by the limit is not "xong"
                 if (_pendingSwitch)
                 {
                     _pendingSwitch = false;
@@ -1523,8 +1535,10 @@ namespace ClaudeCAD.Plugin
                     _loginRunning = false;
                     if (status.LoggedIn == true)
                     {
-                        if (ClaudeAuth.ApiKeyInUse)
-                            Ui.AddNote("✓ Đã đăng nhập Claude, nhưng plugin vẫn dùng API key (được ưu tiên hơn tài khoản). Muốn dùng tài khoản Claude: ⚙ ▸ Dùng API key ▸ Xóa key đã lưu.", true);
+                        if (ApiKeyStore.HasKey)
+                            Ui.AddNote("✓ Đã đăng nhập Claude, nhưng plugin vẫn dùng API key đã lưu (được ưu tiên hơn tài khoản). Muốn dùng tài khoản Claude: ⚙ ▸ Dùng API key ▸ Xóa key đã lưu.", true);
+                        else if (ClaudeAuth.ApiKeyInUse)
+                            Ui.AddNote("✓ Đã đăng nhập Claude, nhưng máy đang đặt biến môi trường ANTHROPIC_API_KEY (được ưu tiên hơn tài khoản). Muốn dùng tài khoản Claude: xóa biến đó trong Windows rồi mở lại AutoCAD.", true);
                         else
                             Ui.AddNote("✓ Đã đăng nhập Claude. Trợ lý khởi động lại với tài khoản này — cậu gõ yêu cầu được rồi.");
                         Ui.ShowToast("Đã đăng nhập Claude.", ChatControl.ToastKind.Success);
@@ -1555,6 +1569,7 @@ namespace ClaudeCAD.Plugin
         /// <summary>Limit reached: one card per turn in the conversation, plus a toast.</summary>
         private int _limitHitTurn = -1;
         private bool _rearmAutoRetry;
+        private int _rearmCount;
 
         private void ShowLimitCard(string code, int turn)
         {
@@ -1574,8 +1589,16 @@ namespace ClaudeCAD.Plugin
             if (_rearmAutoRetry)
             {
                 _rearmAutoRetry = false;
-                if (_rateResetsAt.HasValue && _lastPayload != null) SetAutoRetry(true);
+                // only for a real, future reset time (else it would resend every 5 s), at most 3 times in a row, and
+                // only when the resent turn did nothing yet (no objects changed: resending would do the work twice)
+                if (_rateResetsAt.HasValue && _rateResetsAt.Value > DateTime.Now.AddMinutes(1) && _lastPayload != null
+                    && _turnHandles.Count == 0 && _rearmCount < 3)
+                {
+                    _rearmCount++;
+                    SetAutoRetry(true);
+                }
             }
+            else _rearmCount = 0;
             Ui.AddLimitCard("Đã chạm giới hạn sử dụng Claude", detail, _rateResetsAt, _lastPayload != null && _rateResetsAt.HasValue, _autoRetryOn);
             Ui.ShowToast($"Hết {label}" + (_rateResetsAt.HasValue ? $" — dùng lại lúc {_rateResetsAt.Value:HH:mm}" : ""), ChatControl.ToastKind.Error, 8);
             _transcript?.Entries.Add(new ChatEntry { Role = "error", Text = $"Hết {label}.{when}" });
@@ -1622,7 +1645,8 @@ namespace ClaudeCAD.Plugin
         // Sign-in, sign-out and API key changes clear it.
         private string _accountText;
         private DateTime _accountAt = DateTime.MinValue;
-        private void ForgetAccountStatus() => _accountAt = DateTime.MinValue;
+        private int _accountGen;
+        private void ForgetAccountStatus() { _accountAt = DateTime.MinValue; _accountGen++; }
 
         private void RefreshAccountStatus()
         {
@@ -1632,11 +1656,13 @@ namespace ClaudeCAD.Plugin
                 return;
             }
             Ui.SetAccountStatus("Đang kiểm tra...");
+            int gen = _accountGen;
             ClaudeAuth.StatusAsync().ContinueWith(t =>
             {
                 var a = t.IsFaulted ? new AuthStatus { Error = t.Exception?.GetBaseException().Message } : t.Result;
                 var extra = a.Method == "api_key_saved" ? " (" + ApiKeyStore.Mask(ApiKeyStore.Load()) + ")" : "";
                 var text = "Đang dùng: " + a.Label + extra + (string.IsNullOrEmpty(_readyInfo) ? "" : " · " + _readyInfo);
+                if (gen != _accountGen) return; // signed in / out or key changed meanwhile: this answer is stale
                 if (a.Error == null) { _accountText = text; _accountAt = DateTime.UtcNow; }
                 Ui.SetAccountStatus(text);
             });
@@ -1664,9 +1690,11 @@ namespace ClaudeCAD.Plugin
             {
                 if (t.Result)
                 {
-                    Ui.AddNote(ClaudeAuth.ApiKeyInUse
+                    Ui.AddNote(ApiKeyStore.HasKey
                         ? "Đã đăng xuất tài khoản Claude trên máy này. Trợ lý vẫn chạy bằng API key đã lưu (⚙ ▸ Dùng API key ▸ Xóa key đã lưu để ngừng)."
-                        : "Đã đăng xuất tài khoản Claude trên máy này. Bấm ⚙ ▸ Đăng nhập Claude để đăng nhập lại.");
+                        : ClaudeAuth.ApiKeyInUse
+                            ? "Đã đăng xuất tài khoản Claude trên máy này. Trợ lý vẫn chạy bằng biến môi trường ANTHROPIC_API_KEY (xóa biến đó trong Windows để ngừng)."
+                            : "Đã đăng xuất tài khoản Claude trên máy này. Bấm ⚙ ▸ Đăng nhập Claude để đăng nhập lại.");
                     RestartSidecarQuietly();
                 }
                 else Ui.AddErrorCard("Không đăng xuất được (không thấy Claude Code đi kèm plugin hoặc lệnh bị lỗi). Xóa tay file %USERPROFILE%\\.claude\\.credentials.json nếu cần.", false);
@@ -1962,6 +1990,8 @@ namespace ClaudeCAD.Plugin
 
         private void OnConnected()
         {
+            _restartExpected = false;
+            _restartingUntil = DateTime.MinValue;
             if (_wasDisconnected) Ui.ShowToast("Đã kết nối lại với trợ lý.", ChatControl.ToastKind.Success);
             _wasDisconnected = false;
             Ui.SetConnection("Đã kết nối, đang khởi tạo phiên...", true);
@@ -2023,8 +2053,9 @@ namespace ClaudeCAD.Plugin
                             int turn = _turnSeq;
                             // the SDK's rate_limit event (with the reset time) often comes right after this error:
                             // wait a moment so the one card shows the time and offers "Tự gửi lại"
-                            if (code == "rate_limit") Task.Delay(700).ContinueWith(_ => Ui.Enqueue(() => ShowLimitCard(code, turn)));
-                            else Ui.Enqueue(() => ShowLimitCard(code, turn));
+                            int gen = _chatGen;
+                            if (code == "rate_limit") Task.Delay(700).ContinueWith(_ => Ui.Enqueue(() => { if (gen == _chatGen) ShowLimitCard(code, turn); }));
+                            else Ui.Enqueue(() => { if (gen == _chatGen) ShowLimitCard(code, turn); });
                             if (_busy) _lastError = null; // the limit card replaces the generic error card
                             break;
                         }
@@ -2084,7 +2115,8 @@ namespace ClaudeCAD.Plugin
                         {
                             if (_busy) _limitHitTurn = _turnSeq;
                             int turn = _turnSeq;
-                            Ui.Enqueue(() => ShowLimitCard(null, turn));
+                            int gen = _chatGen;
+                            Ui.Enqueue(() => { if (gen == _chatGen) ShowLimitCard(null, turn); });
                         }
                         else if (status == "allowed_warning" || util >= 0.8)
                         {
@@ -2211,10 +2243,14 @@ namespace ClaudeCAD.Plugin
         private volatile bool _restartExpected;
 
         /// <summary>Restart asked by the user (sign-in, API key, CLAUDECHATRESTART): no "Mất kết nối" warning for it.</summary>
+        private DateTime _restartingUntil = DateTime.MinValue;
+
         private void RestartSidecarQuietly()
         {
-            _restartExpected = true;
             ForgetAccountStatus(); // every restart follows a sign-in / sign-out / API key change
+            if (!Activation.IsActivated) return; // no assistant on a machine without a licence (it starts on activation)
+            _restartExpected = true;
+            _restartingUntil = DateTime.UtcNow.AddSeconds(20); // until the new assistant connects (OnConnected)
             // stopping the old processes waits up to a few seconds: not on AutoCAD's / the palette's thread
             Task.Run(() =>
             {
@@ -2358,7 +2394,12 @@ namespace ClaudeCAD.Plugin
                 DrawingHistory.Instance.ObjectChanged -= OnDbChanged;
                 Notifier.Dispose();
                 _skillWatcher?.Dispose();
-                _skillDebounce?.Dispose();
+                lock (_skillDebounceLock)
+                {
+                    _disposed = true;
+                    _skillDebounce?.Dispose();
+                    _skillDebounce = null;
+                }
                 _autoRetryTimer?.Dispose();
             }
             catch { }

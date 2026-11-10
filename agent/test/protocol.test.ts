@@ -144,3 +144,22 @@ describe('v0.9.4: skills per chat in user_message', () => {
     assert.equal('skills' in parsePluginMessage({ type: 'user_message', text: 'x' }), false);
   });
 });
+
+describe('review fixes: big messages are read in linear time', () => {
+  it('30 M characters in 64 KB chunks', () => {
+    const d = new LineDecoder();
+    const chunk = 'x'.repeat(64 * 1024);
+    const t0 = Date.now();
+    let lines: string[] = [];
+    for (let i = 0; i < 470; i++) lines = lines.concat(d.push(chunk));
+    lines = lines.concat(d.push('\n{"type":"cancel"}\n'));
+    assert.equal(lines.length, 2);
+    assert.equal(lines[0]!.length, 470 * 64 * 1024);
+    assert.ok(Date.now() - t0 < 3000, `took ${Date.now() - t0} ms`);
+  });
+
+  it('a timeout set above 5 minutes is kept', async () => {
+    const { timeoutFor } = await import('../src/ipc/rpc.js');
+    assert.equal(timeoutFor('draw_line', {}, 600_000), 600_000);
+  });
+});

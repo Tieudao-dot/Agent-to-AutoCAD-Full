@@ -401,6 +401,8 @@ namespace ClaudeCAD.Core.Tests
             // the chat's own list wins; skills that no longer exist / are broken are dropped
             Assert.Equal(new List<string> { "ve-kien-truc" }, SkillSelection.ForChat(new List<string> { "ve-kien-truc", "da-xoa", "loi" }, new List<string> { "ve-mep" }, lib));
             Assert.Empty(SkillSelection.ForChat(new List<string>(), new List<string> { "ve-mep" }, lib)); // "−" on every skill is kept
+            // the stored choice keeps a skill that is broken / missing right now (it comes back when fixed)
+            Assert.Equal(new List<string> { "ve-kien-truc", "da-xoa", "loi" }, SkillSelection.Choice(new List<string> { "ve-kien-truc", "da-xoa", "loi" }, null, lib));
             // − / +
             var l = SkillSelection.Toggle(new List<string> { "khung-ten", "ve-mep" }, "ve-mep", false);
             Assert.Equal(new List<string> { "khung-ten" }, l);

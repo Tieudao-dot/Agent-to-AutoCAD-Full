@@ -71,4 +71,20 @@ describe('confirmation gate', () => {
     assert.equal(confirmationError('draw_line', {}, { ...first('vẽ'), alreadyAffected: 500 }), undefined);
     assert.equal(affectedCount('reset_dynamic_block', { handles: many(30) }), 30);
   });
+
+  it('natural Vietnamese yes and no (review fixes)', () => {
+    for (const yes of ['Vâng, tớ đồng ý', 'Thôi được, xóa đi', 'Thế thì xóa đi', 'Không sao, xóa đi', 'Mình cũng đồng ý', 'Cậu cứ xóa đi', 'dạ được', 'ok xóa luôn'])
+      assert.equal(isConfirmation(yes), true, yes);
+    for (const no of ['Đừng tiếp tục', 'đừng xóa đi', 'Chưa đồng ý', 'khỏi xóa', 'xóa điểm cao độ ở góc', 'làm điện chiếu sáng tầng 2', 'sửa điểm cuối đường trục A',
+      'vẽ lại rồi xóa đi các đường cũ', 'xóa layer DIM thì ok không?'])
+      assert.equal(isConfirmation(no), false, no);
+  });
+
+  it('counts distinct existing objects, not calls; objects created this turn are free', () => {
+    const touched = new Set(many(15));
+    const g: GateState = { userText: 'dời rồi đổi layer', answersQuestion: false, touched, created: new Set(['NEW1', 'NEW2']) };
+    assert.equal(confirmationError('set_entity_props', { handles: many(15) }, g), undefined); // the same 15 again
+    assert.equal(confirmationError('erase_entities', { handles: ['NEW1', 'NEW2'] }, g), undefined); // made in this turn
+    assert.match(confirmationError('erase_entities', { handles: many(25) }, g) ?? '', /to 25 \(15 already \+ 10 now/);
+  });
 });

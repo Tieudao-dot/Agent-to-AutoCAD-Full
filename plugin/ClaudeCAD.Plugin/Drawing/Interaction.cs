@@ -139,12 +139,22 @@ namespace ClaudeCAD.Plugin.Drawing
             if (doc == null || Watched.Contains(doc)) return;
             Watched.Add(doc);
             doc.ImpliedSelectionChanged += OnImpliedSelectionChanged;
+            doc.CommandEnded += OnUndoRedoEnded;
+        }
+
+        // U / UNDO / REDO bring objects back or take them away without "appended / erased" events: recount layers
+        private static readonly HashSet<string> UndoCommands = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "U", "UNDO", "REDO", "MREDO", "OOPS" };
+
+        private static void OnUndoRedoEnded(object sender, CommandEventArgs e)
+        {
+            try { if (sender is Document d && UndoCommands.Contains(e.GlobalCommandName)) _layerCounts.Remove(d.Database); }
+            catch { /* never throw into AutoCAD */ }
         }
 
         public static void Unwatch(Document doc)
         {
             if (doc == null || !Watched.Remove(doc)) return;
-            try { doc.ImpliedSelectionChanged -= OnImpliedSelectionChanged; } catch { }
+            try { doc.ImpliedSelectionChanged -= OnImpliedSelectionChanged; doc.CommandEnded -= OnUndoRedoEnded; } catch { }
         }
 
         private static void OnImpliedSelectionChanged(object sender, EventArgs e)

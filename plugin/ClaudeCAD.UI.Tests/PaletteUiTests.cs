@@ -374,25 +374,34 @@ namespace ClaudeCAD.UI.Tests
         [Fact]
         public void LongTranscriptRendersTheLastMessagesAndOneActivationCard()
         {
-            int buttons = 0, cards = 0, moreAfterClick = 0;
+            int buttons = 0, cards = 0, moreAfterClick = 0, before = 0, after = 0;
+            bool cardKept = false;
             Sta(() =>
             {
                 var t = new ChatTranscript { DrawingName = "A.dwg" };
                 for (int i = 0; i < 150; i++) t.Entries.Add(new ChatEntry { Role = i % 2 == 0 ? "user" : "assistant", Text = "tin " + i });
                 var c = new ChatControl { Width = 400, Height = 500 };
                 c.LoadTranscript(t, false);
+                var messages = (StackPanel)typeof(ChatControl).GetField("_messages", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance).GetValue(c);
+                // a live card below the history (here the activation card) must survive "Xem thêm"
+                c.AddActivationCard("CC-3B28-85F3-67B7", "PC", "Liên hệ Zalo owner: 0344644415", "");
+                var card = messages.Children[messages.Children.Count - 1];
+                before = messages.Children.Count;
                 var more = FindAll<Button>(c).Where(b => (b.Content as string ?? "").StartsWith("Xem thêm")).ToList();
                 buttons = more.Count;
                 more[0].RaiseEvent(new RoutedEventArgs(System.Windows.Controls.Primitives.ButtonBase.ClickEvent));
                 moreAfterClick = FindAll<Button>(c).Count(b => (b.Content as string ?? "").StartsWith("Xem thêm"));
+                after = messages.Children.Count;
+                cardKept = messages.Children.Contains(card) && messages.Children[messages.Children.Count - 1] == card;
 
                 // pressing Enter again while not activated: the live card is reused, not added again
-                c.AddActivationCard("CC-3B28-85F3-67B7", "PC", "Liên hệ Zalo owner: 0344644415", "");
                 c.AddActivationCard("CC-3B28-85F3-67B7", "PC", "Liên hệ Zalo owner: 0344644415", "");
                 cards = FindAll<Button>(c).Count(b => (b.Content as string) == "Kích hoạt");
             });
             Assert.Equal(1, buttons);
             Assert.Equal(1, moreAfterClick); // 150 → 60 shown → 120 shown, still 30 older
+            Assert.Equal(before + 60, after); // 60 older messages inserted (button replaced by the next one)
+            Assert.True(cardKept, "the card below the history was rebuilt or lost");
             Assert.Equal(1, cards);
         }
 

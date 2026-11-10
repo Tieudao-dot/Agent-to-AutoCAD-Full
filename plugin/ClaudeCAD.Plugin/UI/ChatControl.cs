@@ -577,6 +577,15 @@ namespace ClaudeCAD.Plugin.UI
         /// while Claude is still writing no longer jumps back down on every word. force: the user's own message, a
         /// conversation opening.
         /// </summary>
+        // ≥ 0 while older messages are inserted above the live ones ("Xem thêm"), else -1 (append)
+        private int _insertAt = -1;
+
+        private void AppendMessage(UIElement element)
+        {
+            if (_insertAt >= 0) _messages.Children.Insert(_insertAt++, element);
+            else _messages.Children.Add(element);
+        }
+
         private void ScrollToEnd(bool force = false)
         {
             if (force || _scroll.VerticalOffset >= _scroll.ScrollableHeight - 80) _scroll.ScrollToEnd();
@@ -1210,28 +1219,72 @@ namespace ClaudeCAD.Plugin.UI
                 return;
             }
             AddNote($"Lịch sử chat của {(string.IsNullOrEmpty(t.DrawingName) ? "bản vẽ này" : t.DrawingName)} — {t.Entries.Count} mục. Claude vẫn nhớ ngữ cảnh cuộc chat.");
-            if (from > 0)
-            {
-                var more = new Button { Content = $"Xem thêm {Math.Min(from, TranscriptWindow)} tin cũ hơn ({from} tin chưa hiện)", Padding = new Thickness(10, 2, 10, 2), Margin = new Thickness(0, 2, 0, 6), HorizontalAlignment = HorizontalAlignment.Center };
-                more.Click += (s, e) => { RenderTranscript(t, canUndoLast, Math.Max(0, from - TranscriptWindow)); _scroll.ScrollToTop(); };
-                _messages.Children.Add(more);
-            }
-            foreach (var e in t.Entries.Skip(from))
-            {
-                switch (e.Role)
-                {
-                    case "user": AddUserCore(e); break;
-                    case "assistant":
-                        var v = NewAssistant();
-                        foreach (var tl in e.Tools) v.AddTool(tl);
-                        v.Finish(e, false);
-                        break;
-                    case "error": AddNoteCore(e.Text, true); break;
-                    default: AddNoteCore(e.Text, false); break;
-                }
-            }
+            if (from > 0) AppendMessage(MoreButton(t, from));
+            foreach (var e in t.Entries.Skip(from)) RenderEntry(e);
             if (_lastAssistant != null) _lastAssistant.SetUndo(canUndoLast);
             ScrollToEnd(true);
+        }
+
+        private void RenderEntry(ChatEntry e)
+        {
+            switch (e.Role)
+            {
+                case "user": AddUserCore(e); break;
+                case "assistant":
+                    var v = NewAssistant();
+                    foreach (var tl in e.Tools) v.AddTool(tl);
+                    v.Finish(e, false);
+                    break;
+                case "error": AddNoteCore(e.Text, true); break;
+                default: AddNoteCore(e.Text, false); break;
+            }
+        }
+
+        private Button MoreButton(ChatTranscript t, int from)
+        {
+            var more = new Button { Content = $"Xem thêm {Math.Min(from, TranscriptWindow)} tin cũ hơn ({from} tin chưa hiện)", Padding = new Thickness(10, 2, 10, 2), Margin = new Thickness(0, 2, 0, 6), HorizontalAlignment = HorizontalAlignment.Center };
+            more.Click += (s, e) => ShowOlder(t, more, from);
+            return more;
+        }
+
+        /// <summary>
+        /// "Xem thêm": the older messages are inserted where the button was. Nothing below is rebuilt, so open cards
+        /// (confirmation, plan, usage limit), "Hoàn tác lượt này" / "Lưu macro" and a reply being written stay.
+        /// </summary>
+        private void ShowOlder(ChatTranscript t, Button more, int from)
+        {
+            int at = _messages.Children.IndexOf(more);
+            if (at < 0) return;
+            _messages.Children.RemoveAt(at);
+            int newFrom = Math.Max(0, from - TranscriptWindow);
+            var current = _current;
+            var last = _lastAssistant;
+            var lastUser = _lastUserText;
+            var edit = _lastEditButton;
+            var confirms = _openConfirmButtons.ToList();
+            _openConfirmButtons.Clear();
+            _current = null;
+            _lastAssistant = null;
+            _lastEditButton = null; // only the newest request keeps its "Sửa" button
+            _insertAt = at;
+            try
+            {
+                if (newFrom > 0) AppendMessage(MoreButton(t, newFrom));
+                foreach (var e in t.Entries.Skip(newFrom).Take(Math.Max(0, from - newFrom))) RenderEntry(e);
+                EndAssistantCore();
+                _lastAssistant?.SetUndo(false);
+                if (_lastEditButton != null) _lastEditButton.Visibility = Visibility.Collapsed;
+            }
+            finally
+            {
+                _insertAt = -1;
+                _current = current;
+                _lastAssistant = last;
+                _lastUserText = lastUser;
+                _lastEditButton = edit;
+                _openConfirmButtons.Clear();
+                _openConfirmButtons.AddRange(confirms);
+            }
         }
 
         public void AddUserMessage(ChatEntry e) => Ui(() => { AddUserCore(e); ScrollToEnd(true); });
@@ -1282,7 +1335,7 @@ namespace ClaudeCAD.Plugin.UI
                 Child = stack,
             };
             Theme.Ref(border, Border.BackgroundProperty, Theme.UserBg);
-            _messages.Children.Add(border);
+            AppendMessage(border);
         }
 
         public void BeginAssistant() => Ui(() =>
@@ -1293,7 +1346,7 @@ namespace ClaudeCAD.Plugin.UI
         private AssistantView NewAssistant()
         {
             var v = new AssistantView(this);
-            _messages.Children.Add(v.Root);
+            AppendMessage(v.Root);
             _lastAssistant?.SetUndo(false);
             _lastAssistant = v;
             return v;
@@ -1344,7 +1397,7 @@ namespace ClaudeCAD.Plugin.UI
         {
             var t = new TextBlock { Text = text, TextWrapping = TextWrapping.Wrap, FontStyle = FontStyles.Italic, Margin = new Thickness(4) };
             Theme.Ref(t, TextBlock.ForegroundProperty, isError ? Theme.ErrorFg : Theme.MutedFg);
-            _messages.Children.Add(t);
+            AppendMessage(t);
         }
 
         /// <summary>Error card with "Thử lại" (feature 13).</summary>
@@ -1367,7 +1420,7 @@ namespace ClaudeCAD.Plugin.UI
             stack.Children.Add(row);
             var b = new Border { Child = stack, BorderThickness = new Thickness(1), CornerRadius = new CornerRadius(6), Padding = new Thickness(8, 5, 8, 5), Margin = new Thickness(0, 4, 24, 4) };
             Theme.Ref(b, Border.BorderBrushProperty, Theme.ErrorFg);
-            _messages.Children.Add(b);
+            AppendMessage(b);
             ScrollToEnd();
         });
 
@@ -1408,7 +1461,7 @@ namespace ClaudeCAD.Plugin.UI
             Theme.Ref(b, Border.BackgroundProperty, Theme.CardBg);
             Theme.Ref(b, Border.BorderBrushProperty, Theme.Accent);
             if (_current != null) _current.AddCard(b);       // inside the turn's bubble: text after it continues there
-            else { b.Margin = new Thickness(0, 4, 24, 4); _messages.Children.Add(b); }
+            else { b.Margin = new Thickness(0, 4, 24, 4); AppendMessage(b); }
             ScrollToEnd();
         });
 
@@ -1945,7 +1998,7 @@ namespace ClaudeCAD.Plugin.UI
             var card = new Border { Child = stack, BorderThickness = new Thickness(1), CornerRadius = new CornerRadius(6), Padding = new Thickness(10, 6, 10, 6), Margin = new Thickness(0, 4, 24, 4), Tag = "limit" };
             Theme.Ref(card, Border.BackgroundProperty, Theme.CardBg);
             Theme.Ref(card, Border.BorderBrushProperty, Theme.ErrorFg);
-            _messages.Children.Add(card);
+            AppendMessage(card);
             ScrollToEnd();
         });
 
@@ -2017,7 +2070,7 @@ namespace ClaudeCAD.Plugin.UI
             stack.Children.Add(b);
             var card = new Border { Child = stack, BorderThickness = new Thickness(1), CornerRadius = new CornerRadius(6), Padding = new Thickness(8, 5, 8, 6), Margin = new Thickness(0, 4, 24, 4) };
             Theme.Ref(card, Border.BorderBrushProperty, Theme.ErrorFg);
-            _messages.Children.Add(card);
+            AppendMessage(card);
             ScrollToEnd();
         });
 
@@ -2052,7 +2105,7 @@ namespace ClaudeCAD.Plugin.UI
             stack.Children.Add(hint);
             var card = Card(stack, "welcome");
             card.Margin = new Thickness(0, 4, 24, 4);
-            _messages.Children.Add(card);
+            AppendMessage(card);
             ScrollToEnd();
         });
 
@@ -2151,7 +2204,7 @@ namespace ClaudeCAD.Plugin.UI
             _activationCard = card;
             card.Margin = new Thickness(0, 4, 24, 4);
             Theme.Ref(card, Border.BorderBrushProperty, Theme.ErrorFg);
-            _messages.Children.Add(card);
+            AppendMessage(card);
             ScrollToEnd();
             key.Focus();
         });
@@ -2181,7 +2234,7 @@ namespace ClaudeCAD.Plugin.UI
         private void PlaceCard(Border b)
         {
             if (_current != null) _current.AddCard(b);
-            else { b.Margin = new Thickness(0, 4, 24, 4); _messages.Children.Add(b); }
+            else { b.Margin = new Thickness(0, 4, 24, 4); AppendMessage(b); }
             ScrollToEnd();
         }
 

@@ -335,15 +335,16 @@ describe('v0.9.4 review fixes', () => {
       for await (const _m of input) {
         n++;
         push(init);
-        if (n === 1) push(textDelta('Có 40 đối tượng trên layer A-TEMP. Cậu có đồng ý không?'));
+        push(textDelta(n === 1 ? 'Có 40 đối tượng trên layer A-TEMP. Cậu có đồng ý không?' : 'Xong.'));
         push(result());
       }
     });
     const { s } = makeSession(fn);
-    const h = (k: number) => ({ handles: Array.from({ length: k }, (_, i) => `H${i}`) });
+    const h = (k: number, from = 0) => ({ handles: Array.from({ length: k }, (_, i) => `H${i + from}`) });
     s.sendMessage({ type: 'user_message', text: 'dọn layer A-TEMP' });
     assert.equal(s.gate('erase_entities', h(20)), undefined);
-    assert.match(s.gate('erase_entities', h(20)) ?? '', /Confirmation required/); // 40 in total
+    assert.equal(s.gate('set_entity_props', h(20)), undefined); // the same 20 objects again: still 20
+    assert.match(s.gate('erase_entities', h(20, 20)) ?? '', /Confirmation required/); // 40 distinct in total
     await tick();
     s.sendMessage({ type: 'user_message', text: 'đồng ý' });
     assert.equal(s.gate('erase_entities', h(40)), undefined);
@@ -463,5 +464,79 @@ describe('skills per chat', () => {
     const { s } = makeSession(fn, dir);
     s.sendMessage({ type: 'user_message', text: 'x' });
     assert.deepEqual(calls.options.skills, ['claudecad-skills:ve-kien-truc']);
+  });
+});
+
+describe('review fixes: confirmation gate in the session', () => {
+  it('objects created in this turn are not "existing"; cards and the plan button count; a resent "đồng ý" still answers', async () => {
+    const { fn } = fakeQuery(async (input, push) => {
+      let n = 0;
+      for await (const _m of input) {
+        n++;
+        push(init);
+        if (n === 1) push(textDelta('Xóa 30 đường trên layer TEMP. Cậu có đồng ý không?'));
+        // turn 2 ("đồng ý") hits the usage limit: no text at all
+        push(result());
+      }
+    });
+    const { s } = makeSession(fn);
+    const hs = (k: number, p = 'N') => Array.from({ length: k }, (_, i) => `${p}${i}`);
+    // "chèn 30 cửa, đánh số C1..C30": 30 blocks created, then their attributes set one by one
+    s.sendMessage({ type: 'user_message', text: 'chèn 30 cửa rồi đánh số' });
+    s.noteResult('batch_execute', { calls: hs(30).map(() => ({ tool: 'insert_block', params: {} })) },
+      { ok: true, result: { results: hs(30).map((h) => ({ ok: true, result: { handle: h } })) } });
+    for (const h of hs(30)) assert.equal(s.gate('set_block_attributes', { handle: h, values: {} }), undefined);
+    await tick();
+    // asked → "đồng ý" → that turn produced nothing (limit) → the resent "đồng ý" still answers the question
+    s.sendMessage({ type: 'user_message', text: 'đồng ý' });
+    await tick();
+    s.sendMessage({ type: 'user_message', text: 'đồng ý' });
+    assert.equal(s.gate('erase_entities', { handles: hs(30, 'E') }), undefined);
+    // "Làm" on a plan card
+    s.sendMessage({ type: 'user_message', text: 'Làm theo kế hoạch.', plan: 'approved' });
+    assert.equal(s.gate('erase_entities', { handles: hs(30, 'P') }), undefined);
+  });
+
+  it('only one error card when the API error was already reported', async () => {
+    const { fn } = fakeQuery(async (input, push) => {
+      for await (const _m of input) {
+        push(init);
+        push({ type: 'assistant', error: 'authentication_failed', parent_tool_use_id: null, message: { content: [] }, session_id: 's1' } as unknown as SDKMessage);
+        push({ type: 'result', subtype: 'success', is_error: true, result: 'Not logged in · Please run /login', session_id: 's1' } as unknown as SDKMessage);
+      }
+    });
+    const { s, events } = makeSession(fn);
+    s.sendMessage({ type: 'user_message', text: 'x' });
+    await tick();
+    const end = events.find((e) => e.type === 'turn_end') as { error?: string };
+    assert.equal(end.error, undefined);
+    assert.ok(events.some((e) => e.type === 'agent_error' && (e as { code?: string }).code === 'authentication_failed'));
+  });
+
+  it('the "skill removed" note survives a switch to another drawing and back', async () => {
+    const texts: string[] = [];
+    const fn = ((params: { prompt: AsyncIterable<SDKUserMessage>; options: any }) => {
+      const gen = (async function* () {
+        for await (const m of params.prompt) {
+          texts.push(String(m.message.content));
+          yield { ...init, session_id: params.options.resume ?? 'sA' } as SDKMessage;
+          yield result();
+        }
+      })();
+      return Object.assign(gen, { interrupt: async () => {}, close: () => {} });
+    }) as unknown as QueryFn;
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'claudecad-skills-'));
+    for (const n of ['aa', 'bb']) {
+      fs.mkdirSync(path.join(dir, n));
+      fs.writeFileSync(path.join(dir, n, 'SKILL.md'), `---\nname: ${n}\ndescription: Skill ${n} dùng khi vẽ ${n}.\n---\n`);
+    }
+    const { s } = makeSession(fn, dir);
+    s.sendMessage({ type: 'user_message', text: 'x', skills: ['aa', 'bb'] });
+    await tick();
+    s.switchTo('sB'); // another drawing
+    s.switchTo('sA'); // back
+    s.sendMessage({ type: 'user_message', text: 'y', skills: ['aa'] }); // "−" bb
+    await tick();
+    assert.match(texts.at(-1)!, /đã bỏ skill khỏi đoạn chat này: "bb"/);
   });
 });

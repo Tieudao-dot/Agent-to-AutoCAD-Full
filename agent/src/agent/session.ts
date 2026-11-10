@@ -6,7 +6,7 @@ import {
   type SDKUserMessage,
 } from '@anthropic-ai/claude-agent-sdk';
 import type { SidecarToPlugin, UserMessage } from '../ipc/protocol.js';
-import { affectedCount, confirmationError } from './confirmation.js';
+import { confirmationError, createdHandles, newlyAffected } from './confirmation.js';
 import { toSdkUserMessage } from './content.js';
 import type { ToolBridge } from '../tools/common.js';
 import { MCP_SERVER_NAME, createCadServer } from '../tools/index.js';
@@ -84,7 +84,14 @@ export class AgentSession {
   // and how many existing objects this turn changed / removed so far
   private turnAsked = false;
   private answersQuestion = false;
-  private affectedThisTurn = 0;
+  /** Existing objects this turn changed / removed, and objects it created (distinct handles). */
+  private touchedThisTurn = new Set<string>();
+  private createdThisTurn = new Set<string>();
+  /** The turn produced text (a turn without any, e.g. one that hit the usage limit, answered nothing). */
+  private turnHadText = false;
+  private lastPlan?: 'approved';
+  /** The turn's assistant.error code (already shown in Vietnamese, with its own card). */
+  private turnErrorCode?: string;
   // next-step buttons: Claude called suggest_next_steps this turn → the SDK's predicted prompt is not shown too
   private toolSuggested = false;
   private suggestionsOn = true;
@@ -93,6 +100,8 @@ export class AgentSession {
   private chatSkills?: string[];
   private loadedSkillsKey?: string;
   private lastSentSkills?: string[];
+  /** Skills last sent per conversation: the "−" / "+" note survives a switch to another drawing and back. */
+  private readonly skillsBySession = new Map<string, string[]>();
 
   constructor(private readonly cfg: SessionConfig) {
     this.defaultModel = cfg.model;
@@ -117,24 +126,33 @@ export class AgentSession {
    * be confirmed first (the count is cumulative over the turn), otherwise undefined (and the call is counted).
    */
   gate(tool: string, params: Record<string, unknown>): string | undefined {
-    const err = confirmationError(tool, params, {
+    const g = {
       userText: this.lastUser,
       answersQuestion: this.answersQuestion,
-      confirmedByButton: this.lastConfirm === 'yes',
-      alreadyAffected: this.affectedThisTurn,
-    });
+      confirmedByButton: this.lastConfirm === 'yes' || this.lastPlan === 'approved',
+      touched: this.touchedThisTurn,
+      created: this.createdThisTurn,
+    };
+    const err = confirmationError(tool, params, g);
     if (err) {
       this.turnAsked = true; // Claude now asks: the user's next "đồng ý" answers it
       return err;
     }
-    this.affectedThisTurn += affectedCount(tool, params);
+    for (const h of newlyAffected(tool, params, g)) this.touchedThisTurn.add(h);
     return undefined;
+  }
+
+  /** After a tool call: objects it created in this turn are the user's request itself, never "existing" ones. */
+  noteResult(tool: string, params: Record<string, unknown>, resp: { ok: boolean; result?: unknown }): void {
+    if (!resp.ok) return;
+    for (const h of createdHandles(tool, params, resp.result)) this.createdThisTurn.add(h);
   }
 
   /** Options handed to query(); exported for tests and documentation. */
   buildOptions(resume?: string): Options {
     const server = createCadServer(this.cfg.bridge, this.cfg.version, (req) => {
       if (req.type === 'suggestions') this.toolSuggested = true;
+      if (req.type === 'confirm_request' || req.type === 'plan_request') this.turnAsked = true; // a card asks too
       this.cfg.emit(req);
     });
     const plugin = prepareSkillsPlugin(this.cfg.skillsDir, this.cfg.workDir, this.chatSkills);
@@ -218,23 +236,33 @@ export class AgentSession {
     if (msg.skills) {
       if (this.q && this.loadedSkillsKey !== skillsKey(msg.skills)) this.closeQuery();
       this.chatSkills = msg.skills;
-      if (this.lastSentSkills) {
-        removed = this.lastSentSkills.filter((x) => !msg.skills!.includes(x));
-        added = msg.skills.filter((x) => !this.lastSentSkills!.includes(x));
+      const prev = (this.sessionId ? this.skillsBySession.get(this.sessionId) : undefined) ?? this.lastSentSkills;
+      if (prev) {
+        removed = prev.filter((x) => !msg.skills!.includes(x));
+        added = msg.skills.filter((x) => !prev.includes(x));
       }
-      this.lastSentSkills = msg.skills;
     }
     try {
       this.ensureStarted();
     } catch (err) {
       this.cfg.emit({ type: 'turn_end', error: `Không khởi tạo được phiên Claude: ${(err as Error).message}` });
-      return;
+      return; // the list is remembered only once Claude really started with it (the note is not lost)
+    }
+    if (msg.skills) {
+      this.lastSentSkills = msg.skills;
+      if (this.sessionId) this.skillsBySession.set(this.sessionId, msg.skills);
     }
     this.turnActive = true;
     this.cancelRequested = false;
-    this.answersQuestion = this.turnAsked; // this message answers what the previous turn asked
+    // this message answers what the previous turn asked; a previous turn that produced nothing (usage limit,
+    // error) asked nothing new: what it answered (e.g. a resent "đồng ý") still stands
+    this.answersQuestion = this.turnAsked || (!this.turnHadText && this.answersQuestion);
     this.turnAsked = false;
-    this.affectedThisTurn = 0;
+    this.turnHadText = false;
+    this.touchedThisTurn = new Set();
+    this.createdThisTurn = new Set();
+    this.lastPlan = msg.plan;
+    this.turnErrorCode = undefined;
     this.toolSuggested = false;
     this.suggestionsOn = msg.context?.suggestions !== false;
     this.lastUser = msg.text;
@@ -289,7 +317,10 @@ export class AgentSession {
     this.closeQuery();
     this.turnActive = false;
     this.turnAsked = false;
-    this.lastSentSkills = undefined; // another conversation: no "skills removed / added" note for it
+    this.answersQuestion = false; // another conversation: nothing asked there carries over
+    this.turnHadText = true;
+    // the list that conversation was last sent (its "−" / "+" note stays right); unknown → no note
+    this.lastSentSkills = sessionId ? this.skillsBySession.get(sessionId) : undefined;
     this.sessionId = sessionId;
   }
 
@@ -324,6 +355,8 @@ export class AgentSession {
     this.sessionId = undefined;
     this.turnActive = false;
     this.turnAsked = false;
+    this.answersQuestion = false; // another conversation: nothing asked there carries over
+    this.turnHadText = true;
     this.lastSentSkills = undefined;
     this.cfg.emit({ type: 'session_reset' });
   }
@@ -400,6 +433,7 @@ export class AgentSession {
         if (msg.subtype === 'init') {
           // emitted at the start of every turn: results of abandoned turns all came before it
           this.staleResults = 0;
+          if (this.lastSentSkills && !this.skillsBySession.has(msg.session_id)) this.skillsBySession.set(msg.session_id, this.lastSentSkills);
           this.sessionId = msg.session_id;
           this.gotInit = true;
           this.cfg.emit({ type: 'session_info', session_id: msg.session_id, model: msg.model });
@@ -417,6 +451,7 @@ export class AgentSession {
         const ev = msg.event;
         if (ev.type === 'content_block_delta' && ev.delta.type === 'text_delta') {
           this.textBlockOpen = true;
+          this.turnHadText = true;
           if (ev.delta.text.includes('?')) this.turnAsked = true;
           this.cfg.emit({ type: 'agent_text', delta: ev.delta.text });
         } else if (ev.type === 'content_block_stop' && this.textBlockOpen) {
@@ -428,6 +463,7 @@ export class AgentSession {
 
       case 'assistant':
         if (msg.error && msg.parent_tool_use_id === null) {
+          this.turnErrorCode = msg.error;
           this.cfg.emit({ type: 'agent_error', message: ERROR_TEXT[msg.error] ?? `Lỗi từ Claude: ${msg.error}`, code: msg.error });
         }
         return;
@@ -472,6 +508,9 @@ export class AgentSession {
             msg.subtype === 'error_max_budget_usd' ? 'Vượt ngân sách chi phí của lượt.' :
             'Lỗi khi thực thi lượt.';
           this.finishTurn({ error: why, usage });
+        } else if (msg.is_error && this.turnErrorCode) {
+          // the error was already reported (Vietnamese text, login / limit card): no second English card
+          this.finishTurn({ usage });
         } else if (msg.is_error) {
           // "success" + is_error: the turn ended on an API error, its text is in result
           const text = typeof msg.result === 'string' && msg.result.trim() ? msg.result.trim().slice(0, 300) : 'Claude trả về lỗi API.';

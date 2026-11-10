@@ -101,5 +101,5 @@ export function timeoutFor(tool: string, params: Record<string, unknown>, base =
   } else if (SLOW_TOOLS.has(tool) || CAPTURE_TOOLS.has(tool)) {
     ms = Math.max(base, 120_000);
   }
-  return Math.min(ms, MAX_TIMEOUT_MS);
+  return Math.min(ms, Math.max(MAX_TIMEOUT_MS, base)); // a longer CLAUDECAD_TOOL_TIMEOUT_MS is respected
 }

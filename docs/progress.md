@@ -207,3 +207,10 @@ Cần test: S-1 … S-5.
 - Tự kiểm tra xóa thư mục thử khi đạt (giữ ảnh), dọn thư mục cũ hơn 7 ngày; mẫu lệnh ghi file tạm rồi thay; lưu lịch sử chat cắt + ghi trong một khóa; tự gửi lại bật lại khi lại hết giới hạn; chỉ dùng claude.exe; dọn code thừa phía trợ lý.
 
 Cần test: D-1 … D-3.
+
+### v0.9.4 — sửa sau đợt rà lại độc lập ✅
+
+- Cổng xác nhận: đếm đối tượng **riêng biệt** đã có trước lượt (cùng 12 cửa dời rồi đổi layer = 12; đối tượng vừa tạo trong lượt không tính); câu đồng ý tự nhiên ("Vâng, tớ đồng ý", "Thôi được, xóa đi", "Không sao, xóa đi") được nhận, câu từ chối / câu hỏi lại ("Đừng tiếp tục", "Chưa đồng ý", "…thì ok không?") và từ ghép ("xóa điểm…") không bị coi là đồng ý; thẻ xác nhận / kế hoạch tính là đã hỏi, nút "Làm" tính là đã đồng ý; "đồng ý" gửi lại sau lượt hết giới hạn vẫn được nhận.
+- Trợ lý: lỗi API chỉ một thẻ (tiếng Việt); ghi chú "đã bỏ / thêm skill" giữ đúng khi chuyển bản vẽ qua lại; tin nhắn lớn đọc trong thời gian tuyến tính; thời gian chờ > 5 phút do người dùng đặt được giữ; tin không đọc được luôn kết thúc lượt.
+- Plugin: báo cáo lỗi không tóm tắt hai lần; "Xem thêm" chèn tin cũ lên trên (thẻ đang mở, Hoàn tác, Lưu macro giữ nguyên); zoom của Claude không ghi bước hoàn tác; tự gửi lại chỉ bật lại khi có giờ làm mới thật, lượt chưa làm gì, tối đa 3 lần; bản vẽ chưa có chat theo skill của chat gần nhất, skill đang sửa lỗi không bị loại khỏi chat; đếm layer làm mới sau U / REDO; lượt hết giới hạn không báo "xong"; không gửi tin trong lúc trợ lý đang khởi động lại; trạng thái tài khoản không ghi đè bằng kết quả cũ; lời nhắn riêng cho biến môi trường ANTHROPIC_API_KEY; không khởi động trợ lý khi chưa kích hoạt; hẹn giờ nạp skill an toàn khi đóng AutoCAD; thẻ giới hạn trễ không rơi vào chat khác.
+- 4 mục của trang key trong bộ cài và script Google: chuyển thread bảo mật.

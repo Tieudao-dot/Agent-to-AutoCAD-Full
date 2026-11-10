@@ -42,11 +42,13 @@ namespace ClaudeCAD.Plugin.Core
         /// </summary>
         public static List<string> ForChat(List<string> chat, List<string> last, IEnumerable<SkillInfo> library)
         {
-            var lib = (library ?? Enumerable.Empty<SkillInfo>()).Where(k => k.Error == null).ToList();
-            var names = new HashSet<string>(lib.Select(k => k.Name), StringComparer.Ordinal);
-            var pick = chat ?? last ?? lib.Where(k => k.Enabled && !k.Builtin).Select(k => k.Name).ToList();
-            return Clean(pick).Where(names.Contains).ToList();
+            var names = new HashSet<string>((library ?? Enumerable.Empty<SkillInfo>()).Where(k => k.Error == null).Select(k => k.Name), StringComparer.Ordinal);
+            return Choice(chat, last, library).Where(names.Contains).ToList();
         }
+
+        /// <summary>The choice itself (chat ?? most recent ?? enabled own skills), not filtered by what exists now.</summary>
+        public static List<string> Choice(List<string> chat, List<string> last, IEnumerable<SkillInfo> library) =>
+            Clean(chat ?? last ?? (library ?? Enumerable.Empty<SkillInfo>()).Where(k => k.Error == null && k.Enabled && !k.Builtin).Select(k => k.Name).ToList());
 
         /// <summary>"+" (use = true) / "−" (use = false) on one skill.</summary>
         public static List<string> Toggle(List<string> current, string name, bool use)
