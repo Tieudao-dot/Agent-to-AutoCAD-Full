@@ -840,6 +840,8 @@ namespace ClaudeCAD.Plugin
             SaveTranscript();
             Ui.AddUserMessage(userEntry);
             Ui.SetBusy(true);
+            _turnAsked = false;
+            _trayAttention = null;
             StatusTray.Set(StatusTray.State.Busy);
             Ui.SetToolStatus(toAgent ? "Claude đang suy nghĩ..." : "Đang chạy macro...");
             Ui.BeginAssistant();
@@ -987,6 +989,9 @@ namespace ClaudeCAD.Plugin
                     Ui.DiscardAssistant();
                     Ui.SetBusy(false);
                     ReturnQueuedToInput(); // it was written for the other chat
+                    _turnAsked = false;
+                    _trayAttention = null;
+                    StatusTray.Set(_ipc.IsConnected ? StatusTray.State.Ready : StatusTray.State.Offline);
                     return;
                 }
                 lock (_gate)

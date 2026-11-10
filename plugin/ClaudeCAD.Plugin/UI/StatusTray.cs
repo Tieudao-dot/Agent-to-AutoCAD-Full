@@ -5,6 +5,7 @@ using System.Drawing.Drawing2D;
 using System.Runtime.InteropServices;
 using Autodesk.AutoCAD.Windows;
 using ClaudeCAD.Plugin.Core;
+using ClaudeCAD.Plugin.Drawing;
 using AcApp = Autodesk.AutoCAD.ApplicationServices.Application;
 
 namespace ClaudeCAD.Plugin.UI
@@ -100,7 +101,16 @@ namespace ClaudeCAD.Plugin.UI
         {
             _state = state;
             _detail = detail ?? "";
-            Apply();
+            OnMain(Apply);
+        }
+
+        /// <summary>
+        /// The status bar belongs to AutoCAD's main thread; connection events arrive on pipe threads.
+        /// </summary>
+        private static void OnMain(Action action)
+        {
+            if (MainThread.IsMainThread) action();
+            else MainThread.Post(action);
         }
 
         public static State Current => _state;
@@ -111,7 +121,7 @@ namespace ClaudeCAD.Plugin.UI
             bool dark = Theme.AutoCadIsDark();
             if (dark == _dark) return;
             _dark = dark;
-            Apply();
+            OnMain(Apply);
         }
 
         /// <summary>
@@ -121,6 +131,12 @@ namespace ClaudeCAD.Plugin.UI
         public static void Bubble(string title, string text)
         {
             if (_item == null || string.IsNullOrWhiteSpace(text)) return;
+            OnMain(() => ShowBubble(title, text));
+        }
+
+        private static void ShowBubble(string title, string text)
+        {
+            if (_item == null) return;
             try
             {
                 _item.CloseBubbleWindows();
