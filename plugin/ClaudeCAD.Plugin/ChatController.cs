@@ -186,14 +186,14 @@ namespace ClaudeCAD.Plugin
             ui.ActivationKeySubmitted += k => Guard("activation", () => SubmitActivation(k));
             ui.ApiKeyMask = () => ApiKeyStore.HasKey ? ApiKeyStore.Mask(ApiKeyStore.Load()) : null;
 
-            Interaction.SelectionPicked += sel => { _selection = sel; Ui.SetSelectionChip(sel, true); _palette.FocusInput(); };
-            Interaction.ImpliedSelectionChanged += sel => { if (!_busy) { _selection = sel; Ui.SetSelectionChip(sel, false); } };
-            Interaction.PointsPicked += pts => { Ui.InsertAtCaret(Interaction.FormatPoints(pts)); _palette.FocusInput(); };
+            Interaction.SelectionPicked += OnSelectionPicked;
+            Interaction.ImpliedSelectionChanged += OnImpliedSelection;
+            Interaction.PointsPicked += OnPointsPicked;
 
             var dm = AcApp.DocumentManager;
             dm.DocumentToBeDestroyed += OnDocumentToBeDestroyed;
             dm.DocumentActivated += OnDocumentActivated;
-            dm.DocumentCreated += (s, e) => WatchDoc(e.Document);
+            dm.DocumentCreated += OnDocumentCreated;
             DrawingHistory.Instance.ObjectChanged += OnDbChanged; // one subscription to the database events for the whole plugin
             AcApp.SystemVariableChanged += OnSystemVariableChanged;
         }
@@ -265,7 +265,10 @@ namespace ClaudeCAD.Plugin
         }
 
         /// <summary>Any drawing change outside a chat turn (Properties palette, grips...) makes "Hoàn tác lượt này" unsafe.</summary>
-        private void OnDbChanged(Autodesk.AutoCAD.DatabaseServices.Database db, Autodesk.AutoCAD.DatabaseServices.DBObject obj, string kind, bool erased)
+        private void OnDbChanged(Autodesk.AutoCAD.DatabaseServices.Database db, Autodesk.AutoCAD.DatabaseServices.DBObject obj, string kind, bool erased) =>
+            Quiet("database event", () => OnDbChangedCore(db, obj, kind, erased));
+
+        private void OnDbChangedCore(Autodesk.AutoCAD.DatabaseServices.Database db, Autodesk.AutoCAD.DatabaseServices.DBObject obj, string kind, bool erased)
         {
             if (_busy)
             {
@@ -324,7 +327,10 @@ namespace ClaudeCAD.Plugin
             Ui.SetDark(dark);
         }
 
-        private void OnSystemVariableChanged(object sender, Autodesk.AutoCAD.ApplicationServices.SystemVariableChangedEventArgs e)
+        private void OnSystemVariableChanged(object sender, Autodesk.AutoCAD.ApplicationServices.SystemVariableChangedEventArgs e) =>
+            Quiet("system variable", () => OnSystemVariableChangedCore(sender, e));
+
+        private void OnSystemVariableChangedCore(object sender, Autodesk.AutoCAD.ApplicationServices.SystemVariableChangedEventArgs e)
         {
             if (e.Name.Equals("COLORTHEME", StringComparison.OrdinalIgnoreCase) && _settings.Theme == "auto") ApplyTheme();
         }
@@ -918,6 +924,7 @@ namespace ClaudeCAD.Plugin
                 if (string.IsNullOrEmpty(errorNote) && empty && !string.IsNullOrEmpty(_lastError)) errorNote = _lastError;
                 // the usage limit already has its own card for this turn: no second, generic "Lượt bị lỗi" card
                 if (_limitHitTurn == _turnSeq) errorNote = null;
+                else _rearmAutoRetry = false; // the resent request went through
                 if (!string.IsNullOrEmpty(errorNote))
                 {
                     _transcript?.Entries.Add(new ChatEntry { Role = "error", Text = errorNote });
@@ -987,7 +994,9 @@ namespace ClaudeCAD.Plugin
             });
         }
 
-        private void OnCommandEnded(object sender, CommandEventArgs e)
+        private void OnCommandEnded(object sender, CommandEventArgs e) => Quiet("command ended", () => OnCommandEndedCore(sender, e));
+
+        private void OnCommandEndedCore(object sender, CommandEventArgs e)
         {
             var name = e.GlobalCommandName ?? "";
             if (name.StartsWith("CLAUDECAD_", StringComparison.OrdinalIgnoreCase)) return;
@@ -1545,6 +1554,7 @@ namespace ClaudeCAD.Plugin
 
         /// <summary>Limit reached: one card per turn in the conversation, plus a toast.</summary>
         private int _limitHitTurn = -1;
+        private bool _rearmAutoRetry;
 
         private void ShowLimitCard(string code, int turn)
         {
@@ -1561,6 +1571,11 @@ namespace ClaudeCAD.Plugin
             var detail = $"Gói Claude đã dùng hết {label}.{when} Yêu cầu vừa rồi chưa được thực hiện" +
                          (_lastPayload != null ? " — bấm \"Tự gửi lại\" để plugin gửi lại khi có hạn mức." : ".") +
                          " Muốn dùng ngay: dùng API key Anthropic (trả theo lượng dùng).";
+            if (_rearmAutoRetry)
+            {
+                _rearmAutoRetry = false;
+                if (_rateResetsAt.HasValue && _lastPayload != null) SetAutoRetry(true);
+            }
             Ui.AddLimitCard("Đã chạm giới hạn sử dụng Claude", detail, _rateResetsAt, _lastPayload != null && _rateResetsAt.HasValue, _autoRetryOn);
             Ui.ShowToast($"Hết {label}" + (_rateResetsAt.HasValue ? $" — dùng lại lúc {_rateResetsAt.Value:HH:mm}" : ""), ChatControl.ToastKind.Error, 8);
             _transcript?.Entries.Add(new ChatEntry { Role = "error", Text = $"Hết {label}.{when}" });
@@ -1585,6 +1600,7 @@ namespace ClaudeCAD.Plugin
                 _autoRetryOn = false;
                 if (_busy || _lastPayload == null) { Ui.ShowToast("Hạn mức đã làm mới — gửi lại yêu cầu khi cậu sẵn sàng.", ChatControl.ToastKind.Info, 8); return; }
                 Ui.ShowToast("Hạn mức đã được làm mới — đang gửi lại yêu cầu vừa rồi.", ChatControl.ToastKind.Success, 6);
+                _rearmAutoRetry = true; // hits the (next) limit again → wait for that one too
                 Retry();
             }), null, due, System.Threading.Timeout.InfiniteTimeSpan);
             Ui.ShowToast($"Sẽ tự gửi lại lúc {_rateResetsAt.Value.AddSeconds(60):HH:mm} (cứ để AutoCAD mở).", ChatControl.ToastKind.Success, 5);
@@ -1602,14 +1618,27 @@ namespace ClaudeCAD.Plugin
 
         // ================================================================= v0.9.2: account, bug report
 
+        // "claude auth status" starts a process (up to 20 s): opening ⚙ again within 30 s reuses the answer.
+        // Sign-in, sign-out and API key changes clear it.
+        private string _accountText;
+        private DateTime _accountAt = DateTime.MinValue;
+        private void ForgetAccountStatus() => _accountAt = DateTime.MinValue;
+
         private void RefreshAccountStatus()
         {
+            if (_accountText != null && DateTime.UtcNow - _accountAt < TimeSpan.FromSeconds(30))
+            {
+                Ui.SetAccountStatus(_accountText);
+                return;
+            }
             Ui.SetAccountStatus("Đang kiểm tra...");
             ClaudeAuth.StatusAsync().ContinueWith(t =>
             {
                 var a = t.IsFaulted ? new AuthStatus { Error = t.Exception?.GetBaseException().Message } : t.Result;
                 var extra = a.Method == "api_key_saved" ? " (" + ApiKeyStore.Mask(ApiKeyStore.Load()) + ")" : "";
-                Ui.SetAccountStatus("Đang dùng: " + a.Label + extra + (string.IsNullOrEmpty(_readyInfo) ? "" : " · " + _readyInfo));
+                var text = "Đang dùng: " + a.Label + extra + (string.IsNullOrEmpty(_readyInfo) ? "" : " · " + _readyInfo);
+                if (a.Error == null) { _accountText = text; _accountAt = DateTime.UtcNow; }
+                Ui.SetAccountStatus(text);
             });
         }
 
@@ -2185,7 +2214,13 @@ namespace ClaudeCAD.Plugin
         private void RestartSidecarQuietly()
         {
             _restartExpected = true;
-            _sidecar.Restart();
+            ForgetAccountStatus(); // every restart follows a sign-in / sign-out / API key change
+            // stopping the old processes waits up to a few seconds: not on AutoCAD's / the palette's thread
+            Task.Run(() =>
+            {
+                try { _sidecar.Restart(); }
+                catch (Exception ex) { Logger.Error("sidecar restart failed", ex); }
+            });
         }
 
         private void OnDisconnected(string reason)
@@ -2207,7 +2242,9 @@ namespace ClaudeCAD.Plugin
 
         // ================================================================= document events
 
-        private void OnDocumentToBeDestroyed(object sender, DocumentCollectionEventArgs e)
+        private void OnDocumentToBeDestroyed(object sender, DocumentCollectionEventArgs e) => Quiet("drawing closing", () => OnDocumentToBeDestroyedCore(sender, e));
+
+        private void OnDocumentToBeDestroyedCore(object sender, DocumentCollectionEventArgs e)
         {
             bool cancel = false;
             lock (_gate)
@@ -2230,7 +2267,9 @@ namespace ClaudeCAD.Plugin
             }
         }
 
-        private void OnDocumentActivated(object sender, DocumentCollectionEventArgs e)
+        private void OnDocumentActivated(object sender, DocumentCollectionEventArgs e) => Quiet("drawing activated", () => OnDocumentActivatedCore(sender, e));
+
+        private void OnDocumentActivatedCore(object sender, DocumentCollectionEventArgs e)
         {
             // an old version opened from the palette: no chat of its own
             if (_openingVersion.HasValue && e.Document != null && !_versionDocs.ContainsKey(e.Document) && e.Document != _transcriptDoc)
@@ -2265,6 +2304,20 @@ namespace ClaudeCAD.Plugin
 
         // ================================================================= helpers
 
+        // AutoCAD events (drawing switched / closed, command ended, object changed, variable changed, selection):
+        // an exception escaping into AutoCAD's native caller shows "Fatal error" and closes AutoCAD. Logged only
+        // (no note: some of them fire hundreds of times per command).
+        private void Quiet(string what, Action a)
+        {
+            try { a(); }
+            catch (Exception ex) { Logger.Error("AutoCAD event handler failed: " + what, ex); }
+        }
+
+        private void OnDocumentCreated(object sender, DocumentCollectionEventArgs e) => Quiet("drawing created", () => WatchDoc(e.Document));
+        private void OnSelectionPicked(PickedSelection sel) => Quiet("selection", () => { _selection = sel; Ui.SetSelectionChip(sel, true); _palette.FocusInput(); });
+        private void OnImpliedSelection(PickedSelection sel) => Quiet("implied selection", () => { if (!_busy) { _selection = sel; Ui.SetSelectionChip(sel, false); } });
+        private void OnPointsPicked(List<Autodesk.AutoCAD.Geometry.Point3d> pts) => Quiet("points", () => { Ui.InsertAtCaret(Interaction.FormatPoints(pts)); _palette.FocusInput(); });
+
         private void Guard(string what, Action a)
         {
             try
@@ -2292,8 +2345,16 @@ namespace ClaudeCAD.Plugin
                 var dm = AcApp.DocumentManager;
                 dm.DocumentToBeDestroyed -= OnDocumentToBeDestroyed;
                 dm.DocumentActivated -= OnDocumentActivated;
+                dm.DocumentCreated -= OnDocumentCreated;
                 AcApp.SystemVariableChanged -= OnSystemVariableChanged;
-                foreach (var d in _watchedDocs.ToList()) { try { d.CommandEnded -= OnCommandEnded; } catch { } Interaction.Unwatch(d); }
+                Interaction.SelectionPicked -= OnSelectionPicked;
+                Interaction.ImpliedSelectionChanged -= OnImpliedSelection;
+                Interaction.PointsPicked -= OnPointsPicked;
+                foreach (var d in _watchedDocs.ToList())
+                {
+                    try { d.CommandEnded -= OnCommandEnded; d.CommandCancelled -= OnCommandEnded; d.CommandFailed -= OnCommandEnded; } catch { }
+                    Interaction.Unwatch(d);
+                }
                 DrawingHistory.Instance.ObjectChanged -= OnDbChanged;
                 Notifier.Dispose();
                 _skillWatcher?.Dispose();

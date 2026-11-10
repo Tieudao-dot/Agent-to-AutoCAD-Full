@@ -102,10 +102,6 @@ export class AgentSession {
     return this.turnActive;
   }
 
-  get currentSessionId(): string | undefined {
-    return this.sessionId;
-  }
-
   /** Text of the user message of the current/last turn (used by the confirmation gate). */
   get lastUserText(): string {
     return this.lastUser;
@@ -114,10 +110,6 @@ export class AgentSession {
   /** True when the current turn was started by the "Đồng ý" button of a confirmation card. */
   get lastUserConfirmed(): boolean {
     return this.lastConfirm === 'yes';
-  }
-
-  get info(): string {
-    return this.initInfo;
   }
 
   /**

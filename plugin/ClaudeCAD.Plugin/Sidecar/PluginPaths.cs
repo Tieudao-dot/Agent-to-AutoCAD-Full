@@ -87,7 +87,8 @@ namespace ClaudeCAD.Plugin.Sidecar
                 var path = Environment.GetEnvironmentVariable("PATH") ?? "";
                 foreach (var p in path.Split(Path.PathSeparator).Where(s => !string.IsNullOrWhiteSpace(s)))
                 {
-                    foreach (var name in new[] { "claude.exe", "claude.cmd" })
+                    // claude.exe only: a claude.cmd (npm install) cannot be started with UseShellExecute = false
+                    foreach (var name in new[] { "claude.exe" })
                     {
                         try
                         {

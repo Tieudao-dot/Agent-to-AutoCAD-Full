@@ -198,3 +198,12 @@ Cần test: R-1 … R-6 (và K-1 … K-7).
 - Sửa lỗi nạp lại skill 2 lần (một đồng hồ có khóa).
 
 Cần test: S-1 … S-5.
+
+### v0.9.4 — đợt 3 (dọn dẹp, chạy bền hơn) ✅
+
+- Sự kiện AutoCAD (chuyển / đóng / tạo bản vẽ, kết thúc lệnh, đối tượng đổi, biến hệ thống, chọn đối tượng / điểm) có lớp bắt lỗi: lỗi của plugin không làm AutoCAD "Fatal error"; đóng khung chat gỡ đủ các sự kiện.
+- Khởi động lại trợ lý: tắt cả cây tiến trình (taskkill /T trên 2022–2024, Kill(true) trên 2025), chạy nền.
+- ⚙ nhớ trạng thái tài khoản 30 giây; bộ cài kiểm tra đăng nhập tối đa ~15 giây.
+- Tự kiểm tra xóa thư mục thử khi đạt (giữ ảnh), dọn thư mục cũ hơn 7 ngày; mẫu lệnh ghi file tạm rồi thay; lưu lịch sử chat cắt + ghi trong một khóa; tự gửi lại bật lại khi lại hết giới hạn; chỉ dùng claude.exe; dọn code thừa phía trợ lý.
+
+Cần test: D-1 … D-3.

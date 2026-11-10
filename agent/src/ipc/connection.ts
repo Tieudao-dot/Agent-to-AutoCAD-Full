@@ -37,10 +37,6 @@ export class Connection extends EventEmitter<ConnectionEvents> {
     stream.on('error', (err) => this.close(`pipe error: ${err.message}`));
   }
 
-  get isOpen(): boolean {
-    return !this.closed;
-  }
-
   private onData(chunk: Buffer): void {
     let lines: string[];
     try {

@@ -27,12 +27,6 @@ export class ToolRpc {
     private readonly timeoutMs = DEFAULT_TOOL_TIMEOUT_MS,
   ) {}
 
-  /** Swaps the transport (used after a reconnect). Pending calls are failed first. */
-  setSender(send: SendFn): void {
-    this.failAll('ACAD_ERROR', 'Connection to AutoCAD was reset while the call was in flight.');
-    this.send = send;
-  }
-
   get pendingCount(): number {
     return this.pending.size;
   }

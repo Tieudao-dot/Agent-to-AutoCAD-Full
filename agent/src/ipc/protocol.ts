@@ -13,6 +13,8 @@ export const ERROR_CODES = [
   'ACAD_ERROR',
   'TIMEOUT',
   'TOO_MANY_ENTITIES',
+  'READ_ONLY', // the user turned on "Chỉ xem" for this drawing
+  'UNKNOWN_TOOL',
 ] as const;
 export type ErrorCode = (typeof ERROR_CODES)[number] | (string & {});
 

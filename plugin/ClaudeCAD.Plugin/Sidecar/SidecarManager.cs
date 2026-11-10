@@ -198,7 +198,19 @@ namespace ClaudeCAD.Plugin.Sidecar
             {
                 if (!p.HasExited)
                 {
-                    p.Kill();
+                    // the whole tree: node AND the Claude Code process it started (Kill() alone left that one running
+                    // until its pipe broke; the job object only cleans up when AutoCAD exits)
+#if ACAD_R24
+                    try
+                    {
+                        using (var tk = Process.Start(new ProcessStartInfo("taskkill", "/T /F /PID " + p.Id) { UseShellExecute = false, CreateNoWindow = true }))
+                            tk?.WaitForExit(3000);
+                    }
+                    catch (Exception ex) { Logger.Warn("taskkill failed: " + ex.Message); }
+                    if (!SafeHasExited(p)) p.Kill();
+#else
+                    p.Kill(true);
+#endif
                     p.WaitForExit(2000);
                 }
             }

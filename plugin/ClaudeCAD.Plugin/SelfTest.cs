@@ -35,6 +35,7 @@ namespace ClaudeCAD.Plugin
             var steps = new List<Step>();
             var dm = AcApp.DocumentManager;
             var original = dm.MdiActiveDocument;
+            CleanOldRuns();
             var dir = Path.Combine(Path.GetTempPath(), "ClaudeCAD-selftest-" + DateTime.Now.ToString("yyyyMMdd-HHmmss", CultureInfo.InvariantCulture));
             Directory.CreateDirectory(dir);
             var dwg = Path.Combine(dir, "selftest.dwg");
@@ -151,7 +152,7 @@ namespace ClaudeCAD.Plugin
                 var r = Capture.Render(doc, new Point3d(-500, -500, 0), new Point3d(5500, 3500, 0), 800, "window");
                 if (r.Png == null || r.Png.Length < 500) throw new InvalidOperationException("ảnh rỗng");
                 File.WriteAllBytes(Path.Combine(dir, "capture.png"), r.Png);
-                return $"{r.Width}×{r.Height}, {r.Png.Length / 1024.0:0.0} KB (xem capture.png trong {dir})";
+                return $"{r.Width}×{r.Height}, {r.Png.Length / 1024.0:0.0} KB (ảnh: dòng «Ảnh chụp thử» bên dưới, hoặc capture.png trong thư mục thử)";
             });
 
             Do("Danh sách layer / tên cho @", () =>
@@ -194,6 +195,18 @@ namespace ClaudeCAD.Plugin
             return Report(steps, dir);
         }
 
+        /// <summary>Test folders of earlier runs (kept when something failed) older than a week.</summary>
+        private static void CleanOldRuns()
+        {
+            try
+            {
+                foreach (var d in Directory.GetDirectories(Path.GetTempPath(), "ClaudeCAD-selftest-*"))
+                    if (DateTime.Now - Directory.GetLastWriteTime(d) > TimeSpan.FromDays(7))
+                        try { Directory.Delete(d, true); } catch { }
+            }
+            catch { }
+        }
+
         private static string Report(List<Step> steps, string dir)
         {
             var sb = new StringBuilder();
@@ -202,10 +215,28 @@ namespace ClaudeCAD.Plugin
             foreach (var s in steps)
                 sb.AppendLine($"{(s.Ok ? "✓" : "✗")} {s.Name}{(s.Ms > 0 ? $" ({s.Ms} ms)" : "")}: {s.Detail}");
             int bad = steps.Count(s => !s.Ok);
+            var stamp = DateTime.Now.ToString("yyyyMMdd-HHmmss", CultureInfo.InvariantCulture);
             sb.AppendLine(new string('=', 60));
             sb.AppendLine(bad == 0 ? "Tất cả đều đạt." : $"{bad} mục chưa đạt — gửi file này (và log CLAUDECHATLOG) cho người phát triển.");
-            sb.AppendLine("Thư mục thử: " + dir);
-            var file = Path.Combine(Logger.LogDirectory, "selftest-" + DateTime.Now.ToString("yyyyMMdd-HHmmss", CultureInfo.InvariantCulture) + ".txt");
+            if (bad == 0)
+            {
+                // nothing to investigate: keep only the picture (next to the report), drop the test drawings
+                try
+                {
+                    var png = Path.Combine(dir, "capture.png");
+                    if (File.Exists(png))
+                    {
+                        Directory.CreateDirectory(Logger.LogDirectory);
+                        var keep = Path.Combine(Logger.LogDirectory, "selftest-" + stamp + ".png");
+                        File.Copy(png, keep, true);
+                        sb.AppendLine("Ảnh chụp thử: " + keep);
+                    }
+                    Directory.Delete(dir, true);
+                }
+                catch (Exception ex) { Logger.Warn("selftest folder not removed: " + ex.Message); sb.AppendLine("Thư mục thử: " + dir); }
+            }
+            else sb.AppendLine("Thư mục thử (giữ lại để kiểm tra): " + dir);
+            var file = Path.Combine(Logger.LogDirectory, "selftest-" + stamp + ".txt");
             try
             {
                 Directory.CreateDirectory(Logger.LogDirectory);

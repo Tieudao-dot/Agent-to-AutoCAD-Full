@@ -222,11 +222,10 @@ namespace ClaudeCAD.Plugin.Core
                 lock (_io)
                 {
                     Directory.CreateDirectory(_dir);
-                    t.Trim();
                     var file = Path.Combine(_dir, ChatTranscript.FileNameFor(t.DrawingKey));
                     var tmp = file + "." + Guid.NewGuid().ToString("N") + ".tmp";
                     string json;
-                    lock (t) json = t.ToJson();
+                    lock (t) { t.Trim(); json = t.ToJson(); } // trimmed and serialized as one step
                     File.WriteAllText(tmp, json, new UTF8Encoding(false));
                     if (File.Exists(file)) File.Replace(tmp, file, null, true);
                     else File.Move(tmp, file);
