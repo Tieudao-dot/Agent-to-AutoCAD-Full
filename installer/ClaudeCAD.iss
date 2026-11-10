@@ -164,12 +164,14 @@ begin
   end;
 end;
 
-{ ======================================================================= v0.9.4 activation
-  Every machine needs a key from the owner. The key page shows the machine code and the owner's contact, and
+{ ======================================================================= v0.9.4 activation + device list
+  Every machine needs the owner's permission. The key page shows the machine code and the owner's contact, and
   emails the owner (through the owner's Google Apps Script web app) the device name, the Windows user, the
-  machine code and the key for it. Only the owner sees the key; the user types what the owner sends back. A
-  right key returns a signed licence, saved in %LocalAppData%\ClaudeCAD\license.txt — the plugin checks its
-  signature at every AutoCAD start (copying the folder / installing from the .zip does not skip it).
+  machine code and the key for it; the machine also lands in the owner's Google Sheet as "Chờ duyệt". Two ways
+  forward: the owner sets the row Active (the user installs without a key and presses "Kiểm tra lại" in the
+  palette), or the owner sends the key by Zalo and the user types it here. A right key returns a signed licence
+  (license.txt) plus a signed status (status.txt) in %LocalAppData%\ClaudeCAD — the plugin checks the licence at
+  every AutoCAD start and re-asks the owner's Active/Disabled decision there and every ~6 hours.
   Silent installs: /KEY=XXXX-XXXX-XXXX-XXXX. }
 
 var
@@ -306,9 +308,9 @@ begin
   begin
     Requested := True;
     if Pos('"sent":false', Body) > 0 then
-      SetStatus('Yêu cầu của máy này đã được gửi cho chủ plugin trước đó. Nhận key qua Zalo rồi dán vào ô trên.')
+      SetStatus('Yêu cầu của máy này đã được gửi cho chủ plugin trước đó. Dán key vào ô trên, hoặc chờ duyệt rồi bấm Next cài tiếp.')
     else
-      SetStatus('Đã gửi yêu cầu kích hoạt (mã máy + tên thiết bị) cho chủ plugin. Nhận key qua Zalo rồi dán vào ô trên.');
+      SetStatus('Đã gửi yêu cầu kích hoạt (mã máy + tên thiết bị) cho chủ plugin. Dán key vào ô trên, hoặc chờ duyệt rồi bấm Next cài tiếp.');
   end;
 end;
 
@@ -331,16 +333,31 @@ begin
   Result := SaveStringToFile(LicenseFile(), License, False);
 end;
 
+{ the signed device status (CCS1|...) that comes with the licence: saved so the plugin starts unlocked }
+function SaveStatusLine(const Line: String): Boolean;
+begin
+  ForceDirectories(ExpandConstant('{localappdata}\ClaudeCAD'));
+  Result := SaveStringToFile(ExpandConstant('{localappdata}\ClaudeCAD\status.txt'), Line, False);
+end;
+
 { key → signed licence (online), or an offline activation code pasted as is. Err = why not. }
 function Activate(const Input: String; var Err: String): Boolean;
 var
-  K, Body, Lic: String;
+  K, Body, Lic, St: String;
+  p: Integer;
 begin
   Result := False;
   Err := '';
   K := Trim(Input);
   if Pos('CCL1|', K) = 1 then
   begin
+    { the no-network pass (CCS1|...) may be pasted together with the licence }
+    p := Pos('CCS1|', K);
+    if p > 0 then
+    begin
+      SaveStatusLine(Trim(Copy(K, p, Length(K))));
+      K := Trim(Copy(K, 1, p - 1));
+    end;
     if Pos('CCL1|' + MachineCode() + '|', K) <> 1 then begin Err := 'Mã kích hoạt offline này của máy khác.'; exit; end;
     Result := SaveLicense(K);
     if not Result then Err := 'Không lưu được giấy phép.';
@@ -365,6 +382,9 @@ begin
   end;
   Result := SaveLicense(Lic);
   if not Result then Err := 'Không lưu được giấy phép.';
+  { the service marks the machine Active with the key and signs that too }
+  St := JsonValue(Body, 'status');
+  if Pos('CCS1|' + MachineCode() + '|', St) = 1 then SaveStatusLine(St);
 end;
 
 procedure InitializeWizard();
@@ -372,15 +392,17 @@ var
   Intro, CodeLabel, KeyLabel: TNewStaticText;
   CopyButton: TNewButton;
 begin
-  KeyPage := CreateCustomPage(wpWelcome, 'Kích hoạt ClaudeCAD', 'Cần key kích hoạt cho máy này để cài đặt.');
+  KeyPage := CreateCustomPage(wpWelcome, 'Kích hoạt ClaudeCAD', 'Chủ plugin cấp quyền dùng cho từng máy.');
 
   Intro := TNewStaticText.Create(KeyPage);
   Intro.Parent := KeyPage.Surface;
   Intro.WordWrap := True;
   Intro.Width := KeyPage.SurfaceWidth;
   if '{#ActivationUrl}' <> '' then
-    Intro.Caption := 'ClaudeCAD chỉ cài được khi có key do chủ plugin cấp, riêng cho từng máy.' + #13#10 +
-                     '{#ContactPas} để nhận key.'
+    Intro.Caption := 'ClaudeCAD chỉ dùng được khi máy này được chủ plugin cho phép. Yêu cầu được gửi tự động;' + #13#10 +
+                     '{#ContactPas} để được duyệt nhanh.' + #13#10 +
+                     'Có key thì dán vào ô dưới. Chưa có key vẫn bấm Next cài tiếp được — sau khi được duyệt,' + #13#10 +
+                     'mở AutoCAD và bấm "Kiểm tra lại" trong khung chat Claude.'
   else
     Intro.Caption := 'ClaudeCAD chỉ cài được khi có mã kích hoạt do chủ plugin cấp, riêng cho từng máy.' + #13#10 +
                      '{#ContactPas}, gửi mã máy bên dưới để nhận mã kích hoạt (dòng dài bắt đầu bằng CCL1|).';
@@ -458,6 +480,15 @@ var
 begin
   Result := True;
   if (KeyPage = nil) or (CurPageID <> KeyPage.ID) then exit;
+  if (Trim(KeyEdit.Text) = '') and ('{#ActivationUrl}' <> '') then
+  begin
+    { the sheet way: install without a key; the plugin unlocks once the owner sets the machine Active }
+    Result := MsgBox('Chưa nhập key. Cài tiếp và chờ chủ plugin duyệt máy này?' + #13#10 +
+                     'Sau khi được duyệt: mở AutoCAD, bấm "Kiểm tra lại" trong khung chat Claude là dùng được.',
+                     mbConfirmation, MB_YESNO) = IDYES;
+    if Result then Log('activation: continuing without a key (the owner approves via the device sheet)');
+    exit;
+  end;
   SetStatus('Đang kiểm tra key...');
   Result := Activate(KeyEdit.Text, Err);
   if Result then SetStatus('Đã kích hoạt máy này.')

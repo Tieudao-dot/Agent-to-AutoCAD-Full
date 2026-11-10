@@ -113,7 +113,7 @@ namespace ClaudeCAD.Plugin
         {
             var list = new List<(string, bool, string)>
             {
-                ("Kích hoạt (key theo máy)", Activation.IsActivated, Activation.StatusText),
+                ("Kích hoạt (key + trạng thái thiết bị)", Activation.IsAllowed, Activation.StatusText),
                 ("Khung chat đã mở trong phiên này", _started, _started ? "có" : "chưa (gõ CLAUDECHAT để khởi động trợ lý)"),
                 ("Tiến trình trợ lý (Node)", _sidecar.State == SidecarState.Running, _sidecar.State.ToString()),
                 ("Kết nối plugin ↔ trợ lý (named pipe)", _ipc.IsConnected, _ipc.IsConnected ? _ipc.PipeName : "chưa kết nối"),
@@ -187,6 +187,7 @@ namespace ClaudeCAD.Plugin
             ui.LimitAutoRetryToggled += on => Guard("auto retry", () => SetAutoRetry(on));
             ui.ActivationRequestRequested += () => Guard("activation request", RequestActivation);
             ui.ActivationKeySubmitted += k => Guard("activation", () => SubmitActivation(k));
+            ui.ActivationCheckRequested += () => Guard("activation check", () => CheckDeviceStatus(manual: true));
             ui.ApiKeyMask = () => ApiKeyStore.HasKey ? ApiKeyStore.Mask(ApiKeyStore.Load()) : null;
 
             Interaction.SelectionPicked += sel => { _selection = sel; Ui.SetSelectionChip(sel, true); _palette.FocusInput(); };
@@ -223,9 +224,14 @@ namespace ClaudeCAD.Plugin
                 _ipc.Start();
                 UpdateService.CheckInBackground(msg => { Ui.AddNote(msg); Ui.ShowToast(msg, ChatControl.ToastKind.Info, 10); }); // phase 3: daily update check
             }
-            // no Node / Claude Code process on a machine without a licence: it would run for nothing
+            // no Node / Claude Code process on a machine without a licence (or one the owner locked): it would run for nothing
             if (!Activation.IsActivated) ShowActivationCard();
-            else _sidecar.EnsureStarted();
+            else
+            {
+                if (Activation.DeviceAllowed) _sidecar.EnsureStarted();
+                else ShowLockedCard();
+                StartDeviceWatch(); // the owner's Active/Disabled decision: checked now and every ~6 hours
+            }
         }
 
         /// <summary>CLAUDECHATUPDATE: check now and stage the update if there is one.</summary>
@@ -1699,6 +1705,7 @@ namespace ClaudeCAD.Plugin
         {
             ShowPalette();
             if (!Activation.IsActivated) { ShowActivationCard(); return; } // sign-in comes after the key
+            if (!Activation.DeviceAllowed) { ShowLockedCard(); return; } // the owner locked / has not approved this machine
             ClaudeAuth.StatusAsync().ContinueWith(t =>
             {
                 var auth = t.IsFaulted ? new AuthStatus { Error = t.Exception?.GetBaseException().Message } : t.Result;
@@ -1722,12 +1729,21 @@ namespace ClaudeCAD.Plugin
         private bool _activating;
         private bool _autoRequested; // the automatic request is sent once per AutoCAD session at most
 
-        /// <summary>False (and the activation card is shown) while this machine has no valid licence.</summary>
+        /// <summary>False (and the matching 🔒 card is shown) while this machine may not use the plugin:
+        /// no valid licence, or the owner's device list says Disabled / Chờ duyệt / unreachable too long.</summary>
         private bool RequireActivation()
         {
-            if (Activation.IsActivated) return true;
-            ShowActivationCard(force: true); // the palette reuses the live card (brings it into view)
-            Ui.SetToolStatus("Cần kích hoạt ClaudeCAD trên máy này trước. " + Activation.Contact + ".");
+            if (Activation.IsAllowed) return true;
+            if (!Activation.IsActivated)
+            {
+                ShowActivationCard(force: true); // the palette reuses the live card (brings it into view)
+                Ui.SetToolStatus("Cần kích hoạt ClaudeCAD trên máy này trước. " + Activation.Contact + ".");
+            }
+            else
+            {
+                ShowLockedCard();
+                Ui.SetToolStatus(Activation.BlockedMessage);
+            }
             return false;
         }
 
@@ -1743,7 +1759,8 @@ namespace ClaudeCAD.Plugin
             bool auto = !_autoRequested && Activation.ShouldAutoRequest && Activation.ServiceUrl != null;
             if (auto) _autoRequested = true;
             Ui.AddActivationCard(Activation.MachineCode, Activation.DeviceName, Activation.Contact,
-                auto ? "Đang gửi yêu cầu kích hoạt cho chủ plugin..." : "Bấm \"Gửi yêu cầu kích hoạt\" để chủ plugin nhận mã máy qua email, hoặc nhắn mã máy qua Zalo.");
+                auto ? "Đang gửi yêu cầu kích hoạt cho chủ plugin..." : "Bấm \"Gửi yêu cầu kích hoạt\" để chủ plugin nhận mã máy qua email, hoặc nhắn mã máy qua Zalo.",
+                canCheck: Activation.ServiceUrl != null);
             if (auto) RequestActivation();
         }
 
@@ -1770,10 +1787,84 @@ namespace ClaudeCAD.Plugin
                 Ui.ShowToast("Đã kích hoạt ClaudeCAD", ChatControl.ToastKind.Success, 6);
                 Ui.Enqueue(() =>
                 {
-                    _sidecar.EnsureStarted(); // not started while the machine had no licence
-                    ShowWelcome(autoLogin: true); // next step: Claude sign-in (opens by itself when needed)
+                    StartDeviceWatch();
+                    if (Activation.IsAllowed)
+                    {
+                        _sidecar.EnsureStarted(); // not started while the machine had no licence
+                        ShowWelcome(autoLogin: true); // next step: Claude sign-in (opens by itself when needed)
+                    }
+                    else
+                    {
+                        ShowLockedCard();
+                        CheckDeviceStatus(manual: false); // an old status.txt may hide a fresh approval
+                    }
                 });
             });
+        }
+
+        // ================================================================= v0.9.4: device list (Google Sheet of the owner)
+
+        private System.Threading.Timer _deviceTimer;
+        private int _deviceChecking;
+
+        /// <summary>🔒 card for a licensed machine the owner locked / has not approved; one live card.</summary>
+        private void ShowLockedCard() => Ui.AddLockedCard(Activation.BlockedMessage);
+
+        /// <summary>Checks the owner's decision now and then every ~6 hours (plus at every AutoCAD start).</summary>
+        private void StartDeviceWatch()
+        {
+            if (Activation.ServiceUrl == null || _deviceTimer != null) return;
+            _deviceTimer = new System.Threading.Timer(_ => CheckDeviceStatus(manual: false), null,
+                TimeSpan.FromSeconds(2), TimeSpan.FromHours(6));
+        }
+
+        /// <summary>
+        /// Asks the activation service for this machine's signed status and locks / unlocks the palette when the
+        /// owner's decision changed. manual = the user pressed "Kiểm tra lại" (always report the outcome).
+        /// </summary>
+        private void CheckDeviceStatus(bool manual)
+        {
+            if (Activation.ServiceUrl == null) return;
+            if (System.Threading.Interlocked.Exchange(ref _deviceChecking, 1) == 1) return;
+            bool before = Activation.IsAllowed;
+            Activation.CheckStatusAsync().ContinueWith(t =>
+            {
+                System.Threading.Interlocked.Exchange(ref _deviceChecking, 0);
+                var (ok, msg) = t.IsFaulted
+                    ? (false, "Không kiểm tra được trạng thái: " + t.Exception?.GetBaseException().Message)
+                    : t.Result;
+                bool after = Activation.IsAllowed;
+                if (after == before)
+                {
+                    if (manual) ShowGateStatus(msg, !ok);
+                    return;
+                }
+                Ui.Enqueue(() =>
+                {
+                    if (after)
+                    {
+                        Ui.RemoveLockedCard();
+                        Ui.SetActivationStatus("Chủ plugin đã duyệt máy này — đã kích hoạt.", false, done: true);
+                        Ui.ShowToast("ClaudeCAD đã được mở khóa", ChatControl.ToastKind.Success, 6);
+                        _sidecar.EnsureStarted();
+                        ShowWelcome(autoLogin: true);
+                    }
+                    else
+                    {
+                        _sidecar.Stop(); // no assistant for a machine the owner locked
+                        ShowLockedCard();
+                        Ui.SetToolStatus(Activation.BlockedMessage);
+                        Ui.ShowToast("ClaudeCAD đã bị chủ plugin tạm khóa", ChatControl.ToastKind.Warning, 8);
+                    }
+                });
+            });
+        }
+
+        /// <summary>The answer of a manual check, on whichever 🔒 card is live.</summary>
+        private void ShowGateStatus(string msg, bool error)
+        {
+            if (!Activation.IsActivated) Ui.SetActivationStatus(msg, error);
+            else Ui.SetLockedStatus(msg, error);
         }
 
         // ================================================================= v0.7: version history
@@ -2294,6 +2385,7 @@ namespace ClaudeCAD.Plugin
                 _skillWatcher?.Dispose();
                 _skillDebounce?.Dispose();
                 _autoRetryTimer?.Dispose();
+                _deviceTimer?.Dispose();
             }
             catch { }
             _sidecar.Dispose();

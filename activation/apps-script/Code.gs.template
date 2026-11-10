@@ -1,17 +1,29 @@
 /**
- * ClaudeCAD — máy chủ kích hoạt (Google Apps Script, miễn phí, chạy trên tài khoản Google của chủ plugin).
+ * ClaudeCAD — máy chủ kích hoạt + quản lý thiết bị (Google Apps Script, miễn phí, chạy trên tài khoản Google
+ * của chủ plugin, GẮN VỚI một Google Sheet: mở Sheet → Tiện ích mở rộng → Apps Script → dán file này).
+ *
+ * Google Sheet là bảng điều khiển của chủ plugin: mỗi máy cài plugin là một dòng trong trang "Thiết bị".
+ * Đổi ô Trạng thái là đủ:
+ *   - "Chờ duyệt" (tự thêm khi có máy mới): máy chưa dùng được.
+ *   - "Active": máy được dùng — người dùng bấm "Kiểm tra lại" trong AutoCAD (hoặc cài tiếp) là tự kích hoạt.
+ *   - "Disabled": máy bị khóa ở lần kiểm tra kế tiếp (plugin kiểm tra mỗi lần mở AutoCAD và ~6 giờ/lần;
+ *     máy mất mạng dùng được tối đa 7 ngày kể từ lần kiểm tra cuối rồi tự khóa tới khi có mạng).
+ *   - Xóa dòng = máy quay về "Chờ duyệt" ở lần kiểm tra kế tiếp.
  *
  * Bộ cài / plugin gọi web app này:
  *   ?action=request&machine=CC-XXXX-XXXX-XXXX&device=...&user=...&from=...
- *       → tạo key cho mã máy đó và GỬI EMAIL cho chủ plugin (người dùng KHÔNG nhận được key).
+ *       → thêm dòng "Chờ duyệt" vào Sheet (nếu chưa có) và GỬI EMAIL cho chủ plugin (kèm key dự phòng).
  *   ?action=activate&machine=CC-XXXX-XXXX-XXXX&key=XXXX-XXXX-XXXX-XXXX
- *       → key đúng: trả về giấy phép đã ký (plugin tự kiểm tra bằng khóa công khai, không cần mạng nữa).
+ *       → key đúng và máy không bị Disabled: trả giấy phép đã ký + đặt dòng đó thành Active.
+ *   ?action=status&machine=CC-XXXX-XXXX-XXXX&ver=...
+ *       → trả trạng thái có chữ ký (CCS1|máy|trạng thái|ngày|chữ ký); máy Active nhận kèm giấy phép
+ *         nên được duyệt qua Sheet là tự kích hoạt, không cần key. Cập nhật "Lần cuối dùng" + "Phiên bản".
  *
  * BÍ MẬT: file này chứa khóa riêng để ký giấy phép. Không chia sẻ, không đưa lên GitHub.
  * Mất file này / lộ file này → báo người phát triển để đổi cặp khóa trong bản plugin mới.
  *
  * Tạo key bằng tay (máy không có mạng): sửa MAY_THU_CONG bên dưới rồi chạy hàm taoKeyThuCong
- * (nút ▶ Run) — key và mã kích hoạt offline được gửi vào email của cậu.
+ * (nút ▶ Run) — key, mã kích hoạt offline và mã miễn-kiểm-tra được gửi vào email của cậu.
  */
 
 var EMAIL = '{{EMAIL}}';
@@ -19,6 +31,9 @@ var SECRET = '{{SECRET}}';
 var PRIVATE_KEY = '{{PRIVATE_KEY}}';
 var TIME_ZONE = 'Asia/Ho_Chi_Minh';
 var MAY_THU_CONG = 'CC-0000-0000-0000';
+var SHEET_NAME = 'Thiết bị';
+var STATUS_VALUES = ['Chờ duyệt', 'Active', 'Disabled'];
+var LOCKED_MSG = 'Máy này đã bị chủ plugin tạm khóa.';
 // Anti-spam: the web app URL is inside every installer. Without a limit, ~100 made-up requests would use up the
 // Gmail quota of the day (≈ 100 emails) and real users could not get a key until tomorrow.
 var MAX_MAILS_PER_HOUR = 10;
@@ -34,6 +49,7 @@ function doGet(e) {
     var action = String(p.action || '');
     if (action === 'request') out = handleRequest(p);
     else if (action === 'activate') out = handleActivate(p);
+    else if (action === 'status') out = handleStatus(p);
     else if (action === 'ping') out = { ok: true, service: 'ClaudeCAD activation' };
     else out = { ok: false, error: 'Yêu cầu không hợp lệ.' };
   } catch (err) {
@@ -42,12 +58,76 @@ function doGet(e) {
   return ContentService.createTextOutput(JSON.stringify(out)).setMimeType(ContentService.MimeType.JSON);
 }
 
+// ======================================================================= Google Sheet "Thiết bị"
+
+/** The device sheet; creates it (headers, frozen row, status dropdown) the first time. */
+function getSheet() {
+  var ss = SpreadsheetApp.getActive();
+  if (!ss) throw new Error('Script chưa gắn với Google Sheet — tạo lại theo activation/README.md (mở Sheet → Tiện ích mở rộng → Apps Script → dán file này).');
+  return ss.getSheetByName(SHEET_NAME) || caiDat();
+}
+
+/** Run once from the editor (or called by itself): builds / repairs the "Thiết bị" sheet. */
+function caiDat() {
+  var ss = SpreadsheetApp.getActive();
+  if (!ss) throw new Error('Script chưa gắn với Google Sheet — mở Google Sheet rồi vào Tiện ích mở rộng → Apps Script và dán file này ở đó.');
+  var sh = ss.getSheetByName(SHEET_NAME) || ss.insertSheet(SHEET_NAME);
+  var headers = ['Mã máy', 'Thiết bị', 'User Windows', 'Ngày xin', 'Ngày kích hoạt', 'Trạng thái', 'Lần cuối dùng', 'Phiên bản', 'Ghi chú'];
+  sh.getRange(1, 1, 1, headers.length).setValues([headers]).setFontWeight('bold');
+  sh.setFrozenRows(1);
+  var rule = SpreadsheetApp.newDataValidation().requireValueInList(STATUS_VALUES, true).setAllowInvalid(false).build();
+  sh.getRange(2, 6, 998, 1).setDataValidation(rule);
+  return sh;
+}
+
+function nowText() {
+  return Utilities.formatDate(new Date(), TIME_ZONE, 'dd/MM/yyyy HH:mm');
+}
+
+/** Row number of the machine (2…), or 0. */
+function findRow(sh, machine) {
+  var n = sh.getLastRow();
+  if (n < 2) return 0;
+  var vals = sh.getRange(2, 1, n - 1, 1).getValues();
+  for (var i = 0; i < vals.length; i++)
+    if (String(vals[i][0]).replace(/\s+/g, '').toUpperCase() === machine) return i + 2;
+  return 0;
+}
+
+/** 'active' / 'disabled' / 'pending' from the Trạng thái cell (typos and unknown machines count as pending). */
+function rowStatus(sh, row) {
+  if (!row) return 'pending';
+  var s = String(sh.getRange(row, 6).getValue()).replace(/\s+/g, ' ').trim().toLowerCase();
+  if (s === 'active') return 'active';
+  if (s === 'disabled') return 'disabled';
+  return 'pending';
+}
+
+/** Adds the machine as "Chờ duyệt" (new) or refreshes device / user (existing). Returns the row. */
+function upsertDevice(sh, machine, device, user) {
+  var row = findRow(sh, machine);
+  if (!row) {
+    sh.appendRow([machine, device || '(không rõ)', user || '(không rõ)', nowText(), '', STATUS_VALUES[0], '', '', '']);
+    return findRow(sh, machine);
+  }
+  if (device && device !== '(không rõ)') sh.getRange(row, 2).setValue(device);
+  if (user && user !== '(không rõ)') sh.getRange(row, 3).setValue(user);
+  return row;
+}
+
+// ======================================================================= actions
+
 function handleRequest(p) {
   var machine = normMachine(p.machine);
   if (!machine) return { ok: false, error: 'Mã máy không hợp lệ.' };
   var device = clip(p.device, 64) || '(không rõ)';
   var user = clip(p.user, 64) || '(không rõ)';
   var from = clip(p.from, 40) || '';
+  var sh = getSheet();
+  if (rowStatus(sh, findRow(sh, machine)) === 'disabled') {
+    console.log('request refused (disabled): ' + machine);
+    return { ok: false, error: LOCKED_MSG };
+  }
   // the same machine asking again within 30 minutes (Back/Next in the installer, reopening the palette): one email
   var cache = CacheService.getScriptCache();
   var seen = 'req:' + machine;
@@ -55,6 +135,7 @@ function handleRequest(p) {
   var lock = LockService.getScriptLock();
   if (!lock.tryLock(5000)) return { ok: false, error: 'Máy chủ kích hoạt đang bận, thử lại sau ít phút.' };
   try {
+    upsertDevice(sh, machine, device, user); // the owner sees the machine in the sheet even when no email goes out
     var hour = 'mails:' + Utilities.formatDate(new Date(), 'UTC', 'yyyyMMddHH');
     var sentThisHour = Number(cache.get(hour) || 0);
     if (sentThisHour >= MAX_MAILS_PER_HOUR) {
@@ -86,24 +167,80 @@ function sendRequestMail(machine, device, user, from) {
     'Mã máy: ' + machine + '\n' +
     (from ? 'Từ: ' + from + '\n' : '') +
     'Lúc: ' + when + '\n\n' +
+    'ĐỒNG Ý CHO DÙNG (chọn 1 trong 2 cách):\n' +
+    '  1. Mở Google Sheet "' + SHEET_NAME + '", tìm dòng có mã máy trên, đổi Trạng thái thành Active.\n' +
+    '     Người đó bấm "Kiểm tra lại" trong AutoCAD (hoặc cài tiếp) là xong, không cần key.\n' +
+    '  2. Hoặc gửi KEY dưới đây qua Zalo cho người đó:\n' +
     'KEY: ' + key + '\n\n' +
-    'Đồng ý cho máy này dùng: gửi key trên cho người đó (Zalo).\n' +
-    'Không đồng ý: bỏ qua email này — không có key thì không cài và không dùng được plugin.\n' +
-    'Key chỉ dùng được trên đúng máy có mã ' + machine + ', vĩnh viễn.\n\n' +
-    'Lưu ý: tên thiết bị và người dùng do máy kia tự khai; hãy xác nhận người xin key qua Zalo trước khi gửi.');
+    'Không đồng ý: bỏ qua email này (máy nằm ở "Chờ duyệt" và không dùng được), ' +
+    'hoặc đổi Trạng thái thành Disabled để chặn hẳn.\n' +
+    'Key chỉ dùng được trên đúng máy có mã ' + machine + '; muốn ngưng thì đổi Trạng thái thành Disabled.\n\n' +
+    'Lưu ý: tên thiết bị và người dùng do máy kia tự khai; hãy xác nhận người xin qua Zalo trước khi duyệt.');
 }
 
 function handleActivate(p) {
   var machine = normMachine(p.machine);
   if (!machine) return { ok: false, error: 'Mã máy không hợp lệ.' };
+  var sh = getSheet();
+  if (rowStatus(sh, findRow(sh, machine)) === 'disabled') {
+    console.log('activation refused (disabled): ' + machine);
+    return { ok: false, error: LOCKED_MSG };
+  }
   var key = normKey(p.key);
   if (key.length !== 16 || key !== makeKey(machine).replace(/-/g, '')) {
     console.log('activation refused: ' + machine);
     return { ok: false, error: 'Key không đúng với máy này (mã máy ' + machine + '). Kiểm tra lại key, hoặc xin key mới.' };
   }
+  markActive(sh, machine, '(kích hoạt bằng key)');
   console.log('activated: ' + machine);
-  return { ok: true, license: makeLicense(machine) };
+  return { ok: true, license: makeLicense(machine), status: makeStatus(machine, 'active') };
 }
+
+/** A right key / manual approval: the row becomes Active with its activation date. Best-effort under the lock. */
+function markActive(sh, machine, device) {
+  var lock = LockService.getScriptLock();
+  if (!lock.tryLock(5000)) return;
+  try {
+    var row = upsertDevice(sh, machine, device, '');
+    if (row) {
+      sh.getRange(row, 6).setValue('Active');
+      if (!String(sh.getRange(row, 5).getValue()).trim()) sh.getRange(row, 5).setValue(nowText());
+    }
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+function handleStatus(p) {
+  var machine = normMachine(p.machine);
+  if (!machine) return { ok: false, error: 'Mã máy không hợp lệ.' };
+  var sh = getSheet();
+  var row = findRow(sh, machine);
+  var status = rowStatus(sh, row);
+  if (row) {
+    // "Lần cuối dùng" + "Phiên bản": at most one write per machine per 30 minutes
+    var cache = CacheService.getScriptCache();
+    var mark = 'seen:' + machine;
+    if (!cache.get(mark)) {
+      var lock = LockService.getScriptLock();
+      if (lock.tryLock(5000)) {
+        try {
+          sh.getRange(row, 7).setValue(nowText());
+          var ver = clip(p.ver, 20);
+          if (ver) sh.getRange(row, 8).setValue(ver);
+          cache.put(mark, '1', 1800);
+        } finally {
+          lock.releaseLock();
+        }
+      }
+    }
+  }
+  var out = { ok: true, status: makeStatus(machine, status) };
+  if (status === 'active') out.license = makeLicense(machine); // approved via the sheet: no key needed
+  return out;
+}
+
+// ======================================================================= keys, licences, signed status
 
 /** XXXX-XXXX-XXXX-XXXX: the first 80 bits of HMAC-SHA256(SECRET, "CCK1|" + machine) in base32. */
 function makeKey(machine) {
@@ -123,7 +260,15 @@ function makeKey(machine) {
 
 /** CCL1|<machine>|<yyyy-MM-dd>|<base64url RSA-SHA256 signature of the text before the last "|">. */
 function makeLicense(machine) {
-  var payload = 'CCL1|' + machine + '|' + Utilities.formatDate(new Date(), 'UTC', 'yyyy-MM-dd');
+  return signLine('CCL1|' + machine + '|' + Utilities.formatDate(new Date(), 'UTC', 'yyyy-MM-dd'));
+}
+
+/** CCS1|<machine>|<active|disabled|pending|offline>|<yyyy-MM-dd>|<signature> — the plugin trusts only this. */
+function makeStatus(machine, status) {
+  return signLine('CCS1|' + machine + '|' + status + '|' + Utilities.formatDate(new Date(), 'UTC', 'yyyy-MM-dd'));
+}
+
+function signLine(payload) {
   var sig = Utilities.computeRsaSha256Signature(payload, PRIVATE_KEY);
   return payload + '|' + Utilities.base64EncodeWebSafe(sig).replace(/=+$/, '');
 }
@@ -142,27 +287,41 @@ function clip(s, n) {
   return s.length > n ? s.substr(0, n) : s;
 }
 
-/** Run from the editor (▶ Run): emails the key and the offline activation code for MAY_THU_CONG. */
+// ======================================================================= editor functions (▶ Run)
+
+/** Emails the key, the offline activation code and the no-network pass for MAY_THU_CONG. */
 function taoKeyThuCong() {
   var machine = normMachine(MAY_THU_CONG);
   if (!machine || machine === 'CC-0000-0000-0000') throw new Error('Sửa MAY_THU_CONG ở đầu file thành mã máy cần kích hoạt (dạng CC-XXXX-XXXX-XXXX).');
   var key = makeKey(machine);
   var license = makeLicense(machine);
+  var offline = makeStatus(machine, 'offline');
+  markActive(getSheet(), machine, '(key thủ công)');
   MailApp.sendEmail(EMAIL, '[ClaudeCAD] Key thủ công cho ' + machine,
-    'Mã máy: ' + machine + '\n\n' +
+    'Mã máy: ' + machine + ' (đã ghi vào Sheet "' + SHEET_NAME + '" là Active)\n\n' +
     'KEY (máy có mạng — dán vào bộ cài hoặc khung chat): ' + key + '\n\n' +
-    'MÃ KÍCH HOẠT OFFLINE (máy không có mạng — dán nguyên dòng dưới vào ô key):\n' + license + '\n');
+    'MÁY KHÔNG CÓ MẠNG — dán CẢ HAI dòng dưới vào ô key (dòng 1 là giấy phép, dòng 2 là mã miễn\n' +
+    'kiểm tra trạng thái: máy đó sẽ KHÔNG khóa được từ xa, chỉ cấp khi máy thật sự không có mạng):\n' +
+    license + '\n' + offline + '\n');
   Logger.log('Key: ' + key);
   Logger.log('Offline: ' + license);
+  Logger.log('Mien kiem tra: ' + offline);
 }
 
-/** Run once from the editor after pasting the file: checks the keys and sends a test email. */
+/** Run once from the editor after pasting the file: builds the sheet, checks the keys and sends a test email. */
 function kiemTra() {
+  caiDat();
   var machine = 'CC-1234-5678-9ABC';
   var key = makeKey(machine);
   var act = handleActivate({ machine: machine, key: key });
   if (!act.ok) throw new Error('Tự kiểm tra thất bại: ' + act.error);
+  if (!act.status || act.status.indexOf('CCS1|' + machine + '|active|') !== 0) throw new Error('Tự kiểm tra thất bại: trạng thái ký không đúng.');
+  var st = handleStatus({ machine: machine, ver: 'kiemTra' });
+  if (!st.ok || !st.license) throw new Error('Tự kiểm tra thất bại: máy Active phải nhận được giấy phép qua ?action=status.');
   MailApp.sendEmail(EMAIL, '[ClaudeCAD] Máy chủ kích hoạt hoạt động',
-    'Đã cài xong máy chủ kích hoạt ClaudeCAD.\nKey thử cho ' + machine + ': ' + key + '\n(Email này chỉ để kiểm tra.)');
+    'Đã cài xong máy chủ kích hoạt + quản lý thiết bị ClaudeCAD.\n' +
+    'Trang "' + SHEET_NAME + '" trong Google Sheet là nơi duyệt (Active) / khóa (Disabled) từng máy.\n' +
+    'Key thử cho máy thử ' + machine + ': ' + key + ' — máy thử này đang là Active trong Sheet, có thể xóa dòng đó.\n' +
+    '(Email này chỉ để kiểm tra.)');
   Logger.log('OK — key thử ' + key + ', đã gửi email kiểm tra tới ' + EMAIL);
 }

@@ -13,18 +13,24 @@ namespace ClaudeCAD.Plugin.Sidecar
 {
     /// <summary>
     /// v0.9.4 per-machine activation on Windows: machine code, the saved licence, and the owner's activation
-    /// service (Google Apps Script web app) that emails the owner a key ("request") and turns a right key into a
-    /// signed licence ("activate"). The installer does the same; the plugin checks again at every AutoCAD start so
-    /// copying the bundle folder or installing from the .zip does not skip the key.
+    /// service (Google Apps Script web app + Google Sheet "Thiết bị") that emails the owner a key ("request"),
+    /// turns a right key into a signed licence ("activate") and answers which machines the owner allows
+    /// ("status": signed CCS1 line, saved in status.txt). The installer does the same; the plugin checks again at
+    /// every AutoCAD start so copying the bundle folder or installing from the .zip does not skip the key, and it
+    /// re-checks the owner's Active/Disabled decision at start and every ~6 hours — a machine that cannot reach
+    /// the service keeps running on its last signed status for at most LicenseLogic.StatusMaxAgeDays days.
     /// </summary>
     public static class Activation
     {
         private static string _machine;
         private static LicenseCheck _check;
+        private static StatusCheck _status;
+        private static DateTime _statusDay; // AgeDays/Fresh were computed for this UTC day
         private static (string url, string contact)? _config;
 
         public static string Root => Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "ClaudeCAD");
         public static string LicenseFile => Path.Combine(Root, "license.txt");
+        public static string StatusFile => Path.Combine(Root, "status.txt");
         private static string RequestStamp => Path.Combine(Root, "activation-request.txt");
 
         public static string MachineCode
@@ -60,9 +66,62 @@ namespace ClaudeCAD.Plugin.Sidecar
 
         public static bool IsActivated => Check.Ok;
 
-        public static string StatusText => IsActivated
-            ? $"đã kích hoạt (mã máy {MachineCode}, từ {Check.Issued})"
-            : $"chưa kích hoạt — {Check.Reason} (mã máy {MachineCode})";
+        /// <summary>The last signed status from the owner's device list (status.txt), checked against today.</summary>
+        public static StatusCheck DeviceStatus
+        {
+            get
+            {
+                if (_status != null && _statusDay == DateTime.UtcNow.Date) return _status; // Fresh depends on the day
+                string text = null;
+                try { if (File.Exists(StatusFile)) text = File.ReadAllText(StatusFile, Encoding.UTF8); }
+                catch (Exception ex) { Logger.Warn("status unreadable: " + ex.Message); }
+                _statusDay = DateTime.UtcNow.Date;
+                _status = LicenseLogic.VerifyStatus(text, MachineCode, DateTime.UtcNow);
+                return _status;
+            }
+        }
+
+        /// <summary>
+        /// The owner's Active/Disabled decision, as far as this machine can know it. A build without an
+        /// activation service has no device list: the licence alone decides, like before.
+        /// </summary>
+        public static bool DeviceAllowed
+        {
+            get
+            {
+                if (ServiceUrl == null) return true;
+                var st = DeviceStatus;
+                return st.Ok && st.Fresh && (st.Status == "active" || st.Status == "offline");
+            }
+        }
+
+        /// <summary>The one gate the palette uses: a valid licence AND the owner still allows this machine.</summary>
+        public static bool IsAllowed => IsActivated && DeviceAllowed;
+
+        /// <summary>Why the palette is locked although the licence is valid (only meaningful when !DeviceAllowed).</summary>
+        public static string BlockedMessage
+        {
+            get
+            {
+                var st = DeviceStatus;
+                if (st.Ok && st.Status == "disabled") return "Máy này đã bị chủ plugin tạm khóa. " + Contact + ".";
+                if (st.Ok && st.Status == "pending") return "Máy này đang chờ chủ plugin duyệt lại. " + Contact + " nếu chờ lâu.";
+                if (st.Ok && !st.Fresh) return $"Plugin đã quá {LicenseLogic.StatusMaxAgeDays} ngày không kiểm tra được với chủ plugin ({st.Reason}). Kết nối mạng rồi bấm \"Kiểm tra lại\".";
+                return $"Chưa xác nhận được máy này với chủ plugin ({st.Reason}). Kết nối mạng rồi bấm \"Kiểm tra lại\".";
+            }
+        }
+
+        public static string StatusText
+        {
+            get
+            {
+                if (!IsActivated) return $"chưa kích hoạt — {Check.Reason} (mã máy {MachineCode})";
+                if (!DeviceAllowed) return $"bị tạm khóa (mã máy {MachineCode}) — {BlockedMessage}";
+                var st = DeviceStatus;
+                var device = ServiceUrl == null ? "" : st.Status == "offline" ? " · miễn kiểm tra từ xa" : $" · được phép dùng (kiểm tra {st.Date})";
+                return $"đã kích hoạt (mã máy {MachineCode}, từ {Check.Issued}){device}";
+            }
+        }
 
         /// <summary>Contents\activation.json {"url", "contact"} written by make-bundle; CLAUDECAD_ACTIVATION_URL overrides the url.</summary>
         private static (string url, string contact) Config
@@ -149,12 +208,91 @@ namespace ClaudeCAD.Plugin.Sidecar
             }
         }
 
+        /// <summary>Writes a verified CCS1 line to status.txt and refreshes the cached status.</summary>
+        private static void SaveStatus(string line, StatusCheck verified)
+        {
+            Directory.CreateDirectory(Root);
+            File.WriteAllText(StatusFile, line.Trim(), new UTF8Encoding(false));
+            _status = verified;
+            _statusDay = DateTime.UtcNow.Date;
+        }
+
+        /// <summary>
+        /// Asks the owner's device list whether this machine is still allowed (signed answer, saved for the
+        /// offline window). An Active machine gets its licence with the answer, so approving in the Google Sheet
+        /// activates without a key. Returns a sentence for the palette; the caller reads IsAllowed afterwards.
+        /// </summary>
+        public static async Task<(bool ok, string message)> CheckStatusAsync()
+        {
+            if (ServiceUrl == null) return (true, "Bản plugin này không dùng máy chủ kích hoạt.");
+            var url = LicenseLogic.BuildUrl(ServiceUrl, new[]
+            {
+                new KeyValuePair<string, string>("action", "status"),
+                new KeyValuePair<string, string>("machine", MachineCode),
+                new KeyValuePair<string, string>("ver", UpdateService.CurrentVersion?.ToString(3) ?? ""),
+            });
+            try
+            {
+                using (var c = NewClient())
+                {
+                    var r = LicenseLogic.ParseResponse(await c.GetStringAsync(url).ConfigureAwait(false));
+                    if (!r.ok || string.IsNullOrEmpty(r.status))
+                        return (false, "Không kiểm tra được trạng thái máy: " + (r.error ?? "máy chủ không trả lời đúng."));
+                    var st = LicenseLogic.VerifyStatus(r.status, MachineCode, DateTime.UtcNow);
+                    if (!st.Ok) return (false, "Trả lời của máy chủ không hợp lệ: " + st.Reason + ".");
+                    SaveStatus(r.status, st);
+                    if (!string.IsNullOrEmpty(r.license))
+                    {
+                        var lic = LicenseLogic.Verify(r.license, MachineCode);
+                        if (lic.Ok)
+                        {
+                            Directory.CreateDirectory(Root);
+                            File.WriteAllText(LicenseFile, r.license.Trim(), new UTF8Encoding(false));
+                            _check = lic;
+                        }
+                    }
+                    Logger.Info("device status: " + st.Status + " (" + MachineCode + ")");
+                    if (st.Status == "disabled") return (true, BlockedMessage);
+                    if (st.Status == "active") return (true, IsActivated
+                        ? "Máy này đang được chủ plugin cho phép dùng."
+                        : "Máy đã được duyệt nhưng chưa lưu được giấy phép — thử lại.");
+                    return (true, "Máy này đang chờ chủ plugin duyệt. " + Contact + " để được duyệt nhanh.");
+                }
+            }
+            catch (Exception ex)
+            {
+                Logger.Warn("status check failed: " + ex.Message);
+                return (false, "Không kết nối được máy chủ kích hoạt (kiểm tra mạng rồi thử lại).");
+            }
+        }
+
         /// <summary>Key (online) or offline activation code → saved licence. Returns a sentence for the palette.</summary>
         public static async Task<(bool ok, string message)> ActivateAsync(string input)
         {
             input = (input ?? "").Trim();
             string license;
-            if (LicenseLogic.IsLicenseText(input)) license = input;
+            if (LicenseLogic.IsLicenseText(input) || LicenseLogic.IsStatusText(input))
+            {
+                // offline activation: a CCL1| licence line, optionally with the CCS1|...|offline| no-network pass
+                license = null;
+                string statusLine = null;
+                foreach (var tok in input.Split(new[] { ' ', '\t', '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries))
+                {
+                    if (tok.StartsWith(LicenseLogic.Prefix + "|", StringComparison.Ordinal)) license = tok;
+                    else if (tok.StartsWith(LicenseLogic.StatusPrefix + "|", StringComparison.Ordinal)) statusLine = tok;
+                }
+                if (statusLine != null)
+                {
+                    var st = LicenseLogic.VerifyStatus(statusLine, MachineCode, DateTime.UtcNow);
+                    if (!st.Ok) return (false, "Dòng CCS1 (mã miễn kiểm tra) không dùng được: " + st.Reason + ".");
+                    SaveStatus(statusLine, st);
+                    if (license == null)
+                        return IsActivated && DeviceAllowed
+                            ? (true, "Đã lưu mã miễn kiểm tra cho máy này.")
+                            : (false, "Đã lưu dòng CCS1, còn thiếu dòng giấy phép CCL1| — dán cả hai dòng trong email của chủ plugin.");
+                }
+                if (license == null) return (false, "Thiếu dòng giấy phép CCL1| trong mã dán vào.");
+            }
             else if (LicenseLogic.IsShortKey(input))
             {
                 if (ServiceUrl == null) return (false, "Bản plugin này chưa có máy chủ kích hoạt — xin chủ plugin mã kích hoạt offline (một dòng dài bắt đầu bằng CCL1|).");
@@ -171,6 +309,12 @@ namespace ClaudeCAD.Plugin.Sidecar
                         var r = LicenseLogic.ParseResponse(await c.GetStringAsync(url).ConfigureAwait(false));
                         if (!r.ok || string.IsNullOrEmpty(r.license)) return (false, r.error ?? "Key không đúng.");
                         license = r.license;
+                        if (!string.IsNullOrEmpty(r.status))
+                        {
+                            // the service marks the machine Active with the key: keep its signed answer
+                            var st = LicenseLogic.VerifyStatus(r.status, MachineCode, DateTime.UtcNow);
+                            if (st.Ok) SaveStatus(r.status, st);
+                        }
                     }
                 }
                 catch (Exception ex)

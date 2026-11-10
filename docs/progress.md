@@ -189,3 +189,12 @@ Cần test: K-1 … K-7.
 - Nhẹ / tối ưu: một thẻ kích hoạt, không chạy trợ lý khi chưa kích hoạt; báo đúng khi dùng API key; một thẻ giới hạn (có giờ làm mới); không cảnh báo mất kết nối khi tự khởi động lại; dòng trạng thái xuống dòng, dán chữ khi clipboard bận, nút Chỉ xem ở giao diện tối, toast không che nút, đồng hồ thẻ cũ dừng; chặn `save_drawing` khi Chỉ xem; giải phóng bộ đồ họa sau khi chụp; mở cuộc chat dài chỉ dựng 60 tin cuối; không tự cuộn khi đang đọc; nhớ số đối tượng theo layer; bản lưu nhanh dùng được sau pan/zoom; lỗi SDK mới có lời Việt; không hiện gợi ý trùng.
 
 Cần test: R-1 … R-6 (và K-1 … K-7).
+
+### v0.9.4 — quản lý thiết bị qua Google Sheet ✅ code xong (nhánh `claude/device-management`)
+
+- **Máy chủ** (`Code.gs.template`, giờ gắn với Google Sheet "ClaudeCAD – Thiết bị", tạo từ Tiện ích mở rộng → Apps Script): `request` thêm dòng **Chờ duyệt** (+ email như cũ, nay hướng dẫn cả 2 cách duyệt); `activate` từ chối máy `Disabled` (kể cả key đúng) và đặt dòng thành `Active`; **mới** `?action=status` trả trạng thái có chữ ký `CCS1|máy|trạng thái|ngày|chữ ký` (máy `Active` nhận kèm giấy phép → duyệt qua Sheet không cần key), cập nhật **Lần cuối dùng** + **Phiên bản** (≤ 30 phút/lần); `caiDat` tự kẻ bảng + dropdown; `kiemTra` tự kiểm tra cả vòng status; `taoKeyThuCong` thêm mã miễn kiểm tra (`CCS1|…|offline|`) cho máy không có mạng + ghi vào Sheet.
+- **Plugin**: `LicenseLogic.VerifyStatus` (chữ ký, đúng máy, hạn **7 ngày** `StatusMaxAgeDays`, chặn ngày tương lai); `Activation` lưu `status.txt`, `CheckStatusAsync`, luật mở khóa `IsAllowed` = giấy phép + trạng thái active/offline còn hạn (build không có URL giữ nguyên như cũ); kiểm tra khi mở AutoCAD + mỗi 6 giờ; `Disabled` → thẻ 🔒 "Máy này đã bị chủ plugin tạm khóa…", trợ lý dừng, giấy phép **không** bị xóa (mở lại `Active` là chạy tiếp); thẻ kích hoạt thêm nút **Kiểm tra lại**; dán được 2 dòng CCL1+CCS1.
+- **Bộ cài**: trang key cho **Next không cần key** (hộp thoại xác nhận, chờ duyệt qua Sheet); lưu `status.txt` khi kích hoạt bằng key; nhận 2 dòng offline.
+- Test: agent 119 (5 bài mới có giả lập SpreadsheetApp), core 118 (3 bài VerifyStatus với cặp khóa vứt-đi).
+
+Cần test trên AutoCAD thật: K-8 … K-12 (cùng K-1 … K-7, R-1 … R-6).

@@ -1,8 +1,10 @@
 /**
- * v0.9.4 activation service (activation/apps-script/Code.gs.template): runs the Google Apps Script in a VM with
- * stand-ins for Utilities / MailApp / CacheService / ContentService, the way Google runs it, and checks:
- * the owner gets the key by email, only the right key turns into a licence, and the licence is signed so the
- * plugin (LicenseLogic.Verify, same RSA-SHA256 PKCS#1 v1.5 + base64url) accepts it.
+ * v0.9.4 activation service + device management (activation/apps-script/Code.gs.template): runs the Google Apps
+ * Script in a VM with stand-ins for Utilities / MailApp / CacheService / LockService / ContentService /
+ * SpreadsheetApp, the way Google runs it, and checks: the owner gets the key by email, every machine lands in
+ * the "Thiết bị" sheet, Active in the sheet activates without a key, Disabled locks the machine, only the right
+ * key turns into a licence, and licences / statuses are signed so the plugin (LicenseLogic, same RSA-SHA256
+ * PKCS#1 v1.5 + base64url) accepts them.
  */
 import assert from 'node:assert/strict';
 import crypto from 'node:crypto';
@@ -27,6 +29,37 @@ const toBuf = (a: number[]): Buffer => Buffer.from(a.map(x => x & 0xff));
 
 interface Mail { to: string; subject: string; body: string }
 
+/** One sheet of a fake spreadsheet: a 2D array with the few Range methods the script uses. */
+class FakeSheet {
+  rows: unknown[][] = [];
+  getLastRow() { return this.rows.length; }
+  appendRow(r: unknown[]) { this.rows.push([...r]); }
+  setFrozenRows(_n: number) {}
+  private cell(r: number, c: number): unknown[] {
+    while (this.rows.length < r) this.rows.push([]);
+    const row = this.rows[r - 1];
+    while (row.length < c) row.push('');
+    return row;
+  }
+  getRange(row: number, col: number, numRows = 1, numCols = 1) {
+    const sheet = this;
+    const range = {
+      getValue: () => (sheet.rows[row - 1] ?? [])[col - 1] ?? '',
+      getValues: () =>
+        Array.from({ length: numRows }, (_, i) =>
+          Array.from({ length: numCols }, (_, j) => (sheet.rows[row - 1 + i] ?? [])[col - 1 + j] ?? '')),
+      setValue(v: unknown) { sheet.cell(row, col)[col - 1] = v; return range; },
+      setValues(vals: unknown[][]) {
+        vals.forEach((r, i) => r.forEach((v, j) => { sheet.cell(row + i, col + j)[col - 1 + j] = v; }));
+        return range;
+      },
+      setFontWeight() { return range; },
+      setDataValidation() { return range; }, // the dropdown is cosmetic; rowStatus() tolerates any text
+    };
+    return range;
+  }
+}
+
 function loadService() {
   const { privateKey, publicKey } = crypto.generateKeyPairSync('rsa', { modulusLength: 2048 });
   const pem = (privateKey.export({ format: 'pem', type: 'pkcs8' }) as string).trim() + '\n';
@@ -38,6 +71,11 @@ function loadService() {
   const mails: Mail[] = [];
   const quota = { left: 100 };
   const cache = new Map<string, string>();
+  const sheets = new Map<string, FakeSheet>();
+  const spreadsheet = {
+    getSheetByName: (n: string) => sheets.get(n) ?? null,
+    insertSheet: (n: string) => { const s = new FakeSheet(); sheets.set(n, s); return s; },
+  };
   const sandbox: Record<string, unknown> = {
     Utilities: {
       computeHmacSha256Signature: (value: string, key: string) => javaBytes(crypto.createHmac('sha256', key).update(value, 'utf8').digest()),
@@ -53,6 +91,14 @@ function loadService() {
     LockService: { getScriptLock: () => ({ tryLock: () => true, releaseLock: () => {} }) },
     console: { log: () => {} },
     CacheService: { getScriptCache: () => ({ get: (k: string) => cache.get(k) ?? null, put: (k: string, v: string) => cache.set(k, v) }) },
+    SpreadsheetApp: {
+      getActive: () => spreadsheet,
+      getActiveSpreadsheet: () => spreadsheet,
+      newDataValidation: () => {
+        const b = { requireValueInList: () => b, setAllowInvalid: () => b, build: () => ({}) };
+        return b;
+      },
+    },
     ContentService: {
       MimeType: { JSON: 'json' },
       createTextOutput: (s: string) => ({ content: s, setMimeType() { return this; } }),
@@ -63,7 +109,9 @@ function loadService() {
   vm.runInContext(code, sandbox);
   const get = (params: Record<string, string>) =>
     JSON.parse(((sandbox.doGet as (e: unknown) => { content: string })({ parameter: params })).content);
-  return { get, mails, cache, publicKey, sandbox, quota };
+  const sheet = () => sheets.get('Thiết bị');
+  const row = (machine: string) => sheet()?.rows.find(r => r[0] === machine);
+  return { get, mails, cache, publicKey, sandbox, quota, sheet, row };
 }
 
 const verify = (license: string, key: crypto.KeyObject) => {
@@ -84,12 +132,28 @@ describe('activation service (Apps Script)', () => {
     assert.match(m.subject, /LAPTOP-TUAN \(Trường\)/);
     assert.match(m.body, /Mã máy: CC-1A2B-3C4D-5E6F/);
     assert.match(m.body, /KEY: [0-9A-HJKMNP-TV-Z]{4}-[0-9A-HJKMNP-TV-Z]{4}-[0-9A-HJKMNP-TV-Z]{4}-[0-9A-HJKMNP-TV-Z]{4}\n/);
+    assert.match(m.body, /Trạng thái thành Active/); // the sheet way is in the email too
     // asked again within 30 minutes (Back / Next, palette reopened): no second email
     assert.deepEqual(s.get({ action: 'request', machine, device: 'LAPTOP-TUAN', user: 'x' }), { ok: true, sent: false });
     assert.equal(s.mails.length, 1);
   });
 
-  it('the key from the email activates that machine only, with a licence the plugin can check', () => {
+  it('a new machine lands in the "Thiết bị" sheet as Chờ duyệt', () => {
+    const s = loadService();
+    s.get({ action: 'request', machine, device: 'LAPTOP-TUAN', user: 'Trường' });
+    const row = s.row(machine)!;
+    assert.ok(row, 'the request must add a row');
+    assert.equal(row[1], 'LAPTOP-TUAN');
+    assert.equal(row[2], 'Trường');
+    assert.ok(String(row[3]).length > 0, 'Ngày xin is filled');
+    assert.equal(row[5], 'Chờ duyệt');
+    // asking again does not duplicate the row
+    s.cache.clear();
+    s.get({ action: 'request', machine, device: 'LAPTOP-TUAN', user: 'Trường' });
+    assert.equal(s.sheet()!.rows.filter(r => r[0] === machine).length, 1);
+  });
+
+  it('the key from the email activates that machine only, and the row becomes Active', () => {
     const s = loadService();
     s.get({ action: 'request', machine, device: 'PC', user: 'u' });
     const key = /KEY: (\S+)/.exec(s.mails[0].body)![1];
@@ -97,6 +161,11 @@ describe('activation service (Apps Script)', () => {
     assert.equal(r.ok, true, r.error);
     assert.match(r.license, /^CCL1\|CC-1A2B-3C4D-5E6F\|\d{4}-\d{2}-\d{2}\|[A-Za-z0-9_-]+$/); // no "=" padding, no quotes
     assert.ok(verify(r.license, s.publicKey));
+    assert.match(r.status, /^CCS1\|CC-1A2B-3C4D-5E6F\|active\|\d{4}-\d{2}-\d{2}\|[A-Za-z0-9_-]+$/);
+    assert.ok(verify(r.status, s.publicKey));
+    const row = s.row(machine)!;
+    assert.equal(row[5], 'Active');
+    assert.ok(String(row[4]).length > 0, 'Ngày kích hoạt is filled');
     // typed in lower case, with spaces, O for 0 / I or L for 1
     const sloppy = key.toLowerCase().replace(/0/g, 'o').replace(/1/g, 'l').replace(/-/g, ' ');
     assert.equal(s.get({ action: 'activate', machine, key: sloppy }).ok, true);
@@ -108,10 +177,60 @@ describe('activation service (Apps Script)', () => {
     assert.equal(s.get({ action: 'activate', machine, key: 'AAAA-BBBB-CCCC-DDDD' }).ok, false);
   });
 
+  it('Active in the sheet activates without a key ("Kiểm tra lại"), and last-use is recorded', () => {
+    const s = loadService();
+    s.get({ action: 'request', machine, device: 'PC', user: 'u' });
+    // not approved yet: signed "pending", no licence
+    let r = s.get({ action: 'status', machine, ver: '0.9.4' });
+    assert.equal(r.ok, true);
+    assert.match(r.status, /^CCS1\|CC-1A2B-3C4D-5E6F\|pending\|\d{4}-\d{2}-\d{2}\|/);
+    assert.ok(verify(r.status, s.publicKey));
+    assert.equal(r.license, undefined);
+    // the owner flips the cell (any letter case, stray spaces): approved
+    const row = s.row(machine)!;
+    row[5] = '  aCtIve ';
+    s.cache.delete('seen:' + machine);
+    r = s.get({ action: 'status', machine, ver: '0.9.4' });
+    assert.match(r.status, /\|active\|/);
+    assert.ok(verify(r.status, s.publicKey));
+    assert.ok(verify(r.license, s.publicKey), 'an Active machine gets its licence from ?action=status');
+    assert.match(r.license, /^CCL1\|CC-1A2B-3C4D-5E6F\|/);
+    assert.ok(String(row[6]).length > 0, 'Lần cuối dùng is filled');
+    assert.equal(row[7], '0.9.4');
+  });
+
+  it('Disabled blocks request and activate (even with the right key), and status says so', () => {
+    const s = loadService();
+    s.get({ action: 'request', machine, device: 'PC', user: 'u' });
+    const key = /KEY: (\S+)/.exec(s.mails[0].body)![1];
+    s.row(machine)![5] = 'Disabled';
+    const act = s.get({ action: 'activate', machine, key });
+    assert.equal(act.ok, false);
+    assert.match(act.error, /tạm khóa/);
+    const req = s.get({ action: 'request', machine, device: 'PC', user: 'u' });
+    assert.equal(req.ok, false);
+    assert.match(req.error, /tạm khóa/);
+    assert.equal(s.mails.length, 1); // no begging emails from a disabled machine
+    const st = s.get({ action: 'status', machine });
+    assert.match(st.status, /^CCS1\|CC-1A2B-3C4D-5E6F\|disabled\|/);
+    assert.ok(verify(st.status, s.publicKey));
+    assert.equal(st.license, undefined);
+  });
+
+  it('status for an unknown machine is signed "pending" and adds no row', () => {
+    const s = loadService();
+    const r = s.get({ action: 'status', machine: 'CC-AAAA-BBBB-CCCC' });
+    assert.equal(r.ok, true);
+    assert.match(r.status, /^CCS1\|CC-AAAA-BBBB-CCCC\|pending\|/);
+    assert.ok(verify(r.status, s.publicKey));
+    assert.equal(s.row('CC-AAAA-BBBB-CCCC'), undefined);
+  });
+
   it('refuses bad input instead of failing', () => {
     const s = loadService();
     assert.equal(s.get({ action: 'request', machine: 'hello' }).ok, false);
     assert.equal(s.get({ action: 'activate', machine: 'CC-1A2B-3C4D-5E6F', key: '' }).ok, false);
+    assert.equal(s.get({ action: 'status', machine: 'hello' }).ok, false);
     assert.equal(s.get({}).ok, false);
     assert.equal(s.get({ action: 'ping' }).ok, true);
     assert.equal(s.mails.length, 0);
@@ -126,7 +245,7 @@ describe('activation service (Apps Script)', () => {
     assert.match(keyA, /^[0-9A-HJKMNP-TV-Z]{4}(-[0-9A-HJKMNP-TV-Z]{4}){3}$/);
   });
 
-  it('the manual function emails the key and the offline activation code', () => {
+  it('the manual function emails the key, the offline code and the no-network pass', () => {
     const s = loadService();
     vm.runInContext("MAY_THU_CONG = 'CC-1A2B-3C4D-5E6F';", s.sandbox);
     (s.sandbox.taoKeyThuCong as () => void)();
@@ -134,6 +253,19 @@ describe('activation service (Apps Script)', () => {
     const offline = /\n(CCL1\|\S+)\n/.exec(s.mails[0].body)![1];
     assert.ok(verify(offline, s.publicKey));
     assert.ok(offline.startsWith('CCL1|CC-1A2B-3C4D-5E6F|'));
+    const pass = /\n(CCS1\|\S+)\n/.exec(s.mails[0].body)![1];
+    assert.ok(verify(pass, s.publicKey));
+    assert.ok(pass.startsWith('CCS1|CC-1A2B-3C4D-5E6F|offline|'));
+    assert.equal(s.row(machine)![5], 'Active'); // the owner sees the hand-made machine in the sheet too
+  });
+
+  it('kiemTra builds the sheet and self-tests the whole loop', () => {
+    const s = loadService();
+    (s.sandbox.kiemTra as () => void)();
+    assert.equal(s.sheet()!.rows[0][0], 'Mã máy'); // headers in place
+    assert.equal(s.row('CC-1234-5678-9ABC')![5], 'Active');
+    assert.equal(s.mails.length, 1);
+    assert.match(s.mails[0].subject, /hoạt động/);
   });
 
   it('limits request emails: 10 per hour, keeps a few of the daily Gmail quota', () => {
@@ -144,6 +276,7 @@ describe('activation service (Apps Script)', () => {
     assert.equal(r.ok, false);
     assert.match(r.error, /quá nhiều yêu cầu/i);
     assert.equal(s.mails.length, 10);
+    assert.ok(s.row(m(11)), 'the machine is in the sheet even when the email was not sent');
     // daily quota almost used up (another hour)
     const t = loadService();
     t.quota.left = 6;

@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 using System.Security.Cryptography;
 using System.Text;
@@ -13,6 +14,18 @@ namespace ClaudeCAD.Plugin.Core
         public string Reason = "";
         public string Machine = "";
         public string Issued = "";
+    }
+
+    /// <summary>Result of checking a signed device status (CCS1 line) against this machine and today.</summary>
+    public sealed class StatusCheck
+    {
+        public bool Ok;            // signature valid and the line is for this machine
+        public string Status = ""; // active | disabled | pending | offline (lower case)
+        public string Machine = "";
+        public string Date = "";   // yyyy-MM-dd (UTC) of the check the service signed
+        public int AgeDays;        // how old that check is
+        public bool Fresh;         // offline, or at most StatusMaxAgeDays old
+        public string Reason = "";
     }
 
     /// <summary>
@@ -35,6 +48,9 @@ namespace ClaudeCAD.Plugin.Core
 
         public const string DefaultContact = "Liên hệ Zalo owner: 0344644415";
         public const string Prefix = "CCL1";
+        public const string StatusPrefix = "CCS1";
+        /// <summary>A machine may run on its last signed status for this many days without reaching the service.</summary>
+        public const int StatusMaxAgeDays = 7;
         private const string Base32 = "0123456789ABCDEFGHJKMNPQRSTVWXYZ";
 
         /// <summary>CC-XXXX-XXXX-XXXX from the Windows MachineGuid (or the computer name when there is none).</summary>
@@ -70,6 +86,9 @@ namespace ClaudeCAD.Plugin.Core
         /// <summary>An offline activation code (the whole licence line) pasted instead of a key.</summary>
         public static bool IsLicenseText(string s) => (s ?? "").Trim().StartsWith(Prefix + "|", StringComparison.Ordinal);
 
+        /// <summary>A signed device-status line (CCS1|...), alone or pasted together with the licence.</summary>
+        public static bool IsStatusText(string s) => (s ?? "").Trim().Contains(StatusPrefix + "|");
+
         public static LicenseCheck Verify(string license, string machine) => Verify(license, machine, PublicModulus, PublicExponent);
 
         public static LicenseCheck Verify(string license, string machine, string modulusB64, string exponentB64)
@@ -90,17 +109,63 @@ namespace ClaudeCAD.Plugin.Core
             try { sig = FromBase64Url(parts[3]); }
             catch { r.Reason = "chữ ký giấy phép hỏng"; return r; }
             var data = Encoding.UTF8.GetBytes(parts[0] + "|" + parts[1] + "|" + parts[2]);
+            r.Ok = VerifyRsa(data, sig, modulusB64, exponentB64);
+            if (!r.Ok) r.Reason = "chữ ký giấy phép không hợp lệ";
+            return r;
+        }
+
+        /// <summary>
+        /// Checks a signed device status "CCS1|machine|status|yyyy-MM-dd|sig" (same key and signature scheme as
+        /// the licence). Ok = signed for this machine; Fresh = may still be trusted today (status "offline", for
+        /// machines the owner exempted, never goes stale; anything else is stale after StatusMaxAgeDays days,
+        /// so a disabled machine cannot dodge the lock by blocking the plugin's network).
+        /// </summary>
+        public static StatusCheck VerifyStatus(string line, string machine, DateTime utcNow) => VerifyStatus(line, machine, utcNow, PublicModulus, PublicExponent);
+
+        public static StatusCheck VerifyStatus(string line, string machine, DateTime utcNow, string modulusB64, string exponentB64)
+        {
+            var r = new StatusCheck();
+            line = (line ?? "").Trim();
+            if (line.Length == 0) { r.Reason = "chưa kiểm tra được trạng thái máy với máy chủ lần nào"; return r; }
+            var parts = line.Split('|');
+            if (parts.Length != 5 || parts[0] != StatusPrefix) { r.Reason = "xác nhận trạng thái không đúng định dạng"; return r; }
+            r.Machine = parts[1];
+            r.Status = parts[2].Trim().ToLowerInvariant();
+            r.Date = parts[3];
+            if (!string.Equals(parts[1], machine, StringComparison.OrdinalIgnoreCase))
+            {
+                r.Reason = $"xác nhận trạng thái của máy khác ({parts[1]}), máy này là {machine}";
+                return r;
+            }
+            byte[] sig;
+            try { sig = FromBase64Url(parts[4]); }
+            catch { r.Reason = "chữ ký trạng thái hỏng"; return r; }
+            var data = Encoding.UTF8.GetBytes(line.Substring(0, line.LastIndexOf('|')));
+            if (!VerifyRsa(data, sig, modulusB64, exponentB64)) { r.Reason = "chữ ký trạng thái không hợp lệ"; return r; }
+            DateTime d;
+            if (!DateTime.TryParseExact(r.Date, "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.AssumeUniversal | DateTimeStyles.AdjustToUniversal, out d))
+            { r.Reason = "ngày trong xác nhận trạng thái hỏng"; return r; }
+            r.Ok = true;
+            r.AgeDays = (int)(utcNow.Date - d.Date).TotalDays;
+            r.Fresh = r.Status == "offline" || (r.AgeDays >= -1 && r.AgeDays <= StatusMaxAgeDays); // -1: time zones around midnight
+            if (!r.Fresh) r.Reason = r.AgeDays > StatusMaxAgeDays
+                ? $"lần kiểm tra trạng thái gần nhất đã {r.AgeDays} ngày trước (quá {StatusMaxAgeDays} ngày)"
+                : "ngày trong xác nhận trạng thái nằm ở tương lai (đồng hồ máy sai?)";
+            return r;
+        }
+
+        private static bool VerifyRsa(byte[] data, byte[] sig, string modulusB64, string exponentB64)
+        {
             try
             {
                 using (var rsa = RSA.Create())
                 {
                     rsa.ImportParameters(new RSAParameters { Modulus = Convert.FromBase64String(modulusB64), Exponent = Convert.FromBase64String(exponentB64) });
-                    r.Ok = rsa.VerifyData(data, sig, HashAlgorithmName.SHA256, RSASignaturePadding.Pkcs1);
+                    return rsa.VerifyData(data, sig, HashAlgorithmName.SHA256, RSASignaturePadding.Pkcs1);
                 }
             }
-            catch (CryptographicException) { r.Ok = false; }
-            if (!r.Ok) r.Reason = "chữ ký giấy phép không hợp lệ";
-            return r;
+            catch (CryptographicException) { return false; }
+            catch (FormatException) { return false; }
         }
 
         public static byte[] FromBase64Url(string s)
@@ -129,8 +194,8 @@ namespace ClaudeCAD.Plugin.Core
             return sb.ToString();
         }
 
-        /// <summary>{"ok":true,"license":"..."} / {"ok":false,"error":"..."} from the activation service.</summary>
-        public static (bool ok, string license, string error, bool sent) ParseResponse(string json)
+        /// <summary>{"ok":true,"license":"...","status":"..."} / {"ok":false,"error":"..."} from the activation service.</summary>
+        public static (bool ok, string license, string error, bool sent, string status) ParseResponse(string json)
         {
             try
             {
@@ -139,12 +204,13 @@ namespace ClaudeCAD.Plugin.Core
                 string lic = d.TryGetValue("license", out var l) ? l as string : null;
                 string err = d.TryGetValue("error", out var e) ? e as string : null;
                 bool sent = d.TryGetValue("sent", out var s) && s is bool sb && sb;
-                return (ok, lic, err, sent);
+                string status = d.TryGetValue("status", out var st) ? st as string : null;
+                return (ok, lic, err, sent, status);
             }
             catch
             {
                 // Google's sign-in / error pages are HTML: the web app is not deployed for "Anyone"
-                return (false, null, "máy chủ kích hoạt trả về nội dung lạ (web app chưa được triển khai cho \"Anyone\"?)", false);
+                return (false, null, "máy chủ kích hoạt trả về nội dung lạ (web app chưa được triển khai cho \"Anyone\"?)", false, null);
             }
         }
     }
