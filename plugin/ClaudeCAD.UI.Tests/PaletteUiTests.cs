@@ -478,6 +478,121 @@ namespace ClaudeCAD.UI.Tests
             });
         }
 
+        /// <summary>
+        /// The AutoCAD-style shell: usage meter, queued message row, busy line, confirmation card with the
+        /// count as a figure, and the settings popup as collapsible two-column groups.
+        /// </summary>
+        [Fact]
+        public void RendersAutoCadStyleShell()
+        {
+            bool meterShown = false, meterHidden = false, queuedShown = false, queuedHidden = false, busyShown = false, busyHidden = false;
+            int sendWhileBusy = 0, queueCancel = 0, stopOnEsc = 0, confirmYes = 0, preview = 0, categories = 0;
+            string sendLabelBusy = null, sendLabelIdle = null;
+            Sta(() =>
+            {
+                var c = new ChatControl { Width = 400, Height = 760 };
+                c.ApplySettings(new PaletteSettings());
+                c.SetDark(true);
+                c.SetConnection("Đã kết nối · Nha-pho.dwg", true);
+                c.LoadTranscript(new ChatTranscript { DrawingName = "Nha-pho.dwg" }, false);
+                c.SendRequested += m => sendWhileBusy++;
+                c.QueueCancelRequested += () => queueCancel++;
+                c.StopRequested += () => stopOnEsc++;
+                c.ConfirmAnswered += (id, yes) => { if (yes) confirmYes++; };
+                c.ZoomRequested += h => preview += h.Count;
+
+                T Field<T>(string name) => (T)typeof(ChatControl).GetField(name, System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance).GetValue(c);
+                var meter = Field<DockPanel>("_usageMeter");
+                var queued = Field<DockPanel>("_queuedRow");
+                var busy = Field<TextBlock>("_busyLine");
+                var send = Field<Button>("_send");
+                var input = Field<TextBox>("_input");
+
+                // usage meter: hidden until there is something to watch
+                c.SetUsageMeter("Hạn mức 5 giờ", -1, "");
+                Pump();
+                meterHidden = meter.Visibility != Visibility.Visible;
+                c.SetUsageMeter("Hạn mức 5 giờ", 0.41, "14:30");
+                Pump();
+                meterShown = meter.Visibility == Visibility.Visible;
+
+                c.AddUserMessage(new ChatEntry { Role = "user", Text = "Xóa hết các đường nét đứt cũ trên layer A-TEMP rồi vẽ lại khung tên" });
+                c.BeginAssistant();
+                c.AppendAssistant("Tớ tìm thấy các đối tượng cần xóa trên layer A-TEMP. Cần cậu đồng ý trước khi xóa.");
+                c.AddConfirmCard("c1", "Xóa 57 đối tượng trên layer A-TEMP (LINE 41 · POLYLINE 12 · TEXT 4). Các layer khác giữ nguyên.", 57, new List<string> { "1A", "1B", "1C" });
+                Pump();
+
+                // while Claude works: busy line on, the send button queues instead of being disabled
+                c.SetBusy(true);
+                Pump();
+                busyShown = busy.Visibility == Visibility.Visible && busy.Text.Contains("Đang làm");
+                sendLabelBusy = send.Content as string;
+                input.Text = "À, tường ngăn phòng ngủ dày 110 thôi";
+                send.RaiseEvent(new RoutedEventArgs(System.Windows.Controls.Primitives.ButtonBase.ClickEvent));
+                c.SetQueued("À, tường ngăn phòng ngủ dày 110 thôi");
+                Pump();
+                queuedShown = queued.Visibility == Visibility.Visible;
+                Shot(c, "shell-dang-lam");
+
+                // "Bỏ" on the queued row raises the cancel; hiding it is the controller's answer
+                FindAll<Button>(queued).First().RaiseEvent(new RoutedEventArgs(System.Windows.Controls.Primitives.ButtonBase.ClickEvent));
+                c.SetQueued(null);
+                Pump();
+                queuedHidden = queued.Visibility != Visibility.Visible;
+
+                c.SetBusy(false);
+                Pump();
+                busyHidden = busy.Visibility != Visibility.Visible;
+                sendLabelIdle = send.Content as string;
+
+                // confirmation card: preview + the single accent "Đồng ý"
+                FindAll<Button>(c).First(b => (b.Content as string ?? "").StartsWith("⌖ Xem trên bản vẽ")).RaiseEvent(new RoutedEventArgs(System.Windows.Controls.Primitives.ButtonBase.ClickEvent));
+                FindAll<Button>(c).First(b => (b.Content as string) == "Đồng ý").RaiseEvent(new RoutedEventArgs(System.Windows.Controls.Primitives.ButtonBase.ClickEvent));
+                Shot(c, "shell-xac-nhan");
+
+                // error + sign-in cards: glyph + plain text, no red card
+                c.EndAssistant(new ChatEntry { Role = "assistant", Text = "Tớ tìm thấy các đối tượng cần xóa trên layer A-TEMP." }, false, false);
+                c.AddErrorCard("AutoCAD đang bận, Claude chưa vẽ được. Có thể một lệnh hoặc hộp thoại đang mở — bấm Esc trong AutoCAD rồi thử lại.", true);
+                c.AddLoginCard("Phiên đăng nhập Claude đã hết hạn. Yêu cầu vừa rồi chưa được thực hiện.");
+                Shot(c, "shell-loi");
+
+                // settings popup: collapsible groups (Chung, Cách Claude làm việc, An toàn, Tài khoản AI, Trợ giúp)
+                var popup = Field<System.Windows.Controls.Primitives.Popup>("_settingsPopup");
+                var panel = (FrameworkElement)popup.Child;
+                popup.Child = null;
+                var host = new Border { Width = 320, Height = 560, Child = panel, Background = Brushes.Transparent };
+                host.SetValue(TextElement.FontFamilyProperty, new FontFamily("Segoe UI"));
+                Theme.Apply(host.Resources, true);
+                Shot(host, "shell-cai-dat");
+                categories = FindAll<Button>(host).Count(b => (b.ToolTip as string) == "Bấm để mở / thu gọn");
+            });
+            Assert.True(meterHidden, "usage meter must stay hidden with nothing to show");
+            Assert.True(meterShown, "usage meter did not appear");
+            Assert.True(busyShown, "busy line did not appear while a turn runs");
+            Assert.True(busyHidden, "busy line stayed after the turn");
+            Assert.Equal("Gửi thêm", sendLabelBusy);
+            Assert.Equal("Gửi", sendLabelIdle);
+            Assert.Equal(1, sendWhileBusy); // the message typed while busy reaches the controller (which queues it)
+            Assert.True(queuedShown, "queued row did not appear");
+            Assert.Equal(1, queueCancel);
+            Assert.True(queuedHidden, "queued row stayed after the cancel");
+            Assert.Equal(3, preview);
+            Assert.Equal(1, confirmYes);
+            Assert.Equal(5, categories);
+            Assert.Equal(0, stopOnEsc);
+            Assert.True(new FileInfo(Path.Combine(OutDir, "shell-xac-nhan.png")).Length > 5_000);
+            Assert.True(new FileInfo(Path.Combine(OutDir, "shell-cai-dat.png")).Length > 5_000);
+        }
+
+        [Fact]
+        public void ElapsedReadsLikeAPerson()
+        {
+            var elapsed = typeof(ChatControl).GetMethod("Elapsed", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static);
+            Assert.Equal("0 giây", elapsed.Invoke(null, new object[] { TimeSpan.FromSeconds(-3) }));
+            Assert.Equal("12 giây", elapsed.Invoke(null, new object[] { TimeSpan.FromSeconds(12.9) }));
+            Assert.Equal("1 phút 12 giây", elapsed.Invoke(null, new object[] { TimeSpan.FromSeconds(72) }));
+        }
+
         private static string FindTemplates()
         {
             var dir = new DirectoryInfo(AppContext.BaseDirectory);

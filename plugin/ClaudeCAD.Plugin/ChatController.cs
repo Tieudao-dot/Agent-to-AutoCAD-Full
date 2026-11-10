@@ -142,6 +142,7 @@ namespace ClaudeCAD.Plugin
             var ui = _palette.Control;
             ui.SendRequested += m => Guard("send", () => SendComposed(m));
             ui.StopRequested += () => Guard("stop", Cancel);
+            ui.QueueCancelRequested += () => Guard("queue", ReturnQueuedToInput);
             ui.NewChatRequested += () => Guard("new chat", NewChat);
             ui.PickSelectionRequested += () => Guard("pick", () => MainThread.Post(() => Interaction.Start(Interaction.PickCommand)));
             ui.PickPointRequested += () => Guard("point", () => MainThread.Post(() => Interaction.Start(Interaction.PointCommand)));
@@ -592,9 +593,41 @@ namespace ClaudeCAD.Plugin
 
         // ================================================================= sending
 
+        /// <summary>Typed while a turn was running: sent as the next message when that turn ends cleanly.</summary>
+        private ComposedMessage _queued;
+        /// <summary>The running turn showed a confirmation / plan card: a queued message must not answer it.</summary>
+        private bool _turnAsked;
+
+        private void QueueWhileBusy(ComposedMessage m)
+        {
+            if (_macroRunning)
+            {
+                Ui.SetInputText(m.Text);
+                Ui.SetToolStatus("Đợi macro chạy xong rồi gửi.");
+                return;
+            }
+            if (_queued == null) _queued = m;
+            else
+            {
+                // more ideas while waiting: one message, in the order they were typed
+                _queued.Text = _queued.Text + "\n" + m.Text;
+                _queued.Images.AddRange(m.Images);
+            }
+            Ui.SetQueued(_queued.Text);
+        }
+
+        /// <summary>Gives the queued message back to the input box (stop, error, a question to answer first).</summary>
+        private void ReturnQueuedToInput()
+        {
+            var q = _queued;
+            _queued = null;
+            Ui.SetQueued(null);
+            if (q != null && !string.IsNullOrWhiteSpace(q.Text)) Ui.SetInputText(q.Text);
+        }
+
         private void SendComposed(ComposedMessage m)
         {
-            if (_busy) return;
+            if (_busy) { QueueWhileBusy(m); return; }
             if (!RequireActivation()) { Ui.SetInputText(m.Text); return; }
             if (DateTime.UtcNow < _restartingUntil)
             {
@@ -836,6 +869,7 @@ namespace ClaudeCAD.Plugin
             if (!_busy) return;
             if (_macroRunning) { _macroCancel = true; Ui.SetToolStatus("Đang dừng macro..."); return; }
             int seq = _turnSeq;
+            ReturnQueuedToInput(); // stopping means rethinking: do not fire the queued message on its own
             Ui.SetToolStatus("Đang dừng...");
             _ipc.Send(new Dictionary<string, object> { ["type"] = "cancel" });
             Task.Delay(CancelGrace).ContinueWith(_ =>
@@ -854,6 +888,7 @@ namespace ClaudeCAD.Plugin
             _chatGen++;
             _pendingConfirm = null;
             _pendingPlan = null;
+            ReturnQueuedToInput();
             if (_macroRunning) { _macroCancel = true; _macroRunning = false; }
             CancelAutoRetry();
             _lastPayload = null; // "Thử lại" must not resend the old request into the new chat
@@ -927,6 +962,7 @@ namespace ClaudeCAD.Plugin
                     lock (_gate) { _turnDoc = null; _turnInvalidReason = null; }
                     Ui.DiscardAssistant();
                     Ui.SetBusy(false);
+                    ReturnQueuedToInput(); // it was written for the other chat
                     return;
                 }
                 lock (_gate)
@@ -967,8 +1003,24 @@ namespace ClaudeCAD.Plugin
                     var active = AcApp.DocumentManager.MdiActiveDocument;
                     if (!IsVersionDoc(active) && active != _transcriptDoc) LoadTranscriptFor(active);
                 }
+                bool answering = _pendingConfirm.HasValue || _pendingPlan.HasValue;
                 if (_pendingConfirm.HasValue) { var c = _pendingConfirm.Value; _pendingConfirm = null; AnswerConfirm(c.id, c.yes); }
                 if (_pendingPlan.HasValue) { var pp = _pendingPlan.Value; _pendingPlan = null; AnswerPlan(pp.id, pp.kind); }
+                if (_queued != null && !answering)
+                {
+                    // Send it only after a clean turn that asked nothing: after an error, a usage limit or a
+                    // "đồng ý?" card the text goes back to the input box and the user decides.
+                    bool clean = string.IsNullOrEmpty(errorNote) && !limitHit && !_turnAsked;
+                    if (clean)
+                    {
+                        var q = _queued;
+                        _queued = null;
+                        Ui.SetQueued(null);
+                        MainThread.Post(() => SendComposed(q));
+                    }
+                    else ReturnQueuedToInput();
+                }
+                _turnAsked = false;
             }));
         }
 
@@ -2093,6 +2145,7 @@ namespace ClaudeCAD.Plugin
                         string text = msg.TryGetValue("text", out var tv) ? tv as string : "";
                         int? count = msg.TryGetValue("count", out var cv) && cv is double cd ? (int)cd : (int?)null;
                         var hs = msg.TryGetValue("handles", out var hv) && hv is List<object> hl ? hl.OfType<string>().ToList() : null;
+                        _turnAsked = true;
                         Ui.AddConfirmCard(id, text, count, hs);
                         Ui.Enqueue(() => _transcript?.Entries.Add(new ChatEntry { Role = "note", Text = "Xác nhận: " + text }));
                         break;
@@ -2121,6 +2174,8 @@ namespace ClaudeCAD.Plugin
                         _rateText = status == "allowed" && util < 0.5 ? "" :
                             $" · {label}{(util >= 0 ? $" {util * 100:0}%" : "")}{(status == "rejected" ? " — đã hết" : "")}{(reset.Length > 0 ? $", làm mới {reset}" : "")}";
                         Ui.SetUsage(_usageText + _rateText);
+                        // The bar only appears once there is something worth watching (half the allowance used).
+                        Ui.SetUsageMeter(label, status == "allowed" && util < 0.5 ? -1 : util, reset);
                         _rateStatus = status ?? "";
                         _rateUtil = util;
                         _rateKind = kind ?? "";
@@ -2189,6 +2244,7 @@ namespace ClaudeCAD.Plugin
                         string id = msg.TryGetValue("id", out var iv) ? iv as string : "";
                         string summary = msg.TryGetValue("summary", out var sv) ? sv as string : "";
                         var steps = msg.TryGetValue("steps", out var stv) && stv is List<object> sl ? sl.OfType<string>().ToList() : new List<string>();
+                        _turnAsked = true;
                         Ui.AddPlanCard(id, summary, steps);
                         Ui.Enqueue(() => _transcript?.Entries.Add(new ChatEntry { Role = "note", Text = "Kế hoạch: " + summary + (steps.Count > 0 ? "\n" + string.Join("\n", steps.Select((x, i) => $"{i + 1}. {x}")) : "") }));
                         break;

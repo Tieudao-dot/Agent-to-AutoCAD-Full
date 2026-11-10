@@ -126,6 +126,11 @@ Trạng thái: ⬜ chưa chạy · ✅ đạt · ❌ không đạt · ⚠️ đ�
 | UX-3 | Chữ trong khung chat cùng font và cỡ với palette Properties (⚙ ▸ Cỡ chữ để *Theo AutoCAD*) | ⬜ chưa chạy | |
 | UX-4 | Ctrl+lăn chuột đổi cỡ chữ → giữ cỡ của mình, đổi theme AutoCAD không kéo cỡ chữ về theo AutoCAD nữa | ⬜ chưa chạy | |
 | UX-5 | ⚙ ▸ Giao diện ép **Tối** khi AutoCAD đang sáng → khung chat tối, chữ vẫn đọc được (lấy font của AutoCAD, không lấy màu) | ⬜ chưa chạy | |
+| UX-6 | Thanh công cụ: rê chuột từng icon (⊞ ■ ⤓ ⚙ ≡ ＋ ✦ ▷ ✎ ⟲) → tooltip "Tên — giải thích ngắn"; lưu 1 macro → icon ▷ đổi màu nhấn, tooltip có "đã lưu 1" | ⬜ chưa chạy | |
+| UX-7 | Đang chạy lượt dài: gõ thêm ý + Enter → hàng "⏳ Chờ gửi…" hiện; lượt xong → tin tự gửi. Lặp lại rồi bấm **Bỏ** / **■** → chữ về lại ô nhập, không tự gửi | ⬜ chưa chạy | |
+| UX-8 | Đang chạy lượt: dòng "● Đang làm · … giây · N thao tác" đếm đúng; con trỏ ở ô nhập nhấn **Esc** → lượt dừng; con trỏ ở bản vẽ nhấn Esc → không dừng lượt | ⬜ chưa chạy | |
+| UX-9 | Yêu cầu xóa > 20 đối tượng → thẻ xác nhận có số to, **⌖ Xem trên bản vẽ** chọn đúng các đối tượng (Esc bỏ chọn), **Đồng ý** → xóa; U một lần → về như cũ | ⬜ chưa chạy | |
+| UX-10 | ⚙: 5 nhóm thu gọn, bấm tiêu đề mở/đóng; chưa đăng nhập thì nhóm *Tài khoản AI* tự mở; đổi Giao diện / Model vẫn có tác dụng như trước | ⬜ chưa chạy | |
 | R-1 | Macro có bo góc (fillet) giữa 2 đường vừa vẽ → chạy lại macro ở chỗ khác: bo góc 2 đường mới, 2 đường cũ giữ nguyên | ⬜ chưa chạy | |
 | R-2 | Bật Phiên bản, yêu cầu Claude "zoom vào khung tên rồi đổi chữ" → có phiên bản mới trước khi sửa; lượt chỉ zoom không có nút Hoàn tác | ⬜ chưa chạy | |
 | R-3 | "Vẽ lại rồi xóa đi các đường cũ" trên layer có > 20 đối tượng → Claude hỏi xác nhận trước khi xóa | ⬜ chưa chạy | |

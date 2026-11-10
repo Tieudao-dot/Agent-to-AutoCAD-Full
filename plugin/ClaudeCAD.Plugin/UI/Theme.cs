@@ -16,6 +16,8 @@ namespace ClaudeCAD.Plugin.UI
         public const string Fg = "cc.fg";
         public const string MutedFg = "cc.muted";
         public const string ErrorFg = "cc.error";
+        /// <summary>Warning glyph (confirmation, "AutoCAD đang bận"): the color sits on the icon, not the card.</summary>
+        public const string WarnFg = "cc.warn";
         public const string UserBg = "cc.user";
         public const string AssistantBg = "cc.assistant";
         public const string CardBg = "cc.card";
@@ -87,6 +89,7 @@ namespace ClaudeCAD.Plugin.UI
                 res[Fg] = B(0xEC, 0xEF, 0xF2);
                 res[MutedFg] = B(0xA0, 0xA8, 0xB0);
                 res[ErrorFg] = B(0xFF, 0x8A, 0x80);
+                res[WarnFg] = B(0xE8, 0xC1, 0x5A);
                 res[UserBg] = B(0x2B, 0x57, 0x97);
                 res[AssistantBg] = B(0x33, 0x38, 0x40);
                 res[CardBg] = B(0x3B, 0x34, 0x22);
@@ -107,6 +110,7 @@ namespace ClaudeCAD.Plugin.UI
                 res[Fg] = B(0x1F, 0x23, 0x28);
                 res[MutedFg] = B(0x5F, 0x67, 0x70);
                 res[ErrorFg] = B(0xC6, 0x28, 0x28);
+                res[WarnFg] = B(0xA6, 0x6A, 0x00);
                 res[UserBg] = B(0xD7, 0xE6, 0xFB);
                 res[AssistantBg] = B(0xFF, 0xFF, 0xFF);
                 res[CardBg] = B(0xFF, 0xF4, 0xD6);
