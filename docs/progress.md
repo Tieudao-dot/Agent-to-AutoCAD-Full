@@ -222,3 +222,5 @@ Cần test: D-1 … D-3.
 - Test: agent 127, core 120; build net48 + net8.
 
 Cần test trên AutoCAD thật: K-8 … K-16 (cùng K-1 … K-7, R-1 … R-6).
+
+**Chờ chủ plugin quyết (sau khi thử trên máy thật):** đổi cặp khóa kích hoạt trước khi phát hành? SECRET + khóa riêng hiện tại có xuất hiện trong nhật ký nội bộ của phiên làm việc cloud (đoạn ngữ cảnh lưu tự động khi sửa dòng email trong Code.gs), không có trên GitHub hay trong chat. Đổi khóa: tạo cặp mới bằng lệnh kín (không mở/sửa file chứa khóa), cập nhật `LicenseLogic.PublicModulus` + fixture test, chủ plugin dán Code.gs mới + `kiemTra` + Phiên bản mới (URL giữ nguyên), build lại bộ cài thử.
