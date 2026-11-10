@@ -78,3 +78,10 @@ Quy tắc:
 - Thư viện tham chiếu NuGet `AutoCAD.NET` 24.1.51000 và 25.0.1 (AdUiPalettes, AcMgd, AdWindows):
   các thuộc tính và API trong bảng trên đều có ở cả hai bản.
 - Nền model space tối mặc định RGB 33, 40, 48 (tài liệu Autodesk).
+
+## 6. Tooltip
+
+Mỗi nút icon và mỗi nút hành động đều có tooltip dạng **"Tên — giải thích ngắn"**, ví dụ
+"Chat mới — mở đoạn chat mới cho bản vẽ này, đoạn cũ vẫn xem lại được". Nút icon không đủ chỗ ghi
+số lượng, nên khi có nội dung (Macro đã lưu, Phiên bản, Ghi chú) icon chuyển sang màu nhấn và số
+lượng nằm trong tooltip — giống nút đang bật trong AutoCAD.

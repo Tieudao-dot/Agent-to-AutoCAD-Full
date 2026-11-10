@@ -1,6 +1,7 @@
 using System;
 using System.Windows;
 using System.Windows.Media;
+using System.Windows.Media.Effects;
 
 namespace ClaudeCAD.Plugin.UI
 {
@@ -31,6 +32,30 @@ namespace ClaudeCAD.Plugin.UI
         public const string PressBg = "cc.press";
         /// <summary>Text on top of <see cref="Accent"/>.</summary>
         public const string AccentFg = "cc.accentfg";
+
+        /// <summary>
+        /// Corner radius for every box in the palette. AutoCAD's own palettes are square, so this is 0 —
+        /// it stays a single constant so the whole shell can be rounded again from one place.
+        /// </summary>
+        public static readonly CornerRadius Corner = new CornerRadius(0);
+
+        /// <summary>
+        /// Thin shadow that lifts the toolbar, the input row and the cards off the model-space background.
+        /// </summary>
+        public static Effect Shadow(double depth = 2, double blur = 5, double opacity = 0.35)
+        {
+            var e = new DropShadowEffect
+            {
+                Color = Colors.Black,
+                Direction = depth >= 0 ? 270 : 90,
+                ShadowDepth = Math.Abs(depth),
+                BlurRadius = blur,
+                Opacity = opacity,
+                RenderingBias = RenderingBias.Performance,
+            };
+            e.Freeze();
+            return e;
+        }
 
         private static SolidColorBrush B(byte r, byte g, byte b)
         {
