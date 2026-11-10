@@ -394,12 +394,13 @@ namespace ClaudeCAD.Plugin.UI
             actions.Children.Add(_send);
             var left = new StackPanel { Orientation = Orientation.Horizontal };
             _leftActions = left;
-            _pickSel = MakeButton("Chọn đối tượng", "Quét chọn đối tượng trên bản vẽ để gửi kèm tin nhắn");
-            _pickPt = MakeButton("Lấy điểm", "Bấm điểm trên bản vẽ để chèn tọa độ vào tin nhắn (Enter để xong)");
-            _addImg = MakeButton("Ảnh", "Đính kèm ảnh phác thảo / ảnh scan (hoặc dán Ctrl+V, kéo thả vào khung chat)");
-            _capture = MakeButton("Chụp", "Chụp vùng bản vẽ đang xem gửi kèm tin nhắn, để chỉ cho Claude \"chỗ này sai\"");
+            // Same icon row as the toolbar (screen A1): glyph + "Tên — giải thích ngắn" tooltip.
+            _pickSel = IconButton("⬚", "Chọn đối tượng — quét chọn trên bản vẽ để gửi kèm tin nhắn");
+            _pickPt = IconButton("✛", "Lấy điểm — bấm điểm trên bản vẽ để chèn tọa độ vào tin nhắn (Enter để xong)");
+            _addImg = IconButton("▨", "Ảnh — đính kèm ảnh phác thảo / ảnh scan (hoặc dán Ctrl+V, kéo thả vào khung chat)");
+            _capture = IconButton("⛶", "Chụp — chụp vùng bản vẽ đang xem gửi kèm, để chỉ cho Claude \"chỗ này sai\"");
             _capture.Click += (s, e) => CaptureScreenRequested?.Invoke();
-            foreach (var b in new[] { _pickSel, _pickPt, _addImg, _capture }) { b.Margin = new Thickness(0, 0, 4, 0); left.Children.Add(b); }
+            foreach (var b in new[] { _pickSel, _pickPt, _addImg, _capture }) { b.Margin = new Thickness(0, 0, 2, 0); left.Children.Add(b); }
             actions.Children.Add(left);
             _pickSel.Click += (s, e) => PickSelectionRequested?.Invoke();
             _pickPt.Click += (s, e) => PickPointRequested?.Invoke();

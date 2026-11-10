@@ -487,7 +487,7 @@ namespace ClaudeCAD.UI.Tests
         {
             bool meterShown = false, meterHidden = false, queuedShown = false, queuedHidden = false, busyShown = false, busyHidden = false;
             bool stylesLoaded = false, flatButton = false;
-            int sendWhileBusy = 0, queueCancel = 0, stopOnEsc = 0, confirmYes = 0, preview = 0, categories = 0;
+            int sendWhileBusy = 0, queueCancel = 0, stopOnEsc = 0, confirmYes = 0, preview = 0, categories = 0, inputIcons = 0;
             string sendLabelBusy = null, sendLabelIdle = null;
             Sta(() =>
             {
@@ -559,6 +559,10 @@ namespace ClaudeCAD.UI.Tests
                 FindAll<Button>(c).First(b => (b.Content as string) == "Đồng ý").RaiseEvent(new RoutedEventArgs(System.Windows.Controls.Primitives.ButtonBase.ClickEvent));
                 Shot(c, "shell-xac-nhan");
 
+                // the row under the input is icons too: glyph content, "Tên — …" tooltip
+                var inputTips = new[] { "Chọn đối tượng — ", "Lấy điểm — ", "Ảnh — ", "Chụp — " };
+                inputIcons = FindAll<Button>(c).Count(b => b.Content is TextBlock && inputTips.Any(t => (b.ToolTip as string ?? "").StartsWith(t)));
+
                 // error + sign-in cards: glyph + plain text, no red card
                 c.EndAssistant(new ChatEntry { Role = "assistant", Text = "Tớ tìm thấy các đối tượng cần xóa trên layer A-TEMP." }, false, false);
                 c.AddErrorCard("AutoCAD đang bận, Claude chưa vẽ được. Có thể một lệnh hoặc hộp thoại đang mở — bấm Esc trong AutoCAD rồi thử lại.", true);
@@ -577,6 +581,7 @@ namespace ClaudeCAD.UI.Tests
             });
             Assert.True(stylesLoaded, "the palette's control styles did not parse");
             Assert.True(flatButton, "buttons still use the default Windows template");
+            Assert.Equal(4, inputIcons); // Chọn đối tượng, Lấy điểm, Ảnh, Chụp
             Assert.True(meterHidden, "usage meter must stay hidden with nothing to show");
             Assert.True(meterShown, "usage meter did not appear");
             Assert.True(busyShown, "busy line did not appear while a turn runs");

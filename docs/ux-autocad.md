@@ -106,3 +106,9 @@ Lý do: sidecar và cổng xác nhận tính "một tin = một lượt" (đếm
 ghép kết quả với lượt). Chèn tin giữa lượt sẽ làm lệch các phép tính an toàn đó. Sau lỗi, hết hạn mức, Dừng,
 hoặc khi lượt vừa hỏi "đồng ý?", chữ được trả về ô nhập để người dùng tự quyết — một tin chờ không bao giờ
 tự trả lời hộ một câu hỏi xác nhận.
+
+## 9. Hàng icon dưới ô nhập (màn A1)
+Bốn nút đính kèm dưới ô nhập dùng cùng `IconButton` với thanh công cụ: ⬚ Chọn đối tượng, ✛ Lấy điểm,
+▨ Ảnh, ⛶ Chụp. Tooltip theo mẫu "Tên — giải thích ngắn". Nút **Gửi** vẫn là nút chữ, vì đó là hành động chính
+và nhãn của nó đổi thành "Gửi thêm" khi Claude đang làm. Các glyph có trong font Segoe UI Symbol của Windows;
+nếu máy nào hiện ô vuông trống thì ghi vào test-log UX-18.
