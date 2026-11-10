@@ -61,39 +61,47 @@ namespace ClaudeCAD.Plugin.Drawing
             descriptor.addRequirement(Autodesk.AutoCAD.UniqueString.Intern("3D Drawing"));
             var kernel = Manager.AcquireGraphicsKernel(descriptor);
             byte[] png;
-            using (var view = new GsView())
+            try
             {
-                int cvport = Convert.ToInt32(AcApp.GetSystemVariable("CVPORT"));
-                try { gsm.SetViewFromViewport(view, cvport > 1 ? cvport : 2); }
-                catch (Exception ex) { Logger.Warn("capture: SetViewFromViewport failed: " + ex.Message); }
-                // always a plan (top) view of the window
-                view.SetView(new Point3d((a.X + b.X) / 2, (a.Y + b.Y) / 2, 1), new Point3d((a.X + b.X) / 2, (a.Y + b.Y) / 2, 0), Vector3d.YAxis, w, h);
-                using (var dev = gsm.CreateAutoCADOffScreenDevice(kernel))
+                using (var view = new GsView())
                 {
-                    dev.OnSize(new System.Drawing.Size(pw, ph));
-                    dev.DeviceRenderType = RendererType.Default;
-                    dev.BackgroundColor = System.Drawing.Color.FromArgb(33, 40, 48);
-                    dev.Add(view);
-                    dev.Update();
-                    using (var model = gsm.CreateAutoCADModel(kernel))
-                    using (var tr = db.TransactionManager.StartOpenCloseTransaction())
+                    int cvport = Convert.ToInt32(AcApp.GetSystemVariable("CVPORT"));
+                    try { gsm.SetViewFromViewport(view, cvport > 1 ? cvport : 2); }
+                    catch (Exception ex) { Logger.Warn("capture: SetViewFromViewport failed: " + ex.Message); }
+                    // always a plan (top) view of the window
+                    view.SetView(new Point3d((a.X + b.X) / 2, (a.Y + b.Y) / 2, 1), new Point3d((a.X + b.X) / 2, (a.Y + b.Y) / 2, 0), Vector3d.YAxis, w, h);
+                    using (var dev = gsm.CreateAutoCADOffScreenDevice(kernel))
                     {
-                        var bt = (BlockTable)tr.GetObject(db.BlockTableId, OpenMode.ForRead);
-                        var ms = (BlockTableRecord)tr.GetObject(bt[BlockTableRecord.ModelSpace], OpenMode.ForRead);
-                        view.Add(ms, model);
-                        view.ZoomExtents(new Point3d(a.X, a.Y, 0), new Point3d(b.X, b.Y, 0));
+                        dev.OnSize(new System.Drawing.Size(pw, ph));
+                        dev.DeviceRenderType = RendererType.Default;
+                        dev.BackgroundColor = System.Drawing.Color.FromArgb(33, 40, 48);
+                        dev.Add(view);
                         dev.Update();
-                        using (var bmp = view.GetSnapshot(new System.Drawing.Rectangle(0, 0, pw, ph)))
-                        using (var stream = new MemoryStream())
+                        using (var model = gsm.CreateAutoCADModel(kernel))
+                        using (var tr = db.TransactionManager.StartOpenCloseTransaction())
                         {
-                            bmp.Save(stream, System.Drawing.Imaging.ImageFormat.Png);
-                            png = stream.ToArray();
+                            var bt = (BlockTable)tr.GetObject(db.BlockTableId, OpenMode.ForRead);
+                            var ms = (BlockTableRecord)tr.GetObject(bt[BlockTableRecord.ModelSpace], OpenMode.ForRead);
+                            view.Add(ms, model);
+                            view.ZoomExtents(new Point3d(a.X, a.Y, 0), new Point3d(b.X, b.Y, 0));
+                            dev.Update();
+                            using (var bmp = view.GetSnapshot(new System.Drawing.Rectangle(0, 0, pw, ph)))
+                            using (var stream = new MemoryStream())
+                            {
+                                bmp.Save(stream, System.Drawing.Imaging.ImageFormat.Png);
+                                png = stream.ToArray();
+                            }
+                            view.EraseAll();
+                            tr.Commit();
                         }
-                        view.EraseAll();
-                        tr.Commit();
+                        dev.Erase(view);
                     }
-                    dev.Erase(view);
                 }
+            }
+            finally
+            {
+                // one reference per capture_view (every visual check) otherwise
+                try { Manager.ReleaseGraphicsKernel(kernel); } catch (Exception ex) { Logger.Warn("capture: kernel not released: " + ex.Message); }
             }
             return new CaptureResult { Png = png, Width = pw, Height = ph, Min = a, Max = b, Region = region ?? "window" };
         }

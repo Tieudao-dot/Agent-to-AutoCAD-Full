@@ -190,15 +190,20 @@ namespace ClaudeCAD.Plugin.Drawing
             var doc = _host.ResolveDocument();
             bool writes = def.Writes || (def.Name == "batch_execute" && BatchWrites(p));
             // undo_last_turn is registered as a read (it only queues U) but it changes the drawing
-            // save_drawing with a path renames the drawing (and overwrites a file): a change too
-            bool changes = writes || def.Name == "undo_last_turn" || (def.Name == "save_drawing" && p.Has("path"));
+            // save_drawing writes the DWG on disk (with a path it also renames the drawing): a change too, even
+            // without a path — it would store the user's unsaved manual edits while "Chỉ xem" is on
+            bool changes = writes || def.Name == "undo_last_turn" || def.Name == "save_drawing";
             if (changes && _host.ReadOnly && !ReadOnlyAllowed.Contains(def.Name))
                 throw new ToolException(ErrorCodes.ReadOnly, $"{def.Name}: {ReadOnlyMessage}");
 
-            if (writes && !_host.Undo.IsOpen && !ReadOnlyAllowed.Contains(def.Name)) _host.BeforeWrite(doc);
+            // A zoom changes only the view: it neither takes the version copy nor opens the turn's undo group.
+            // (Before, a zoom first opened the undo group and the version copy of the real change that followed
+            // was skipped; a zoom-only turn also offered "Hoàn tác lượt này".) BeforeWrite runs once per turn.
+            bool viewOnly = ReadOnlyAllowed.Contains(def.Name);
+            if (writes && !viewOnly) _host.BeforeWrite(doc);
             if (def.NoTransaction)
             {
-                if (writes) _host.Undo.EnsureStarted(doc);
+                if (writes && !viewOnly) _host.Undo.EnsureStarted(doc);
                 var ctx0 = new ToolContext(doc, null, writes, this);
                 var r0 = def.Handler(ctx0, p);
                 if (MacroLogic.ShouldRecord(def.Name, writes)) _host.RecordCall(def.Name, p.Raw, r0);

@@ -122,6 +122,18 @@ jobs:
             "- SHA-256: $h"
           ) | Set-Content -Encoding utf8 release-notes.md
 
+      # Since v0.9.4 every machine needs a key. A release built without the activation service url would lock
+      # out every user who updates (no way to request or check a key online): refuse to publish it.
+      - name: Activation service configured?
+        if: startsWith(github.ref, 'refs/tags/v') || inputs.release || steps.rel.outputs.new == 'true'
+        run: |
+          $url = (Get-Content activation/activation.json -Raw | ConvertFrom-Json).url
+          if ([string]::IsNullOrWhiteSpace($url)) {
+            Write-Error "activation/activation.json has no url: deploy the Apps Script (activation/README.md) and put its web app url there before releasing."
+            exit 1
+          }
+          Write-Host "activation service: $url"
+
       - name: Release (tags, a manual run with "release", or a new version on main)
         if: startsWith(github.ref, 'refs/tags/v') || inputs.release || steps.rel.outputs.new == 'true'
         uses: softprops/action-gh-release@v2

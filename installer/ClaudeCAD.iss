@@ -16,6 +16,8 @@
 #ifndef ActivationContact
   #define ActivationContact "Liên hệ Zalo owner: 0344644415"
 #endif
+; the contact text goes into Pascal string literals: double any '
+#define ContactPas StringChange(ActivationContact, "'", "''")
 
 [Setup]
 AppId={{8D3C1A52-6E4B-4F0A-9C27-3B5E7A1D9F40}
@@ -203,8 +205,9 @@ var
   Text: AnsiString;
 begin
   Result := False;
+  { CCL1|machine|date|signature (≈ 380 characters): a truncated / empty file does not hide the key page }
   if LoadStringFromFile(LicenseFile(), Text) then
-    Result := Pos('CCL1|' + MachineCode() + '|', String(Text)) = 1;
+    Result := (Pos('CCL1|' + MachineCode() + '|', String(Text)) = 1) and (Length(Text) > 100);
 end;
 
 { percent-encoding of the UTF-8 bytes (device / user names may be Vietnamese); Pascal Script has no nested routines }
@@ -229,16 +232,22 @@ begin
   end;
 end;
 
-{ GET through WinHTTP (follows Google's redirect to script.googleusercontent.com) }
+{ GET through WinHTTP (follows Google's redirect to script.googleusercontent.com). Short timeouts: the wizard
+  does not repaint while it waits. WinHTTP ignores the Windows (Internet Options) proxy unless told: use it. }
 function HttpGet(const Url: String; var Body: String): Boolean;
 var
   Req: Variant;
+  ProxyOn: Cardinal;
+  Proxy: String;
 begin
   Result := False;
   Body := '';
   try
     Req := CreateOleObject('WinHttp.WinHttpRequest.5.1');
-    Req.SetTimeouts(10000, 10000, 15000, 25000);
+    Req.SetTimeouts(5000, 5000, 8000, 12000);
+    if RegQueryDWordValue(HKCU, 'Software\Microsoft\Windows\CurrentVersion\Internet Settings', 'ProxyEnable', ProxyOn) and (ProxyOn <> 0) then
+      if RegQueryStringValue(HKCU, 'Software\Microsoft\Windows\CurrentVersion\Internet Settings', 'ProxyServer', Proxy) and (Trim(Proxy) <> '') then
+        Req.SetProxy(2, Trim(Proxy), '<local>');
     Req.Open('GET', Url, False);
     Req.SetRequestHeader('User-Agent', 'ClaudeCAD-Setup/{#AppVersion}');
     Req.Send('');
@@ -272,6 +281,7 @@ end;
 procedure SetStatus(const Text: String);
 begin
   if KeyStatus <> nil then KeyStatus.Caption := Text;
+  WizardForm.Refresh; { paint now: the request that follows blocks the window for a few seconds }
 end;
 
 procedure SendRequest();
@@ -284,14 +294,22 @@ begin
     exit;
   end;
   SetStatus('Đang gửi yêu cầu kích hoạt cho chủ plugin...');
-  if HttpGet('{#ActivationUrl}?action=request&machine=' + MachineCode() + '&device=' + UrlEncode(GetComputerNameString()) +
-             '&user=' + UrlEncode(GetUserNameString()) + '&from=' + UrlEncode('setup {#AppVersion}'), Body) and JsonOk(Body) then
+  if not HttpGet('{#ActivationUrl}?action=request&machine=' + MachineCode() + '&device=' + UrlEncode(GetComputerNameString()) +
+                 '&user=' + UrlEncode(GetUserNameString()) + '&from=' + UrlEncode('setup {#AppVersion}'), Body) then
+    SetStatus('Không gửi được yêu cầu tự động (máy chưa có mạng?). Nhắn mã máy ở trên cho chủ plugin qua Zalo.')
+  else if not JsonOk(Body) then
   begin
-    Requested := True;
-    SetStatus('Đã gửi yêu cầu kích hoạt (mã máy + tên thiết bị) cho chủ plugin. Nhận key qua Zalo rồi dán vào ô trên.');
+    if JsonValue(Body, 'error') <> '' then SetStatus(JsonValue(Body, 'error') + ' Nhắn mã máy ở trên cho chủ plugin qua Zalo.')
+    else SetStatus('Máy chủ kích hoạt chưa sẵn sàng. Nhắn mã máy ở trên cho chủ plugin qua Zalo.');
   end
   else
-    SetStatus('Không gửi được yêu cầu tự động (máy chưa có mạng?). Nhắn mã máy ở trên cho chủ plugin qua Zalo.');
+  begin
+    Requested := True;
+    if Pos('"sent":false', Body) > 0 then
+      SetStatus('Yêu cầu của máy này đã được gửi cho chủ plugin trước đó. Nhận key qua Zalo rồi dán vào ô trên.')
+    else
+      SetStatus('Đã gửi yêu cầu kích hoạt (mã máy + tên thiết bị) cho chủ plugin. Nhận key qua Zalo rồi dán vào ô trên.');
+  end;
 end;
 
 procedure AskClick(Sender: TObject);
@@ -333,7 +351,7 @@ begin
   K := Uppercase(K);
   if Length(K) <> 16 then begin Err := 'Key gồm 16 ký tự dạng XXXX-XXXX-XXXX-XXXX.'; exit; end;
   if '{#ActivationUrl}' = '' then begin Err := 'Bộ cài này chưa có máy chủ kích hoạt — xin chủ plugin mã kích hoạt offline (dòng dài bắt đầu bằng CCL1|).'; exit; end;
-  if not HttpGet('{#ActivationUrl}?action=activate&machine=' + MachineCode() + '&key=' + K, Body) then
+  if not HttpGet('{#ActivationUrl}?action=activate&machine=' + MachineCode() + '&key=' + UrlEncode(K), Body) then
   begin
     Err := 'Không kết nối được máy chủ kích hoạt. Kiểm tra mạng rồi bấm Next lại.';
     exit;
@@ -360,8 +378,12 @@ begin
   Intro.Parent := KeyPage.Surface;
   Intro.WordWrap := True;
   Intro.Width := KeyPage.SurfaceWidth;
-  Intro.Caption := 'ClaudeCAD chỉ cài được khi có key do chủ plugin cấp, riêng cho từng máy.' + #13#10 +
-                   '{#ActivationContact} để nhận key.';
+  if '{#ActivationUrl}' <> '' then
+    Intro.Caption := 'ClaudeCAD chỉ cài được khi có key do chủ plugin cấp, riêng cho từng máy.' + #13#10 +
+                     '{#ContactPas} để nhận key.'
+  else
+    Intro.Caption := 'ClaudeCAD chỉ cài được khi có mã kích hoạt do chủ plugin cấp, riêng cho từng máy.' + #13#10 +
+                     '{#ContactPas}, gửi mã máy bên dưới để nhận mã kích hoạt (dòng dài bắt đầu bằng CCL1|).';
 
   CodeLabel := TNewStaticText.Create(KeyPage);
   CodeLabel.Parent := KeyPage.Surface;
@@ -393,6 +415,7 @@ begin
   AskButton.Height := ScaleY(23);
   AskButton.Caption := 'Gửi lại yêu cầu';
   AskButton.OnClick := @AskClick;
+  AskButton.Visible := '{#ActivationUrl}' <> ''; { nothing to send to in a build without the activation service }
 
   KeyLabel := TNewStaticText.Create(KeyPage);
   KeyLabel.Parent := KeyPage.Surface;
@@ -403,6 +426,7 @@ begin
   KeyEdit.Parent := KeyPage.Surface;
   KeyEdit.Top := KeyLabel.Top + KeyLabel.Height + ScaleY(4);
   KeyEdit.Width := KeyPage.SurfaceWidth;
+  KeyEdit.Text := ExpandConstant('{param:KEY|}'); { /KEY= also fills the box in a normal (not silent) run }
 
   KeyStatus := TNewStaticText.Create(KeyPage);
   KeyStatus.Parent := KeyPage.Surface;
@@ -412,9 +436,11 @@ begin
   KeyStatus.Caption := '';
 end;
 
+{ Silent installs never show the page (Inno would click Next with an empty box and abort): /KEY= is used in
+  CurStepChanged, and without it the plugin asks for the key inside AutoCAD. }
 function ShouldSkipPage(PageID: Integer): Boolean;
 begin
-  Result := (KeyPage <> nil) and (PageID = KeyPage.ID) and HasLicense();
+  Result := (KeyPage <> nil) and (PageID = KeyPage.ID) and (HasLicense() or WizardSilent());
 end;
 
 procedure CurPageChanged(CurPageID: Integer);

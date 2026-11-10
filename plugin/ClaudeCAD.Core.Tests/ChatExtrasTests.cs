@@ -353,5 +353,34 @@ namespace ClaudeCAD.Core.Tests
             Assert.False(back.Hotkey);
             Assert.True(back.PlanFirst);
         }
+
+        [Fact]
+        public void MacroFilletUsesTheReplayedLines()
+        {
+            // draw_line → A1, draw_line → A2, fillet {handle1: A1, handle2: A2}: on replay the fillet must use the new lines,
+            // never the user's original A1 / A2
+            Assert.True(MacroLogic.IsHandleKey("handle1"));
+            Assert.True(MacroLogic.IsHandleKey("handle2"));
+            Assert.False(MacroLogic.IsHandleKey("handler"));
+            Assert.False(MacroLogic.IsHandleKey("handle_style"));
+            var map = new Dictionary<string, string> { ["A1"] = "B1", ["A2"] = "B2" };
+            var p = new Dictionary<string, object> { ["handle1"] = "A1", ["handle2"] = "A2", ["radius"] = 50.0 };
+            var r = (Dictionary<string, object>)MacroLogic.Remap(p, map);
+            Assert.Equal("B1", r["handle1"]);
+            Assert.Equal("B2", r["handle2"]);
+            // the fillet depends on lines created in the same batch → it starts a new batch
+            var calls = new List<MacroCall>
+            {
+                new MacroCall { Tool = "draw_line", Params = new Dictionary<string, object>(), ResultHandles = new List<string> { "A1" } },
+                new MacroCall { Tool = "draw_line", Params = new Dictionary<string, object>(), ResultHandles = new List<string> { "A2" } },
+                new MacroCall { Tool = "fillet_entities", Params = p, ResultHandles = new List<string>() },
+            };
+            var groups = MacroLogic.PlanBatches(calls, t => true);
+            Assert.Equal(2, groups.Count);
+            Assert.Equal(new List<int> { 2 }, groups[1]);
+            // a failed draw_line on replay: the fillet is skipped instead of hitting the user's line
+            var created = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "A1", "A2" };
+            Assert.Equal(new List<string> { "A2" }, MacroLogic.Unresolved(p, created, new Dictionary<string, string> { ["A1"] = "B1" }));
+        }
     }
 }

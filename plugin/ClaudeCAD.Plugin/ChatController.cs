@@ -223,8 +223,9 @@ namespace ClaudeCAD.Plugin
                 _ipc.Start();
                 UpdateService.CheckInBackground(msg => { Ui.AddNote(msg); Ui.ShowToast(msg, ChatControl.ToastKind.Info, 10); }); // phase 3: daily update check
             }
+            // no Node / Claude Code process on a machine without a licence: it would run for nothing
             if (!Activation.IsActivated) ShowActivationCard();
-            _sidecar.EnsureStarted();
+            else _sidecar.EnsureStarted();
         }
 
         /// <summary>CLAUDECHATUPDATE: check now and stage the update if there is one.</summary>
@@ -253,7 +254,7 @@ namespace ClaudeCAD.Plugin
         public void RestartSidecar()
         {
             ShowPalette();
-            _sidecar.Restart();
+            RestartSidecarQuietly();
         }
 
         private void WatchDoc(Document d)
@@ -510,6 +511,14 @@ namespace ClaudeCAD.Plugin
         private void LoadTranscriptFor(Document doc)
         {
             SaveTranscript();
+            // the request waiting for the usage limit belongs to the drawing we leave: never resend it into another one
+            if (doc != _transcriptDoc)
+            {
+                if (CancelAutoRetry()) Ui.ShowToast("Đã hủy tự gửi lại vì cậu chuyển sang bản vẽ khác.", ChatControl.ToastKind.Info, 6);
+                _lastPayload = null;
+                _lastUserEntry = null;
+            }
+            _activationCardShown = false; // the card (if any) went away with the old conversation
             _chatGen++;
             _pendingConfirm = null;
             _pendingPlan = null;
@@ -689,6 +698,8 @@ namespace ClaudeCAD.Plugin
             if (RefuseOnVersionTab(doc, null)) return;
             lock (_gate)
             {
+                // two Retry() posts in one pump cycle (auto-retry timer + "Thử lại") would start the same turn twice
+                if (_busy) return;
                 _busy = true;
                 _turnSeq++;
                 if (payload != null) payload["turn_id"] = "t-" + _turnSeq.ToString(CultureInfo.InvariantCulture);
@@ -728,13 +739,20 @@ namespace ClaudeCAD.Plugin
             if (!toAgent) return;
             _ipc.SendAsync(payload).ContinueWith(t =>
             {
-                if (!t.Result) EndTurn("Gửi tin nhắn thất bại: mất kết nối với trợ lý.", true);
+                if (t.IsFaulted) Logger.Error("send user_message failed", t.Exception?.GetBaseException());
+                if (t.IsFaulted || !t.Result) EndTurn("Gửi tin nhắn thất bại: mất kết nối với trợ lý.", true);
             });
         }
 
         private void Retry()
         {
             if (_busy || _lastPayload == null) return;
+            if (AcApp.DocumentManager.MdiActiveDocument != _transcriptDoc)
+            {
+                // the last request was made in another drawing (or that drawing was closed)
+                Ui.SetToolStatus("Yêu cầu trước thuộc bản vẽ khác — gõ lại yêu cầu cho bản vẽ này.");
+                return;
+            }
             var copy = new ChatEntry { Role = "user", Text = _lastUserEntry?.Text ?? "", SelectionCount = _lastUserEntry?.SelectionCount ?? 0, ImageCount = _lastUserEntry?.ImageCount ?? 0, Layers = _lastUserEntry?.Layers?.ToList() ?? new List<string>() };
             if (!_ipc.IsConnected)
             {
@@ -788,6 +806,9 @@ namespace ClaudeCAD.Plugin
             _pendingPlan = null;
             if (_macroRunning) { _macroCancel = true; _macroRunning = false; }
             CancelAutoRetry();
+            _lastPayload = null; // "Thử lại" must not resend the old request into the new chat
+            _lastUserEntry = null;
+            _activationCardShown = false;
             try { History.Reset(_transcriptDoc, KeyFor(_transcriptDoc), DrawingPathOf(_transcriptDoc)); }
             catch (Exception ex) { Logger.Warn("snapshot reset failed: " + ex.Message); }
             if (_transcript != null)
@@ -875,6 +896,8 @@ namespace ClaudeCAD.Plugin
                 else Ui.DiscardAssistant();
                 // an agent error without any reply (login, rate limit, crash) becomes a retry card
                 if (string.IsNullOrEmpty(errorNote) && empty && !string.IsNullOrEmpty(_lastError)) errorNote = _lastError;
+                // the usage limit already has its own card for this turn: no second, generic "Lượt bị lỗi" card
+                if (_limitHitTurn == _turnSeq) errorNote = null;
                 if (!string.IsNullOrEmpty(errorNote))
                 {
                     _transcript?.Entries.Add(new ChatEntry { Role = "error", Text = errorNote });
@@ -1486,9 +1509,12 @@ namespace ClaudeCAD.Plugin
                     _loginRunning = false;
                     if (status.LoggedIn == true)
                     {
-                        Ui.AddNote("✓ Đã đăng nhập Claude. Trợ lý khởi động lại với tài khoản này — cậu gõ yêu cầu được rồi.");
+                        if (ClaudeAuth.ApiKeyInUse)
+                            Ui.AddNote("✓ Đã đăng nhập Claude, nhưng plugin vẫn dùng API key (được ưu tiên hơn tài khoản). Muốn dùng tài khoản Claude: ⚙ ▸ Dùng API key ▸ Xóa key đã lưu.", true);
+                        else
+                            Ui.AddNote("✓ Đã đăng nhập Claude. Trợ lý khởi động lại với tài khoản này — cậu gõ yêu cầu được rồi.");
                         Ui.ShowToast("Đã đăng nhập Claude.", ChatControl.ToastKind.Success);
-                        _sidecar.Restart();
+                        RestartSidecarQuietly();
                     }
                     else Ui.AddLoginCard("Chưa đăng nhập xong (" + status.Label + "). Bấm lại để thử lần nữa.");
                 }));
@@ -1513,10 +1539,12 @@ namespace ClaudeCAD.Plugin
             kind == "five_hour" ? "hạn mức 5 giờ" : kind != null && kind.StartsWith("seven_day") ? "hạn mức tuần" : "hạn mức sử dụng";
 
         /// <summary>Limit reached: one card per turn in the conversation, plus a toast.</summary>
-        private void ShowLimitCard(string code)
+        private int _limitHitTurn = -1;
+
+        private void ShowLimitCard(string code, int turn)
         {
-            if (_limitCardTurn == _turnSeq) return;
-            _limitCardTurn = _turnSeq;
+            if (_limitCardTurn == turn) return; // one card per turn (agent_error + rate_limit event)
+            _limitCardTurn = turn;
             if (code == "billing_error")
             {
                 Ui.AddLimitCard("Tài khoản Claude hết hạn mức thanh toán", "Gói đã hết hạn hoặc thanh toán bị lỗi. Kiểm tra trên claude.ai (Settings ▸ Billing), hoặc dùng API key.", null, false, false);
@@ -1539,7 +1567,11 @@ namespace ClaudeCAD.Plugin
             _autoRetryTimer?.Dispose();
             _autoRetryTimer = null;
             _autoRetryOn = on && _rateResetsAt.HasValue && _lastPayload != null;
-            if (!_autoRetryOn) { Ui.ShowToast("Đã hủy tự gửi lại.", ChatControl.ToastKind.Info); return; }
+            if (!_autoRetryOn)
+            {
+                Ui.ShowToast(on ? "Chưa biết giờ làm mới hạn mức (hoặc không còn yêu cầu để gửi lại) — gửi lại tay khi có hạn mức." : "Đã hủy tự gửi lại.", ChatControl.ToastKind.Info, 6);
+                return;
+            }
             var due = _rateResetsAt.Value.AddSeconds(60) - DateTime.Now;
             if (due < TimeSpan.FromSeconds(5)) due = TimeSpan.FromSeconds(5);
             _autoRetryTimer = new System.Threading.Timer(_ => Ui.Enqueue(() =>
@@ -1553,12 +1585,14 @@ namespace ClaudeCAD.Plugin
             Ui.ShowToast($"Sẽ tự gửi lại lúc {_rateResetsAt.Value.AddSeconds(60):HH:mm} (cứ để AutoCAD mở).", ChatControl.ToastKind.Success, 5);
         }
 
-        private void CancelAutoRetry()
+        /// <summary>Turns "Tự gửi lại" off; true when it was on.</summary>
+        private bool CancelAutoRetry()
         {
-            if (!_autoRetryOn) return;
-            _autoRetryOn = false;
             _autoRetryTimer?.Dispose();
             _autoRetryTimer = null;
+            if (!_autoRetryOn) return false;
+            _autoRetryOn = false;
+            return true;
         }
 
         // ================================================================= v0.9.2: account, bug report
@@ -1596,8 +1630,10 @@ namespace ClaudeCAD.Plugin
             {
                 if (t.Result)
                 {
-                    Ui.AddNote("Đã đăng xuất tài khoản Claude trên máy này. Bấm ⚙ ▸ Đăng nhập Claude để đăng nhập lại.");
-                    _sidecar.Restart();
+                    Ui.AddNote(ClaudeAuth.ApiKeyInUse
+                        ? "Đã đăng xuất tài khoản Claude trên máy này. Trợ lý vẫn chạy bằng API key đã lưu (⚙ ▸ Dùng API key ▸ Xóa key đã lưu để ngừng)."
+                        : "Đã đăng xuất tài khoản Claude trên máy này. Bấm ⚙ ▸ Đăng nhập Claude để đăng nhập lại.");
+                    RestartSidecarQuietly();
                 }
                 else Ui.AddErrorCard("Không đăng xuất được (không thấy Claude Code đi kèm plugin hoặc lệnh bị lỗi). Xóa tay file %USERPROFILE%\\.claude\\.credentials.json nếu cần.", false);
             }));
@@ -1609,7 +1645,7 @@ namespace ClaudeCAD.Plugin
             catch (Exception ex) { Ui.AddErrorCard("Không lưu được API key: " + ex.Message, false); return; }
             Ui.AddNote($"✓ Đã lưu API key {ApiKeyStore.Mask(key)} (mã hóa cho tài khoản Windows này). Trợ lý khởi động lại và dùng key này thay cho tài khoản Claude.");
             Ui.ShowToast("Đã lưu API key — trợ lý đang khởi động lại.", ChatControl.ToastKind.Success);
-            _sidecar.Restart();
+            RestartSidecarQuietly();
         }
 
         private void ClearApiKey()
@@ -1618,7 +1654,7 @@ namespace ClaudeCAD.Plugin
             ApiKeyStore.Clear();
             Ui.AddNote("Đã xóa API key đã lưu. Trợ lý khởi động lại và dùng tài khoản Claude đã đăng nhập" +
                        (string.IsNullOrEmpty(Environment.GetEnvironmentVariable("ANTHROPIC_API_KEY")) ? "." : " — lưu ý: biến môi trường ANTHROPIC_API_KEY vẫn đang được đặt và vẫn được ưu tiên."));
-            _sidecar.Restart();
+            RestartSidecarQuietly();
         }
 
         /// <summary>"Gửi báo cáo lỗi": zip on the Desktop, then Explorer shows it.</summary>
@@ -1684,12 +1720,13 @@ namespace ClaudeCAD.Plugin
 
         private bool _activationCardShown;
         private bool _activating;
+        private bool _autoRequested; // the automatic request is sent once per AutoCAD session at most
 
         /// <summary>False (and the activation card is shown) while this machine has no valid licence.</summary>
         private bool RequireActivation()
         {
             if (Activation.IsActivated) return true;
-            ShowActivationCard(force: _activationCardShown);
+            ShowActivationCard(force: true); // the palette reuses the live card (brings it into view)
             Ui.SetToolStatus("Cần kích hoạt ClaudeCAD trên máy này trước. " + Activation.Contact + ".");
             return false;
         }
@@ -1703,7 +1740,8 @@ namespace ClaudeCAD.Plugin
         {
             if (_activationCardShown && !force) return;
             _activationCardShown = true;
-            bool auto = Activation.ShouldAutoRequest && Activation.ServiceUrl != null;
+            bool auto = !_autoRequested && Activation.ShouldAutoRequest && Activation.ServiceUrl != null;
+            if (auto) _autoRequested = true;
             Ui.AddActivationCard(Activation.MachineCode, Activation.DeviceName, Activation.Contact,
                 auto ? "Đang gửi yêu cầu kích hoạt cho chủ plugin..." : "Bấm \"Gửi yêu cầu kích hoạt\" để chủ plugin nhận mã máy qua email, hoặc nhắn mã máy qua Zalo.");
             if (auto) RequestActivation();
@@ -1730,7 +1768,11 @@ namespace ClaudeCAD.Plugin
                 Ui.SetActivationStatus(msg, !ok, ok);
                 if (!ok) return;
                 Ui.ShowToast("Đã kích hoạt ClaudeCAD", ChatControl.ToastKind.Success, 6);
-                Ui.Enqueue(() => ShowWelcome(autoLogin: true)); // next step: Claude sign-in (opens by itself when needed)
+                Ui.Enqueue(() =>
+                {
+                    _sidecar.EnsureStarted(); // not started while the machine had no licence
+                    ShowWelcome(autoLogin: true); // next step: Claude sign-in (opens by itself when needed)
+                });
             });
         }
 
@@ -1878,7 +1920,7 @@ namespace ClaudeCAD.Plugin
             catch (Exception ex)
             {
                 Logger.Error("version copy failed", ex);
-                Ui.SetToolStatus("Không lưu được phiên bản trước khi sửa: " + ex.Message);
+                Ui.ShowToast("Không lưu được phiên bản trước khi sửa: " + ex.Message, ChatControl.ToastKind.Warning, 8); // the status line is cleared when the turn ends
             }
         }
 
@@ -1943,7 +1985,12 @@ namespace ClaudeCAD.Plugin
                         var code = msg.TryGetValue("code", out var cv0) ? cv0 as string : null;
                         if (code == "rate_limit" || code == "billing_error")
                         {
-                            Ui.Enqueue(() => ShowLimitCard(code));
+                            _limitHitTurn = _turnSeq;
+                            int turn = _turnSeq;
+                            // the SDK's rate_limit event (with the reset time) often comes right after this error:
+                            // wait a moment so the one card shows the time and offers "Tự gửi lại"
+                            if (code == "rate_limit") Task.Delay(700).ContinueWith(_ => Ui.Enqueue(() => ShowLimitCard(code, turn)));
+                            else Ui.Enqueue(() => ShowLimitCard(code, turn));
                             if (_busy) _lastError = null; // the limit card replaces the generic error card
                             break;
                         }
@@ -1999,7 +2046,12 @@ namespace ClaudeCAD.Plugin
                         _rateUtil = util;
                         _rateKind = kind ?? "";
                         _rateResetsAt = msg.TryGetValue("resets_at", out var rv2) && rv2 is double rd2 ? DateTimeOffset.FromUnixTimeSeconds((long)rd2).LocalDateTime : (DateTime?)null;
-                        if (status == "rejected") Ui.Enqueue(() => ShowLimitCard(null));
+                        if (status == "rejected")
+                        {
+                            if (_busy) _limitHitTurn = _turnSeq;
+                            int turn = _turnSeq;
+                            Ui.Enqueue(() => ShowLimitCard(null, turn));
+                        }
                         else if (status == "allowed_warning" || util >= 0.8)
                         {
                             // once per limit window: "sắp hết hạn mức"
@@ -2122,9 +2174,20 @@ namespace ClaudeCAD.Plugin
             }
         }
 
+        private volatile bool _restartExpected;
+
+        /// <summary>Restart asked by the user (sign-in, API key, CLAUDECHATRESTART): no "Mất kết nối" warning for it.</summary>
+        private void RestartSidecarQuietly()
+        {
+            _restartExpected = true;
+            _sidecar.Restart();
+        }
+
         private void OnDisconnected(string reason)
         {
-            if (!_wasDisconnected) Ui.ShowToast("Mất kết nối với trợ lý — đang thử kết nối lại...", ChatControl.ToastKind.Warning, 6);
+            bool expected = _restartExpected;
+            _restartExpected = false;
+            if (!_wasDisconnected && !expected) Ui.ShowToast("Mất kết nối với trợ lý — đang thử kết nối lại...", ChatControl.ToastKind.Warning, 6);
             _wasDisconnected = true;
             if (_busy && !_macroRunning) EndTurn("Mất kết nối với trợ lý giữa lượt; lượt này đã dừng. Lịch sử chat vẫn giữ nguyên.", true);
             Ui.SetConnection("Mất kết nối với trợ lý...", false);

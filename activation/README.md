@@ -58,4 +58,5 @@ Key vẫn riêng cho từng máy. Cài ngầm mà không có `/KEY=` thì plugin
   Bỏ `--secret` thì script tạo SECRET mới, và mọi key đã gửi trước đó đều không còn dùng được để kích hoạt máy mới. Giấy phép đã kích hoạt vẫn dùng được.
 - **Đổi cặp khóa** (lộ khóa riêng): tạo khóa mới bằng `openssl genrsa -out license-private.pem 2048`, chạy `--print-public` để lấy khóa công khai, cập nhật `LicenseLogic.PublicModulus`, rồi phát hành bản mới. Lưu ý: giấy phép cũ sẽ hết hiệu lực trên bản mới, nên mọi máy phải kích hoạt lại.
 - **Giới hạn:** mã nguồn đang công khai. Người biết lập trình có thể sửa mã để bỏ bước kiểm tra rồi tự build lại. Key chặn được người dùng thông thường; muốn chặn cả trường hợp này thì phải để repo ở chế độ riêng tư.
-- **Hạn mức email của Google:** khoảng 100 email/ngày với Gmail thường. Một máy hỏi lại trong vòng 30 phút sẽ không tạo email mới.
+- **Chống spam:** tối đa 10 email xin key mỗi giờ; chừa lại 5 lượt trong hạn mức email ngày (~100 với Gmail thường) cho `taoKeyThuCong` / `kiemTra`. Một máy hỏi lại trong vòng 30 phút không tạo email mới. Xem các lượt xin / kích hoạt ở **Thực thi** (Executions) trong script.google.com.
+- **Tên thiết bị và người dùng trong email do máy kia tự khai** — xác nhận người xin key qua Zalo trước khi gửi key.

@@ -31,11 +31,16 @@ namespace ClaudeCAD.Plugin.Sidecar
     /// </summary>
     public static class ClaudeAuth
     {
-        public static Task<AuthStatus> StatusAsync() => Task.Run(() =>
+        /// <summary>An API key (saved in the plugin or ANTHROPIC_API_KEY) is used instead of the Claude account.</summary>
+        public static bool ApiKeyInUse =>
+            (ApiKeyStore.HasKey && ApiKeyStore.Load() != null) || !string.IsNullOrEmpty(Environment.GetEnvironmentVariable("ANTHROPIC_API_KEY"));
+
+        /// <param name="accountOnly">true: the Claude account itself (after a browser sign-in), even when an API key is in use.</param>
+        public static Task<AuthStatus> StatusAsync(bool accountOnly = false) => Task.Run(() =>
         {
-            if (ApiKeyStore.HasKey && ApiKeyStore.Load() != null)
+            if (!accountOnly && ApiKeyStore.HasKey && ApiKeyStore.Load() != null)
                 return new AuthStatus { LoggedIn = true, Method = "api_key_saved" };
-            if (!string.IsNullOrEmpty(Environment.GetEnvironmentVariable("ANTHROPIC_API_KEY")))
+            if (!accountOnly && !string.IsNullOrEmpty(Environment.GetEnvironmentVariable("ANTHROPIC_API_KEY")))
                 return new AuthStatus { LoggedIn = true, Method = "api_key" };
             var exe = PluginPaths.ClaudeExecutable;
             if (exe == null) return new AuthStatus { Error = "không thấy Claude Code đi kèm plugin" };
@@ -51,6 +56,7 @@ namespace ClaudeCAD.Plugin.Sidecar
                 using (var p = Process.Start(psi))
                 {
                     var outTask = p.StandardOutput.ReadToEndAsync();
+                    var errTask = p.StandardError.ReadToEndAsync(); // drained: a full stderr pipe would block claude
                     if (!p.WaitForExit(20000)) { try { p.Kill(); } catch { } return new AuthStatus { Error = "hết thời gian chờ" }; }
                     return Parse(outTask.Result);
                 }
@@ -121,7 +127,7 @@ namespace ClaudeCAD.Plugin.Sidecar
             {
                 try { p.WaitForExit(); } catch { }
                 try { p.Dispose(); } catch { }
-                done?.Invoke(await StatusAsync().ConfigureAwait(false));
+                done?.Invoke(await StatusAsync(accountOnly: true).ConfigureAwait(false));
             });
             return true;
         }

@@ -437,8 +437,11 @@ export class LineDecoder {
   private readonly decoder = new StringDecoder('utf8');
   private buffer = '';
   private first = true;
+  /** After an over-long line: drop everything up to its end, then read normally again. */
+  private skipping = false;
 
-  constructor(private readonly maxLineLength = 16 * 1024 * 1024) {}
+  // 64 M characters: a message with several photos (≤ 3.5 MB each, base64) still fits
+  constructor(private readonly maxLineLength = 64 * 1024 * 1024) {}
 
   /** Feeds a chunk; returns the complete lines it finished (without terminators). */
   push(chunk: Buffer | string): string[] {
@@ -446,6 +449,12 @@ export class LineDecoder {
     if (this.first && text.length > 0) {
       if (text.charCodeAt(0) === 0xfeff) text = text.slice(1);
       this.first = false;
+    }
+    if (this.skipping) {
+      const nl = text.indexOf('\n');
+      if (nl < 0) return [];
+      text = text.slice(nl + 1);
+      this.skipping = false;
     }
     this.buffer += text;
     const lines: string[] = [];
@@ -458,6 +467,7 @@ export class LineDecoder {
     }
     if (this.buffer.length > this.maxLineLength) {
       this.buffer = '';
+      this.skipping = true; // the rest of this line must not be read as a new message
       throw new ProtocolError(`line longer than ${this.maxLineLength} characters`);
     }
     return lines;

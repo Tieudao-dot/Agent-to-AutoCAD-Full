@@ -19,6 +19,10 @@ var SECRET = '{{SECRET}}';
 var PRIVATE_KEY = '{{PRIVATE_KEY}}';
 var TIME_ZONE = 'Asia/Ho_Chi_Minh';
 var MAY_THU_CONG = 'CC-0000-0000-0000';
+// Anti-spam: the web app URL is inside every installer. Without a limit, ~100 made-up requests would use up the
+// Gmail quota of the day (≈ 100 emails) and real users could not get a key until tomorrow.
+var MAX_MAILS_PER_HOUR = 10;
+var KEEP_DAILY_QUOTA = 5; // left for taoKeyThuCong / kiemTra
 
 var MACHINE_RE = /^CC-[0-9A-F]{4}-[0-9A-F]{4}-[0-9A-F]{4}$/;
 var B32 = '0123456789ABCDEFGHJKMNPQRSTVWXYZ'; // Crockford: no I, L, O, U
@@ -48,6 +52,30 @@ function handleRequest(p) {
   var cache = CacheService.getScriptCache();
   var seen = 'req:' + machine;
   if (cache.get(seen)) return { ok: true, sent: false };
+  var lock = LockService.getScriptLock();
+  if (!lock.tryLock(5000)) return { ok: false, error: 'Máy chủ kích hoạt đang bận, thử lại sau ít phút.' };
+  try {
+    var hour = 'mails:' + Utilities.formatDate(new Date(), 'UTC', 'yyyyMMddHH');
+    var sentThisHour = Number(cache.get(hour) || 0);
+    if (sentThisHour >= MAX_MAILS_PER_HOUR) {
+      console.log('request refused (hourly limit): ' + machine + ' ' + device);
+      return { ok: false, error: 'Có quá nhiều yêu cầu kích hoạt trong giờ này, thử lại sau.' };
+    }
+    if (MailApp.getRemainingDailyQuota() <= KEEP_DAILY_QUOTA) {
+      console.log('request refused (daily email quota): ' + machine + ' ' + device);
+      return { ok: false, error: 'Máy chủ kích hoạt đã hết lượt gửi email hôm nay.' };
+    }
+    sendRequestMail(machine, device, user, from);
+    cache.put(hour, String(sentThisHour + 1), 3600);
+    cache.put(seen, '1', 1800);
+    console.log('request mailed: ' + machine + ' ' + device + ' (' + user + ')');
+    return { ok: true, sent: true };
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+function sendRequestMail(machine, device, user, from) {
   var key = makeKey(machine);
   var when = Utilities.formatDate(new Date(), TIME_ZONE, 'dd/MM/yyyy HH:mm');
   MailApp.sendEmail(EMAIL,
@@ -61,9 +89,8 @@ function handleRequest(p) {
     'KEY: ' + key + '\n\n' +
     'Đồng ý cho máy này dùng: gửi key trên cho người đó (Zalo).\n' +
     'Không đồng ý: bỏ qua email này — không có key thì không cài và không dùng được plugin.\n' +
-    'Key chỉ dùng được trên đúng máy có mã ' + machine + ', vĩnh viễn.');
-  cache.put(seen, '1', 1800);
-  return { ok: true, sent: true };
+    'Key chỉ dùng được trên đúng máy có mã ' + machine + ', vĩnh viễn.\n\n' +
+    'Lưu ý: tên thiết bị và người dùng do máy kia tự khai; hãy xác nhận người xin key qua Zalo trước khi gửi.');
 }
 
 function handleActivate(p) {
@@ -71,8 +98,10 @@ function handleActivate(p) {
   if (!machine) return { ok: false, error: 'Mã máy không hợp lệ.' };
   var key = normKey(p.key);
   if (key.length !== 16 || key !== makeKey(machine).replace(/-/g, '')) {
+    console.log('activation refused: ' + machine);
     return { ok: false, error: 'Key không đúng với máy này (mã máy ' + machine + '). Kiểm tra lại key, hoặc xin key mới.' };
   }
+  console.log('activated: ' + machine);
   return { ok: true, license: makeLicense(machine) };
 }
 

@@ -122,7 +122,7 @@ namespace ClaudeCAD.Plugin.UI
         private Border _apiKeyPanel;
         private PasswordBox _apiKeyBox;
         private TextBlock _apiKeyInfo;
-        private readonly StackPanel _toasts = new StackPanel { VerticalAlignment = VerticalAlignment.Top, HorizontalAlignment = HorizontalAlignment.Stretch, Margin = new Thickness(12, 64, 12, 0), IsHitTestVisible = true };
+        private readonly StackPanel _toasts = new StackPanel { VerticalAlignment = VerticalAlignment.Top, HorizontalAlignment = HorizontalAlignment.Stretch, Margin = new Thickness(12, 6, 12, 0), IsHitTestVisible = true };
         // layer scope
         private Button _layersBtn;
         private Border _layerPanel;
@@ -163,6 +163,7 @@ namespace ClaudeCAD.Plugin.UI
         private AssistantView _lastAssistant;
         private Button _lastEditButton;
         private readonly List<Button> _openConfirmButtons = new List<Button>();
+        private readonly List<DispatcherTimer> _cardTimers = new List<DispatcherTimer>();
 
         public ChatControl()
         {
@@ -275,6 +276,8 @@ namespace ClaudeCAD.Plugin.UI
             // ---- bottom: tool status, chips, input, action buttons
             var bottom = new DockPanel { Margin = new Thickness(6, 2, 6, 6) };
             _toolStatus = MutedText("");
+            _toolStatus.TextWrapping = TextWrapping.Wrap; // long hints ("Cần kích hoạt…", errors) are not cut at 300–400 px
+            _toolStatus.TextTrimming = TextTrimming.None;
             _toolStatus.FontStyle = FontStyles.Italic;
             _toolStatus.Margin = new Thickness(0, 0, 0, 4);
             DockPanel.SetDock(_toolStatus, Dock.Top);
@@ -424,12 +427,13 @@ namespace ClaudeCAD.Plugin.UI
                 HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled,
                 Content = _messages,
             };
-            root.Children.Add(_scroll);
-            // toasts float over the conversation (top), they never push the messages around
-            var layer = new Grid();
-            layer.Children.Add(root);
-            layer.Children.Add(_toasts);
-            Content = layer;
+            // toasts float over the conversation only (not over the context bar's buttons at narrow widths),
+            // they never push the messages around
+            var middle = new Grid();
+            middle.Children.Add(_scroll);
+            middle.Children.Add(_toasts);
+            root.Children.Add(middle);
+            Content = root;
             RefreshChips();
         }
 
@@ -583,7 +587,15 @@ namespace ClaudeCAD.Plugin.UI
             };
         }
 
-        private void ScrollToEnd() => _scroll.ScrollToEnd();
+        /// <summary>
+        /// Follows new content only when the user is at (or near) the bottom: scrolling up to read an earlier answer
+        /// while Claude is still writing no longer jumps back down on every word. force: the user's own message, a
+        /// conversation opening.
+        /// </summary>
+        private void ScrollToEnd(bool force = false)
+        {
+            if (force || _scroll.VerticalOffset >= _scroll.ScrollableHeight - 80) _scroll.ScrollToEnd();
+        }
 
         // ================================================================= settings / theme
 
@@ -716,10 +728,16 @@ namespace ClaudeCAD.Plugin.UI
             }
             if (e.Key == Key.V && (Keyboard.Modifiers & ModifierKeys.Control) != 0)
             {
+                bool image;
                 try
                 {
                     // Excel/Word also put a bitmap of the cells on the clipboard: text wins
-                    if (Clipboard.ContainsText() || !Clipboard.ContainsImage()) return;
+                    image = !Clipboard.ContainsText() && Clipboard.ContainsImage();
+                }
+                catch { return; } // clipboard busy (clipboard manager, remote desktop): let the normal text paste happen
+                if (!image) return;
+                try
+                {
                     e.Handled = true;
                     var img = Clipboard.GetImage();
                     // screenshots often come as Bgra32 with alpha = 0: drop the alpha channel
@@ -1185,10 +1203,18 @@ namespace ClaudeCAD.Plugin.UI
             _current = null;
             _lastAssistant = null;
             _lastEditButton = null;
+            _openConfirmButtons.Clear();
+            foreach (var t in _cardTimers) t.Stop(); // limit-card countdowns of removed cards (up to a week otherwise)
+            _cardTimers.Clear();
             _toolStatus.Text = "";
         });
 
-        public void LoadTranscript(ChatTranscript t, bool canUndoLast) => Ui(() =>
+        /// <summary>Messages built when a conversation opens; older ones on "Xem thêm" (each reply is a rich-text block: 400 are slow).</summary>
+        public const int TranscriptWindow = 60;
+
+        public void LoadTranscript(ChatTranscript t, bool canUndoLast) => Ui(() => RenderTranscript(t, canUndoLast, Math.Max(0, t.Entries.Count - TranscriptWindow)));
+
+        private void RenderTranscript(ChatTranscript t, bool canUndoLast, int from)
         {
             ClearHistory();
             if (t.Entries.Count == 0)
@@ -1197,7 +1223,13 @@ namespace ClaudeCAD.Plugin.UI
                 return;
             }
             AddNote($"Lịch sử chat của {(string.IsNullOrEmpty(t.DrawingName) ? "bản vẽ này" : t.DrawingName)} — {t.Entries.Count} mục. Claude vẫn nhớ ngữ cảnh cuộc chat.");
-            foreach (var e in t.Entries)
+            if (from > 0)
+            {
+                var more = new Button { Content = $"Xem thêm {Math.Min(from, TranscriptWindow)} tin cũ hơn ({from} tin chưa hiện)", Padding = new Thickness(10, 2, 10, 2), Margin = new Thickness(0, 2, 0, 6), HorizontalAlignment = HorizontalAlignment.Center };
+                more.Click += (s, e) => { RenderTranscript(t, canUndoLast, Math.Max(0, from - TranscriptWindow)); _scroll.ScrollToTop(); };
+                _messages.Children.Add(more);
+            }
+            foreach (var e in t.Entries.Skip(from))
             {
                 switch (e.Role)
                 {
@@ -1212,10 +1244,10 @@ namespace ClaudeCAD.Plugin.UI
                 }
             }
             if (_lastAssistant != null) _lastAssistant.SetUndo(canUndoLast);
-            ScrollToEnd();
-        });
+            ScrollToEnd(true);
+        }
 
-        public void AddUserMessage(ChatEntry e) => Ui(() => { AddUserCore(e); ScrollToEnd(); });
+        public void AddUserMessage(ChatEntry e) => Ui(() => { AddUserCore(e); ScrollToEnd(true); });
 
         private void AddUserCore(ChatEntry e)
         {
@@ -1400,6 +1432,7 @@ namespace ClaudeCAD.Plugin.UI
         public void SetConnection(string text, bool ok) => Ui(() =>
         {
             _connection.Text = text;
+            _connection.ToolTip = string.IsNullOrEmpty(text) ? null : text; // usually cut next to the buttons
             Theme.Ref(_connection, TextBlock.ForegroundProperty, ok ? Theme.MutedFg : Theme.ErrorFg);
         });
 
@@ -1460,6 +1493,7 @@ namespace ClaudeCAD.Plugin.UI
             row.Children.Add(okB);
             var tb = InputBox();
             tb.Text = initial ?? "";
+            ForwardWheel(tb);
             tb.Margin = new Thickness(0, 0, 6, 0);
             row.Children.Add(tb);
             void Close() { if (row.Parent is Panel p) p.Children.Remove(row); }
@@ -1538,8 +1572,18 @@ namespace ClaudeCAD.Plugin.UI
             _readOnlyBtn.ToolTip = on
                 ? "Đang bật Chỉ xem: Claude chỉ đọc, đo, hỏi đáp — không sửa bản vẽ này. Bấm để cho phép sửa."
                 : "Bấm để bật Chỉ xem: Claude chỉ được đọc, đo, hỏi đáp — không sửa bản vẽ này";
-            if (on) Theme.Ref(_readOnlyBtn, ForegroundProperty, Theme.ErrorFg);
-            else _readOnlyBtn.ClearValue(ForegroundProperty);
+            if (on)
+            {
+                Theme.Ref(_readOnlyBtn, ForegroundProperty, Theme.ErrorFg);
+                Theme.Ref(_readOnlyBtn, BackgroundProperty, Theme.InputBg); // the default light chrome made the dark-theme red unreadable
+                Theme.Ref(_readOnlyBtn, BorderBrushProperty, Theme.ErrorFg);
+            }
+            else
+            {
+                _readOnlyBtn.ClearValue(ForegroundProperty);
+                _readOnlyBtn.ClearValue(BackgroundProperty);
+                _readOnlyBtn.ClearValue(BorderBrushProperty);
+            }
         }
 
         // ---------------------------------------------------------------- project notes
@@ -1886,8 +1930,13 @@ namespace ClaudeCAD.Plugin.UI
                 }
                 Tick();
                 var timer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(30) };
-                timer.Tick += (s, e) => { Tick(); if (resetsAt.Value <= DateTime.Now) timer.Stop(); };
+                timer.Tick += (s, e) =>
+                {
+                    Tick();
+                    if (resetsAt.Value <= DateTime.Now) { timer.Stop(); _cardTimers.Remove(timer); }
+                };
                 timer.Start();
+                _cardTimers.Add(timer);
             }
             var row = new WrapPanel { Margin = new Thickness(0, 6, 0, 0) };
             if (canAutoRetry && resetsAt.HasValue)
@@ -2025,6 +2074,8 @@ namespace ClaudeCAD.Plugin.UI
         private TextBlock _activationStatus;
         private TextBox _activationKey;
         private Button _activationGo, _activationAsk;
+        private Border _activationCard;
+        private bool _activationDone;
 
         /// <summary>
         /// This machine has no licence: machine code (copy), the owner's contact, "Gửi yêu cầu kích hoạt" (emails the
@@ -2032,6 +2083,14 @@ namespace ClaudeCAD.Plugin.UI
         /// </summary>
         public void AddActivationCard(string machine, string device, string contact, string status) => Ui(() =>
         {
+            // one live card: pressing Enter again while not activated brings the existing card back into view
+            if (_activationCard != null && _activationCard.Parent != null && !_activationDone)
+            {
+                _activationCard.BringIntoView();
+                _activationKey?.Focus();
+                return;
+            }
+            _activationDone = false;
             var stack = new StackPanel();
             var title = new TextBlock { Text = "🔒 Kích hoạt ClaudeCAD", FontWeight = FontWeights.SemiBold, FontSize = FontSize + 1 };
             Theme.Ref(title, TextBlock.ForegroundProperty, Theme.Fg);
@@ -2041,7 +2100,7 @@ namespace ClaudeCAD.Plugin.UI
             stack.Children.Add(intro);
 
             var codeRow = new WrapPanel { Margin = new Thickness(0, 6, 0, 0) };
-            var code = new TextBox { Text = machine, IsReadOnly = true, FontFamily = new FontFamily("Consolas"), FontWeight = FontWeights.SemiBold, Padding = new Thickness(4, 1, 4, 1), BorderThickness = new Thickness(1), VerticalAlignment = VerticalAlignment.Center, ToolTip = "Mã máy: gửi mã này cho chủ plugin" };
+            var code = new TextBox { Text = machine, IsReadOnly = true, Focusable = true, FontFamily = new FontFamily("Consolas"), FontWeight = FontWeights.SemiBold, Padding = new Thickness(4, 1, 4, 1), BorderThickness = new Thickness(1), VerticalAlignment = VerticalAlignment.Center, ToolTip = "Mã máy: gửi mã này cho chủ plugin" };
             Theme.Ref(code, BackgroundProperty, Theme.InputBg);
             Theme.Ref(code, ForegroundProperty, Theme.Fg);
             Theme.Ref(code, BorderBrushProperty, Theme.Border);
@@ -2095,11 +2154,14 @@ namespace ClaudeCAD.Plugin.UI
             key.KeyDown += (s, e) => { if (e.Key == Key.Enter) { e.Handled = true; Submit(); } };
             ask.Click += (s, e) => { ask.IsEnabled = false; SetActivationStatus("Đang gửi yêu cầu...", false); ActivationRequestRequested?.Invoke(); };
 
+            ForwardWheel(code);
+            ForwardWheel(key);
             _activationStatus = st;
             _activationKey = key;
             _activationGo = go;
             _activationAsk = ask;
             var card = Card(stack, "activation");
+            _activationCard = card;
             card.Margin = new Thickness(0, 4, 24, 4);
             Theme.Ref(card, Border.BorderBrushProperty, Theme.ErrorFg);
             _messages.Children.Add(card);
@@ -2116,6 +2178,7 @@ namespace ClaudeCAD.Plugin.UI
             if (_activationGo != null) _activationGo.IsEnabled = !done;
             if (_activationAsk != null) _activationAsk.IsEnabled = !done;
             if (_activationKey != null) _activationKey.IsReadOnly = done;
+            if (done) _activationDone = true;
         });
 
         // ---------------------------------------------------------------- cards: skill draft, plan

@@ -6,6 +6,7 @@ import {
   type SDKUserMessage,
 } from '@anthropic-ai/claude-agent-sdk';
 import type { SidecarToPlugin, UserMessage } from '../ipc/protocol.js';
+import { affectedCount, confirmationError } from './confirmation.js';
 import { toSdkUserMessage } from './content.js';
 import type { ToolBridge } from '../tools/common.js';
 import { MCP_SERVER_NAME, createCadServer } from '../tools/index.js';
@@ -47,6 +48,12 @@ const ERROR_TEXT: Record<string, string> = {
   overloaded: 'Máy chủ Claude đang quá tải, thử lại sau ít phút.',
   model_not_found: 'Model không khả dụng với tài khoản này. Đặt CLAUDECAD_MODEL sang model khác (ví dụ claude-sonnet-5-5).',
   max_output_tokens: 'Câu trả lời quá dài và bị cắt.',
+  account_on_hold: 'Tài khoản Claude đang bị tạm khóa. Đăng nhập claude.ai để xem chi tiết, hoặc đổi tài khoản trong ⚙ ▸ Tài khoản AI.',
+  verification_required: 'Tài khoản Claude cần xác minh. Đăng nhập claude.ai trên trình duyệt để hoàn tất, rồi thử lại.',
+  server_error: 'Máy chủ Claude gặp lỗi tạm thời, thử lại sau ít phút.',
+  invalid_request: 'Yêu cầu gửi tới Claude không hợp lệ (có thể do ảnh hoặc tệp đính kèm quá lớn). Bớt tệp đính kèm rồi thử lại.',
+  cloud_credential_error: 'Lỗi thông tin xác thực của nhà cung cấp đám mây cấu hình cho Claude.',
+  unknown: 'Claude gặp lỗi không rõ nguyên nhân. Thử lại; nếu lặp lại, bấm ⚙ ▸ Gửi báo cáo lỗi.',
 };
 
 /**
@@ -73,6 +80,14 @@ export class AgentSession {
   private reloadPending = false;
   private turnId?: string;
   private readonly defaultModel?: string;
+  // confirmation gate (see confirmation.ts): Claude asked something in the turn being answered,
+  // and how many existing objects this turn changed / removed so far
+  private turnAsked = false;
+  private answersQuestion = false;
+  private affectedThisTurn = 0;
+  // next-step buttons: Claude called suggest_next_steps this turn → the SDK's predicted prompt is not shown too
+  private toolSuggested = false;
+  private suggestionsOn = true;
 
   constructor(private readonly cfg: SessionConfig) {
     this.defaultModel = cfg.model;
@@ -100,9 +115,31 @@ export class AgentSession {
     return this.initInfo;
   }
 
+  /**
+   * Confirmation gate for a tool call of the running turn: an error text for Claude when the call must
+   * be confirmed first (the count is cumulative over the turn), otherwise undefined (and the call is counted).
+   */
+  gate(tool: string, params: Record<string, unknown>): string | undefined {
+    const err = confirmationError(tool, params, {
+      userText: this.lastUser,
+      answersQuestion: this.answersQuestion,
+      confirmedByButton: this.lastConfirm === 'yes',
+      alreadyAffected: this.affectedThisTurn,
+    });
+    if (err) {
+      this.turnAsked = true; // Claude now asks: the user's next "đồng ý" answers it
+      return err;
+    }
+    this.affectedThisTurn += affectedCount(tool, params);
+    return undefined;
+  }
+
   /** Options handed to query(); exported for tests and documentation. */
   buildOptions(resume?: string): Options {
-    const server = createCadServer(this.cfg.bridge, this.cfg.version, (req) => this.cfg.emit(req));
+    const server = createCadServer(this.cfg.bridge, this.cfg.version, (req) => {
+      if (req.type === 'suggestions') this.toolSuggested = true;
+      this.cfg.emit(req);
+    });
     const plugin = prepareSkillsPlugin(this.cfg.skillsDir, this.cfg.workDir);
     if (plugin) this.cfg.log(`skills loaded: ${plugin.skills.join(', ') || '(none)'}`);
 
@@ -117,8 +154,10 @@ export class AgentSession {
       // Base tool set: only Read (to read skill files) and Skill. Everything CAD comes from our MCP server.
       tools: ['Read', 'Skill'],
       disallowedTools: DISALLOWED_BUILTINS,
-      // Auto-allow our tools and Read; deny anything else without prompting.
-      allowedTools: [`mcp__${MCP_SERVER_NAME}`, `mcp__${MCP_SERVER_NAME}__*`, 'Read', 'Skill'],
+      // Auto-allow our tools; Read ONLY inside the generated skills plugin (relative to cwd = workDir).
+      // Anything else is denied without prompting (dontAsk): text inside a received drawing cannot make
+      // Claude read credentials or other files of this PC.
+      allowedTools: [`mcp__${MCP_SERVER_NAME}`, `mcp__${MCP_SERVER_NAME}__*`, `Read(./${SKILLS_PLUGIN_NAME}/**)`, 'Skill'],
       permissionMode: 'dontAsk',
       permissionPrompts: 'none',
       // Isolation: ignore ~/.claude settings, CLAUDE.md, project MCP configs.
@@ -147,6 +186,7 @@ export class AgentSession {
     const resume = this.sessionId;
     this.resuming = !!resume;
     this.gotInit = false;
+    this.staleResults = 0; // results of an older Claude process never reach this one
     const q = queryFn({ prompt: input, options: this.buildOptions(resume) });
     this.q = q;
     this.input = input;
@@ -166,9 +206,8 @@ export class AgentSession {
       // otherwise the palette would wait forever for a turn_end.
       this.cfg.log('new message while a turn is active: abandoning the previous turn');
       this.cfg.onCancel?.();
+      // its result (if any) comes before the next turn's "init", which resets the count
       this.staleResults++;
-      // safety: if the abandoned turn never reports a result, stop waiting for it
-      setTimeout(() => { if (this.staleResults > 0) this.staleResults--; }, 15_000).unref?.();
       void this.q?.interrupt().catch(() => {});
       this.turnActive = false;
       this.cancelRequested = false;
@@ -182,6 +221,11 @@ export class AgentSession {
     }
     this.turnActive = true;
     this.cancelRequested = false;
+    this.answersQuestion = this.turnAsked; // this message answers what the previous turn asked
+    this.turnAsked = false;
+    this.affectedThisTurn = 0;
+    this.toolSuggested = false;
+    this.suggestionsOn = msg.context?.suggestions !== false;
     this.lastUser = msg.text;
     this.lastConfirm = msg.confirm;
     this.turnId = msg.turn_id;
@@ -222,9 +266,13 @@ export class AgentSession {
 
   /** Per-drawing conversations: continue the given session (or a fresh one) on the next message. */
   switchTo(sessionId: string | undefined): void {
-    if (this.turnActive) this.cfg.onCancel?.();
+    if (this.turnActive) {
+      this.cfg.onCancel?.();
+      this.finishTurn({ cancelled: true });
+    }
     this.closeQuery();
     this.turnActive = false;
+    this.turnAsked = false;
     this.sessionId = sessionId;
   }
 
@@ -241,16 +289,24 @@ export class AgentSession {
     }
     // The SDK normally ends the turn with a result message; make sure the UI is released.
     setTimeout(() => {
-      if (gen === this.generation && this.turnActive && this.cancelRequested) this.finishTurn({ cancelled: true });
+      if (gen === this.generation && this.turnActive && this.cancelRequested) {
+        // the interrupted turn's result may still come: it must not end the user's next turn
+        this.staleResults++;
+        this.finishTurn({ cancelled: true });
+      }
     }, 3000).unref?.();
   }
 
   /** New chat: drop the conversation and start a fresh one on the next message. */
   reset(): void {
-    if (this.turnActive) this.cfg.onCancel?.();
+    if (this.turnActive) {
+      this.cfg.onCancel?.();
+      this.finishTurn({ cancelled: true });
+    }
     this.closeQuery();
     this.sessionId = undefined;
     this.turnActive = false;
+    this.turnAsked = false;
     this.cfg.emit({ type: 'session_reset' });
   }
 
@@ -324,10 +380,12 @@ export class AgentSession {
     switch (msg.type) {
       case 'system':
         if (msg.subtype === 'init') {
+          // emitted at the start of every turn: results of abandoned turns all came before it
+          this.staleResults = 0;
           this.sessionId = msg.session_id;
           this.gotInit = true;
           this.cfg.emit({ type: 'session_info', session_id: msg.session_id, model: msg.model });
-          const auth = msg.apiKeySource === 'ANTHROPIC_API_KEY' ? 'API key' : 'Claude login';
+          const auth = !msg.apiKeySource || msg.apiKeySource === 'none' || msg.apiKeySource === 'oauth' ? 'Claude login' : 'API key';
           this.initInfo = `${msg.model} · ${auth}`;
           this.cfg.log(
             `init session=${msg.session_id} model=${msg.model} tools=${msg.tools.length} skills=[${(msg.skills ?? []).join(', ')}]`,
@@ -341,6 +399,7 @@ export class AgentSession {
         const ev = msg.event;
         if (ev.type === 'content_block_delta' && ev.delta.type === 'text_delta') {
           this.textBlockOpen = true;
+          if (ev.delta.text.includes('?')) this.turnAsked = true;
           this.cfg.emit({ type: 'agent_text', delta: ev.delta.text });
         } else if (ev.type === 'content_block_stop' && this.textBlockOpen) {
           this.textBlockOpen = false;
@@ -357,7 +416,8 @@ export class AgentSession {
 
       case 'prompt_suggestion': {
         const text = (msg as { suggestion?: string }).suggestion?.trim();
-        if (text) this.cfg.emit({ type: 'suggestions', items: [text], source: 'sdk' });
+        // Claude's own suggest_next_steps buttons win; none at all when the user turned them off
+        if (text && !this.toolSuggested && this.suggestionsOn) this.cfg.emit({ type: 'suggestions', items: [text], source: 'sdk' });
         return;
       }
 
@@ -394,6 +454,10 @@ export class AgentSession {
             msg.subtype === 'error_max_budget_usd' ? 'Vượt ngân sách chi phí của lượt.' :
             'Lỗi khi thực thi lượt.';
           this.finishTurn({ error: why, usage });
+        } else if (msg.is_error) {
+          // "success" + is_error: the turn ended on an API error, its text is in result
+          const text = typeof msg.result === 'string' && msg.result.trim() ? msg.result.trim().slice(0, 300) : 'Claude trả về lỗi API.';
+          this.finishTurn({ error: text, usage });
         } else {
           this.finishTurn({ usage });
         }

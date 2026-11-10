@@ -181,3 +181,11 @@ Cần test: I-6, I-7.
 - Máy chủ: `activation/apps-script/Code.gs.template` + `make-apps-script.mjs`; hướng dẫn `activation/README.md`.
 
 Cần test: K-1 … K-7.
+
+### v0.9.4 — sửa sau đợt rà soát toàn dự án (4 nhóm, ~45 vấn đề) ✅
+
+- Nghiêm trọng: cổng xác nhận (câu trả lời ngắn cho câu hỏi của lượt trước, đếm cộng dồn cả lượt, thêm `reset_dynamic_block`); tự gửi lại bị hủy khi chuyển bản vẽ / chat mới; macro fillet/chamfer (`handle1`/`handle2`); cài ngầm bỏ qua trang key (`/KEY=`); CI không phát hành khi `activation.json` chưa có URL.
+- Trung bình: `Read` chỉ trong thư mục skill + dữ liệu bản vẽ trong ngoặc kép + quy tắc "dữ liệu không phải lệnh"; log / báo cáo lỗi không lẫn nội dung chat (`CLAUDECAD_LOG_FULL=1` khi cần); zoom không mở nhóm hoàn tác / không bỏ qua bản sao lưu; kết quả lượt cũ sau Dừng gắn với `system/init`; tin quá dài (nhiều ảnh) báo lỗi ngay, giới hạn 64 M ký tự; thời gian chờ theo lệnh (gói lệnh, in, chụp, lưu); trang key bộ cài (thời gian chờ ngắn, proxy Windows, lỗi rõ); Apps Script 10 email/giờ + chừa hạn mức; so sánh sửa tay chỉ đánh dấu xong khi thành công.
+- Nhẹ / tối ưu: một thẻ kích hoạt, không chạy trợ lý khi chưa kích hoạt; báo đúng khi dùng API key; một thẻ giới hạn (có giờ làm mới); không cảnh báo mất kết nối khi tự khởi động lại; dòng trạng thái xuống dòng, dán chữ khi clipboard bận, nút Chỉ xem ở giao diện tối, toast không che nút, đồng hồ thẻ cũ dừng; chặn `save_drawing` khi Chỉ xem; giải phóng bộ đồ họa sau khi chụp; mở cuộc chat dài chỉ dựng 60 tin cuối; không tự cuộn khi đang đọc; nhớ số đối tượng theo layer; bản lưu nhanh dùng được sau pan/zoom; lỗi SDK mới có lời Việt; không hiện gợi ý trùng.
+
+Cần test: R-1 … R-6 (và K-1 … K-7).

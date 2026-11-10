@@ -124,8 +124,10 @@ namespace ClaudeCAD.Plugin.Core
             }
         }
 
+        /// <summary>handle / handles / *_handle(s) / handle1, handle2 (fillet_entities, chamfer_entities).</summary>
         public static bool IsHandleKey(string k) =>
-            k == "handle" || k == "handles" || k.EndsWith("_handle", StringComparison.Ordinal) || k.EndsWith("_handles", StringComparison.Ordinal);
+            k == "handle" || k == "handles" || k.EndsWith("_handle", StringComparison.Ordinal) || k.EndsWith("_handles", StringComparison.Ordinal) ||
+            (k.Length > 6 && k.StartsWith("handle", StringComparison.Ordinal) && k.Substring(6).All(char.IsDigit));
 
         /// <summary>
         /// Handles created by an earlier call of the macro that this call uses but that were not re-created

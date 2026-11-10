@@ -9,7 +9,6 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { parseArgs } from 'node:util';
-import { confirmationError } from './agent/confirmation.js';
 import { AgentSession } from './agent/session.js';
 import { connectPipe } from './ipc/connection.js';
 import { DEFAULT_TOOL_TIMEOUT_MS } from './ipc/protocol.js';
@@ -36,6 +35,9 @@ async function main(): Promise<void> {
     process.exit(2);
   }
   initLog(values['log-dir']);
+  // before anything can throw asynchronously: a stray error must not kill the sidecar ("mất kết nối")
+  process.on('uncaughtException', (err) => log(`uncaughtException: ${err.stack ?? err}`));
+  process.on('unhandledRejection', (err) => log(`unhandledRejection: ${(err as Error)?.stack ?? err}`));
   log(`ClaudeCAD sidecar ${VERSION} starting (node ${process.version}, pid ${process.pid})`);
 
   const workDir =
@@ -46,9 +48,12 @@ async function main(): Promise<void> {
   const conn = await connectPipe(values.pipe);
   log(`connected to pipe ${values.pipe}`);
 
-  const timeoutMs = Number(process.env.CLAUDECAD_TOOL_TIMEOUT_MS) || DEFAULT_TOOL_TIMEOUT_MS;
+  const timeoutMs = Number(process.env.CLAUDECAD_TOOL_TIMEOUT_MS) || DEFAULT_TOOL_TIMEOUT_MS; // base; big calls get more (rpc.ts)
+  // Tool parameters and results carry drawing content (texts, coordinates, layer names): the log keeps only
+  // what is needed to debug (tool, id, size, error) unless CLAUDECAD_LOG_FULL=1.
+  const fullLog = process.env.CLAUDECAD_LOG_FULL === '1';
   const rpc = new ToolRpc((msg) => {
-    log(`-> ${truncate(JSON.stringify(msg))}`);
+    log(fullLog ? `-> ${truncate(JSON.stringify(msg))}` : `-> ${msg.id} ${msg.tool} (${JSON.stringify(msg.params).length} chars)`);
     return conn.send(msg);
   }, timeoutMs);
 
@@ -56,7 +61,7 @@ async function main(): Promise<void> {
   let session: AgentSession;
   const bridge: ToolBridge = {
     call: async (tool, params) => {
-      const block = session?.lastUserConfirmed ? undefined : confirmationError(tool, params, session?.lastUserText);
+      const block = session?.gate(tool, params);
       if (block) {
         log(`confirmation gate blocked ${tool}`);
         return { id: 'local', ok: false, error: { code: 'INVALID_PARAMS', message: block } };
@@ -80,7 +85,7 @@ async function main(): Promise<void> {
 
   conn.on('message', (msg) => {
     if ('ok' in msg) {
-      log(`<- ${truncate(JSON.stringify(msg))}`);
+      log(fullLog ? `<- ${truncate(JSON.stringify(msg))}` : msg.ok ? `<- ${msg.id} ok` : `<- ${msg.id} ${msg.error.code}: ${truncate(msg.error.message, 300)}`);
       if (!rpc.handleResponse(msg)) log(`late/unknown response ${msg.id} ignored`);
       return;
     }
@@ -106,7 +111,14 @@ async function main(): Promise<void> {
         break;
     }
   });
-  conn.on('invalid', (err, line) => log(`invalid message dropped: ${err.message} ${truncate(line, 200)}`));
+  conn.on('invalid', (err, line) => {
+    log(`invalid message dropped: ${err.message} ${truncate(line, 200)}`);
+    // A user_message that could not be read (e.g. several large photos over the size limit) would leave the
+    // palette waiting for a turn_end that never comes. While no turn runs, an unreadable line can only be one.
+    if (!session.busy && (line === '' || line.includes('"user_message"'))) {
+      conn.send({ type: 'turn_end', error: 'Trợ lý không đọc được tin nhắn (có thể do ảnh đính kèm quá lớn). Bớt ảnh hoặc dùng ảnh nhỏ hơn rồi gửi lại.' });
+    }
+  });
   conn.on('close', (reason) => {
     log(`pipe closed: ${reason}; exiting`);
     rpc.failAll('ACAD_ERROR', 'Connection to AutoCAD lost.');
@@ -129,8 +141,6 @@ async function main(): Promise<void> {
     }, 5000).unref();
   }
 
-  process.on('uncaughtException', (err) => log(`uncaughtException: ${err.stack ?? err}`));
-  process.on('unhandledRejection', (err) => log(`unhandledRejection: ${(err as Error)?.stack ?? err}`));
 }
 
 main().catch((err) => {

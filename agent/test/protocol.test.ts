@@ -112,3 +112,27 @@ describe('parsePluginMessage', () => {
     assert.throws(() => parsePluginMessage({ id: 'r', ok: false, error: 'nope' }), ProtocolError);
   });
 });
+
+describe('v0.9.4: big messages and timeouts', () => {
+  it('after an over-long line the rest of it is skipped, the next line is read', () => {
+    const d = new LineDecoder(10);
+    assert.throws(() => d.push('x'.repeat(50)), ProtocolError);
+    assert.deepEqual(d.push('yyyy'), []); // still the same over-long line
+    assert.deepEqual(d.push('zz\n{"a":1}\n'), ['{"a":1}']);
+  });
+
+  it('a message with several photos fits the default limit', () => {
+    const d = new LineDecoder();
+    const big = '{"type":"user_message","text":"x","images":["' + 'A'.repeat(20 * 1024 * 1024) + '"]}';
+    assert.equal(d.push(big + '\n').length, 1);
+  });
+
+  it('slow calls get longer timeouts', async () => {
+    const { timeoutFor } = await import('../src/ipc/rpc.js');
+    assert.equal(timeoutFor('draw_line', {}), 30_000);
+    assert.equal(timeoutFor('batch_execute', { calls: Array.from({ length: 500 }, () => ({ tool: 'draw_line' })) }), 80_000);
+    assert.equal(timeoutFor('plot_pdf', {}), 120_000);
+    assert.equal(timeoutFor('batch_execute', { calls: [{ tool: 'save_drawing' }] }), 120_000);
+    assert.equal(timeoutFor('batch_execute', { calls: Array.from({ length: 5000 }, () => ({ tool: 'draw_line' })) }), 300_000);
+  });
+});

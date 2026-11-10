@@ -36,15 +36,22 @@ function loadService() {
     .replace('{{SECRET}}', 'test-secret')
     .replace('{{PRIVATE_KEY}}', js(pem));
   const mails: Mail[] = [];
+  const quota = { left: 100 };
   const cache = new Map<string, string>();
   const sandbox: Record<string, unknown> = {
     Utilities: {
       computeHmacSha256Signature: (value: string, key: string) => javaBytes(crypto.createHmac('sha256', key).update(value, 'utf8').digest()),
       computeRsaSha256Signature: (value: string, key: string) => javaBytes(crypto.sign('sha256', Buffer.from(value, 'utf8'), key)),
       base64EncodeWebSafe: (bytes: number[]) => toBuf(bytes).toString('base64').replace(/\+/g, '-').replace(/\//g, '_'),
-      formatDate: (d: Date, _tz: string, fmt: string) => (fmt === 'yyyy-MM-dd' ? d.toISOString().slice(0, 10) : d.toISOString()),
+      formatDate: (d: Date, _tz: string, fmt: string) =>
+        fmt === 'yyyy-MM-dd' ? d.toISOString().slice(0, 10) : fmt === 'yyyyMMddHH' ? d.toISOString().slice(0, 13).replace(/[-T]/g, '') : d.toISOString(),
     },
-    MailApp: { sendEmail: (to: string, subject: string, body: string) => mails.push({ to, subject, body }) },
+    MailApp: {
+      sendEmail: (to: string, subject: string, body: string) => mails.push({ to, subject, body }),
+      getRemainingDailyQuota: () => quota.left - mails.length,
+    },
+    LockService: { getScriptLock: () => ({ tryLock: () => true, releaseLock: () => {} }) },
+    console: { log: () => {} },
     CacheService: { getScriptCache: () => ({ get: (k: string) => cache.get(k) ?? null, put: (k: string, v: string) => cache.set(k, v) }) },
     ContentService: {
       MimeType: { JSON: 'json' },
@@ -56,7 +63,7 @@ function loadService() {
   vm.runInContext(code, sandbox);
   const get = (params: Record<string, string>) =>
     JSON.parse(((sandbox.doGet as (e: unknown) => { content: string })({ parameter: params })).content);
-  return { get, mails, cache, publicKey, sandbox };
+  return { get, mails, cache, publicKey, sandbox, quota };
 }
 
 const verify = (license: string, key: crypto.KeyObject) => {
@@ -127,5 +134,25 @@ describe('activation service (Apps Script)', () => {
     const offline = /\n(CCL1\|\S+)\n/.exec(s.mails[0].body)![1];
     assert.ok(verify(offline, s.publicKey));
     assert.ok(offline.startsWith('CCL1|CC-1A2B-3C4D-5E6F|'));
+  });
+
+  it('limits request emails: 10 per hour, keeps a few of the daily Gmail quota', () => {
+    const s = loadService();
+    const m = (i: number) => `CC-0000-0000-${i.toString(16).toUpperCase().padStart(4, '0')}`;
+    for (let i = 1; i <= 10; i++) assert.equal(s.get({ action: 'request', machine: m(i), device: 'x', user: 'y' }).sent, true);
+    const r = s.get({ action: 'request', machine: m(11), device: 'x', user: 'y' });
+    assert.equal(r.ok, false);
+    assert.match(r.error, /quá nhiều yêu cầu/i);
+    assert.equal(s.mails.length, 10);
+    // daily quota almost used up (another hour)
+    const t = loadService();
+    t.quota.left = 6;
+    assert.equal(t.get({ action: 'request', machine: m(1), device: 'x', user: 'y' }).sent, true);
+    const r2 = t.get({ action: 'request', machine: m(2), device: 'x', user: 'y' });
+    assert.equal(r2.ok, false);
+    assert.match(r2.error, /hết lượt gửi email/);
+    // activation of a machine whose key the owner already sent still works
+    const key = /KEY: (\S+)/.exec(t.mails[0]!.body)![1];
+    assert.equal(t.get({ action: 'activate', machine: m(1), key }).ok, true);
   });
 });

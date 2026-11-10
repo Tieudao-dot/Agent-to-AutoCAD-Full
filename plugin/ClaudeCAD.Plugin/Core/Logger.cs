@@ -46,7 +46,11 @@ namespace ClaudeCAD.Plugin.Core
             Write("ERROR", msg + Environment.NewLine + (ex?.ToString() ?? "(no exception)"));
 
         /// <summary>IPC traffic; long payloads are truncated (spec §10).</summary>
-        public static void Ipc(string direction, string line) => Write("IPC  ", direction + " " + Params.Truncate(line, 2000));
+        /// <summary>CLAUDECAD_LOG_FULL=1: log whole IPC messages (debugging). Default: type / tool / id / size only, no chat content.</summary>
+        public static readonly bool FullIpc = Environment.GetEnvironmentVariable("CLAUDECAD_LOG_FULL") == "1";
+
+        public static void Ipc(string direction, string line) =>
+            Write("IPC  ", direction + " " + (FullIpc ? Params.Truncate(line, 2000) : Diagnostics.SummarizeMessage(line)));
 
         private static void Write(string level, string msg)
         {

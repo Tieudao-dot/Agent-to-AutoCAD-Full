@@ -19,7 +19,49 @@ namespace ClaudeCAD.Plugin.Core
             new Regex(@"(?i)(""?(?:access|refresh)_?token""?\s*[:=]\s*""?)[^"",\s]{8,}", RegexOptions.Compiled),
             new Regex(@"(?i)(ANTHROPIC_API_KEY\s*[=:]\s*)\S+", RegexOptions.Compiled),
             new Regex(@"(?i)(CLAUDE_CODE_OAUTH_TOKEN\s*[=:]\s*)\S+", RegexOptions.Compiled),
+            new Regex(@"(?i)(ANTHROPIC_AUTH_TOKEN\s*[=:]\s*)\S+", RegexOptions.Compiled),                 // gateway users
+            new Regex(@"(?i)(x-api-key\s*[:=]\s*)\S{8,}", RegexOptions.Compiled),                         // other key formats
+            new Regex(@"(?i)(""(?:api[_-]?key|id_?token|client_secret|password|secret)""\s*:\s*"")[^""]{4,}", RegexOptions.Compiled),
+            new Regex(@"(?i)(https?://[^\s:/@]+:)[^\s@/]+(?=@)", RegexOptions.Compiled),                    // user:password@host
         };
+
+        private static readonly Regex JsonType = new Regex(@"""type""\s*:\s*""([A-Za-z_]+)""", RegexOptions.Compiled);
+        private static readonly Regex JsonTool = new Regex(@"""tool""\s*:\s*""([A-Za-z_]+)""", RegexOptions.Compiled);
+        private static readonly Regex JsonId = new Regex(@"""id""\s*:\s*""([A-Za-z0-9_\-]{1,40})""", RegexOptions.Compiled);
+        private static readonly Regex JsonOk = new Regex(@"""ok""\s*:\s*(true|false)", RegexOptions.Compiled);
+        private static readonly Regex JsonCode = new Regex(@"""code""\s*:\s*""([A-Za-z_]+)""", RegexOptions.Compiled);
+        // plugin log: "12:00:01.234 IPC   -> {...}" ; sidecar log: "... -> {...}" / "... <- {...}"
+        private static readonly Regex MessageLine = new Regex(@"^(?<head>.*?(?:IPC\s+\S+|->|<-)) (?<body>\{.*)$", RegexOptions.Compiled);
+
+        /// <summary>
+        /// One IPC / sidecar JSON message → what is needed to debug it (type, tool, id, ok / error code, size), without
+        /// its content: user prompts, Claude's replies, project notes, texts and coordinates of the drawing stay out of
+        /// logs and bug reports.
+        /// </summary>
+        public static string SummarizeMessage(string json)
+        {
+            if (string.IsNullOrEmpty(json)) return json ?? "";
+            var parts = new List<string>();
+            var t = JsonType.Match(json); if (t.Success) parts.Add(t.Groups[1].Value);
+            var tool = JsonTool.Match(json); if (tool.Success) parts.Add(tool.Groups[1].Value);
+            var id = JsonId.Match(json); if (id.Success) parts.Add("id=" + id.Groups[1].Value);
+            var ok = JsonOk.Match(json); if (ok.Success) parts.Add("ok=" + ok.Groups[1].Value);
+            var code = JsonCode.Match(json); if (code.Success) parts.Add("code=" + code.Groups[1].Value);
+            return "{" + string.Join(" ", parts) + "} [" + json.Length + " ký tự, nội dung đã ẩn]";
+        }
+
+        /// <summary>Bug report: message lines of the plugin and sidecar logs (older versions logged them in full) are summarized.</summary>
+        public static string StripChatContent(string log)
+        {
+            if (string.IsNullOrEmpty(log)) return log ?? "";
+            var lines = log.Split('\n');
+            for (int i = 0; i < lines.Length; i++)
+            {
+                var m = MessageLine.Match(lines[i].TrimEnd('\r'));
+                if (m.Success) lines[i] = m.Groups["head"].Value + " " + SummarizeMessage(m.Groups["body"].Value);
+            }
+            return string.Join("\n", lines);
+        }
 
         /// <summary>Removes API keys and tokens from a text before it leaves the computer.</summary>
         public static string Redact(string text)

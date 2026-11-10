@@ -57,10 +57,18 @@ export class Connection extends EventEmitter<ConnectionEvents> {
         this.emit('invalid', err as Error, line);
         continue;
       }
+      let msg;
       try {
-        this.emit('message', parsePluginMessage(parsed));
+        msg = parsePluginMessage(parsed);
       } catch (err) {
         this.emit('invalid', err as Error, line);
+        continue;
+      }
+      try {
+        this.emit('message', msg);
+      } catch (err) {
+        // a failing handler must not drop the other lines of this chunk
+        process.emitWarning(`message handler failed: ${(err as Error).message}`);
       }
     }
   }

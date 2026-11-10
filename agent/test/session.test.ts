@@ -118,7 +118,7 @@ describe('AgentSession', () => {
     const { s, events } = makeSession(fn);
     s.send('chào Claude', 'test.dwg');
     await tick();
-    assert.deepEqual(received, ['[Bản vẽ đang mở: test.dwg]\nchào Claude']);
+    assert.deepEqual(received, ['[Bản vẽ đang mở: "test.dwg"]\nchào Claude']);
     assert.deepEqual(events.filter((e) => e.type !== 'session_info').map((e) => (e.type === 'turn_end' ? { type: e.type } : e)), [
       { type: 'ready', info: 'claude-opus-5-5 · Claude login', version: 'test' },
       { type: 'agent_text', delta: 'Xin ' },
@@ -258,5 +258,143 @@ describe('system prompt (spec §9)', async () => {
       'Vietnamese', 'millimetres', 'get_drawing_info', 'list_layers', 'batch_execute', 'Never guess handles',
       'Cậu có đồng ý không?', 'save_drawing', 'purge_unused', 'U once', 'at most 2 times', 'ask one short question', 'skill',
     ]) assert.ok(SYSTEM_PROMPT.includes(needle), needle);
+  });
+});
+
+describe('v0.9.4 review fixes', () => {
+  it('a late result of a cancelled turn does not end the next turn', async () => {
+    let release: (() => void) | undefined;
+    const { fn } = fakeQuery(async (input, push) => {
+      let n = 0;
+      for await (const _m of input) {
+        n++;
+        push(init);
+        if (n === 1) {
+          // first turn: interrupted, its result only comes much later (after the next message was sent)
+          await new Promise<void>((r) => (release = r));
+          push(result());
+          push(init); // the second turn starts after the old result
+          push(textDelta('lượt 2'));
+          await tick(50);
+          push(result());
+        }
+      }
+    });
+    const { s, events } = makeSession(fn);
+    s.sendMessage({ type: 'user_message', text: 'vẽ', turn_id: 't-1' });
+    await tick();
+    await s.cancel();
+    await tick(3200); // cancel fallback ends turn 1
+    assert.equal(events.filter((e) => e.type === 'turn_end').length, 1);
+    s.sendMessage({ type: 'user_message', text: 'vẽ lại', turn_id: 't-2' });
+    release!();
+    await tick(20);
+    // the old result was skipped: turn 2 is still running
+    assert.equal(s.busy, true);
+    await tick(100);
+    const ends = events.filter((e) => e.type === 'turn_end') as Array<{ turn_id?: string }>;
+    assert.deepEqual(ends.map((e) => e.turn_id), ['t-1', 't-2']);
+  });
+
+  it('an abandoned turn that never reports a result does not swallow the next result', async () => {
+    const { fn } = fakeQuery(async (input, push) => {
+      let n = 0;
+      for await (const _m of input) {
+        n++;
+        if (n === 1) continue; // turn 1: never answers
+        push(init);
+        push(result());
+      }
+    });
+    const { s, events } = makeSession(fn);
+    s.sendMessage({ type: 'user_message', text: 'a', turn_id: 't-1' });
+    await tick();
+    s.sendMessage({ type: 'user_message', text: 'b', turn_id: 't-2' }); // palette force-ended turn 1
+    await tick();
+    const ends = events.filter((e) => e.type === 'turn_end') as Array<{ turn_id?: string }>;
+    assert.deepEqual(ends.map((e) => e.turn_id), ['t-2']);
+  });
+
+  it('"success" with is_error reports the API error text', async () => {
+    const { fn } = fakeQuery(async (input, push) => {
+      for await (const _m of input) {
+        push(init);
+        push({ type: 'result', subtype: 'success', is_error: true, result: 'API Error: 500 internal', session_id: 's1' } as unknown as SDKMessage);
+      }
+    });
+    const { s, events } = makeSession(fn);
+    s.sendMessage({ type: 'user_message', text: 'x' });
+    await tick();
+    const end = events.find((e) => e.type === 'turn_end') as { error?: string };
+    assert.match(end.error ?? '', /API Error: 500/);
+  });
+
+  it('confirmation gate: cumulative per turn, a short yes answers a question of the previous turn', async () => {
+    const { fn } = fakeQuery(async (input, push) => {
+      let n = 0;
+      for await (const _m of input) {
+        n++;
+        push(init);
+        if (n === 1) push(textDelta('Có 40 đối tượng trên layer A-TEMP. Cậu có đồng ý không?'));
+        push(result());
+      }
+    });
+    const { s } = makeSession(fn);
+    const h = (k: number) => ({ handles: Array.from({ length: k }, (_, i) => `H${i}`) });
+    s.sendMessage({ type: 'user_message', text: 'dọn layer A-TEMP' });
+    assert.equal(s.gate('erase_entities', h(20)), undefined);
+    assert.match(s.gate('erase_entities', h(20)) ?? '', /Confirmation required/); // 40 in total
+    await tick();
+    s.sendMessage({ type: 'user_message', text: 'đồng ý' });
+    assert.equal(s.gate('erase_entities', h(40)), undefined);
+    await tick();
+    // a new request with "ok" inside, after a turn that asked nothing → asked again
+    s.sendMessage({ type: 'user_message', text: 'ok' });
+    await tick();
+    s.sendMessage({ type: 'user_message', text: 'ok xóa hết' });
+    assert.match(s.gate('erase_entities', h(30)) ?? '', /Confirmation required/);
+  });
+
+  it('no SDK next-step prediction when Claude made its own buttons or the user turned them off', async () => {
+    const suggestion = { type: 'prompt_suggestion', suggestion: 'vẽ cửa', session_id: 's1' } as unknown as SDKMessage;
+    const { fn } = fakeQuery(async (input, push) => {
+      for await (const _m of input) {
+        push(init);
+        push(result());
+        push(suggestion);
+      }
+    });
+    const { s, events } = makeSession(fn);
+    s.sendMessage({ type: 'user_message', text: 'a', context: { suggestions: false } });
+    await tick();
+    assert.equal(events.filter((e) => e.type === 'suggestions').length, 0);
+    s.sendMessage({ type: 'user_message', text: 'b' });
+    await tick();
+    assert.equal(events.filter((e) => e.type === 'suggestions').length, 1);
+  });
+
+  it('switching drawing mid-turn ends the turn', async () => {
+    const { fn } = fakeQuery(async (input) => {
+      for await (const _m of input) {
+        /* never answers */
+      }
+    });
+    const { s, events } = makeSession(fn);
+    s.sendMessage({ type: 'user_message', text: 'a', turn_id: 't-1' });
+    await tick();
+    s.switchTo('other');
+    const end = events.find((e) => e.type === 'turn_end') as { turn_id?: string; cancelled?: boolean };
+    assert.equal(end.turn_id, 't-1');
+    assert.equal(end.cancelled, true);
+    assert.equal(s.busy, false);
+  });
+
+  it('Read is only allowed inside the skills plugin', () => {
+    const { fn, calls } = fakeQuery(async () => {});
+    const { s } = makeSession(fn);
+    s.sendMessage({ type: 'user_message', text: 'x' });
+    const allowed = calls.options.allowedTools as string[];
+    assert.ok(!allowed.includes('Read'));
+    assert.ok(allowed.includes('Read(./claudecad-skills/**)'));
   });
 });

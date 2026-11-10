@@ -121,6 +121,12 @@ Trạng thái: ⬜ chưa chạy · ✅ đạt · ❌ không đạt · ⚠️ đ�
 | K-5 | Sao chép `license.txt` sang máy khác → plugin báo "giấy phép của máy khác" | ⬜ chưa chạy | |
 | K-6 | Máy không có mạng: bộ cài báo không gửi được; mã offline (`taoKeyThuCong`) dán vào ô key → cài được | ⬜ chưa chạy | |
 | K-7 | `ClaudeCAD-Setup.exe /VERYSILENT /KEY=<key>` → cài ngầm và kích hoạt | ⬜ chưa chạy | |
+| R-1 | Macro có bo góc (fillet) giữa 2 đường vừa vẽ → chạy lại macro ở chỗ khác: bo góc 2 đường mới, 2 đường cũ giữ nguyên | ⬜ chưa chạy | |
+| R-2 | Bật Phiên bản, yêu cầu Claude "zoom vào khung tên rồi đổi chữ" → có phiên bản mới trước khi sửa; lượt chỉ zoom không có nút Hoàn tác | ⬜ chưa chạy | |
+| R-3 | "Vẽ lại rồi xóa đi các đường cũ" trên layer có > 20 đối tượng → Claude hỏi xác nhận trước khi xóa | ⬜ chưa chạy | |
+| R-4 | Hết giới hạn, bật "Tự gửi lại", chuyển sang bản vẽ khác → toast "Đã hủy tự gửi lại", không gửi gì vào bản vẽ mới | ⬜ chưa chạy | |
+| R-5 | Nút Chụp / Claude tự kiểm tra bằng ảnh 20 lần liên tiếp → AutoCAD không chậm dần | ⬜ chưa chạy | |
+| R-6 | Gửi báo cáo lỗi → mở các file log trong .zip: không có nội dung tin nhắn / chữ trong bản vẽ | ⬜ chưa chạy | |
 | I-1 | Tải `ClaudeCAD-Setup.exe` từ link releases/latest, chạy trên máy **chưa có Node.js và Claude Code** → cài xong không hỏi gì thêm (ngoài SmartScreen) | ⬜ chưa chạy | |
 | I-2 | Mở AutoCAD lần đầu sau khi cài → không có cảnh báo SECURELOAD; khung chat tự mở với thẻ **Bắt đầu** (Node đi kèm ✓, trợ lý ✓, tài khoản ✗) | ⬜ chưa chạy | |
 | I-3 | Bấm **Đăng nhập Claude** → cửa sổ đen + trình duyệt đăng nhập Pro/Max → "✓ Đã đăng nhập Claude", gửi tin nhắn được ngay | ⬜ chưa chạy | |
@@ -149,6 +155,7 @@ Trạng thái: ⬜ chưa chạy · ✅ đạt · ❌ không đạt · ⚠️ đ�
 | 2026-11-05 | Phase 1b: `npm test` 38/38 (thêm: danh mục tool TS khớp handler C#, mọi schema chuyển được sang JSON Schema, schema nhận ví dụ spec, giới hạn 500 call/batch) | ✅ |
 | 2026-11-06 | v0.9.0 tối ưu + review: `dotnet test` 102/102 (gom macro theo lô, chỉ ánh xạ tham số handle, bỏ bước dùng đối tượng chưa tạo lại, mẫu lệnh không che mẫu có sẵn, file mẫu hỏng); `npm test` 95/95 (`turn_id`, mô tả skill trong ngoặc kép); build net48 + net8 ✅ | ✅ |
 | 2026-11-06 | v0.8.0 chọn layer: `dotnet test` 98/98 (đếm theo layer, lọc theo layer bỏ tick, tìm layer, lịch sử giữ layer đã chọn); `npm test` 93/93 (`attachments.layers`, `selection.layers`, câu dặn Claude phân biệt thuộc tính layer / đối tượng); build net48 + net8 ✅ | ✅ |
+| 2026-11-10 | v0.9.4 sửa sau rà soát (30 mục): `dotnet test` lõi 115/115 (macro handle1/handle2, log không lẫn chat, che thêm token); `npm test` 114/114 (cổng xác nhận câu ngắn + cộng dồn cả lượt, kết quả lượt cũ sau Dừng, `success`+`is_error`, gợi ý trùng, chuyển bản vẽ giữa lượt, Read chỉ trong thư mục skill, dữ liệu bản vẽ trong ngoặc kép, tin quá dài bỏ qua tới dòng sau, thời gian chờ theo lệnh, Apps Script giới hạn 10 email/giờ); build net48 + net8 ✅ | ✅ |
 | 2026-11-09 | v0.9.4 khóa key: `dotnet test` lõi 112/112 (mã máy khớp công thức bộ cài, chuẩn hóa key, chữ ký giấy phép: đúng máy / máy khác / sửa ngày / sửa chữ ký, khóa công khai nhúng khớp khóa của máy chủ); `npm test` 100/100 (Apps Script chạy trong VM: email cho chủ plugin có tên máy + key, chống gửi trùng 30 phút, key đúng → giấy phép ký đúng, key sai / máy khác bị từ chối, mã offline); build plugin net48 + net8 ✅ | ✅ |
 | 2026-11-06 | v0.7.0 sửa tay + phiên bản: `dotnet test` 96/96 (biên bản nén/đọc lại, mã kiểm tra bỏ nhiễu số thực và "-0", so đầy đủ / bản vẽ lớn theo layer, báo cáo sửa tay giới hạn 300 mã, phiên bản 30 phút + giữ 10 bản); `npm test` 91/91 (`manual_changes` lọc mã sai, câu dặn Claude đọc lại); build net48 + net8 (Wblock/SaveAs, mở DWG chỉ xem, CloseAndDiscard) ✅ | ✅ |
 | 2026-11-06 | v0.6.0 tiện ích khung chat: `dotnet test` lõi 88/88 (macro ghi/ánh xạ handle/lưu, bảng thay đổi, `@`, ghi chú dự án, mẫu lệnh, cài đặt mới, lịch sử giữ Chỉ xem + ghi chú + thay đổi); `npm test` 89/89 (ảnh `capture_view` thành khối image MCP, thẻ kế hoạch, gợi ý, bản nháp skill, ngữ cảnh mới, `promptSuggestions`); build plugin net48 + net8 (API GraphicsSystem off-screen, PreTranslateMessage) ✅ | ✅ |

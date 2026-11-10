@@ -12,7 +12,6 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { confirmationError } from '../agent/confirmation.js';
 import { AgentSession } from '../agent/session.js';
 import type { SidecarToPlugin, ToolResponse } from '../ipc/protocol.js';
 
@@ -168,7 +167,7 @@ async function main(): Promise<void> {
     },
     bridge: {
       call: async (tool, params) => {
-        const block = confirmationError(tool, params, session.lastUserText);
+        const block = session.gate(tool, params);
         const resp: ToolResponse = block ? { id: 'dry', ok: false, error: { code: 'INVALID_PARAMS', message: block } } : drawing.call(tool, params);
         const summary = tool === 'batch_execute'
           ? `batch_execute(${(params.calls as unknown[]).length} calls: ${[...new Set((params.calls as Array<{ tool: string }>).map((c) => c.tool))].join(', ')})`

@@ -27,10 +27,10 @@ describe('message content', () => {
       confirm: 'yes',
     });
     const all = lines.join('\n');
-    assert.match(all, /Bản vẽ đang mở: nha\.dwg/);
+    assert.match(all, /Bản vẽ đang mở: "nha\.dwg"/);
     assert.match(all, /skill "ve-kien-truc"/);
     assert.match(all, /1:50/);
-    assert.match(all, /đang chọn: 2 \(2 LINE\).*2F4A, 2F4B/);
+    assert.match(all, /đang chọn: 2 \("2 LINE"\).*2F4A, 2F4B/);
     assert.match(all, /hoàn tác/);
     assert.match(all, /Đồng ý/);
   });

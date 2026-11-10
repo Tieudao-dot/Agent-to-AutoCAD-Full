@@ -74,7 +74,7 @@ namespace ClaudeCAD.Plugin
 
         private static void AddFile(ZipArchive zip, string name, string path)
         {
-            try { Add(zip, name, Diagnostics.ReadTail(path)); }
+            try { Add(zip, name, Diagnostics.StripChatContent(Diagnostics.ReadTail(path))); }
             catch (Exception ex) { Add(zip, name + ".loi.txt", "Không đọc được: " + ex.Message); }
         }
 

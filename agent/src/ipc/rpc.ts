@@ -42,14 +42,16 @@ export class ToolRpc {
     return `req-${this.seq}`;
   }
 
-  call(tool: string, params: Record<string, unknown>, timeoutMs = this.timeoutMs): Promise<ToolResponse> {
+  call(tool: string, params: Record<string, unknown>, timeoutMs = timeoutFor(tool, params, this.timeoutMs)): Promise<ToolResponse> {
     const id = this.nextId();
     return new Promise<ToolResponse>((resolve) => {
       const timer = setTimeout(() => {
         if (this.pending.delete(id)) {
           resolve(errorResponse(id, 'TIMEOUT',
-            `${tool} did not answer within ${Math.round(timeoutMs / 1000)} s. AutoCAD may be busy (a command or dialog is open). ` +
-              'Ask the user to press Esc in AutoCAD, then retry once; for big jobs split the batch into smaller batches.'));
+            `${tool} did not answer within ${Math.round(timeoutMs / 1000)} s. AutoCAD may be busy (a command or dialog is open), ` +
+              'or the call is still running and may have COMPLETED. Do not simply run it again: first check the drawing ' +
+              '(count_entities / list_entities on the layers involved) to see what was already created or changed, then do only what is missing. ' +
+              'If nothing happened, ask the user to press Esc in AutoCAD and retry once with smaller batches.'));
         }
       }, timeoutMs);
       this.pending.set(id, { tool, resolve, timer });
@@ -85,4 +87,25 @@ export class ToolRpc {
 
 export function errorResponse(id: string, code: string, message: string): ToolResponseErr {
   return { id, ok: false, error: { code, message } };
+}
+
+/** Calls that legitimately take long on a big drawing (render, plot, save, purge). */
+const SLOW_TOOLS = new Set(['plot_pdf', 'save_drawing', 'purge_unused', 'regen', 'attach_xref', 'reload_xref', 'bind_xref', 'zoom_extents']);
+const CAPTURE_TOOLS = new Set(['capture_view']);
+const MAX_TIMEOUT_MS = 5 * 60_000;
+
+/**
+ * Per-call timeout: one 30 s limit for everything made a 500-call batch or a PDF plot of a big drawing
+ * "time out" while AutoCAD was still working — Claude then re-ran it and drew everything twice.
+ */
+export function timeoutFor(tool: string, params: Record<string, unknown>, base = DEFAULT_TOOL_TIMEOUT_MS): number {
+  let ms = base;
+  if (tool === 'batch_execute') {
+    const calls = Array.isArray(params.calls) ? (params.calls as Array<{ tool?: unknown }>) : [];
+    ms = base + calls.length * 100;
+    if (calls.some((c) => typeof c?.tool === 'string' && (SLOW_TOOLS.has(c.tool) || CAPTURE_TOOLS.has(c.tool)))) ms = Math.max(ms, 120_000);
+  } else if (SLOW_TOOLS.has(tool) || CAPTURE_TOOLS.has(tool)) {
+    ms = Math.max(base, 120_000);
+  }
+  return Math.min(ms, MAX_TIMEOUT_MS);
 }

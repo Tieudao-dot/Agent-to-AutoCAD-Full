@@ -3,8 +3,12 @@
  *
  * The primary mechanism is the system prompt: Claude must report the count and ask
  * before erasing by filter or modifying more than 20 objects. This gate enforces
- * the "> 20 objects" part mechanically: such a call is refused unless the user's
- * message of the current turn is a confirmation ("đồng ý", "ok", "có"...).
+ * the "> 20 objects" part mechanically: once a turn has changed or removed more than
+ * 20 existing objects in total (summed over all its calls, so splitting into chunks of
+ * 20 does not slip through), further destructive calls are refused unless the user's
+ * message answers a question of the previous turn with a short confirmation
+ * ("đồng ý", "ok", "có, xóa đi"...), or came from the "Đồng ý" button of a card.
+ * "vẽ lại rồi xóa đi các đường cũ" as a first request is NOT a confirmation.
  */
 
 export const CONFIRM_THRESHOLD = 20;
@@ -25,6 +29,7 @@ const DESTRUCTIVE: Record<string, (p: Record<string, unknown>) => number> = {
   set_dynamic_props: () => 1,
   trim_entities: (p) => len(p.handles),
   extend_entities: (p) => len(p.handles),
+  reset_dynamic_block: (p) => len(p.handles),
 };
 
 function len(v: unknown): number {
@@ -53,7 +58,7 @@ const ANYWHERE = new Set(['ok', 'okay', 'oke', 'okie', 'yes', 'yep', 'confirm'])
 /** Accepted only as the first word ("có, xóa đi" yes; "có bao nhiêu..." / "có thể xóa..." no). */
 const LEADING = new Set(['có', 'ừ', 'ừm', 'uh', 'y', 'đúng', 'được', 'duoc', 'chuẩn']);
 
-/** True if the user's message reads as an explicit confirmation. */
+/** True if the user's message reads as an explicit confirmation (a short reply, the yes-word near its start). */
 export function isConfirmation(text: string | undefined): boolean {
   if (!text) return false;
   const t = text.toLowerCase().normalize('NFC');
@@ -61,9 +66,12 @@ export function isConfirmation(text: string | undefined): boolean {
     // "không" alone is a refusal; "không sao" (no problem) is fine
     if (/^\s*(không|khong|no|đừng)/u.test(t)) return false;
   }
-  if (PHRASES.some((ph) => t.includes(ph))) return true;
   const tokens = t.split(/[\s,.!?;:()"'…-]+/u).filter(Boolean);
   if (tokens.length === 0 || tokens.length > 12) return false; // confirmations are short replies
+  // "đồng ý", "ừ xóa đi", "thôi được rồi làm đi": the phrase opens the reply. A request that merely
+  // contains "xóa đi" further on ("vẽ lại rồi xóa đi các đường cũ") is not an answer.
+  const head = tokens.slice(0, 3).join(' ');
+  if (PHRASES.some((ph) => head.includes(ph))) return true;
   if (tokens.some((w) => ANYWHERE.has(w))) return true;
   const first = tokens[0]!;
   if (!LEADING.has(first)) return false;
@@ -71,16 +79,38 @@ export function isConfirmation(text: string | undefined): boolean {
   return !(first === 'có' && /^(thể|the|bao|phải|nên|cần)$/u.test(tokens[1] ?? ''));
 }
 
+export interface GateState {
+  /** The user's message of the current turn. */
+  userText: string | undefined;
+  /** The previous turn asked the user something (a "?" in Claude's reply, or this gate refused a call). */
+  answersQuestion: boolean;
+  /** The turn was started by the "Đồng ý" button of a confirmation / plan card. */
+  confirmedByButton?: boolean;
+  /** Existing objects already changed or removed by earlier calls of this turn. */
+  alreadyAffected: number;
+}
+
+/** True when the user's message counts as a "yes" to a question Claude asked. */
+export function userConfirmed(g: GateState): boolean {
+  return !!g.confirmedByButton || (g.answersQuestion && isConfirmation(g.userText));
+}
+
 /**
  * Returns an error message if the call must be confirmed first, otherwise undefined.
+ * The count is cumulative over the turn (g.alreadyAffected + this call).
  */
-export function confirmationError(tool: string, params: Record<string, unknown>, userText: string | undefined): string | undefined {
+export function confirmationError(tool: string, params: Record<string, unknown>, g: GateState): string | undefined {
   const n = affectedCount(tool, params);
-  if (n <= CONFIRM_THRESHOLD) return undefined;
-  if (isConfirmation(userText)) return undefined;
+  if (n === 0) return undefined;
+  const total = g.alreadyAffected + n;
+  if (total <= CONFIRM_THRESHOLD) return undefined;
+  if (userConfirmed(g)) return undefined;
+  const what = g.alreadyAffected > 0
+    ? `this ${tool} call would bring the objects modified or erased in this turn to ${total} (${g.alreadyAffected} already + ${n} now; more than ${CONFIRM_THRESHOLD})`
+    : `this ${tool} call would modify or erase ${n} existing objects (more than ${CONFIRM_THRESHOLD})`;
   return (
-    `Confirmation required: this ${tool} call would modify or erase ${n} existing objects (more than ${CONFIRM_THRESHOLD}). ` +
-    'Do not retry now. Tell the user in Vietnamese how many objects and what will change, ask "Cậu có đồng ý không?", ' +
+    `Confirmation required: ${what}. ` +
+    'Do not retry now and do not split the change into smaller calls. Tell the user in Vietnamese how many objects and what will change, ask "Cậu có đồng ý không?", ' +
     'and end your turn. Run the operation only after the user confirms in their next message.'
   );
 }

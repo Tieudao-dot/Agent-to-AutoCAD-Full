@@ -47,7 +47,8 @@ export function prepareSkillsPlugin(skillsDir: string | undefined, workDir: stri
 
   const pluginDir = path.join(workDir, SKILLS_PLUGIN_NAME);
   const target = path.join(pluginDir, 'skills');
-  fs.rmSync(pluginDir, { recursive: true, force: true });
+  // the Claude process that used it may still hold files open for a moment (Windows: EPERM / ENOTEMPTY)
+  fs.rmSync(pluginDir, { recursive: true, force: true, maxRetries: 10, retryDelay: 100 });
   fs.mkdirSync(path.join(pluginDir, '.claude-plugin'), { recursive: true });
   fs.mkdirSync(target, { recursive: true });
 

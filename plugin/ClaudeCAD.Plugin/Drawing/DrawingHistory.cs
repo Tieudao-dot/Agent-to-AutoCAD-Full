@@ -228,12 +228,14 @@ namespace ClaudeCAD.Plugin.Drawing
         private void EnsureCompared(Document doc, State st, string key, string path)
         {
             if (st.Compared) return;
-            st.Compared = true;
             DrawingSnapshot baseline = null;
             try { baseline = LoadBaseline(key, path); }
             catch (Exception ex) { Logger.Warn("snapshot unreadable: " + ex.Message); }
-            if (baseline == null) return;
+            if (baseline == null) { st.Compared = true; return; }
+            // Compared only once the comparison worked: if Build throws (drawing busy...), the next message tries
+            // again instead of writing a fresh baseline that would silently drop the manual changes since last time
             var now = Build(doc.Database, key, baseline.Entries.Keys);
+            st.Compared = true;
             st.LayoutIds = LayoutIds(doc.Database);
             var diff = SnapshotDiff.Compare(baseline, now);
             st.Snapshot = now;
@@ -497,12 +499,17 @@ namespace ClaudeCAD.Plugin.Drawing
                 if (doc == null || doc.IsDisposed) { _toCompare.Dequeue(); return; }
                 // wait until no command is running in that drawing
                 if (!string.IsNullOrEmpty(doc.CommandInProgress) || !doc.Editor.IsQuiescent) return;
-                _toCompare.Dequeue();
-                var st = Get(doc);
-                if (!st.Compared && !ReferenceEquals(doc.Database, TurnDb)) EnsureCompared(doc, st, KeyOf(doc), doc.Name);
+                _toCompare.Dequeue(); // once: a failure below must not also drop the next drawing in the queue
+                try
+                {
+                    var st = Get(doc);
+                    if (!st.Compared && !ReferenceEquals(doc.Database, TurnDb)) EnsureCompared(doc, st, KeyOf(doc), doc.Name);
+                }
+                catch (Exception ex) { Logger.Warn("idle snapshot compare failed (retried on the next message): " + ex.Message); }
             }
             catch (Exception ex)
             {
+                // thrown before the dequeue above (drawing closing...): drop it so Idle does not spin on it
                 Logger.Warn("idle snapshot compare failed: " + ex.Message);
                 if (_toCompare.Count > 0) _toCompare.Dequeue();
             }
@@ -645,7 +652,8 @@ namespace ClaudeCAD.Plugin.Drawing
             {
                 return doc == AcApp.DocumentManager.MdiActiveDocument && doc.IsNamedDrawing && File.Exists(doc.Name)
                     && string.Equals(Path.GetExtension(doc.Name), ".dwg", StringComparison.OrdinalIgnoreCase) // not .dxf / .dwt
-                    && Convert.ToInt32(AcApp.GetSystemVariable("DBMOD")) == 0;
+                    // bits 8 (window) and 16 (view) are set by any pan / zoom: they do not change the content
+                    && (Convert.ToInt32(AcApp.GetSystemVariable("DBMOD")) & ~(8 | 16)) == 0;
             }
             catch { return false; }
         }
