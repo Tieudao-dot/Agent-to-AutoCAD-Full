@@ -256,7 +256,8 @@ begin
   Body := '';
   try
     Req := CreateOleObject('WinHttp.WinHttpRequest.5.1');
-    Req.SetTimeouts(5000, 5000, 8000, 12000);
+    { receive 25 s: a cold Apps Script start + its 5 s lock + sending the email can take well over 12 s }
+    Req.SetTimeouts(5000, 5000, 8000, 25000);
     if RegQueryDWordValue(HKCU, 'Software\Microsoft\Windows\CurrentVersion\Internet Settings', 'ProxyEnable', ProxyOn) and (ProxyOn <> 0) then
       if RegQueryStringValue(HKCU, 'Software\Microsoft\Windows\CurrentVersion\Internet Settings', 'ProxyServer', Proxy) and (Trim(Proxy) <> '') then
         Req.SetProxy(2, Trim(Proxy), '<local>');
@@ -292,7 +293,11 @@ end;
 
 procedure SetStatus(const Text: String);
 begin
-  if KeyStatus <> nil then KeyStatus.Caption := Text;
+  if KeyStatus <> nil then
+  begin
+    KeyStatus.Caption := Text;
+    KeyStatus.Refresh; { the label has its own window: repaint it, not only the wizard }
+  end;
   WizardForm.Refresh; { paint now: the request that follows blocks the window for a few seconds }
 end;
 
@@ -305,7 +310,7 @@ begin
     SetStatus('Nhắn mã máy ở trên cho chủ plugin để nhận key.');
     exit;
   end;
-  SetStatus('Đang gửi yêu cầu kích hoạt cho chủ plugin...');
+  SetStatus('Đang gửi yêu cầu kích hoạt cho chủ plugin (có thể mất tới 20 giây, cửa sổ sẽ đứng yên)...');
   if not HttpGet('{#ActivationUrl}?action=request&machine=' + MachineCode() + '&device=' + UrlEncode(GetComputerNameString()) +
                  '&user=' + UrlEncode(GetUserNameString()) + '&from=' + UrlEncode('setup {#AppVersion}'), Body) then
     SetStatus('Không gửi được yêu cầu tự động (máy chưa có mạng?). Nhắn mã máy ở trên cho chủ plugin qua Zalo.')
@@ -480,7 +485,8 @@ begin
   { the owner gets the email as soon as the page opens (once per run; "Gửi lại yêu cầu" sends again) }
   if (KeyPage <> nil) and (CurPageID = KeyPage.ID) then
   begin
-    if not Requested then SendRequest();
+    { a key already given with /KEY=: nothing to ask the owner for }
+    if (not Requested) and (Trim(KeyEdit.Text) = '') then SendRequest();
   end;
 end;
 

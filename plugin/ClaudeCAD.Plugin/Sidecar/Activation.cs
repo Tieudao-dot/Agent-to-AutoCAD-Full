@@ -75,10 +75,46 @@ namespace ClaudeCAD.Plugin.Sidecar
                 string text = null;
                 try { if (File.Exists(StatusFile)) text = File.ReadAllText(StatusFile, Encoding.UTF8); }
                 catch (Exception ex) { Logger.Warn("status unreadable: " + ex.Message); }
-                _statusDay = DateTime.UtcNow.Date;
-                _status = LicenseLogic.VerifyStatus(text, MachineCode, DateTime.UtcNow);
+                var now = DateTime.UtcNow;
+                var seen = LatestSeenUtc();
+                _statusDay = now.Date;
+                _status = LicenseLogic.VerifyStatus(text, MachineCode, now, seen);
+                if (_status.ClockBack) Logger.Warn($"clock set back: now {now:o}, already seen {seen:o}");
+                else RememberSeen(now, reset: false);
                 return _status;
             }
+        }
+
+        // ---- clock set back (stretching the 7-day offline window): the latest time seen, kept in two places
+
+        private const string SeenRegKey = @"Software\ClaudeCAD\Activation";
+        private static string SeenFile => Path.Combine(Root, "clock.txt");
+
+        /// <summary>The latest time this machine's clock showed the plugin (file and registry, whichever is later).</summary>
+        private static DateTime? LatestSeenUtc()
+        {
+            DateTime? best = null;
+            void Take(string s)
+            {
+                if (DateTime.TryParse((s ?? "").Trim(), CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out var t))
+                {
+                    t = t.ToUniversalTime();
+                    if (!best.HasValue || t > best.Value) best = t;
+                }
+            }
+            try { if (File.Exists(SeenFile)) Take(File.ReadAllText(SeenFile)); } catch { }
+            try { using (var k = Registry.CurrentUser.OpenSubKey(SeenRegKey)) Take(k?.GetValue("LastSeenUtc") as string); } catch { }
+            return best;
+        }
+
+        /// <summary>Moves the mark forward (reset = a fresh answer from the service: trust this clock again).</summary>
+        private static void RememberSeen(DateTime utcNow, bool reset)
+        {
+            var prior = reset ? null : LatestSeenUtc();
+            if (prior.HasValue && prior.Value >= utcNow) return;
+            var text = utcNow.ToString("o", CultureInfo.InvariantCulture);
+            try { Directory.CreateDirectory(Root); File.WriteAllText(SeenFile, text); } catch (Exception ex) { Logger.Warn("clock mark unsaved: " + ex.Message); }
+            try { using (var k = Registry.CurrentUser.CreateSubKey(SeenRegKey)) k?.SetValue("LastSeenUtc", text); } catch (Exception ex) { Logger.Warn("clock mark unsaved: " + ex.Message); }
         }
 
         /// <summary>
@@ -106,6 +142,7 @@ namespace ClaudeCAD.Plugin.Sidecar
                 var st = DeviceStatus;
                 if (st.Ok && st.Status == "disabled") return "Máy này đã bị chủ plugin tạm khóa. " + Contact + ".";
                 if (st.Ok && st.Status == "pending") return "Máy này đang chờ chủ plugin duyệt lại. " + Contact + " nếu chờ lâu.";
+                if (st.Ok && st.ClockBack) return "Đồng hồ máy đang chậm hơn lần dùng trước. Chỉnh lại ngày giờ Windows cho đúng, kết nối mạng rồi bấm \"Kiểm tra lại\".";
                 if (st.Ok && !st.Fresh) return $"Plugin đã quá {LicenseLogic.StatusMaxAgeDays} ngày không kiểm tra được với chủ plugin ({st.Reason}). Kết nối mạng rồi bấm \"Kiểm tra lại\".";
                 return $"Chưa xác nhận được máy này với chủ plugin ({st.Reason}). Kết nối mạng rồi bấm \"Kiểm tra lại\".";
             }
@@ -123,23 +160,37 @@ namespace ClaudeCAD.Plugin.Sidecar
             }
         }
 
-        /// <summary>Contents\activation.json {"url", "contact"} written by make-bundle; CLAUDECAD_ACTIVATION_URL overrides the url.</summary>
+        /// <summary>
+        /// The activation service {"url", "contact"}: built into the dll from activation/activation.json (a release
+        /// always has the url there, so editing or deleting Contents\activation.json on a user's machine cannot
+        /// switch the owner's device check off). The Contents file is only read by a build without a built-in url;
+        /// CLAUDECAD_ACTIVATION_URL replaces the url (tests) but can never remove it.
+        /// </summary>
         private static (string url, string contact) Config
         {
             get
             {
                 if (_config.HasValue) return _config.Value;
                 string url = null, contact = null;
+                void Read(string json)
+                {
+                    var d = JsonCodec.ParseObject(json);
+                    var u = d.TryGetValue("url", out var uv) ? uv as string : null;
+                    var c = d.TryGetValue("contact", out var cv) ? cv as string : null;
+                    if (string.IsNullOrWhiteSpace(url) && !string.IsNullOrWhiteSpace(u)) url = u.Trim();
+                    if (string.IsNullOrWhiteSpace(contact) && !string.IsNullOrWhiteSpace(c)) contact = c.Trim();
+                }
+                try
+                {
+                    using (var s = typeof(Activation).Assembly.GetManifestResourceStream("ClaudeCAD.activation.json"))
+                        if (s != null) using (var r = new StreamReader(s, Encoding.UTF8)) Read(r.ReadToEnd());
+                }
+                catch (Exception ex) { Logger.Warn("built-in activation config unreadable: " + ex.Message); }
                 try
                 {
                     var dir = PluginPaths.ContentsDirectory;
                     var file = dir == null ? null : Path.Combine(dir, "activation.json");
-                    if (file != null && File.Exists(file))
-                    {
-                        var d = JsonCodec.ParseObject(File.ReadAllText(file, Encoding.UTF8));
-                        url = d.TryGetValue("url", out var u) ? u as string : null;
-                        contact = d.TryGetValue("contact", out var c) ? c as string : null;
-                    }
+                    if (file != null && File.Exists(file)) Read(File.ReadAllText(file, Encoding.UTF8)); // fills only what is still missing
                 }
                 catch (Exception ex) { Logger.Warn("activation.json unreadable: " + ex.Message); }
                 var env = Environment.GetEnvironmentVariable("CLAUDECAD_ACTIVATION_URL");
@@ -240,6 +291,8 @@ namespace ClaudeCAD.Plugin.Sidecar
                         return (false, "Không kiểm tra được trạng thái máy: " + (r.error ?? "máy chủ không trả lời đúng."));
                     var st = LicenseLogic.VerifyStatus(r.status, MachineCode, DateTime.UtcNow);
                     if (!st.Ok) return (false, "Trả lời của máy chủ không hợp lệ: " + st.Reason + ".");
+                    // a fresh answer dated by the service: this clock is right again (a clock that was wrong-ahead recovers)
+                    if (st.Fresh) RememberSeen(DateTime.UtcNow, reset: true);
                     SaveStatus(r.status, st);
                     if (!string.IsNullOrEmpty(r.license))
                     {

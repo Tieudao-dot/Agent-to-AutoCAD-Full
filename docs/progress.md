@@ -218,4 +218,7 @@ Cần test: D-1 … D-3.
 
 - Bổ sung sau khi chủ plugin duyệt thử: **tối đa 30 máy mới/giờ** vào Sheet (chống mã máy bịa làm đầy bảng); máy đã `Active` xin lại không gửi email; **máy chờ duyệt tự hỏi trạng thái khi mở AutoCAD** (và ~6 giờ/lần) → đổi `Active` là lần mở sau tự dùng được, không cần bấm "Kiểm tra lại".
 
-Cần test trên AutoCAD thật: K-8 … K-13 (cùng K-1 … K-7, R-1 … R-6).
+- **Đợt rà soát bảo mật (sau khi gộp skill theo đoạn chat + đợt 3):** link máy chủ nhúng vào DLL (xóa `Contents\activation.json` không tắt được kiểm tra trạng thái); chống vặn lùi đồng hồ (`clock.txt` + `HKCU\Software\ClaudeCAD\Activation`, đặt lại khi kiểm tra trực tuyến thành công); Thử lại / Chat mới / khởi động lại sau đăng nhập không chạy trợ lý trên máy chưa được phép; máy chủ: chặn công thức (`'` trước `= + - @`), kiểm tra trùng trong khóa, trần 40 email/ngày (PropertiesService); bộ cài: vẽ lại dòng trạng thái trước khi gửi, không gửi email khi có `/KEY=`, chờ trả lời 25 giây.
+- Test: agent 127, core 120; build net48 + net8.
+
+Cần test trên AutoCAD thật: K-8 … K-16 (cùng K-1 … K-7, R-1 … R-6).

@@ -41,6 +41,8 @@ var MAX_MAILS_PER_HOUR = 10;
 var KEEP_DAILY_QUOTA = 5; // left for taoKeyThuCong / kiemTra
 // Same reason for the sheet: made-up machine codes would otherwise fill it with junk rows.
 var MAX_NEW_DEVICES_PER_HOUR = 30;
+// 10 an hour could still use up the ~100 emails of a day in ~10 hours of made-up requests.
+var MAX_MAILS_PER_DAY = 40;
 
 var MACHINE_RE = /^CC-[0-9A-F]{4}-[0-9A-F]{4}-[0-9A-F]{4}$/;
 var B32 = '0123456789ABCDEFGHJKMNPQRSTVWXYZ'; // Crockford: no I, L, O, U
@@ -110,11 +112,11 @@ function rowStatus(sh, row) {
 function upsertDevice(sh, machine, device, user) {
   var row = findRow(sh, machine);
   if (!row) {
-    sh.appendRow([machine, device || '(không rõ)', user || '(không rõ)', nowText(), '', STATUS_VALUES[0], '', '', '']);
+    sh.appendRow([machine, cellText(device || '(không rõ)'), cellText(user || '(không rõ)'), nowText(), '', STATUS_VALUES[0], '', '', '']);
     return findRow(sh, machine);
   }
-  if (device && device !== '(không rõ)') sh.getRange(row, 2).setValue(device);
-  if (user && user !== '(không rõ)') sh.getRange(row, 3).setValue(user);
+  if (device && device !== '(không rõ)') sh.getRange(row, 2).setValue(cellText(device));
+  if (user && user !== '(không rõ)') sh.getRange(row, 3).setValue(cellText(user));
   return row;
 }
 
@@ -139,6 +141,8 @@ function handleRequest(p) {
   var lock = LockService.getScriptLock();
   if (!lock.tryLock(5000)) return { ok: false, error: 'Máy chủ kích hoạt đang bận, thử lại sau ít phút.' };
   try {
+    // checked again under the lock: two requests from one machine at the same moment send one email
+    if (cache.get(seen)) return { ok: true, sent: false };
     var stamp = Utilities.formatDate(new Date(), 'UTC', 'yyyyMMddHH');
     if (!findRow(sh, machine)) {
       var newKey = 'rows:' + stamp;
@@ -162,12 +166,21 @@ function handleRequest(p) {
       console.log('request refused (hourly limit): ' + machine + ' ' + device);
       return { ok: false, error: 'Có quá nhiều yêu cầu kích hoạt trong giờ này, thử lại sau.' };
     }
-    if (MailApp.getRemainingDailyQuota() <= KEEP_DAILY_QUOTA) {
-      console.log('request refused (daily email quota): ' + machine + ' ' + device);
+    // per day: in script properties (the cache keeps a value 6 hours at most)
+    var props = PropertiesService.getScriptProperties();
+    var dayKey = 'mailsDay:' + stamp.substr(0, 8);
+    var sentToday = Number(props.getProperty(dayKey) || 0);
+    if (sentToday >= MAX_MAILS_PER_DAY || MailApp.getRemainingDailyQuota() <= KEEP_DAILY_QUOTA) {
+      console.log('request refused (daily email limit): ' + machine + ' ' + device);
       return { ok: false, error: 'Máy chủ kích hoạt đã hết lượt gửi email hôm nay.' };
     }
     sendRequestMail(machine, device, user, from);
     cache.put(hour, String(sentThisHour + 1), 3600);
+    props.setProperty(dayKey, String(sentToday + 1));
+    if (sentToday === 0) { // first email of the day: forget the counters of earlier days
+      var all = props.getKeys();
+      for (var i = 0; i < all.length; i++) if (all[i].indexOf('mailsDay:') === 0 && all[i] !== dayKey) props.deleteProperty(all[i]);
+    }
     cache.put(seen, '1', 1800);
     console.log('request mailed: ' + machine + ' ' + device + ' (' + user + ')');
     return { ok: true, sent: true };
@@ -247,7 +260,7 @@ function handleStatus(p) {
         try {
           sh.getRange(row, 7).setValue(nowText());
           var ver = clip(p.ver, 20);
-          if (ver) sh.getRange(row, 8).setValue(ver);
+          if (ver) sh.getRange(row, 8).setValue(cellText(ver));
           cache.put(mark, '1', 1800);
         } finally {
           lock.releaseLock();
@@ -305,6 +318,15 @@ function normKey(s) {
 function clip(s, n) {
   s = String(s || '').replace(/[\r\n\t]+/g, ' ').trim();
   return s.length > n ? s.substr(0, n) : s;
+}
+
+/**
+ * Text sent by a machine (device / user name, version) as a plain-text cell: a leading ' keeps Google Sheets
+ * from running it as a formula (=IMAGE("https://…"&A2), =HYPERLINK(…) could leak the device list or plant links).
+ */
+function cellText(s) {
+  s = String(s == null ? '' : s);
+  return /^[=+\-@]/.test(s) ? "'" + s : s;
 }
 
 // ======================================================================= editor functions (▶ Run)

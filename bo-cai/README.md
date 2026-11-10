@@ -35,7 +35,9 @@ Sau khi cài: gõ `CLAUDECHATSELFTEST` để tự kiểm tra (báo cáo ✓/✗ 
 
 - Mỗi máy chạy bộ cài (hoặc mở khung chat khi chưa kích hoạt) tự hiện thành một dòng **Chờ duyệt** trong Google Sheet **"ClaudeCAD – Thiết bị"** của chủ plugin, kèm email **"[ClaudeCAD] Yêu cầu kích hoạt: <tên máy> (<user>)"** có mã máy và **KEY** dự phòng.
 - **Cho dùng:** đổi ô **Trạng thái** của dòng đó thành `Active` → lần mở AutoCAD kế tiếp máy đó tự dùng được (hoặc bấm **Kiểm tra lại** để dùng ngay), **không cần key**. Hoặc gửi KEY trong email qua Zalo.
-- **Chống spam:** tối đa 30 máy mới mỗi giờ được thêm vào bảng, 10 email mỗi giờ; máy đã `Active` xin lại không gửi email thừa.
+- **Chống spam:** tối đa 30 máy mới mỗi giờ được thêm vào bảng, 10 email mỗi giờ và 40 email mỗi ngày; máy đã `Active` xin lại không gửi email thừa; tên máy gửi lên không chạy được như công thức trong bảng.
+- **Không né được lệnh khóa:** link máy chủ nằm sẵn trong plugin (xóa file cấu hình không tắt được kiểm tra); chỉnh lùi đồng hồ máy để kéo dài 7 ngày cũng bị phát hiện.
+- ⚠️ **Đừng đổi tên trang "Thiết bị", đừng chèn / đổi thứ tự cột** trước cột "Ghi chú" (máy chủ đọc cột theo vị trí). Chia sẻ bảng tính thì chỉ cho quyền **Người xem**: người có quyền sửa xem được khóa bí mật trong Apps Script.
 - **Ngưng cho dùng:** đổi thành `Disabled` → máy bị khóa ở lần kiểm tra kế tiếp (plugin kiểm tra mỗi lần mở AutoCAD và ~6 giờ/lần; máy cố tình ngắt mạng cũng chỉ dùng thêm tối đa 7 ngày). Đổi lại `Active` là máy dùng tiếp ngay, không cần key mới.
 - Cột **Lần cuối dùng** và **Phiên bản** cho biết máy nào còn đang dùng plugin.
 - Key chỉ dùng được trên đúng máy có mã đó. Cài lại Windows / thay mainboard thì mã máy đổi, máy xin duyệt lại như máy mới.

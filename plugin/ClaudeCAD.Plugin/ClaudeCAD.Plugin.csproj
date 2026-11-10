@@ -107,4 +107,10 @@
     </Reference>
   </ItemGroup>
 
+  <!-- v0.9.4: the activation service url is built into the dll, so deleting / editing Contents\activation.json
+       on a user's machine cannot switch off the owner's Active / Disabled check -->
+  <ItemGroup>
+    <EmbeddedResource Include="..\..\activation\activation.json" LogicalName="ClaudeCAD.activation.json" Link="activation.json" />
+  </ItemGroup>
+
 </Project>

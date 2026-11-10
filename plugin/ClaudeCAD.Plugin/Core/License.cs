@@ -24,7 +24,8 @@ namespace ClaudeCAD.Plugin.Core
         public string Machine = "";
         public string Date = "";   // yyyy-MM-dd (UTC) of the check the service signed
         public int AgeDays;        // how old that check is
-        public bool Fresh;         // offline, or at most StatusMaxAgeDays old
+        public bool Fresh;         // offline, or at most StatusMaxAgeDays old (and the clock was not set back)
+        public bool ClockBack;     // this machine's clock is earlier than a time it already showed
         public string Reason = "";
     }
 
@@ -122,7 +123,18 @@ namespace ClaudeCAD.Plugin.Core
         /// </summary>
         public static StatusCheck VerifyStatus(string line, string machine, DateTime utcNow) => VerifyStatus(line, machine, utcNow, PublicModulus, PublicExponent);
 
-        public static StatusCheck VerifyStatus(string line, string machine, DateTime utcNow, string modulusB64, string exponentB64)
+        /// <summary>latestSeenUtc: the latest time this machine's clock ever showed the plugin (null = unknown).</summary>
+        public static StatusCheck VerifyStatus(string line, string machine, DateTime utcNow, DateTime? latestSeenUtc) =>
+            VerifyStatus(line, machine, utcNow, PublicModulus, PublicExponent, latestSeenUtc);
+
+        /// <summary>
+        /// True when the clock is more than a day earlier than a time it already showed: someone set it back to
+        /// stretch the offline window (a day of slack for time-zone / daylight-saving changes and small corrections).
+        /// </summary>
+        public static bool ClockRolledBack(DateTime utcNow, DateTime? latestSeenUtc) =>
+            latestSeenUtc.HasValue && utcNow < latestSeenUtc.Value.AddDays(-1);
+
+        public static StatusCheck VerifyStatus(string line, string machine, DateTime utcNow, string modulusB64, string exponentB64, DateTime? latestSeenUtc = null)
         {
             var r = new StatusCheck();
             line = (line ?? "").Trim();
@@ -151,6 +163,13 @@ namespace ClaudeCAD.Plugin.Core
             if (!r.Fresh) r.Reason = r.AgeDays > StatusMaxAgeDays
                 ? $"lần kiểm tra trạng thái gần nhất đã {r.AgeDays} ngày trước (quá {StatusMaxAgeDays} ngày)"
                 : "ngày trong xác nhận trạng thái nằm ở tương lai (đồng hồ máy sai?)";
+            else if (r.Status != "offline" && ClockRolledBack(utcNow, latestSeenUtc))
+            {
+                // the owner's no-network pass never expires, so the clock does not matter for it
+                r.Fresh = false;
+                r.ClockBack = true;
+                r.Reason = "đồng hồ máy bị chỉnh lùi so với lần dùng trước";
+            }
             return r;
         }
 

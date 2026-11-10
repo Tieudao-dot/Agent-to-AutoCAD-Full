@@ -124,6 +124,25 @@ namespace ClaudeCAD.Core.Tests
         }
 
         [Fact]
+        public void ClockSetBackToStretchTheOfflineWindowIsCaught()
+        {
+            // the plugin already saw Nov 20; the clock now says Nov 12 (inside the 7 days of the Nov 9 status)
+            var seen = new System.DateTime(2026, 11, 20, 9, 0, 0, System.DateTimeKind.Utc);
+            var back = LicenseLogic.VerifyStatus(StatusActive, "CC-1A2B-3C4D-5E6F", new System.DateTime(2026, 11, 12, 9, 0, 0, System.DateTimeKind.Utc), StatusModulus, "AQAB", seen);
+            Assert.True(back.Ok);
+            Assert.False(back.Fresh);
+            Assert.True(back.ClockBack);
+            Assert.Contains("đồng hồ", back.Reason);
+            // a few hours back (time zone, daylight saving, a small correction) is fine
+            Assert.True(LicenseLogic.VerifyStatus(StatusActive, "CC-1A2B-3C4D-5E6F", Nov10, StatusModulus, "AQAB", Nov10.AddHours(20)).Fresh);
+            Assert.True(LicenseLogic.VerifyStatus(StatusActive, "CC-1A2B-3C4D-5E6F", Nov10, StatusModulus, "AQAB", null).Fresh);
+            // the owner's no-network pass does not care about the clock
+            Assert.True(LicenseLogic.VerifyStatus(StatusOffline, "CC-1A2B-3C4D-5E6F", Nov10, StatusModulus, "AQAB", Nov10.AddYears(1)).Fresh);
+            Assert.False(LicenseLogic.ClockRolledBack(Nov10, null));
+            Assert.True(LicenseLogic.ClockRolledBack(Nov10, Nov10.AddDays(2)));
+        }
+
+        [Fact]
         public void StatusOfOtherMachinesTamperingAndJunkFail()
         {
             Assert.False(LicenseLogic.VerifyStatus(StatusActive, "CC-9999-9999-9999", Nov10, StatusModulus, "AQAB").Ok);
