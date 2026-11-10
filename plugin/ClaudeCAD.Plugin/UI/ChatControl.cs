@@ -637,11 +637,34 @@ namespace ClaudeCAD.Plugin.UI
             SettingsChanged?.Invoke(_settings.Clone());
         }
 
-        public void SetDark(bool dark) => Ui(() => Theme.Apply(Resources, dark));
+        public void SetDark(bool dark) => SetDark(dark, null);
+
+        /// <summary>
+        /// Repaints the palette. <paramref name="acad"/> carries the colors and font AutoCAD uses for its
+        /// own palettes (null = keep the built-in set, e.g. in the UI tests).
+        /// </summary>
+        public void SetDark(bool dark, AcadTheme.Info acad) => Ui(() =>
+        {
+            Theme.Apply(Resources, dark, acad);
+            ApplyAcadFont(acad);
+        });
+
+        /// <summary>
+        /// Takes the palette font from AutoCAD. The user's own font size (⚙ ▸ Cỡ chữ) wins, so this only
+        /// sets the size while the setting is still on "theo AutoCAD" (FontSize = 0).
+        /// </summary>
+        private void ApplyAcadFont(AcadTheme.Info acad)
+        {
+            if (acad == null) return;
+            if (acad.Font != null) FontFamily = acad.Font;
+            if (acad.FontSize > 0 && (_settings == null || _settings.FontAuto)) FontSize = acad.FontSize;
+        }
 
         private void ChangeFont(int delta)
         {
-            _settings.FontSize = _settings.ClampFont(_settings.FontSize + delta);
+            // The user picked a size: stop following AutoCAD's palette font size from here on.
+            _settings.FontSize = _settings.ClampFont((FontSize > 0 ? FontSize : _settings.FontSize) + delta);
+            _settings.FontAuto = false;
             FontSize = _settings.FontSize;
             foreach (var v in _messages.Children.OfType<FrameworkElement>().Select(e => e.Tag).OfType<AssistantView>()) v.Rerender();
             SettingsChanged?.Invoke(_settings.Clone());

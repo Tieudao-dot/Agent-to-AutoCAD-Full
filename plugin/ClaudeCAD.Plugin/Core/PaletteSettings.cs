@@ -16,6 +16,8 @@ namespace ClaudeCAD.Plugin.Core
         public string Model = "";           // "" = sidecar default (feature 14)
         public string Effort = "";          // "" = model default
         public double FontSize = 13;        // feature 19
+        /// <summary>Font size follows AutoCAD's own palette font; false once the user picks a size.</summary>
+        public bool FontAuto = true;
         public string Theme = "auto";       // auto | dark | light
         public bool Notify = true;          // feature 15
         public bool VisualCheck = true;     // Claude looks at the drawing (capture_view) after big drawing tasks
@@ -72,7 +74,7 @@ namespace ClaudeCAD.Plugin.Core
         public string ToJson() => JsonCodec.Serialize(new Dictionary<string, object>
         {
             ["standard"] = Standard, ["scale"] = Scale, ["model"] = Model, ["effort"] = Effort,
-            ["font_size"] = FontSize, ["theme"] = Theme, ["notify"] = Notify,
+            ["font_size"] = FontSize, ["font_auto"] = FontAuto, ["theme"] = Theme, ["notify"] = Notify,
             ["visual_check"] = VisualCheck, ["plan_first"] = PlanFirst, ["suggestions"] = Suggestions, ["hotkey"] = Hotkey,
             ["versions"] = Versions, ["snapshot_next_to_drawing"] = SnapshotNextToDrawing,
             ["history"] = History.Cast<object>().ToList(),
@@ -93,6 +95,7 @@ namespace ClaudeCAD.Plugin.Core
             s.Theme = Str("theme", "auto");
             if (d.TryGetValue("font_size", out var fs) && fs is double f) s.FontSize = s.ClampFont(f);
             bool Bool(string k, bool def) => d.TryGetValue(k, out var v) && v is bool x ? x : def;
+            s.FontAuto = Bool("font_auto", true);
             s.Notify = Bool("notify", true);
             s.VisualCheck = Bool("visual_check", true);
             s.PlanFirst = Bool("plan_first", true);

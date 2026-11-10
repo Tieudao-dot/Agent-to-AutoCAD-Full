@@ -121,6 +121,11 @@ Trạng thái: ⬜ chưa chạy · ✅ đạt · ❌ không đạt · ⚠️ đ�
 | K-5 | Sao chép `license.txt` sang máy khác → plugin báo "giấy phép của máy khác" | ⬜ chưa chạy | |
 | K-6 | Máy không có mạng: bộ cài báo không gửi được; mã offline (`taoKeyThuCong`) dán vào ô key → cài được | ⬜ chưa chạy | |
 | K-7 | `ClaudeCAD-Setup.exe /VERYSILENT /KEY=<key>` → cài ngầm và kích hoạt | ⬜ chưa chạy | |
+| UX-1 | Mở khung chat trên AutoCAD theme **tối**: nền, chữ, ô nhập, viền palette khớp palette Properties đặt cạnh (chụp 2 palette cạnh nhau để so) | ⬜ chưa chạy | |
+| UX-2 | `COLORTHEME` = 1 (Options ▸ Display ▸ Color theme = Light) → khung chat đổi sang sáng **ngay**, không cần đóng mở lại; đổi về tối cũng vậy | ⬜ chưa chạy | |
+| UX-3 | Chữ trong khung chat cùng font và cỡ với palette Properties (⚙ ▸ Cỡ chữ để *Theo AutoCAD*) | ⬜ chưa chạy | |
+| UX-4 | Ctrl+lăn chuột đổi cỡ chữ → giữ cỡ của mình, đổi theme AutoCAD không kéo cỡ chữ về theo AutoCAD nữa | ⬜ chưa chạy | |
+| UX-5 | ⚙ ▸ Giao diện ép **Tối** khi AutoCAD đang sáng → khung chat tối, chữ vẫn đọc được (lấy font của AutoCAD, không lấy màu) | ⬜ chưa chạy | |
 | R-1 | Macro có bo góc (fillet) giữa 2 đường vừa vẽ → chạy lại macro ở chỗ khác: bo góc 2 đường mới, 2 đường cũ giữ nguyên | ⬜ chưa chạy | |
 | R-2 | Bật Phiên bản, yêu cầu Claude "zoom vào khung tên rồi đổi chữ" → có phiên bản mới trước khi sửa; lượt chỉ zoom không có nút Hoàn tác | ⬜ chưa chạy | |
 | R-3 | "Vẽ lại rồi xóa đi các đường cũ" trên layer có > 20 đối tượng → Claude hỏi xác nhận trước khi xóa | ⬜ chưa chạy | |

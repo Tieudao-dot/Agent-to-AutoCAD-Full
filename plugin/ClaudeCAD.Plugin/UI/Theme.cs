@@ -23,12 +23,34 @@ namespace ClaudeCAD.Plugin.UI
         public const string CodeBg = "cc.code";
         public const string LinkFg = "cc.link";
         public const string ChipBg = "cc.chip";
+        /// <summary>Toolbar / section-header strip, like a Properties palette category row.</summary>
+        public const string HeaderBg = "cc.header";
+        /// <summary>Icon button under the mouse.</summary>
+        public const string HoverBg = "cc.hover";
+        /// <summary>Icon button being pressed, and the selected row.</summary>
+        public const string PressBg = "cc.press";
+        /// <summary>Text on top of <see cref="Accent"/>.</summary>
+        public const string AccentFg = "cc.accentfg";
 
         private static SolidColorBrush B(byte r, byte g, byte b)
         {
             var br = new SolidColorBrush(Color.FromRgb(r, g, b));
             br.Freeze();
             return br;
+        }
+
+        /// <summary>
+        /// Fills the palette brushes: the built-in set for <paramref name="dark"/> first, then whatever
+        /// AutoCAD's own palette theme gave us on top, so a key AutoCAD does not expose keeps a sane value.
+        /// </summary>
+        public static void Apply(ResourceDictionary res, bool dark, AcadTheme.Info acad)
+        {
+            Apply(res, dark);
+            if (acad == null) return;
+            foreach (var pair in acad.Brushes)
+            {
+                if (pair.Value != null) res[pair.Key] = pair.Value;
+            }
         }
 
         public static void Apply(ResourceDictionary res, bool dark)
@@ -48,6 +70,10 @@ namespace ClaudeCAD.Plugin.UI
                 res[CodeBg] = B(0x1B, 0x1E, 0x22);
                 res[LinkFg] = B(0x7C, 0xB7, 0xFF);
                 res[ChipBg] = B(0x3A, 0x41, 0x4A);
+                res[HeaderBg] = B(0x34, 0x39, 0x41);
+                res[HoverBg] = B(0x3F, 0x45, 0x4E);
+                res[PressBg] = B(0x2F, 0x66, 0xA8);
+                res[AccentFg] = B(0xFF, 0xFF, 0xFF);
             }
             else
             {
@@ -64,6 +90,10 @@ namespace ClaudeCAD.Plugin.UI
                 res[CodeBg] = B(0xEE, 0xF0, 0xF3);
                 res[LinkFg] = B(0x1A, 0x6F, 0xD8);
                 res[ChipBg] = B(0xE4, 0xE8, 0xEE);
+                res[HeaderBg] = B(0xE7, 0xEA, 0xEE);
+                res[HoverBg] = B(0xDD, 0xE2, 0xE8);
+                res[PressBg] = B(0xC3, 0xD8, 0xF2);
+                res[AccentFg] = B(0xFF, 0xFF, 0xFF);
             }
         }
 

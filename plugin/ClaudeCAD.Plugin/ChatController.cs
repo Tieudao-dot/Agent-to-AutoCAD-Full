@@ -196,6 +196,14 @@ namespace ClaudeCAD.Plugin
             dm.DocumentCreated += OnDocumentCreated;
             DrawingHistory.Instance.ObjectChanged += OnDbChanged; // one subscription to the database events for the whole plugin
             AcApp.SystemVariableChanged += OnSystemVariableChanged;
+            // AutoCAD's own theme notification; COLORTHEME above still covers the versions without it.
+            AcadTheme.Subscribe(() => Quiet("acad theme", OnAcadThemeChanged));
+        }
+
+        private void OnAcadThemeChanged()
+        {
+            if (_disposed) return;
+            Ui.Dispatcher.BeginInvoke((Action)(() => Quiet("acad theme", ApplyTheme)));
         }
 
         private ChatControl Ui => _palette.Control;
@@ -323,8 +331,14 @@ namespace ClaudeCAD.Plugin
 
         private void ApplyTheme()
         {
-            bool dark = _settings.Theme == "dark" || (_settings.Theme != "light" && Theme.AutoCadIsDark());
-            Ui.SetDark(dark);
+            // Colors and font come from AutoCAD's own palette theme; COLORTHEME (and our built-in set)
+            // are the fallback when that API is not reachable.
+            var acad = AcadTheme.Read();
+            bool dark = _settings.Theme == "dark"
+                || (_settings.Theme != "light" && (acad?.IsDark ?? Theme.AutoCadIsDark()));
+            // AutoCAD's colors only fit the theme they came from; its font fits either way.
+            var paint = acad == null || acad.IsDark == null || acad.IsDark == dark ? acad : acad.FontOnly();
+            Ui.SetDark(dark, paint);
         }
 
         private void OnSystemVariableChanged(object sender, Autodesk.AutoCAD.ApplicationServices.SystemVariableChangedEventArgs e) =>
@@ -2383,6 +2397,7 @@ namespace ClaudeCAD.Plugin
                 dm.DocumentActivated -= OnDocumentActivated;
                 dm.DocumentCreated -= OnDocumentCreated;
                 AcApp.SystemVariableChanged -= OnSystemVariableChanged;
+                AcadTheme.Unsubscribe();
                 Interaction.SelectionPicked -= OnSelectionPicked;
                 Interaction.ImpliedSelectionChanged -= OnImpliedSelection;
                 Interaction.PointsPicked -= OnPointsPicked;

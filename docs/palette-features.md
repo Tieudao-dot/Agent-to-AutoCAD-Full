@@ -95,3 +95,12 @@ Phần giao diện của palette `CLAUDECHAT` sau đợt nâng cấp. Code: `plu
 | # | Tính năng | Cách dùng | Ghi chú |
 | --- | --- | --- | --- |
 | 40 | Thư viện skill + skill theo đoạn chat | **+ Add skill** chọn nhiều file `.md` → vào thư viện và dùng luôn trong đoạn chat này. **Skill (N)**: *Đang dùng* (✓, nút **−**) / *Thư viện* (nút **+**), **Sửa**. | Danh sách lưu cùng lịch sử chat của bản vẽ; chat mới dùng skill của chat gần nhất; skill mẫu không tự dùng. Trợ lý nạp đúng danh sách của đoạn chat (đổi danh sách → khởi động lại Claude, vẫn giữ cuộc chat) và dặn Claude khi một skill bị bỏ / thêm. |
+
+## Giao diện theo phong cách AutoCAD (v0.9.5)
+
+Báo cáo nghiên cứu: giao diện lấy màu, font và các điểm vào từ chính AutoCAD thay vì tự đặt
+(xem thêm `docs/ux-autocad.md`).
+
+| # | Tính năng | Cách dùng | Ghi chú |
+| --- | --- | --- | --- |
+| 41 | Màu và font theo theme AutoCAD | Tự động. ⚙ ▸ Giao diện = *Theo AutoCAD* (mặc định) | `UI/AcadTheme.cs` đọc `Autodesk.Windows.Palettes.PaletteTheme` qua reflection (`ThemeManager.Instance.CurrentPaletteTheme`): nền palette, chữ, ô nhập, viền, nút, link, hover/press và font palette. Đổi theme trong AutoCAD → palette đổi ngay (sự kiện `ThemeManager.PropertyChanged`, dự phòng biến `COLORTHEME`). Thuộc tính nào AutoCAD không có thì giữ màu dựng sẵn. Cỡ chữ theo AutoCAD đến khi cậu tự chọn cỡ (Ctrl+lăn chuột / ⚙), sau đó giữ cỡ của cậu. |

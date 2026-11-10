@@ -128,6 +128,21 @@ namespace ClaudeCAD.Core.Tests
         }
 
         [Fact]
+        public void FontSizeFollowsAutoCadUntilTheUserPicksOne()
+        {
+            // Fresh settings: the palette font size comes from AutoCAD's own palette theme.
+            Assert.True(new PaletteSettings().FontAuto);
+            Assert.True(PaletteSettings.FromJson("{}").FontAuto);
+
+            // Once the user picks a size it is remembered and AutoCAD no longer overrides it.
+            var picked = new PaletteSettings { FontAuto = false, FontSize = 16 };
+            var back = PaletteSettings.FromJson(picked.ToJson());
+            Assert.False(back.FontAuto);
+            Assert.Equal(16, back.FontSize);
+            Assert.False(picked.Clone().FontAuto);
+        }
+
+        [Fact]
         public void HistoryCursorKeepsDraft()
         {
             var c = new InputHistoryCursor(new List<string> { "một", "hai" });
