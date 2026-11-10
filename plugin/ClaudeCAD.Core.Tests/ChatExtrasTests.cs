@@ -382,5 +382,38 @@ namespace ClaudeCAD.Core.Tests
             var created = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "A1", "A2" };
             Assert.Equal(new List<string> { "A2" }, MacroLogic.Unresolved(p, created, new Dictionary<string, string> { ["A1"] = "B1" }));
         }
+
+        [Fact]
+        public void SkillsPerChat()
+        {
+            var lib = new List<SkillInfo>
+            {
+                new SkillInfo { Name = "ve-kien-truc", Builtin = true, Enabled = true },
+                new SkillInfo { Name = "ve-mep", Builtin = true, Enabled = true },
+                new SkillInfo { Name = "khung-ten", Enabled = true },
+                new SkillInfo { Name = "ve-ket-cau", Enabled = false },
+                new SkillInfo { Name = "loi", Error = "Thiếu description", Enabled = true },
+            };
+            // first run after updating: the user's own enabled skills, never the shipped samples or broken ones
+            Assert.Equal(new List<string> { "khung-ten" }, SkillSelection.ForChat(null, null, lib));
+            // a new chat starts like the most recent one
+            Assert.Equal(new List<string> { "ve-mep", "khung-ten" }, SkillSelection.ForChat(null, new List<string> { "ve-mep", "khung-ten" }, lib));
+            // the chat's own list wins; skills that no longer exist / are broken are dropped
+            Assert.Equal(new List<string> { "ve-kien-truc" }, SkillSelection.ForChat(new List<string> { "ve-kien-truc", "da-xoa", "loi" }, new List<string> { "ve-mep" }, lib));
+            Assert.Empty(SkillSelection.ForChat(new List<string>(), new List<string> { "ve-mep" }, lib)); // "−" on every skill is kept
+            // − / +
+            var l = SkillSelection.Toggle(new List<string> { "khung-ten", "ve-mep" }, "ve-mep", false);
+            Assert.Equal(new List<string> { "khung-ten" }, l);
+            Assert.Equal(new List<string> { "khung-ten", "ve-ket-cau" }, SkillSelection.Toggle(l, "ve-ket-cau", true));
+            Assert.Equal(new List<string> { "khung-ten" }, SkillSelection.Toggle(l, "../x", true)); // invalid names never enter
+
+            // stored with the chat and in the settings
+            var t = new ChatTranscript { DrawingName = "A.dwg", Skills = new List<string> { "khung-ten", "ve-mep" } };
+            Assert.Equal(t.Skills, ChatTranscript.FromJson(t.ToJson()).Skills);
+            Assert.Null(ChatTranscript.FromJson(new ChatTranscript().ToJson()).Skills); // older chats: not chosen yet
+            var ps = new PaletteSettings { LastSkills = new List<string> { "ve-kien-truc" } };
+            Assert.Equal(ps.LastSkills, PaletteSettings.FromJson(ps.ToJson()).LastSkills);
+            Assert.Null(PaletteSettings.FromJson("{}").LastSkills);
+        }
     }
 }

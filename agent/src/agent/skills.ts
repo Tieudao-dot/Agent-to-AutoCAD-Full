@@ -15,6 +15,17 @@ export function disabledSkills(skillsDir: string): Set<string> {
   return off;
 }
 
+/** Every skill folder of the library (has SKILL.md, not hidden), enabled or not. */
+export function librarySkills(skillsDir: string | undefined): string[] {
+  if (!skillsDir || !fs.existsSync(skillsDir)) return [];
+  return fs
+    .readdirSync(skillsDir, { withFileTypes: true })
+    .filter((e) => e.isDirectory() && !e.name.startsWith('.') && !e.name.startsWith('_'))
+    .filter((e) => fs.existsSync(path.join(skillsDir, e.name, 'SKILL.md')))
+    .map((e) => e.name)
+    .sort();
+}
+
 /** Skill folders that will be loaded (have SKILL.md, not hidden, not disabled). */
 export function enabledSkills(skillsDir: string | undefined): string[] {
   if (!skillsDir || !fs.existsSync(skillsDir)) return [];
@@ -42,7 +53,7 @@ export interface SkillsPlugin {
  * sidecar's work directory at every session start, so adding or editing a skill
  * only needs a new chat (New button) — no rebuild, no symlink privileges.
  */
-export function prepareSkillsPlugin(skillsDir: string | undefined, workDir: string): SkillsPlugin | undefined {
+export function prepareSkillsPlugin(skillsDir: string | undefined, workDir: string, only?: string[]): SkillsPlugin | undefined {
   if (!skillsDir || !fs.existsSync(skillsDir)) return undefined;
 
   const pluginDir = path.join(workDir, SKILLS_PLUGIN_NAME);
@@ -52,7 +63,8 @@ export function prepareSkillsPlugin(skillsDir: string | undefined, workDir: stri
   fs.mkdirSync(path.join(pluginDir, '.claude-plugin'), { recursive: true });
   fs.mkdirSync(target, { recursive: true });
 
-  const skills = enabledSkills(skillsDir);
+  // the chat's own list when the palette sends one (v0.9.4: skills per chat), else the enabled ones
+  const skills = only ? librarySkills(skillsDir).filter((s) => only.includes(s)) : enabledSkills(skillsDir);
   for (const name of skills) fs.cpSync(path.join(skillsDir, name), path.join(target, name), { recursive: true });
 
   fs.writeFileSync(

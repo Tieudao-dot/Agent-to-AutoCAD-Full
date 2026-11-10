@@ -23,6 +23,8 @@ namespace ClaudeCAD.Plugin.Core
         public bool Suggestions = true;     // next-step buttons after each reply
         public bool Hotkey = true;          // Ctrl+Shift+Space opens the palette
         public bool Versions = true;        // copy of the DWG before chat changes it (every 30 min max, 10 kept)
+        /// <summary>Skills of the most recent chat: a new chat (or a drawing without one) starts with them. null = never set.</summary>
+        public List<string> LastSkills;
         public bool SnapshotNextToDrawing;  // also write the "biên bản" next to the DWG (shared project folders)
         public List<string> History = new List<string>(); // feature 10, newest last
 
@@ -74,6 +76,7 @@ namespace ClaudeCAD.Plugin.Core
             ["visual_check"] = VisualCheck, ["plan_first"] = PlanFirst, ["suggestions"] = Suggestions, ["hotkey"] = Hotkey,
             ["versions"] = Versions, ["snapshot_next_to_drawing"] = SnapshotNextToDrawing,
             ["history"] = History.Cast<object>().ToList(),
+            ["last_skills"] = LastSkills?.Cast<object>().ToList(),
         });
 
         public static PaletteSettings FromJson(string json)
@@ -98,6 +101,7 @@ namespace ClaudeCAD.Plugin.Core
             s.Versions = Bool("versions", true);
             s.SnapshotNextToDrawing = Bool("snapshot_next_to_drawing", false);
             if (d.TryGetValue("history", out var h) && h is List<object> hl) s.History = hl.OfType<string>().Take(MaxHistory).ToList();
+            if (d.TryGetValue("last_skills", out var ls) && ls is List<object> lsl) s.LastSkills = SkillSelection.Clean(lsl.OfType<string>());
             return s;
         }
 

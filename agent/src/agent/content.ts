@@ -31,6 +31,15 @@ export function contextPreamble(msg: UserMessage): string[] {
     const label = STANDARD_LABELS[std] ?? std;
     lines.push(`[Chuẩn bản vẽ người dùng chọn: ${label} — load and follow the skill "${std}" for this request]`);
   }
+  if (msg.skills_removed?.length) {
+    lines.push(
+      `[Người dùng đã bỏ skill khỏi đoạn chat này: ${msg.skills_removed.map(q).join(', ')} — from now on do not apply the standards ` +
+        'of those skills, even if you read them earlier in this conversation; use the remaining skills / defaults instead]',
+    );
+  }
+  if (msg.skills_added?.length) {
+    lines.push(`[Người dùng vừa thêm skill vào đoạn chat này: ${msg.skills_added.map(q).join(', ')} — load them with the Skill tool when the request concerns them]`);
+  }
   if (msg.context?.scale) lines.push(`[Tỷ lệ in người dùng chọn: ${msg.context.scale} — size text/dimensions for this scale]`);
   if (msg.context?.read_only) {
     lines.push('[CHỈ XEM: người dùng bật "Chỉ xem" cho bản vẽ này — only read, measure, look (capture_view) and answer; do not call tools that change the drawing]');

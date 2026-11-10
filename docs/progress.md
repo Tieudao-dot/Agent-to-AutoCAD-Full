@@ -189,3 +189,12 @@ Cần test: K-1 … K-7.
 - Nhẹ / tối ưu: một thẻ kích hoạt, không chạy trợ lý khi chưa kích hoạt; báo đúng khi dùng API key; một thẻ giới hạn (có giờ làm mới); không cảnh báo mất kết nối khi tự khởi động lại; dòng trạng thái xuống dòng, dán chữ khi clipboard bận, nút Chỉ xem ở giao diện tối, toast không che nút, đồng hồ thẻ cũ dừng; chặn `save_drawing` khi Chỉ xem; giải phóng bộ đồ họa sau khi chụp; mở cuộc chat dài chỉ dựng 60 tin cuối; không tự cuộn khi đang đọc; nhớ số đối tượng theo layer; bản lưu nhanh dùng được sau pan/zoom; lỗi SDK mới có lời Việt; không hiện gợi ý trùng.
 
 Cần test: R-1 … R-6 (và K-1 … K-7).
+
+### v0.9.4 — skill theo từng đoạn chat ✅
+
+- Thư viện skill (thư mục skill của plugin) + danh sách skill riêng cho từng đoạn chat (`ChatTranscript.Skills`); chat mới dùng skill của chat gần nhất (`PaletteSettings.LastSkills`); lần đầu sau cập nhật: các skill cậu đã thêm và đang bật (không gồm skill mẫu).
+- Bảng **Skill (N)**: *Đang dùng* (−) / *Thư viện* (+), Sửa; bỏ Xóa, Mở thư mục, "Tạo skill từ cuộc chat" và ô Chuẩn.
+- `user_message.skills`: trợ lý nạp đúng danh sách, đổi danh sách → khởi động lại Claude và nối tiếp cuộc chat; dặn Claude khi skill bị bỏ / thêm.
+- Sửa lỗi nạp lại skill 2 lần (một đồng hồ có khóa).
+
+Cần test: S-1 … S-5.

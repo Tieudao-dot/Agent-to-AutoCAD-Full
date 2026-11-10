@@ -252,6 +252,14 @@ export interface UserMessage {
   plan?: 'approved';
   /** Echoed in turn_end. */
   turn_id?: string;
+  /**
+   * Skills of this chat (folder names in the skills library): exactly these are loaded. Absent (older
+   * plugin) = the skills enabled in skills.json.
+   */
+  skills?: string[];
+  /** Set by the sidecar (not the plugin): skills the user took out of / put into this chat since the last message. */
+  skills_removed?: string[];
+  skills_added?: string[];
 }
 
 export interface SetOptionsMessage {
@@ -407,6 +415,9 @@ export function parsePluginMessage(value: unknown): PluginToSidecar {
         ...(m.confirm === 'yes' || m.confirm === 'no' ? { confirm: m.confirm } : {}),
         ...(m.plan === 'approved' ? { plan: 'approved' as const } : {}),
         ...(typeof m.turn_id === 'string' && m.turn_id ? { turn_id: m.turn_id.slice(0, 64) } : {}),
+        ...(Array.isArray(m.skills)
+          ? { skills: [...new Set(m.skills.filter((x: unknown): x is string => typeof x === 'string' && /^[a-z0-9][a-z0-9-]{0,63}$/.test(x)))] }
+          : {}),
       };
     }
     case 'set_options':
