@@ -486,6 +486,7 @@ namespace ClaudeCAD.UI.Tests
         public void RendersAutoCadStyleShell()
         {
             bool meterShown = false, meterHidden = false, queuedShown = false, queuedHidden = false, busyShown = false, busyHidden = false;
+            bool stylesLoaded = false, flatButton = false;
             int sendWhileBusy = 0, queueCancel = 0, stopOnEsc = 0, confirmYes = 0, preview = 0, categories = 0;
             string sendLabelBusy = null, sendLabelIdle = null;
             Sta(() =>
@@ -495,6 +496,14 @@ namespace ClaudeCAD.UI.Tests
                 c.SetDark(true);
                 c.SetConnection("Đã kết nối · Nha-pho.dwg", true);
                 c.LoadTranscript(new ChatTranscript { DrawingName = "Nha-pho.dwg" }, false);
+                // the flat control styles parsed, and a button really got the flat template (no Windows chrome)
+                stylesLoaded = Theme.StylesLoaded;
+                c.Measure(new Size(400, 760));
+                c.Arrange(new Rect(0, 0, 400, 760));
+                c.UpdateLayout();
+                var anyButton = FindAll<Button>(c).First();
+                anyButton.ApplyTemplate();
+                flatButton = anyButton.Template != null && anyButton.Template.FindName("bd", anyButton) is Border;
                 c.SendRequested += m => sendWhileBusy++;
                 c.QueueCancelRequested += () => queueCancel++;
                 c.StopRequested += () => stopOnEsc++;
@@ -566,6 +575,8 @@ namespace ClaudeCAD.UI.Tests
                 Shot(host, "shell-cai-dat");
                 categories = FindAll<Button>(host).Count(b => (b.ToolTip as string) == "Bấm để mở / thu gọn");
             });
+            Assert.True(stylesLoaded, "the palette's control styles did not parse");
+            Assert.True(flatButton, "buttons still use the default Windows template");
             Assert.True(meterHidden, "usage meter must stay hidden with nothing to show");
             Assert.True(meterShown, "usage meter did not appear");
             Assert.True(busyShown, "busy line did not appear while a turn runs");
