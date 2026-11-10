@@ -134,6 +134,10 @@ Trạng thái: ⬜ chưa chạy · ✅ đạt · ❌ không đạt · ⚠️ đ�
 | UX-11 | Palette **nổi**: bấm ⌄ → palette co còn hàng công cụ + ô nhập (cao ~170 px); gõ yêu cầu + Enter → Claude chạy, dòng "● Đang làm…" rồi "✓ Đã xong: … · bấm để xem"; bấm dòng đó hoặc ⌃ → palette về chiều cao cũ, đoạn chat còn nguyên | ⬜ chưa chạy | |
 | UX-12 | Palette **neo** trái/phải: bấm ⌄ → nội dung co lại, ô nhập nằm sát thanh công cụ, cột neo giữ nguyên; ⌃ mở lại bình thường | ⬜ chưa chạy | |
 | UX-13 | Đang thu gọn, yêu cầu xóa nhiều đối tượng → palette **tự mở** và hiện thẻ xác nhận; yêu cầu thường (vẽ thêm 1 đường) → palette vẫn thu gọn | ⬜ chưa chạy | |
+| UX-14 | Mở AutoCAD (chưa mở khung chat): thanh trạng thái có icon **C** xám mờ, rê chuột thấy "ClaudeCAD — chưa kết nối… Bấm để mở khung chat"; bấm → khung chat mở, icon hết mờ | ⬜ chưa chạy | |
+| UX-15 | Gửi một yêu cầu: icon có **chấm xanh** suốt lúc Claude làm, xong thì mất chấm; yêu cầu xóa nhiều đối tượng → **chấm vàng** tới khi cậu trả lời | ⬜ chưa chạy | |
+| UX-16 | Bật auto-hide (hoặc đóng khung chat) rồi gửi yêu cầu qua lệnh `CC` → lượt xong có **bong bóng** "Claude đã xong: …" ở icon; bấm *Mở khung chat* → khung chat mở. Tắt ⚙ ▸ *Báo khi lượt xong* → không còn bong bóng | ⬜ chưa chạy | |
+| UX-17 | Đổi Color theme AutoCAD tối ↔ sáng: nét icon trên thanh trạng thái vẫn rõ; thanh tiêu đề palette khi tự ẩn có icon C | ⬜ chưa chạy | |
 | R-1 | Macro có bo góc (fillet) giữa 2 đường vừa vẽ → chạy lại macro ở chỗ khác: bo góc 2 đường mới, 2 đường cũ giữ nguyên | ⬜ chưa chạy | |
 | R-2 | Bật Phiên bản, yêu cầu Claude "zoom vào khung tên rồi đổi chữ" → có phiên bản mới trước khi sửa; lượt chỉ zoom không có nút Hoàn tác | ⬜ chưa chạy | |
 | R-3 | "Vẽ lại rồi xóa đi các đường cũ" trên layer có > 20 đối tượng → Claude hỏi xác nhận trước khi xóa | ⬜ chưa chạy | |

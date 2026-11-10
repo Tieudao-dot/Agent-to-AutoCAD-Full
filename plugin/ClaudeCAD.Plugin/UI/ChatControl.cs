@@ -753,7 +753,7 @@ namespace ClaudeCAD.Plugin.UI
             fonts.Children.Add(minus);
             fonts.Children.Add(plus);
             Row(look, "Cỡ chữ", fonts, "Mặc định theo cỡ chữ palette của AutoCAD; chọn cỡ ở đây thì giữ cỡ của cậu");
-            _notify = CheckRow(look, "Báo khi lượt xong", "Khi AutoCAD không phải cửa sổ trước mặt, Windows báo lúc Claude làm xong");
+            _notify = CheckRow(look, "Báo khi lượt xong", "Bong bóng ở icon ClaudeCAD trên thanh trạng thái khi khung chat đang đóng / tự ẩn; và thông báo Windows khi AutoCAD không phải cửa sổ trước mặt");
             _hotkey = CheckRow(look, "Phím tắt Ctrl+Shift+Space", "Mở palette và đặt con trỏ vào ô nhập (lệnh tắt: CC)");
             p.Children.Add(new Category("CHUNG — GIAO DIỆN", look).Root);
 

@@ -34,6 +34,16 @@ namespace ClaudeCAD.Plugin.UI
                     DockEnabled = DockSides.Left | DockSides.Right,
                 };
                 _ps.AddVisual("Chat", Control);
+                try
+                {
+                    // the palette's icon (rolled-up title bar, palette tabs) in both AutoCAD themes
+                    _ps.DarkThemedIcon = StatusTray.GlyphIcon(true);
+                    _ps.LightThemedIcon = StatusTray.GlyphIcon(false);
+                }
+                catch (Exception ex)
+                {
+                    Core.Logger.Warn("palette icon not set: " + ex.Message);
+                }
                 _ps.KeepFocus = true;
                 _ps.Size = new Size(380, 640);
             }
@@ -42,6 +52,20 @@ namespace ClaudeCAD.Plugin.UI
         }
 
         public bool Visible => _ps != null && _ps.Visible;
+
+        /// <summary>
+        /// The user can see the chat right now: the palette is open and not rolled up (auto-hide).
+        /// False means a finished turn should be reported somewhere else (the status bar bubble).
+        /// </summary>
+        public bool InView
+        {
+            get
+            {
+                if (_ps == null) return false;
+                try { return _ps.Visible && !_ps.RolledUp; }
+                catch { return _ps.Visible; } // RolledUp is not readable for every docking state
+            }
+        }
 
         /// <summary>Gives the palette window the keyboard focus (after picking in the drawing).</summary>
         public void FocusInput()

@@ -340,6 +340,7 @@ namespace ClaudeCAD.Plugin
             // AutoCAD's colors only fit the theme they came from; its font fits either way.
             var paint = acad == null || acad.IsDark == null || acad.IsDark == dark ? acad : acad.FontOnly();
             Ui.SetDark(dark, paint);
+            StatusTray.OnThemeChanged();
         }
 
         private void OnSystemVariableChanged(object sender, Autodesk.AutoCAD.ApplicationServices.SystemVariableChangedEventArgs e) =>
@@ -593,6 +594,28 @@ namespace ClaudeCAD.Plugin
 
         // ================================================================= sending
 
+        /// <summary>Why the status bar icon should ask for attention when the running turn ends (null = no reason).</summary>
+        private string _trayAttention;
+
+        /// <summary>
+        /// End of a turn on the status bar: the state dot, and a bubble when the chat is not in view
+        /// (palette closed or rolled up) — with the palette open the news is already on screen.
+        /// </summary>
+        private void ReportTurnOnTray(ChatEntry assistant, string errorNote, bool limitHit)
+        {
+            string attention = _trayAttention;
+            _trayAttention = null;
+            if (!string.IsNullOrEmpty(errorNote) || limitHit) attention = limitHit ? "đã hết hạn mức sử dụng" : "lượt vừa rồi bị lỗi";
+            StatusTray.Set(attention != null ? StatusTray.State.Attention
+                : _ipc.IsConnected ? StatusTray.State.Ready : StatusTray.State.Offline, attention);
+            if (!_settings.Notify || _palette.InView) return;
+            string text = attention != null
+                ? "Claude " + attention + "."
+                : "Claude đã xong: " + (MarkdownLite.ToPlainText(assistant?.Text ?? "").Split('\n').FirstOrDefault(l => l.Trim().Length > 0)?.Trim() ?? "xem kết quả trong khung chat.");
+            if (text.Length > 140) text = text.Substring(0, 140).TrimEnd() + "…";
+            StatusTray.Bubble("ClaudeCAD", text);
+        }
+
         /// <summary>Typed while a turn was running: sent as the next message when that turn ends cleanly.</summary>
         private ComposedMessage _queued;
         /// <summary>The running turn showed a confirmation / plan card: a queued message must not answer it.</summary>
@@ -817,6 +840,7 @@ namespace ClaudeCAD.Plugin
             SaveTranscript();
             Ui.AddUserMessage(userEntry);
             Ui.SetBusy(true);
+            StatusTray.Set(StatusTray.State.Busy);
             Ui.SetToolStatus(toAgent ? "Claude đang suy nghĩ..." : "Đang chạy macro...");
             Ui.BeginAssistant();
             if (!toAgent) return;
@@ -997,6 +1021,7 @@ namespace ClaudeCAD.Plugin
                 if (_settings.Suggestions && suggestions.Count > 0 && string.IsNullOrEmpty(errorNote) && !limitHit) Ui.AddSuggestions(suggestions);
                 if (usage != null) ShowUsage(usage);
                 if (!limitHit) MaybeNotify(assistant, errorNote, started); // a turn stopped by the limit is not "xong"
+                ReportTurnOnTray(assistant, errorNote, limitHit);
                 if (_pendingSwitch)
                 {
                     _pendingSwitch = false;
@@ -2061,6 +2086,7 @@ namespace ClaudeCAD.Plugin
             if (_wasDisconnected) Ui.ShowToast("Đã kết nối lại với trợ lý.", ChatControl.ToastKind.Success);
             _wasDisconnected = false;
             Ui.SetConnection("Đã kết nối, đang khởi tạo phiên...", true);
+            if (!_busy) StatusTray.Set(StatusTray.State.Ready);
             // a (re)started sidecar knows nothing: restore this drawing's conversation and the chosen model
             SendSwitchSession();
             SendOptions();
@@ -2128,6 +2154,7 @@ namespace ClaudeCAD.Plugin
                         if (code == "authentication_failed" || code == "oauth_org_not_allowed")
                         {
                             Ui.AddLoginCard(m); // one button instead of terminal instructions
+                            _trayAttention = "chưa đăng nhập Claude";
                             if (_busy) _lastError = null;
                             break;
                         }
@@ -2147,6 +2174,7 @@ namespace ClaudeCAD.Plugin
                         var hs = msg.TryGetValue("handles", out var hv) && hv is List<object> hl ? hl.OfType<string>().ToList() : null;
                         _turnAsked = true;
                         Ui.AddConfirmCard(id, text, count, hs);
+                        _trayAttention = "cần cậu xác nhận";
                         Ui.Enqueue(() => _transcript?.Entries.Add(new ChatEntry { Role = "note", Text = "Xác nhận: " + text }));
                         break;
                     }
@@ -2246,6 +2274,7 @@ namespace ClaudeCAD.Plugin
                         var steps = msg.TryGetValue("steps", out var stv) && stv is List<object> sl ? sl.OfType<string>().ToList() : new List<string>();
                         _turnAsked = true;
                         Ui.AddPlanCard(id, summary, steps);
+                        _trayAttention = "có kế hoạch chờ cậu duyệt";
                         Ui.Enqueue(() => _transcript?.Entries.Add(new ChatEntry { Role = "note", Text = "Kế hoạch: " + summary + (steps.Count > 0 ? "\n" + string.Join("\n", steps.Select((x, i) => $"{i + 1}. {x}")) : "") }));
                         break;
                     }
@@ -2337,6 +2366,7 @@ namespace ClaudeCAD.Plugin
             _wasDisconnected = true;
             if (_busy && !_macroRunning) EndTurn("Mất kết nối với trợ lý giữa lượt; lượt này đã dừng. Lịch sử chat vẫn giữ nguyên.", true);
             Ui.SetConnection("Mất kết nối với trợ lý...", false);
+            StatusTray.Set(StatusTray.State.Offline, "mất kết nối với trợ lý");
         }
 
         private void OnSidecarState(SidecarState state, string message)

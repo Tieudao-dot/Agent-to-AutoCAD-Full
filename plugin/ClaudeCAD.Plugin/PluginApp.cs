@@ -4,6 +4,7 @@ using Autodesk.AutoCAD.ApplicationServices;
 using Autodesk.AutoCAD.Runtime;
 using ClaudeCAD.Plugin.Core;
 using ClaudeCAD.Plugin.Drawing;
+using ClaudeCAD.Plugin.UI;
 using AcApp = Autodesk.AutoCAD.ApplicationServices.Application;
 
 [assembly: ExtensionApplication(typeof(ClaudeCAD.Plugin.PluginApp))]
@@ -42,6 +43,7 @@ namespace ClaudeCAD.Plugin
                 DrawingHistory.Instance.NextToDrawing = settings.SnapshotNextToDrawing;
                 DrawingHistory.Instance.Start();
                 TrustBundleFolder();
+                ScheduleStatusTray();
                 ScheduleFirstStart();
                 AcApp.PreTranslateMessage += OnPreTranslateMessage;
                 var ed = AcApp.DocumentManager.MdiActiveDocument?.Editor;
@@ -77,6 +79,36 @@ namespace ClaudeCAD.Plugin
             {
                 Logger.Warn("TRUSTEDPATHS not updated: " + ex.Message);
             }
+        }
+
+        /// <summary>
+        /// ClaudeCAD's icon in the status bar tray, from AutoCAD start (the status bar only exists once
+        /// AutoCAD is idle). A click opens the palette, creating the controller on demand.
+        /// </summary>
+        private static void ScheduleStatusTray()
+        {
+            try
+            {
+                StatusTray.Clicked += OnTrayClicked;
+                int tries = 0;
+                EventHandler onIdle = null;
+                onIdle = (s, e) =>
+                {
+                    // give up quietly after a while: the icon is a convenience, never a reason to keep polling
+                    if (StatusTray.Install() || ++tries > 200) AcApp.Idle -= onIdle;
+                };
+                AcApp.Idle += onIdle;
+            }
+            catch (System.Exception ex)
+            {
+                Logger.Warn("status bar icon not scheduled: " + ex.Message);
+            }
+        }
+
+        private static void OnTrayClicked()
+        {
+            try { Controller.ShowPalette(); }
+            catch (System.Exception ex) { Logger.Error("open from the status bar failed", ex); }
         }
 
         private static string FirstStartFlag =>
@@ -133,6 +165,7 @@ namespace ClaudeCAD.Plugin
             try
             {
                 try { AcApp.PreTranslateMessage -= OnPreTranslateMessage; } catch { }
+                try { StatusTray.Clicked -= OnTrayClicked; StatusTray.Remove(); } catch { }
                 _controller?.Dispose();
                 _controller = null;
             }

@@ -55,7 +55,7 @@ Quy tắc:
 
 | Điểm vào | Trạng thái | Ghi chú |
 | --- | --- | --- |
-| Icon thanh trạng thái + bong bóng | Làm (Đợt 5) | `Application.StatusBar.TrayItems`, `TrayItem.ShowBubbleWindow`: xám = chưa kết nối, thường = sẵn sàng, chấm xanh = đang làm, chấm vàng = cần xác nhận. Bong bóng chỉ hiện khi palette thu gọn / đóng; tắt được trong Cài đặt. |
+| Icon thanh trạng thái + bong bóng | Đã làm (`UI/StatusTray.cs`) | `Application.StatusBar.TrayItems`, `TrayItem.ShowBubbleWindow`: xám = chưa kết nối, thường = sẵn sàng, chấm xanh = đang làm, chấm vàng = cần xác nhận. Bong bóng chỉ hiện khi palette thu gọn / đóng; tắt được trong Cài đặt. |
 | Menu chuột phải "Hỏi Claude về đối tượng đã chọn" | Không làm đợt này | `Application.AddObjectContextMenuExtension` có sẵn nếu sau này cần. |
 | `CC <yêu cầu>` + in kết quả ở command line | Không làm đợt này | `Editor.WriteMessage` / `GetString`. |
 | Tab ribbon | Bỏ | `ComponentManager.Ribbon` có sẵn nhưng chiếm chỗ ribbon, không làm. |
