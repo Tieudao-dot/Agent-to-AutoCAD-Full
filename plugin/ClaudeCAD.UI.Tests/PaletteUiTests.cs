@@ -234,6 +234,57 @@ namespace ClaudeCAD.UI.Tests
             Assert.True(new FileInfo(Path.Combine(OutDir, "palette-layers.png")).Length > 5_000);
         }
 
+        /// <summary>Screen D (plugin side only): the turn's tool calls as a live step list, folded again when the turn ends.</summary>
+        [Fact]
+        public void WorkingTurnShowsItsSteps()
+        {
+            string titleLive = null, titleDone = null;
+            string[] tagsLive = null, tagsDone = null;
+            int rowsLive = 0;
+            bool openLive = false, openDone = true;
+            Sta(() =>
+            {
+                var c = new ChatControl { Width = 380, Height = 520 };
+                c.ApplySettings(new PaletteSettings());
+                c.SetDark(true);
+                c.LoadTranscript(new ChatTranscript(), false);
+                c.AddUserMessage(new ChatEntry { Role = "user", Text = "Vẽ mặt bằng căn hộ 2 phòng ngủ 8x12m" });
+                c.BeginAssistant();
+                c.SetBusy(true);
+                c.UpdateTool(new ToolLogEntry { Tool = "get_drawing_info", State = "running" });
+                c.UpdateTool(new ToolLogEntry { Tool = "get_drawing_info", State = "done", Ms = 42, Summary = "12 layer" });
+                for (int i = 0; i < 3; i++)
+                {
+                    c.UpdateTool(new ToolLogEntry { Tool = "draw_line", State = "running" });
+                    c.UpdateTool(new ToolLogEntry { Tool = "draw_line", State = "done", Ms = 20 });
+                }
+                c.UpdateTool(new ToolLogEntry { Tool = "batch_execute", State = "running" });
+                Pump();
+                Shot(c, "shell-dang-lam-buoc");
+                var rows = FindAll<TextBlock>(c).Where(t => t.Tag is string tag && (tag == "done" || tag == "running" || tag == "error") && t.FontSize == 11).ToList();
+                rowsLive = rows.Count;
+                tagsLive = rows.Select(r => (string)r.Tag).ToArray();
+                var header = FindAll<Button>(c).Select(b => b.Content).OfType<StackPanel>().SelectMany(sp => sp.Children.OfType<TextBlock>()).Select(t => t.Text).LastOrDefault(t => t != null && (t.StartsWith("Đang làm") || t.StartsWith("Thao tác")));
+                titleLive = header;
+                openLive = ((FrameworkElement)rows[0].Parent).Visibility == Visibility.Visible;
+
+                c.UpdateTool(new ToolLogEntry { Tool = "batch_execute", State = "done", Ms = 300, Summary = "30 lệnh OK" });
+                c.EndAssistant(new ChatEntry { Role = "assistant", Text = "Đã vẽ xong." }, true);
+                c.SetBusy(false);
+                Pump();
+                tagsDone = rows.Select(r => (string)r.Tag).ToArray();
+                titleDone = FindAll<Button>(c).Select(b => b.Content).OfType<StackPanel>().SelectMany(sp => sp.Children.OfType<TextBlock>()).Select(t => t.Text).LastOrDefault(t => t != null && (t.StartsWith("Đang làm") || t.StartsWith("Thao tác")));
+                openDone = ((FrameworkElement)rows[0].Parent).Visibility == Visibility.Visible;
+            });
+            Assert.Equal(3, rowsLive); // three LINE calls are one step "×3"
+            Assert.Equal(new[] { "done", "done", "running" }, tagsLive);
+            Assert.Equal("Đang làm · bước 3: Thực thi nhiều lệnh", titleLive);
+            Assert.True(openLive, "the step list must be open while the turn runs");
+            Assert.Equal(new[] { "done", "done", "done" }, tagsDone);
+            Assert.StartsWith("Thao tác (5)", titleDone); // 5 calls in 3 steps
+            Assert.False(openDone, "the step list folds again when the turn ends");
+        }
+
         /// <summary>Screen C: "Bắt đầu" card with three numbered steps; the step to do now carries the buttons.</summary>
         [Fact]
         public void WelcomeCardWalksThroughThreeSteps()

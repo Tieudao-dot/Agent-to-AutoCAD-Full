@@ -647,6 +647,11 @@ namespace ClaudeCAD.Plugin.UI
                 if (_content.Visibility != Visibility.Visible) Toggle();
             }
 
+            public void Collapse()
+            {
+                if (_content.Visibility == Visibility.Visible) Toggle();
+            }
+
             public void Toggle()
             {
                 bool open = _content.Visibility == Visibility.Visible;
@@ -1704,7 +1709,7 @@ namespace ClaudeCAD.Plugin.UI
 
         private void EndAssistantCore()
         {
-            if (_current != null) { _current.Flush(); _current = null; }
+            if (_current != null) { _current.Flush(); _current.Settle(); _current = null; }
         }
 
         public void SetUndoAvailable(bool available) => Ui(() => _lastAssistant?.SetUndo(available));
@@ -3022,48 +3027,101 @@ namespace ClaudeCAD.Plugin.UI
                 _md.Render();
             }
 
-            /// <summary>Tool activity row (feature 12): running rows are updated when the same tool finishes.</summary>
+            private bool _live, _settled;
+
+            /// <summary>
+            /// Tool activity (feature 12) as a step list (screen D): while the turn runs the group is open and
+            /// reads "Đang làm · bước 3: Vẽ tường"; each step is one row, ✓ done, ● running, ⚠ error. The same
+            /// tool called several times in a row is one step "×46", so a wall of LINE calls stays one line.
+            /// Steps that have not started are not shown: the plugin does not know them, and no % is made up.
+            /// </summary>
             public void AddTool(ToolLogEntry e)
             {
                 _toolsCat.Visibility = Visibility.Visible;
+                if (!_live && !_settled) { _live = true; _toolsCat.Expand(); }
+                TextBlock row = null;
                 if (e.State != "running")
                 {
                     var idx = _tools.FindIndex(t => t.entry.State == "running" && t.entry.Tool == e.Tool);
                     if (idx >= 0)
                     {
-                        _tools[idx] = (e, _tools[idx].row);
-                        Paint(_tools[idx].row, e);
-                        UpdateHeader();
-                        return;
+                        row = _tools[idx].row;
+                        _tools[idx] = (e, row);
                     }
                 }
-                var row = new TextBlock { TextWrapping = TextWrapping.Wrap, FontSize = 11, Margin = new Thickness(14, 0, 0, 1) };
-                Paint(row, e);
-                _tools.Add((e, row));
-                _toolRows.Children.Add(row);
+                if (row == null)
+                {
+                    var last = _tools.Count > 0 ? _tools[_tools.Count - 1] : default;
+                    if (last.row != null && last.entry.Tool == e.Tool && last.entry.State != "error") row = last.row;
+                    else
+                    {
+                        row = new TextBlock { TextWrapping = TextWrapping.Wrap, FontSize = 11, Margin = new Thickness(14, 0, 0, 1) };
+                        _toolRows.Children.Add(row);
+                    }
+                    _tools.Add((e, row));
+                }
+                Paint(row);
                 UpdateHeader();
             }
 
-            private static void Paint(TextBlock row, ToolLogEntry e)
+            /// <summary>Number of steps (rows) so far.</summary>
+            internal int StepCount => _toolRows.Children.Count;
+
+            private void Paint(TextBlock row)
             {
+                var group = _tools.Where(t => t.row == row).Select(t => t.entry).ToList();
+                var e = group[group.Count - 1];
                 string label = ToolLabels.Describe(e.Tool);
-                switch (e.State)
+                string times = group.Count > 1 ? " ×" + group.Count : "";
+                long ms = group.Sum(g => g.Ms);
+                if (group.Any(g => g.State == "running"))
                 {
-                    case "running": row.Text = "⏳ " + label; Theme.Ref(row, TextBlock.ForegroundProperty, Theme.MutedFg); break;
-                    case "error": row.Text = $"⚠ {label} — {e.Error} ({e.Ms} ms)"; Theme.Ref(row, TextBlock.ForegroundProperty, Theme.ErrorFg); break;
-                    default: row.Text = $"✓ {label}{(string.IsNullOrEmpty(e.Summary) ? "" : " — " + e.Summary)} ({e.Ms} ms)"; Theme.Ref(row, TextBlock.ForegroundProperty, Theme.MutedFg); break;
+                    row.Text = _settled ? $"○ {label}{times} — chưa xong" : $"● {label}{times} — đang chạy";
+                    row.Tag = "running";
+                    Theme.Ref(row, TextBlock.ForegroundProperty, _settled ? Theme.MutedFg : Theme.Fg);
+                }
+                else if (e.State == "error")
+                {
+                    row.Text = $"⚠ {label}{times} — {e.Error} ({ms} ms)";
+                    row.Tag = "error";
+                    Theme.Ref(row, TextBlock.ForegroundProperty, Theme.ErrorFg);
+                }
+                else
+                {
+                    row.Text = $"✓ {label}{times}{(string.IsNullOrEmpty(e.Summary) ? "" : " — " + e.Summary)} ({ms} ms)";
+                    row.Tag = "done";
+                    Theme.Ref(row, TextBlock.ForegroundProperty, Theme.OkFg);
                 }
             }
 
             private void UpdateHeader()
             {
+                if (_live)
+                {
+                    var cur = _tools.Count > 0 ? ToolLabels.Describe(_tools[_tools.Count - 1].entry.Tool) : "";
+                    _toolsCat.SetTitle($"Đang làm · bước {StepCount}: {cur}");
+                    return;
+                }
                 int errors = _tools.Count(t => t.entry.State == "error");
                 long ms = _tools.Sum(t => t.entry.Ms);
                 _toolsCat.SetTitle($"Thao tác ({_tools.Count}{(errors > 0 ? $", {errors} lỗi" : "")}) · {ms / 1000.0:0.0} s");
             }
 
+            /// <summary>The turn is over (finished, stopped or failed): back to the folded "Thao tác (N)" summary.</summary>
+            public void Settle()
+            {
+                if (_settled) return;
+                _settled = true;
+                bool wasLive = _live;
+                _live = false;
+                foreach (TextBlock row in _toolRows.Children) Paint(row);
+                UpdateHeader();
+                if (wasLive) _toolsCat.Collapse();
+            }
+
             public void Finish(ChatEntry e, bool canUndo, bool canSaveMacro = false)
             {
+                Settle();
                 _text.Clear();
                 _text.Append(e.Text ?? "");
                 Flush();

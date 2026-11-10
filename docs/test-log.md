@@ -140,6 +140,7 @@ Trạng thái: ⬜ chưa chạy · ✅ đạt · ❌ không đạt · ⚠️ đ�
 | UX-17 | Đổi Color theme AutoCAD tối ↔ sáng: nét icon trên thanh trạng thái vẫn rõ; thanh tiêu đề palette khi tự ẩn có icon C | ⬜ chưa chạy | |
 | UX-18 | Hàng dưới ô nhập là 4 icon ⬚ ✛ ▨ ⛶, glyph hiện rõ (không ra ô vuông trống) ở theme tối và sáng; tooltip đúng tên; bấm từng icon chạy đúng Chọn đối tượng / Lấy điểm / Ảnh / Chụp | ⬜ chưa chạy | |
 | UX-19 | Máy mới cài, chưa đăng nhập: thẻ **Bắt đầu** hiện ✓ bước 1, bước 2 có nút Đăng nhập Claude / Dùng API key, bước 3 mờ. Đăng nhập xong, ⚙ ▸ Hướng dẫn bắt đầu: bước 1–2 ✓, bước 3 có *Điền vào ô nhập* → câu mẫu vào ô nhập, Enter vẽ đúng | ⬜ chưa chạy | |
+| UX-20 | Gửi yêu cầu nhiều bước (vd. mặt bằng căn hộ): nhóm **Đang làm · bước N: …** mở sẵn, dòng ✓ / ● cập nhật theo thời gian thực, lệnh lặp gộp "×N"; lượt xong nhóm tự thu gọn thành "Thao tác (N)". Bấm ■ giữa chừng → bước dở thành "○ … — chưa xong" | ⬜ chưa chạy | |
 | R-1 | Macro có bo góc (fillet) giữa 2 đường vừa vẽ → chạy lại macro ở chỗ khác: bo góc 2 đường mới, 2 đường cũ giữ nguyên | ⬜ chưa chạy | |
 | R-2 | Bật Phiên bản, yêu cầu Claude "zoom vào khung tên rồi đổi chữ" → có phiên bản mới trước khi sửa; lượt chỉ zoom không có nút Hoàn tác | ⬜ chưa chạy | |
 | R-3 | "Vẽ lại rồi xóa đi các đường cũ" trên layer có > 20 đối tượng → Claude hỏi xác nhận trước khi xóa | ⬜ chưa chạy | |

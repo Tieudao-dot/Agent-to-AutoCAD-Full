@@ -119,3 +119,10 @@ không đổi. Thẻ có thanh tiêu đề như nhóm Properties và ba hàng `W
 *now* (số màu nhấn, có nút), *later* (mờ). Kích hoạt lấy từ dòng "Kích hoạt", đăng nhập từ dòng "Tài khoản Claude";
 các dòng còn lại (Node.js, trợ lý, skill) chỉ hiện ⊗ khi thiếu, đủ thì gộp thành một dòng chữ nhỏ cuối thẻ.
 Bước 3 không tự gửi: *Điền vào ô nhập* chỉ đưa câu mẫu vào ô để người dùng xem rồi Enter.
+
+## 11. Danh sách bước (màn D, bản nhẹ)
+Chỉ sửa phía plugin, không đổi sidecar: nhóm "Thao tác" của mỗi câu trả lời là danh sách bước. Lúc lượt chạy
+nhóm mở và tiêu đề là "Đang làm · bước N: <lệnh cuối>"; khi `Finish` hoặc `EndAssistantCore` (Dừng, lỗi) gọi
+`Settle()` thì nhóm gập lại về "Thao tác (N) · x s". Lệnh giống nhau gọi liên tiếp gộp một dòng "×N".
+So với màn D còn thiếu: tên bước theo ý Claude ("Vẽ tường 220/110"), các bước chưa làm (○) và thanh %. Các phần
+đó cần sidecar gửi kế hoạch của Claude; chưa làm, để không bịa tiến độ.
