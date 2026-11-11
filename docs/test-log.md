@@ -4,6 +4,8 @@ Môi trường cần: Windows 10/11 x64, AutoCAD 2022 bản full, bản vẽ tr�
 
 Trạng thái: ⬜ chưa chạy · ✅ đạt · ❌ không đạt · ⚠️ đạt một phần. Ghi ngày, phiên bản commit và ghi chú ở cột cuối.
 
+Thử nhanh trên AutoCAD thật (một lượt ~20 phút, xếp theo rủi ro, có ô Đạt / Lỗi và mã mục của file này): [`checklist-thu-that.md`](checklist-thu-that.md).
+
 > **Chưa có kịch bản nào được chạy trên AutoCAD thật.** Phiên phát triển chạy trên cloud Linux, không có Windows/AutoCAD. Những gì đã kiểm chứng tự động trên cloud được liệt kê ở cuối file.
 
 ## Tiêu chí nghiệm thu (spec §12)
@@ -171,11 +173,16 @@ Trạng thái: ⬜ chưa chạy · ✅ đạt · ❌ không đạt · ⚠️ đ�
 | L-3 | Chọn layer + "đổi màu sang đỏ" / "khóa lại" → đổi thuộc tính layer, không hỏi xác nhận; "tăng chiều cao chữ lên 300" trên layer có > 20 chữ → thẻ Đồng ý / Hủy, Đồng ý thì sửa đúng | ⬜ chưa chạy | |
 | L-4 | Chọn một đối tượng → **→ Cả layer** → chip chuyển thành layer của nó; gửi xong chip tự bỏ | ⬜ chưa chạy | |
 | V6-10 | Bảng **Thay đổi** đúng số thêm/sửa/xóa theo layer, bấm dòng zoom tới; còn khi mở lại lịch sử và trong file Xuất | ⬜ chưa chạy | |
+| ST-2 | `CLAUDECHATSELFTEST` trên từng đời AutoCAD đang có: dòng **Bản plugin đúng với đời AutoCAD** ✓ và ghi đúng bản (2022–2024 net48 · 2025–2026 net8 · 2027 net10) + thư mục DLL trong gói cài | ⬜ chưa chạy | |
+| ST-3 | Báo cáo tự kiểm tra: **Theme palette của AutoCAD** ✓ (có số màu, font, tương phản chữ); đổi `COLORTHEME` rồi chạy lại → dòng này đổi "theme tối / sáng" theo; **Style giao diện** ✓; **Icon ClaudeCAD trên thanh trạng thái** ✓ | ⬜ chưa chạy | |
+| ST-4 | Đang có đoạn chat dài, palette **nổi**: chạy tự kiểm tra → dòng **Thu gọn rồi mở lại khung chat** ✓; sau khi xong palette đúng kích thước cũ, đoạn chat còn nguyên, không có tin "tự kiểm tra" nào lọt vào chat. Lặp lại khi palette đang **thu gọn** (⌄) → xong vẫn thu gọn | ⬜ chưa chạy | |
+| ST-5 | Chạy tự kiểm tra trên bản vẽ **đã lưu, chưa sửa gì**: dòng cuối **Bản vẽ của cậu không bị đụng tới** ✓; đóng bản vẽ → AutoCAD **không** hỏi lưu. Dòng **Hàng chờ gửi** và **Skill theo đoạn chat** ✓ | ⬜ chưa chạy | |
 
 ## Đã kiểm chứng tự động trên cloud (Linux)
 
 | Ngày | Hạng mục | Kết quả |
 | --- | --- | --- |
+| 2026-11-11 | Tự kiểm tra mở rộng (nhánh `claude/test-checklist`): luật ✓ / ✗ tách ra `Core/SelfTestRules.cs` — `dotnet test` lõi 160/160 (thêm nhóm `SelfTestRulesTests`: bản build theo đời AutoCAD R24.1–R26.0, DLL sai bản / sai thư mục, tương phản chữ, theme không đọc được, thu gọn mất tin, hàng chờ kẹt, skill hỏng, bản vẽ bị đổi handle / số đối tượng / DBMOD); build `-f net48` và `-f net8.0-windows` riêng, 0 warning; UI test mới `SelfTestProbeTests` (3 test) chỉ chạy trên Windows CI | ✅ |
 | 2026-11-05 | `npm run build` sidecar | ✅ |
 | 2026-11-05 | `npm test` — 32 test: protocol (encode/decode, UTF-8 cắt giữa chunk, CRLF, BOM, dòng quá dài), ToolRpc (tương quan id, timeout, response muộn, mất kết nối, failAll), tích hợp qua socket thật (echo tool, lỗi plugin, timeout, đứt pipe, dòng hỏng, tiến trình sidecar thật nối pipe rồi tự thoát), AgentSession với query giả (stream text, nhiều lượt, cancel, new session, process chết, lỗi đăng nhập, skill plugin) | ✅ 32/32 |
 | 2026-11-05 | `dotnet build` plugin net48 với reference AutoCAD.NET 24.1.51000 | ✅ 0 warning |

@@ -31,7 +31,7 @@ namespace ClaudeCAD.Plugin.UI
     /// WPF chat surface hosted in the ClaudeCAD PaletteSet (code-only, no XAML).
     /// All public methods are thread-safe (they marshal to the Dispatcher).
     /// </summary>
-    public sealed class ChatControl : UserControl
+    public sealed partial class ChatControl : UserControl
     {
         // ------------------------------------------------------------ events (UI → controller)
         public event Action<ComposedMessage> SendRequested;

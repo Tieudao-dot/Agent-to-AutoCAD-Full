@@ -47,7 +47,7 @@ Không nằm trong lượt 20 phút (thử riêng khi rảnh, cần ngắt mạn
 | B1 | ★ | Đóng khung chat rồi mở lại bằng `CC`, sau đó bằng **Ctrl+Shift+Space** khi đang ở bản vẽ | Cả hai cách đều mở khung chat, con trỏ nằm ở ô nhập | ☐ | ☐ | 1a, V6-8 |
 | B2 | ★ | Thẻ **Bắt đầu** → **Đăng nhập Claude** → đồng ý trên trình duyệt | "✓ Đã đăng nhập Claude"; thẻ Bắt đầu hiện ✓ bước 1–2 | ☐ | ☐ | I-3, UX-19 |
 | B3 | ★ | Gõ "chào Claude, kiểm tra kết nối với plugin" | Chữ hiện dần; Claude trả phiên bản AutoCAD + tên bản vẽ. **Lỗi ở đây thì dừng**, làm mục "Gửi lại gì khi lỗi" | ☐ | ☐ | 1a |
-| B4 | ★ | Gõ lệnh `CLAUDECHATSELFTEST`, chờ Notepad mở báo cáo | Dòng cuối "Tất cả đều đạt."; AutoCAD quay về đúng bản vẽ đang mở, không thêm đối tượng nào. Có dòng ✗ → chép nguyên dòng đó | ☐ | ☐ | ST-1, D-2 |
+| B4 | ★ | Gõ lệnh `CLAUDECHATSELFTEST`, chờ Notepad mở báo cáo | Dòng cuối "Tất cả đều đạt."; có dòng ✓ "Bản vẽ của cậu không bị đụng tới"; AutoCAD quay về đúng bản vẽ đang mở. Có dòng ✗ → chép nguyên dòng đó | ☐ | ☐ | ST-1 … ST-5, D-2 |
 
 B4 thay cho việc thử tay: nhóm hoàn tác, chụp ảnh bản vẽ, ghi nhận sửa tay, bản sao phiên bản, đọc theme AutoCAD,
 icon thanh trạng thái đã gắn, thu gọn không mất tin nhắn, DLL đúng với đời AutoCAD.
@@ -116,7 +116,7 @@ Làm trên máy có AutoCAD 2026 và / hoặc 2027. Phần A–G chỉ cần là
 | # | | Làm gì | Kết quả mong đợi | Đạt | Lỗi | Mã gốc |
 | --- | --- | --- | --- | --- | --- | --- |
 | H1 | ★ | Cài bằng `ClaudeCAD-Setup.exe`, mở AutoCAD 2026 / 2027 | Không hỏi "load this plugin?"; khung chat tự mở | ☐ | ☐ | 2026, 2027 (dòng bộ cài) |
-| H2 | ★ | `CLAUDECHATSELFTEST` → đọc dòng "Bản plugin đúng với đời AutoCAD" | ✓; 2026 ghi bản .NET 8 (thư mục `2025`), 2027 ghi bản .NET 10 (thư mục `2027`) | ☐ | ☐ | 2026, 2027 (dòng nạp DLL) |
+| H2 | ★ | `CLAUDECHATSELFTEST` → đọc dòng "Bản plugin đúng với đời AutoCAD" | ✓; 2026 ghi bản net8 (DLL trong thư mục `2025`), 2027 ghi bản net10 (thư mục `2027`) | ☐ | ☐ | 2026, 2027 (dòng nạp DLL) |
 | H3 | ★ | Gõ "vẽ 1 hình chữ nhật 2000x1000 và ghi chữ THỬ ở giữa" → **Hoàn tác lượt này** | Vẽ đúng, chữ có dấu; hoàn tác sạch | ☐ | ☐ | 2026, 2027 (dòng vẽ thử) |
 | H4 | ★ | Lặp lại F2 (đổi `COLORTHEME`) và nhìn icon thanh trạng thái | Khung chat đổi theo; icon **C** hiện, có chấm xanh khi Claude làm | ☐ | ☐ | 2026, 2027 (dòng theme) |
 | H5 | ○ | (2027) Kéo một file ảnh vào ô chat; bấm icon **Chụp** | Ảnh đính kèm được, không báo lỗi; ảnh chụp bản vẽ rõ nét | ☐ | ☐ | 2027 (dòng vẽ thử) |

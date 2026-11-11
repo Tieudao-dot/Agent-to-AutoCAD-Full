@@ -23,7 +23,7 @@ namespace ClaudeCAD.Plugin
     /// undo / edit / retry, confirmation cards, usage, notifications and theme.
     /// One instance per AutoCAD session.
     /// </summary>
-    public sealed class ChatController : ITurnHost, IDisposable
+    public sealed partial class ChatController : ITurnHost, IDisposable
     {
         private static readonly TimeSpan CancelGrace = TimeSpan.FromSeconds(10);
         private static readonly TimeSpan NotifyAfter = TimeSpan.FromSeconds(8);
