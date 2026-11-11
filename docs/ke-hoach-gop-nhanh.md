@@ -30,6 +30,21 @@ Rủi ro chính là **`ChatController.cs`**: nhánh bảo mật sửa phần kí
 trạng thái, tự gửi lại. Phần giảm rủi ro: test tự động (lõi 118, trợ lý 124, UI test), tự kiểm tra mở rộng, và
 checklist thử thật.
 
+## Tiến độ (cập nhật 11/11/2026, thread gộp nhánh)
+
+| Bước | Trạng thái |
+| --- | --- |
+| 1. Chờ việc đang chạy xong | ✅ hai nhánh báo sẵn sàng (`docs/trang-thai/*.md`) |
+| 2. Gộp vào nhánh tích hợp `claude/release-0.9.5` | ✅ thứ tự thực tế: 2026/2027 (nền) → chính → bảo mật → giao diện (`a150723`) → kiểm thử (`a4127f3`) |
+| 3. Cậu test một lần theo `docs/checklist-thu-that.md` | ⏳ chờ cậu |
+| 4. Sửa theo phản hồi | — |
+| 5. Nâng phiên bản → merge `main` | — chỉ khi cậu đồng ý |
+| 6. Sau phát hành: hướng dẫn người dùng, tách `ChatControl.cs` | — |
+
+Xung đột đã gặp: `ChatController.cs` chỉ 1 chỗ (`RestartSidecarQuietly`: giữ `ForgetAccountStatus` + chặn bằng
+`Activation.IsAllowed`); còn lại là `bo-cai/README.md`, `docs/progress.md`, `docs/test-log.md`,
+`docs/palette-features.md` (hai nhánh cùng thêm mục 54 → mục tự kiểm tra thành 55). `SelfTest.cs` tự gộp được.
+
 ## Các bước
 
 1. **Chờ việc đang chạy xong** (không cần cậu): thread giao diện làm tiến độ từng bước; thread kiểm thử làm

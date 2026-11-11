@@ -1,8 +1,8 @@
 # Plugin ClaudeCAD — tổng quan
 
-*Cập nhật 10/11/2026 · bản đang phát hành v0.9.3 · v0.9.4 và giao diện mới (0.9.5) đã code xong, chưa phát hành*
+*Cập nhật 11/11/2026 · bản đang phát hành v0.9.3 · bản thử 0.9.5 (khóa key, giao diện mới, AutoCAD 2026 / 2027) đã gộp trên `claude/release-0.9.5`, chưa phát hành*
 
-ClaudeCAD là plugin cho **AutoCAD 2022–2025** (2026 / 2027 đang làm, chưa phát hành) thêm một khung chat (palette) vào AutoCAD. Người dùng gõ yêu cầu
+ClaudeCAD là plugin cho **AutoCAD 2022–2027** (bản đang phát hành v0.9.3: 2022–2025; 2026 / 2027 có từ bản thử 0.9.5) thêm một khung chat (palette) vào AutoCAD. Người dùng gõ yêu cầu
 bằng tiếng Việt ("vẽ mặt bằng phòng 4×6 m, tường 220, cửa đi 900"). Claude đọc bản vẽ đang mở, rồi tự vẽ, sửa, đo
 hoặc trả lời ngay trên bản vẽ đó. Mọi thay đổi của một lượt gộp thành một bước hoàn tác.
 
@@ -39,7 +39,7 @@ hoặc trả lời ngay trên bản vẽ đó. Mọi thay đổi của một lư
 
 | Thành phần | Công nghệ | Ghi chú |
 | --- | --- | --- |
-| Plugin | C# / WPF, `ClaudeCAD.Plugin.dll` | 2 bản build: .NET Framework 4.8 cho AutoCAD 2022–2024, .NET 8 cho AutoCAD 2025 (nhánh `claude/acad-2026-2027`: .NET 8 dùng luôn cho 2026, thêm bản .NET 10 cho 2027) |
+| Plugin | C# / WPF, `ClaudeCAD.Plugin.dll` | 3 bản build: .NET Framework 4.8 cho AutoCAD 2022–2024, .NET 8 cho AutoCAD 2025–2026, .NET 10 cho AutoCAD 2027 |
 | Trợ lý (sidecar) | Node.js + TypeScript, Claude Agent SDK | Node đi kèm bộ cài, người dùng không phải cài |
 | Skill | File Markdown (chuẩn Agent Skills) | Thư viện skill + danh sách skill theo từng đoạn chat |
 | Bộ cài | Inno Setup, `ClaudeCAD-Setup.exe` | Cài bundle vào ApplicationPlugins, thêm thư mục tin cậy, đăng nhập Claude ở trang cuối |
@@ -47,7 +47,7 @@ hoặc trả lời ngay trên bản vẽ đó. Mọi thay đổi của một lư
 
 ## 4. Cài đặt, kích hoạt, sử dụng
 
-- **Yêu cầu:** Windows, AutoCAD 2022 / 2023 / 2024 / 2025 bản đầy đủ (2026 / 2027: đang làm, chưa phát hành) (AutoCAD LT không chạy plugin .NET),
+- **Yêu cầu:** Windows, AutoCAD 2022 – 2027 bản đầy đủ (2026 / 2027: từ bản thử 0.9.5, chưa thử trên AutoCAD thật) (AutoCAD LT không chạy plugin .NET),
   có mạng, tài khoản Claude Pro / Max hoặc API key Anthropic.
 - **Cài:** chạy `ClaudeCAD-Setup.exe` → trang *Kích hoạt* hiện mã máy, gửi yêu cầu cho chủ plugin, nhập key → cài →
   đăng nhập Claude ở trang cuối. Cài ngầm cho IT: `ClaudeCAD-Setup.exe /VERYSILENT /KEY=<key>`.
@@ -69,8 +69,8 @@ hoặc trả lời ngay trên bản vẽ đó. Mọi thay đổi của một lư
 | Phiên bản | Nội dung chính | Trạng thái |
 | --- | --- | --- |
 | 0.4 – 0.9.3 | Khung chat 20+ tính năng, skill, macro, phiên bản, ghi nhận sửa tay, chọn layer, báo cáo lỗi, tài khoản AI, đăng nhập trong bộ cài | Đã phát hành (v0.9.3 ngày 09/11) |
-| 0.9.4 | Khóa key theo máy + quản lý thiết bị qua Google Sheet (duyệt / khóa từng máy); ~30 bản sửa sau rà soát toàn dự án; skill theo từng đoạn chat; chạy bền hơn | Code xong, CI xanh, chờ test 6 bước trên máy thật |
-| 0.9.5 | Giao diện theo phong cách AutoCAD: màu + font lấy từ theme AutoCAD, nút icon có tooltip, cài đặt dạng lưới, gửi thêm ý khi Claude đang làm, Esc để dừng, thu gọn còn ô nhập, icon + bong bóng trên thanh trạng thái | Code xong, CI xanh, chưa thử trên AutoCAD thật |
+| 0.9.5 (bản thử; gồm phần từng ghi 0.9.4) | Khóa key theo máy + quản lý thiết bị qua Google Sheet (duyệt / khóa từng máy); ~30 bản sửa sau rà soát toàn dự án; skill theo từng đoạn chat; chạy bền hơn | Đã gộp, chờ thử theo `docs/checklist-thu-that.md` |
+| 0.9.5 (bản thử) | AutoCAD 2026 / 2027; tự kiểm tra mở rộng; thẻ "Bắt đầu" 3 bước, tiến độ từng bước. Giao diện theo phong cách AutoCAD: màu + font lấy từ theme AutoCAD, nút icon có tooltip, cài đặt dạng lưới, gửi thêm ý khi Claude đang làm, Esc để dừng, thu gọn còn ô nhập, icon + bong bóng trên thanh trạng thái | Đã gộp, chưa thử trên AutoCAD thật |
 
 **Kiểm thử tự động:** 118 test lõi plugin, 124 test trợ lý, test giao diện WPF trên Windows (có ảnh chụp), build cả 2
 bản .NET và bộ cài trên mỗi lần CI.
@@ -78,8 +78,8 @@ bản .NET và bộ cài trên mỗi lần CI.
 ## 7. Giới hạn hiện tại
 
 - Cần mạng và phụ thuộc hạn mức tài khoản Claude (hạn mức 5 giờ / tuần); hết hạn mức thì phải chờ hoặc dùng API key.
-- Không chạy trên AutoCAD LT. Bản đang phát hành chỉ nhận 2022–2025; AutoCAD 2026 (R25.1) và 2027 (R26.0) đã khai báo trên
-  nhánh `claude/acad-2026-2027`, CI build được, chưa thử trên AutoCAD thật ([chi tiết + nguồn](autocad-2026-2027.md)).
+- Không chạy trên AutoCAD LT. Bản đang phát hành chỉ nhận 2022–2025; AutoCAD 2026 (R25.1) và 2027 (R26.0) có trong
+  bản thử 0.9.5 (nhánh `claude/release-0.9.5`), CI build được, chưa thử trên AutoCAD thật ([chi tiết + nguồn](autocad-2026-2027.md)).
   AutoCAD sau 2027 (R26.1+) không tự nạp cho đến khi được khai báo.
 - Nhiều mục chỉ kiểm được trên AutoCAD thật (theme, thanh trạng thái, chọn đối tượng, phím tắt, kích hoạt) và vẫn
   "chưa chạy" trong `docs/test-log.md`.
