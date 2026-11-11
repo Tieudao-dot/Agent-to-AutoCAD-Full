@@ -121,7 +121,7 @@ if (-not $SkipNodeCheck) {
       exit 3
     }
   }
-  Say "Node.js v$major: OK" Green
+  Say "Node.js v${major}: OK" Green
 }
 
 # ------------------------------------------------------------------ copy the bundle
