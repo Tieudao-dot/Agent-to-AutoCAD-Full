@@ -17,7 +17,7 @@ namespace ClaudeCAD.Plugin.UI
     /// references acmgd/acdbmgd/accoremgd/AdWindows in install mode, and the UI tests run with no
     /// AutoCAD at all). Anything missing is simply left to the hardcoded fallback in <see cref="Theme"/>.
     /// </summary>
-    public static class AcadTheme
+    public static partial class AcadTheme
     {
         /// <summary>What a palette theme gave us. Any member may be absent.</summary>
         public sealed class Info

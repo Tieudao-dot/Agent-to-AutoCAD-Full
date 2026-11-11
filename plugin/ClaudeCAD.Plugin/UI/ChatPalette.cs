@@ -5,7 +5,7 @@ using Autodesk.AutoCAD.Windows;
 namespace ClaudeCAD.Plugin.UI
 {
     /// <summary>The dockable ClaudeCAD palette (opened with CLAUDECHAT).</summary>
-    public sealed class ChatPalette
+    public sealed partial class ChatPalette
     {
         private static readonly Guid PaletteGuid = new Guid("6F1B2C9A-3D4E-4B7A-9C51-2E8F0A6D7B13");
         private const int MinWidth = 300;

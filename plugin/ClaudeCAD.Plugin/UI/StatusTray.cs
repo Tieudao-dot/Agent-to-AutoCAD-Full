@@ -16,7 +16,7 @@ namespace ClaudeCAD.Plugin.UI
     /// state, opens the palette on click, and reports a finished turn in a bubble when the palette is
     /// closed or rolled up — the way AutoCAD itself reports a changed Xref.
     /// </summary>
-    public static class StatusTray
+    public static partial class StatusTray
     {
         public enum State
         {
