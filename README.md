@@ -1,4 +1,4 @@
-# ClaudeCAD — chat với Claude trong AutoCAD 2022–2025
+# ClaudeCAD — chat với Claude trong AutoCAD 2022–2027
 
 Plugin cho AutoCAD 2022 (bản full, Windows; từ phase 3 hỗ trợ cả 2023, 2024, 2025): chat tiếng Việt trong một palette, Claude **vẽ, đọc, sửa, xóa đối tượng trực tiếp trên bản vẽ đang mở**. Spec đầy đủ: [`docs/spec.md`](docs/spec.md). Tiến độ từng phase: [`docs/progress.md`](docs/progress.md).
 
@@ -20,7 +20,7 @@ Kiến trúc: AutoCAD nạp `ClaudeCAD.Plugin.dll` → lệnh `CLAUDECHAT` mở 
 1. Tải **[ClaudeCAD-Setup.exe](https://github.com/Tieudao-dot/Agent-to-Autocad/releases/latest/download/ClaudeCAD-Setup.exe)** (luôn là bản mới nhất).
 2. Chạy file. Windows có thể hiện "Windows protected your PC" → bấm **More info → Run anyway**. Không cần quyền admin, không cần cài Node.js hay Claude Code.
 3. **Kích hoạt:** bộ cài hiện mã máy và *"Liên hệ Zalo owner: 0344644415"* — nhắn Zalo để nhận key (riêng cho máy đó, vĩnh viễn), dán vào ô key rồi **Next**. Chi tiết: [`activation/`](activation/README.md).
-4. Trang cuối bộ cài: giữ ô **Đăng nhập Claude ngay** → **Finish** → bấm **đồng ý** trên trình duyệt (tài khoản Pro/Max, một lần trên mỗi máy, không cần mở AutoCAD). Mở AutoCAD 2022–2025 là dùng được; nếu bỏ qua bước này, lần đầu mở AutoCAD plugin tự mở trang đăng nhập.
+4. Trang cuối bộ cài: giữ ô **Đăng nhập Claude ngay** → **Finish** → bấm **đồng ý** trên trình duyệt (tài khoản Pro/Max, một lần trên mỗi máy, không cần mở AutoCAD). Mở AutoCAD 2022–2027 là dùng được (2026/2027: nhánh `claude/acad-2026-2027`, chưa phát hành); nếu bỏ qua bước này, lần đầu mở AutoCAD plugin tự mở trang đăng nhập.
 
 Hướng dẫn đầy đủ, cập nhật, báo lỗi, đổi tài khoản AI, gỡ cài đặt và lịch sử phiên bản: [`bo-cai/`](bo-cai/README.md). Có lỗi trên máy nào: **⚙ ▸ Gửi báo cáo lỗi** rồi gửi file .zip trên Desktop.
 
@@ -32,8 +32,8 @@ Mở lại khung chat: `CLAUDECHAT`, `CC` hoặc **Ctrl+Shift+Space**. Có trụ
 
 | Hạng mục | Yêu cầu |
 | --- | --- |
-| Máy | Windows 10/11 x64, AutoCAD 2022 bản full (không hỗ trợ LT); 2023/2024/2025 từ phase 3 |
-| Build plugin | Visual Studio 2022 (workload *.NET desktop development*) hoặc .NET SDK 8 (`dotnet build`) |
+| Máy | Windows 10/11 x64, AutoCAD 2022–2025 bản full (không hỗ trợ LT); 2026/2027 đang làm, chưa phát hành ([`docs/autocad-2026-2027.md`](docs/autocad-2026-2027.md)) |
+| Build plugin | Visual Studio 2022 (workload *.NET desktop development*) hoặc .NET SDK 8 (`dotnet build`); bản AutoCAD 2027 cần thêm .NET SDK 10 |
 | Sidecar | Node.js >= 18 (khuyến nghị 20/22 LTS) có trong `PATH` khi phát triển; bộ cài đã kèm sẵn `Contents\node\node.exe` |
 | Tài khoản | Claude Pro/Max (nút **Đăng nhập Claude** trong khung chat), **hoặc** biến môi trường `ANTHROPIC_API_KEY` |
 
@@ -79,12 +79,13 @@ dotnet build plugin/ClaudeCAD.Plugin/ClaudeCAD.Plugin.csproj -c Release
 
 Kết quả (từ phase 3 project build hai bản):
 - `plugin/ClaudeCAD.Plugin/bin/Release/ClaudeCAD.Plugin.dll` — AutoCAD 2022/2023/2024 (.NET Framework 4.8)
-- `plugin/ClaudeCAD.Plugin/bin/Release/acad2025/ClaudeCAD.Plugin.dll` — AutoCAD 2025 (.NET 8)
+- `plugin/ClaudeCAD.Plugin/bin/Release/acad2025/ClaudeCAD.Plugin.dll` — AutoCAD 2025 / 2026 (.NET 8, R25.0–R25.1)
+- `plugin/ClaudeCAD.Plugin/bin/Release/acad2027/ClaudeCAD.Plugin.dll` — AutoCAD 2027 (.NET 10, R26.0)
 
-Chỉ build một bản: thêm `-f net48` hoặc `-f net8.0-windows`. AutoCAD 2025 cài chỗ khác: `-p:AcadDir2025="..."`.
+Chỉ build một bản: thêm `-f net48`, `-f net8.0-windows` hoặc `-f net10.0-windows` (xóa `obj` `bin` giữa các lần đổi bản). AutoCAD 2025 / 2027 cài chỗ khác: `-p:AcadDir2025="..."` / `-p:AcadDir2027="..."`.
 
 - Nếu có `C:\Program Files\Autodesk\AutoCAD 2022\acmgd.dll`, project tham chiếu `accoremgd.dll`, `acdbmgd.dll`, `acmgd.dll` từ thư mục cài (Copy Local = false). AutoCAD cài chỗ khác: thêm `-p:AcadDir="D:\Autodesk\AutoCAD 2022"`.
-- Nếu không có AutoCAD (máy build/CI), project tự dùng package NuGet chính thức `AutoCAD.NET 24.1.51000` (= AutoCAD 2022) làm reference assemblies. Ép chế độ: `-p:AcadRefSource=Install` hoặc `-p:AcadRefSource=NuGet`.
+- Nếu không có AutoCAD (máy build/CI), project tự dùng package NuGet chính thức `AutoCAD.NET 24.1.51000` (= AutoCAD 2022) làm reference assemblies (bản 2025–2026: `25.0.1`, bản 2027: `26.0.0`). Ép chế độ: `-p:AcadRefSource=Install` hoặc `-p:AcadRefSource=NuGet`.
 - Không phụ thuộc Newtonsoft.Json (tránh xung đột phiên bản trong acad.exe): plugin có bộ JSON riêng.
 
 Test giao diện WPF thật (chỉ chạy trên Windows, lưu ảnh chụp palette vào `bin\...\ui-screens`):
@@ -206,7 +207,7 @@ Xem [`bundle/README.md`](bundle/README.md) (thêm ở phase sau): tạo `ClaudeC
 
 ## 6. Cài đặt cho người dùng cuối (phase 3)
 
-- **Setup.exe**: `ClaudeCAD-Setup.exe` (link cố định ở mục *Cài đặt nhanh*) — cài cho user hiện tại, kèm sẵn Node.js, tự thêm thư mục plugin vào `TRUSTEDPATHS` của AutoCAD 2022–2025; lần đầu mở AutoCAD khung chat tự mở với nút **Đăng nhập Claude**.
+- **Setup.exe**: `ClaudeCAD-Setup.exe` (link cố định ở mục *Cài đặt nhanh*) — cài cho user hiện tại, kèm sẵn Node.js, tự thêm thư mục plugin vào `TRUSTEDPATHS` của AutoCAD 2022–2025 (nhánh 2026/2027: thêm R26); lần đầu mở AutoCAD khung chat tự mở với nút **Đăng nhập Claude**.
 - **PowerShell**: giải nén `ClaudeCAD-<version>.zip`, đặt `install.ps1` cạnh thư mục `ClaudeCAD.bundle`, rồi:
 
 ```bash

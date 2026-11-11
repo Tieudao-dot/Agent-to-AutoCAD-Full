@@ -33,9 +33,12 @@ jobs:
           cache: npm
           cache-dependency-path: agent/package-lock.json
 
+      # .NET 8 for the AutoCAD 2025-2026 build and the tests, .NET 10 for the AutoCAD 2027 build
       - uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: 8.0.x
+          dotnet-version: |
+            8.0.x
+            10.0.x
 
       - name: Sidecar - install, test (IPC over Windows named pipes), build
         working-directory: agent
@@ -59,8 +62,16 @@ jobs:
           path: ui-screens/*.png
           if-no-files-found: warn
 
-      - name: Plugin build (net48 for AutoCAD 2022-2024, net8.0-windows for AutoCAD 2025)
+      - name: Plugin build (net48 for AutoCAD 2022-2024, net8.0-windows for 2025-2026, net10.0-windows for 2027)
         run: dotnet build plugin/ClaudeCAD.Plugin/ClaudeCAD.Plugin.csproj -c Release -p:AcadRefSource=NuGet
+
+      - name: All three plugin builds present
+        run: |
+          foreach ($p in 'bin/Release/ClaudeCAD.Plugin.dll', 'bin/Release/acad2025/ClaudeCAD.Plugin.dll', 'bin/Release/acad2027/ClaudeCAD.Plugin.dll') {
+            $f = Join-Path plugin/ClaudeCAD.Plugin $p
+            if (-not (Test-Path $f)) { Write-Error "missing $f"; exit 1 }
+            Write-Host "$f  $((Get-Item $f).Length) bytes"
+          }
 
       - name: Version
         id: ver

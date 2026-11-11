@@ -2,7 +2,7 @@
 
 ## Tóm tắt
 
-- **Sản phẩm:** plugin AutoCAD 2022–2025. Khung chat (palette WPF) điều khiển trợ lý Claude
+- **Sản phẩm:** plugin AutoCAD 2022–2025 (2026 / 2027 đang làm). Khung chat (palette WPF) điều khiển trợ lý Claude
   (sidecar Node, Claude Agent SDK) để vẽ, sửa, đo, hỏi đáp trên bản vẽ đang mở.
 - **Bản đang phát hành:** v0.9.3 (09/11). Mọi thứ sau đó đã code xong, **CI xanh, chưa phát hành**:
   khóa key + quản lý thiết bị, 30 bản sửa sau rà soát, skill theo đoạn chat, giao diện kiểu AutoCAD.
@@ -17,6 +17,7 @@
 | Chính (thread này) | Tính năng, rà soát, sửa lỗi, phát hành | `claude/wizardly-heisenberg-ugup5c` | Xong việc, chờ phát hành | ~563k token · ~$345 |
 | Bảo mật, khóa key & quản lý thiết bị | Key theo máy, Apps Script + Google Sheet duyệt / khóa máy | `claude/device-management` | **Chờ cậu chạy test 6 bước trên AutoCAD** | ~413k · ~$58 |
 | Giao diện & UX kiểu AutoCAD | Lớp vỏ, theme, thu gọn, icon thanh trạng thái | `claude/ux-autocad` | Xong đợt hiện tại, chờ cậu thử / giao việc | ~120k · ~$1,3 |
+| AutoCAD 2026 / 2027 | 2026 dùng chung bản .NET 8, thêm bản .NET 10 cho 2027, bộ cài chung 2022–2027 | `claude/acad-2026-2027` | Chờ cậu thử trên AutoCAD 2027 dùng thử | — |
 
 \* Số hệ thống ghi nhận cho từng thread (quy đổi theo giá API). Ngữ cảnh càng dài thì mỗi bước càng đắt.
 
@@ -38,6 +39,7 @@ net48 + net8 cho cả 4 bản AutoCAD.
 | `main` | `47baddb` v0.9.3 | Đã phát hành |
 | `claude/wizardly-heisenberg-ugup5c` | `4e31fe7` | Xanh (run 42816573516) |
 | `claude/ux-autocad` (tách từ nhánh trên) | `c03a472` hàng nút dưới ô nhập thành icon | Xanh (run 42818258362) |
+| `claude/acad-2026-2027` (tách từ `0d4056a`) | hỗ trợ AutoCAD 2026 / 2027, chưa phát hành | xem [`autocad-2026-2027.md`](autocad-2026-2027.md) |
 | `claude/device-management` | `7839765` (ghi chú) · code `8067a98` | Xanh (run 42779174835) |
 
 ## Việc cần cậu

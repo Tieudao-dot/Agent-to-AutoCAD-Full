@@ -1,25 +1,31 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <!--
-    ClaudeCAD.Plugin — in-process AutoCAD plugin, two builds from the same sources:
+    ClaudeCAD.Plugin — in-process AutoCAD plugin, three builds from the same sources:
 
       net48           → AutoCAD 2022 / 2023 / 2024 (R24.1 - R24.3, .NET Framework 4.8)
                         output: bin\<Configuration>\ClaudeCAD.Plugin.dll
-      net8.0-windows  → AutoCAD 2025 (R25.0, .NET 8)
+      net8.0-windows  → AutoCAD 2025 / 2026 (R25.0 - R25.1, .NET 8; also loads after the 2025/2026
+                        updates that move AutoCAD onto .NET 10, e.g. 2026.1.2 — no runtimeconfig is shipped)
                         output: bin\<Configuration>\acad2025\ClaudeCAD.Plugin.dll
+      net10.0-windows → AutoCAD 2027 (R26.0, .NET 10; not binary compatible with R25, needs its own build)
+                        output: bin\<Configuration>\acad2027\ClaudeCAD.Plugin.dll
 
     AutoCAD references:
       * Install mode (default when the AutoCAD folder exists): accoremgd/acdbmgd/acmgd
         from the install folder, Copy Local = false.
           net48: $(AcadDir)      default C:\Program Files\Autodesk\AutoCAD 2022
           net8 : $(AcadDir2025)  default C:\Program Files\Autodesk\AutoCAD 2025
+          net10: $(AcadDir2027)  default C:\Program Files\Autodesk\AutoCAD 2027
       * NuGet mode (CI, Linux, no AutoCAD): official Autodesk packages as compile-only
-        references — AutoCAD.NET 24.1.51000 (2022 API) and 25.0.1 (2025 API).
-    Force a mode with -p:AcadRefSource=Install|NuGet. Build only one target with -f net48.
+        references — AutoCAD.NET 24.1.51000 (2022 API), 25.0.1 (2025 API, net8.0; the 2025 API is
+        also what the 2026 build compiles against, so the dll stays loadable in both) and 26.0.0 (2027 API, net10.0).
+    Force a mode with -p:AcadRefSource=Install|NuGet. Build only one target with -f net48
+    (rm -rf obj bin between targets when switching).
   -->
 
   <PropertyGroup>
-    <TargetFrameworks>net48;net8.0-windows</TargetFrameworks>
+    <TargetFrameworks>net48;net8.0-windows;net10.0-windows</TargetFrameworks>
     <LangVersion>10.0</LangVersion>
     <Nullable>disable</Nullable>
     <OutputType>Library</OutputType>
@@ -35,6 +41,7 @@
     <EnableWindowsTargeting>true</EnableWindowsTargeting>
     <AcadDir Condition="'$(AcadDir)' == ''">C:\Program Files\Autodesk\AutoCAD 2022</AcadDir>
     <AcadDir2025 Condition="'$(AcadDir2025)' == ''">C:\Program Files\Autodesk\AutoCAD 2025</AcadDir2025>
+    <AcadDir2027 Condition="'$(AcadDir2027)' == ''">C:\Program Files\Autodesk\AutoCAD 2027</AcadDir2027>
   </PropertyGroup>
 
   <!-- ===================================================== net48: AutoCAD 2022-2024 -->
@@ -45,7 +52,7 @@
     <AcadNuGetVersion>24.1.51000</AcadNuGetVersion>
   </PropertyGroup>
 
-  <!-- ===================================================== net8: AutoCAD 2025 -->
+  <!-- ===================================================== net8: AutoCAD 2025 / 2026 -->
   <PropertyGroup Condition="'$(TargetFramework)' == 'net8.0-windows'">
     <OutputPath>bin\$(Configuration)\acad2025\</OutputPath>
     <DefineConstants>$(DefineConstants);ACAD_R25</DefineConstants>
@@ -53,6 +60,17 @@
     <AcadRefDir>$(AcadDir2025)</AcadRefDir>
     <AcadNuGetVersion>25.0.1</AcadNuGetVersion>
     <!-- AutoCAD loads the plugin into its own process: no apphost, no runtimeconfig needed. -->
+    <EnableDynamicLoading>true</EnableDynamicLoading>
+  </PropertyGroup>
+
+  <!-- ===================================================== net10: AutoCAD 2027 -->
+  <!-- ACAD_R26 for anything that differs from R25; every #if ACAD_R24 / #else already sends it down the .NET (Core) path. -->
+  <PropertyGroup Condition="'$(TargetFramework)' == 'net10.0-windows'">
+    <OutputPath>bin\$(Configuration)\acad2027\</OutputPath>
+    <DefineConstants>$(DefineConstants);ACAD_R26</DefineConstants>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <AcadRefDir>$(AcadDir2027)</AcadRefDir>
+    <AcadNuGetVersion>26.0.0</AcadNuGetVersion>
     <EnableDynamicLoading>true</EnableDynamicLoading>
   </PropertyGroup>
 
@@ -79,7 +97,7 @@
     <Reference Include="PresentationFramework" />
   </ItemGroup>
 
-  <ItemGroup Condition="'$(TargetFramework)' == 'net8.0-windows'">
+  <ItemGroup Condition="'$(TargetFramework)' == 'net8.0-windows' Or '$(TargetFramework)' == 'net10.0-windows'">
     <!-- WPF + WinForms without the WindowsDesktop SDK targets (UI is code-only, no XAML compile). -->
     <FrameworkReference Include="Microsoft.WindowsDesktop.App" />
   </ItemGroup>

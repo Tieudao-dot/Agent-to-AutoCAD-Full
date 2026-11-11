@@ -69,6 +69,13 @@ Trạng thái: ⬜ chưa chạy · ✅ đạt · ❌ không đạt · ⚠️ đ�
 | 3 | `install.ps1`: máy chưa có Node → báo + đề nghị winget; có Node → cài bundle; chạy lại sau khi sửa skill → skill giữ nguyên; `-Uninstall` | ⬜ chưa chạy | |
 | 3 | `ClaudeCAD-Setup-<v>.exe` cài/gỡ, cảnh báo thiếu Node / chưa đăng nhập | ⬜ chưa chạy | |
 | 3 | AutoCAD 2023 và 2024 nạp bản net48; AutoCAD 2025 nạp `Contents\2025` (net8); smoke 1a trên mỗi bản | ⬜ chưa chạy | |
+| 2026 | Bộ cài nhận AutoCAD 2026 (R25.1): thư mục plugin có trong TRUSTEDPATHS của R25.1; mở AutoCAD không hỏi "load this plugin?" | ⬜ chưa chạy | |
+| 2026 | Plugin nạp `Contents\2025` (net8) không cảnh báo, cả trước và sau bản cập nhật 2026.1.2 (.NET 10) nếu có | ⬜ chưa chạy | |
+| 2026 | Khung chat tự mở, theme sáng/tối theo AutoCAD, icon thanh trạng thái hiện + đổi chấm màu; vẽ thử 1 hình chữ nhật + chữ; "Hoàn tác lượt này" | ⬜ chưa chạy | |
+| 2027 | Bộ cài nhận AutoCAD 2027 (R26.0): TRUSTEDPATHS của R26.0 có thư mục plugin; mở AutoCAD không hỏi "load this plugin?" | ⬜ chưa chạy | |
+| 2027 | Plugin nạp `Contents\2027` (net10) không cảnh báo; `CLAUDECHATLOG` không có lỗi nạp | ⬜ chưa chạy | |
+| 2027 | Khung chat mở (`CLAUDECHAT`), đổi Color theme sáng/tối → khung chat đổi theo; icon thanh trạng thái + bong bóng | ⬜ chưa chạy | |
+| 2027 | Vẽ thử (hình chữ nhật, chữ, layer mới), xem ảnh chụp bản vẽ (capture_view), "Hoàn tác lượt này" = một U; kéo ảnh vào ô chat không lỗi | ⬜ chưa chạy | |
 | 3 | Cập nhật: đặt `CLAUDECAD_UPDATE_URL` tới latest.json có version cao hơn → palette báo; `CLAUDECHATUPDATE` tải, kiểm SHA-256; đóng AutoCAD → bundle được thay, skill đã sửa còn nguyên | ⬜ chưa chạy | |
 | 3 | latest.json sai SHA-256 → hủy, không đụng bundle | ⬜ chưa chạy | |
 | UI-1 | Nút **Chọn đối tượng**: quét chọn → chip "Kèm N"; chọn sẵn (pickfirst) → chip tự hiện; ✕ bỏ kèm; "đổi mấy cái này sang layer X" đúng đối tượng | ⬜ chưa chạy | |

@@ -1,6 +1,6 @@
 ﻿<#
 .SYNOPSIS
-  Cài / gỡ ClaudeCAD cho AutoCAD 2022-2025 (bundle autoloader), có kiểm tra Node.js và đăng nhập Claude.
+  Cài / gỡ ClaudeCAD cho AutoCAD 2022-2027 (bundle autoloader), có kiểm tra Node.js và đăng nhập Claude.
 
 .EXAMPLE
   powershell -ExecutionPolicy Bypass -File installer\install.ps1
@@ -117,7 +117,7 @@ if ($LASTEXITCODE -ge 8) { Say "Copy skill thất bại (robocopy $LASTEXITCODE)
 $entry = Join-Path $target 'Contents\...'
 $base = 'HKCU:\Software\Autodesk\AutoCAD'
 if (Test-Path $base) {
-  Get-ChildItem $base -ErrorAction SilentlyContinue | Where-Object { $_.PSChildName -match '^R2[45]' } | ForEach-Object {
+  Get-ChildItem $base -ErrorAction SilentlyContinue | Where-Object { $_.PSChildName -match '^R2[456]' }  # R24 = 2022-2024, R25 = 2025-2026, R26 = 2027 | ForEach-Object {
     Get-ChildItem $_.PSPath -ErrorAction SilentlyContinue | ForEach-Object {
       $profiles = Join-Path $_.PSPath 'Profiles'
       if (Test-Path $profiles) {
@@ -139,6 +139,6 @@ if (Test-Path $base) {
 }
 
 Say ''
-Say 'Xong. Mở AutoCAD 2022-2025: khung chat tự mở lần đầu, bấm "Đăng nhập Claude" (đăng nhập một lần trên trình duyệt).' Green
+Say 'Xong. Mở AutoCAD 2022-2027: khung chat tự mở lần đầu, bấm "Đăng nhập Claude" (đăng nhập một lần trên trình duyệt).' Green
 Say "Gỡ cài đặt: powershell -ExecutionPolicy Bypass -File `"$PSCommandPath`" -Uninstall$(if ($AllUsers) {' -AllUsers'})"
 exit 0

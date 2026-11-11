@@ -6,6 +6,16 @@
   #define AppVersion "0.9.4"
 #endif
 #define BundleDir "..\bundle\out\ClaudeCAD.bundle"
+; one installer for AutoCAD 2022-2027: refuse to build it without all three plugin builds
+#if !FileExists(AddBackslash(SourcePath) + BundleDir + "\Contents\ClaudeCAD.Plugin.dll")
+  #error ClaudeCAD.bundle has no AutoCAD 2022-2024 build (Contents\ClaudeCAD.Plugin.dll)
+#endif
+#if !FileExists(AddBackslash(SourcePath) + BundleDir + "\Contents\2025\ClaudeCAD.Plugin.dll")
+  #error ClaudeCAD.bundle has no AutoCAD 2025-2026 build (Contents\2025\ClaudeCAD.Plugin.dll)
+#endif
+#if !FileExists(AddBackslash(SourcePath) + BundleDir + "\Contents\2027\ClaudeCAD.Plugin.dll")
+  #error ClaudeCAD.bundle has no AutoCAD 2027 build (Contents\2027\ClaudeCAD.Plugin.dll)
+#endif
 ; activation service url + owner contact (make-bundle writes it from activation/activation.json)
 #if FileExists(AddBackslash(SourcePath) + "..\bundle\out\activation.iss")
   #include "..\bundle\out\activation.iss"
@@ -58,7 +68,7 @@ Source: "{#BundleDir}\Contents\skills\*"; DestDir: "{app}\Contents\skills"; Flag
 Filename: "{#ClaudeExe}"; Parameters: "auth login --claudeai"; Description: "Đăng nhập Claude ngay (trình duyệt mở ra, bấm đồng ý một lần — không cần mở AutoCAD)"; Flags: postinstall runasoriginaluser skipifsilent nowait; Check: NeedsLogin
 
 [Messages]
-FinishedLabel=ClaudeCAD đã được cài.%n%nĐể dùng ngay: giữ ô "Đăng nhập Claude ngay" rồi bấm Finish — trình duyệt mở trang cấp quyền, cậu bấm đồng ý bằng tài khoản Claude Pro/Max (một cửa sổ đen hiện lên trong lúc đăng nhập và tự đóng khi xong). Sau đó mở AutoCAD 2022–2025 là dùng được.%n%nNếu bỏ qua bước này, lần đầu mở AutoCAD plugin sẽ tự mở trang đăng nhập.
+FinishedLabel=ClaudeCAD đã được cài.%n%nĐể dùng ngay: giữ ô "Đăng nhập Claude ngay" rồi bấm Finish — trình duyệt mở trang cấp quyền, cậu bấm đồng ý bằng tài khoản Claude Pro/Max (một cửa sổ đen hiện lên trong lúc đăng nhập và tự đóng khi xong). Sau đó mở AutoCAD 2022–2027 là dùng được.%n%nNếu bỏ qua bước này, lần đầu mở AutoCAD plugin sẽ tự mở trang đăng nhập.
 
 [Code]
 #if FileExists(AddBackslash(SourcePath) + BundleDir + "\Contents\node\node.exe")
@@ -94,7 +104,8 @@ begin
   for i := 0 to GetArrayLength(Releases) - 1 do
   begin
     Rel := Releases[i];
-    if (Copy(Rel, 1, 3) = 'R24') or (Copy(Rel, 1, 3) = 'R25') then
+    { R24 = 2022-2024, R25 = 2025-2026, R26 = 2027 (the releases PackageContents.xml loads in) }
+    if (Copy(Rel, 1, 3) = 'R24') or (Copy(Rel, 1, 3) = 'R25') or (Copy(Rel, 1, 3) = 'R26') then
       if RegGetSubkeyNames(HKCU, Base + '\' + Rel, Products) then
         for j := 0 to GetArrayLength(Products) - 1 do
           if RegGetSubkeyNames(HKCU, Base + '\' + Rel + '\' + Products[j] + '\Profiles', Profiles) then
