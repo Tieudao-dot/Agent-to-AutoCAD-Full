@@ -75,5 +75,6 @@ bộ cài Inno Setup (`installer/`), skill (`skills/`). Đọc trước: `docs/p
 | AutoCAD 2026/2027 | `session_01D56HmFfmat4UZDMPVZar76` | Nhánh `claude/acad-2026-2027`: bản AutoCAD mới, PackageContents, `install.ps1`, build .NET 10 |
 | QnA | `session_01D56HmGkaq6YFfr46Xdigci` | Hỏi đáp về plugin, không sửa code |
 | Dùng thử & hỗ trợ Autodesk | `session_01D56HmGdeNRHtH8Vob4cXGr` | Bản dùng thử AutoCAD, làm việc với Autodesk |
+| Cài đặt plugin (bộ cài thử AutoCAD 2026) | `session_01D56HmFkjV3poaV54WEEFYJ` | Hướng dẫn cài / kích hoạt bộ cài thử, gỡ rối khi cài, giúp chạy checklist; không sửa code. Lỗi bộ cài / plugin chuyển cho thread gộp nhánh & phát hành |
 
 Link mở thread: `https://claude.ai/code/<session id>`.
