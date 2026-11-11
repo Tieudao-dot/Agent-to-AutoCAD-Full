@@ -88,6 +88,7 @@ namespace ClaudeCAD.Plugin.UI
         // v0.9.4: activation
         public event Action ActivationRequestRequested;
         public event Action<string> ActivationKeySubmitted;
+        public event Action ActivationCheckRequested; // "Kiểm tra lại": ask the owner's device list again
         /// <summary>"sk-ant-…AbCd" of the saved key, or null (shown in the API key editor).</summary>
         public Func<string> ApiKeyMask;
         /// <summary>Layer / block / style names of the active drawing for "@" (called on the UI thread).</summary>
@@ -2649,9 +2650,10 @@ namespace ClaudeCAD.Plugin.UI
 
         /// <summary>
         /// This machine has no licence: machine code (copy), the owner's contact, "Gửi yêu cầu kích hoạt" (emails the
-        /// owner a key) and a box for the key the owner sends back. Only the newest card is live.
+        /// owner a key and adds the machine to the owner's device list), "Kiểm tra lại" (activates once the owner set
+        /// the machine Active in the list — no key needed) and a box for a key / offline code. Only the newest card is live.
         /// </summary>
-        public void AddActivationCard(string machine, string device, string contact, string status) => Ui(() =>
+        public void AddActivationCard(string machine, string device, string contact, string status, bool canCheck = false) => Ui(() =>
         {
             ExpandForDecision();
             // one live card: pressing Enter again while not activated brings the existing card back into view
@@ -2666,7 +2668,14 @@ namespace ClaudeCAD.Plugin.UI
             var title = new TextBlock { Text = "🔒 Kích hoạt ClaudeCAD", FontWeight = FontWeights.SemiBold, FontSize = FontSize + 1 };
             Theme.Ref(title, TextBlock.ForegroundProperty, Theme.Fg);
             stack.Children.Add(title);
-            var intro = new TextBlock { Text = "Máy này cần key kích hoạt để dùng plugin. " + contact + " để nhận key, rồi dán key vào ô dưới.", TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 3, 0, 0) };
+            var intro = new TextBlock
+            {
+                Text = canCheck
+                    ? "Máy này cần được chủ plugin cho phép mới dùng được plugin. " + contact + " để được duyệt. Được duyệt rồi thì lần mở AutoCAD sau là tự dùng được, hoặc bấm \"Kiểm tra lại\" để dùng ngay. Nếu nhận được key thì dán key vào ô dưới."
+                    : "Máy này cần key kích hoạt để dùng plugin. " + contact + " để nhận key, rồi dán key vào ô dưới.",
+                TextWrapping = TextWrapping.Wrap,
+                Margin = new Thickness(0, 3, 0, 0)
+            };
             Theme.Ref(intro, TextBlock.ForegroundProperty, Theme.Fg);
             stack.Children.Add(intro);
 
@@ -2706,6 +2715,12 @@ namespace ClaudeCAD.Plugin.UI
             var buttons = new WrapPanel { Margin = new Thickness(0, 6, 0, 0) };
             var ask = new Button { Content = "Gửi yêu cầu kích hoạt", Padding = new Thickness(10, 2, 10, 2), Margin = new Thickness(0, 0, 6, 4), ToolTip = "Gửi mã máy và tên thiết bị tới email của chủ plugin" };
             buttons.Children.Add(ask);
+            if (canCheck)
+            {
+                var check = new Button { Content = "Kiểm tra lại", Padding = new Thickness(10, 2, 10, 2), Margin = new Thickness(0, 0, 6, 4), ToolTip = "Khi chủ plugin đã duyệt máy này trong danh sách thiết bị, bấm để kích hoạt (không cần key)" };
+                check.Click += (s, e) => { SetActivationStatus("Đang kiểm tra với chủ plugin...", false); ActivationCheckRequested?.Invoke(); };
+                buttons.Children.Add(check);
+            }
             stack.Children.Add(buttons);
             var st = MutedText(status ?? "");
             st.TextWrapping = TextWrapping.Wrap;
@@ -2750,6 +2765,68 @@ namespace ClaudeCAD.Plugin.UI
             if (_activationAsk != null) _activationAsk.IsEnabled = !done;
             if (_activationKey != null) _activationKey.IsReadOnly = done;
             if (done) _activationDone = true;
+        });
+
+        // ---------------------------------------------------------------- card: device lock (v0.9.4)
+
+        private Border _lockedCard;
+        private TextBlock _lockedMsg, _lockedStatus;
+
+        /// <summary>
+        /// 🔒 for a machine with a valid licence that the owner locked (Disabled), has not approved yet, or that
+        /// could not reach the owner's device list for too long. One live card; "Kiểm tra lại" asks again.
+        /// </summary>
+        public void AddLockedCard(string message) => Ui(() =>
+        {
+            if (_lockedCard != null && _lockedCard.Parent != null)
+            {
+                _lockedMsg.Text = message ?? "";
+                _lockedCard.BringIntoView();
+                return;
+            }
+            var stack = new StackPanel();
+            var title = new TextBlock { Text = "🔒 ClaudeCAD tạm khóa", FontWeight = FontWeights.SemiBold, FontSize = FontSize + 1 };
+            Theme.Ref(title, TextBlock.ForegroundProperty, Theme.Fg);
+            stack.Children.Add(title);
+            var msg = new TextBlock { Text = message ?? "", TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 3, 0, 0) };
+            Theme.Ref(msg, TextBlock.ForegroundProperty, Theme.Fg);
+            stack.Children.Add(msg);
+            var buttons = new WrapPanel { Margin = new Thickness(0, 8, 0, 0) };
+            var check = new Button { Content = "Kiểm tra lại", Padding = new Thickness(10, 2, 10, 2), Margin = new Thickness(0, 0, 6, 4), ToolTip = "Hỏi lại chủ plugin xem máy này đã được cho phép dùng chưa" };
+            check.Click += (s, e) => { SetLockedStatus("Đang kiểm tra với chủ plugin...", false); ActivationCheckRequested?.Invoke(); };
+            buttons.Children.Add(check);
+            stack.Children.Add(buttons);
+            var st = MutedText("");
+            st.TextWrapping = TextWrapping.Wrap;
+            st.TextTrimming = TextTrimming.None;
+            st.FontSize = 11;
+            stack.Children.Add(st);
+            _lockedMsg = msg;
+            _lockedStatus = st;
+            var card = Card(stack, "device-lock");
+            _lockedCard = card;
+            card.Margin = new Thickness(0, 4, 24, 4);
+            Theme.Ref(card, Border.BorderBrushProperty, Theme.ErrorFg);
+            _messages.Children.Add(card);
+            ScrollToEnd();
+        });
+
+        /// <summary>Status line of the 🔒 card (the answer of "Kiểm tra lại").</summary>
+        public void SetLockedStatus(string text, bool error) => Ui(() =>
+        {
+            if (_lockedStatus == null) return;
+            _lockedStatus.Text = text ?? "";
+            Theme.Ref(_lockedStatus, TextBlock.ForegroundProperty, error ? Theme.ErrorFg : Theme.MutedFg);
+        });
+
+        /// <summary>The owner allowed the machine again: the 🔒 card goes away.</summary>
+        public void RemoveLockedCard() => Ui(() =>
+        {
+            if (_lockedCard == null) return;
+            if (_lockedCard.Parent is Panel p) p.Children.Remove(_lockedCard);
+            _lockedCard = null;
+            _lockedMsg = null;
+            _lockedStatus = null;
         });
 
         // ---------------------------------------------------------------- cards: skill draft, plan

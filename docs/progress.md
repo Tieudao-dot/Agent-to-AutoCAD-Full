@@ -174,7 +174,7 @@ Cloud: `dotnet test` 106/106, `npm test` 95/95, build ✅. Cần test: T-1, T-2,
 
 Cần test: I-6, I-7.
 
-## v0.9.4 — khóa bằng key theo máy ✅ code xong (chờ URL máy chủ kích hoạt)
+## v0.9.4 — khóa bằng key theo máy ✅ code xong, máy chủ kích hoạt đã chạy (URL trong `activation/activation.json`)
 
 - Bộ cài: trang **Kích hoạt** (mã máy, "Liên hệ Zalo owner: 0344644415", ô key, Sao chép, Gửi lại yêu cầu); mở trang là gửi email cho chủ plugin (tên máy, user Windows, mã máy, KEY) qua Google Apps Script của chủ plugin; chỉ Next khi key đúng; `/KEY=` khi cài ngầm.
 - Plugin: kiểm tra giấy phép (RSA-2048, không cần mạng) mỗi lần mở AutoCAD; thẻ 🔒 **Kích hoạt** trong khung chat (tự gửi yêu cầu mỗi ngày một lần, dán key / mã offline); chặn gửi tin nhắn, thử lại, macro khi chưa kích hoạt; dòng "Kích hoạt" trong tự kiểm tra và báo cáo lỗi.
@@ -214,3 +214,20 @@ Cần test: D-1 … D-3.
 - Trợ lý: lỗi API chỉ một thẻ (tiếng Việt); ghi chú "đã bỏ / thêm skill" giữ đúng khi chuyển bản vẽ qua lại; tin nhắn lớn đọc trong thời gian tuyến tính; thời gian chờ > 5 phút do người dùng đặt được giữ; tin không đọc được luôn kết thúc lượt.
 - Plugin: báo cáo lỗi không tóm tắt hai lần; "Xem thêm" chèn tin cũ lên trên (thẻ đang mở, Hoàn tác, Lưu macro giữ nguyên); zoom của Claude không ghi bước hoàn tác; tự gửi lại chỉ bật lại khi có giờ làm mới thật, lượt chưa làm gì, tối đa 3 lần; bản vẽ chưa có chat theo skill của chat gần nhất, skill đang sửa lỗi không bị loại khỏi chat; đếm layer làm mới sau U / REDO; lượt hết giới hạn không báo "xong"; không gửi tin trong lúc trợ lý đang khởi động lại; trạng thái tài khoản không ghi đè bằng kết quả cũ; lời nhắn riêng cho biến môi trường ANTHROPIC_API_KEY; không khởi động trợ lý khi chưa kích hoạt; hẹn giờ nạp skill an toàn khi đóng AutoCAD; thẻ giới hạn trễ không rơi vào chat khác.
 - 4 mục của trang key trong bộ cài và script Google: chuyển thread bảo mật.
+
+### v0.9.4 — quản lý thiết bị qua Google Sheet ✅ code xong (nhánh `claude/device-management`)
+
+- **Máy chủ** (`Code.gs.template`, giờ gắn với Google Sheet "ClaudeCAD – Thiết bị", tạo từ Tiện ích mở rộng → Apps Script): `request` thêm dòng **Chờ duyệt** (+ email như cũ, nay hướng dẫn cả 2 cách duyệt); `activate` từ chối máy `Disabled` (kể cả key đúng) và đặt dòng thành `Active`; **mới** `?action=status` trả trạng thái có chữ ký `CCS1|máy|trạng thái|ngày|chữ ký` (máy `Active` nhận kèm giấy phép → duyệt qua Sheet không cần key), cập nhật **Lần cuối dùng** + **Phiên bản** (≤ 30 phút/lần); `caiDat` tự kẻ bảng + dropdown; `kiemTra` tự kiểm tra cả vòng status; `taoKeyThuCong` thêm mã miễn kiểm tra (`CCS1|…|offline|`) cho máy không có mạng + ghi vào Sheet.
+- **Plugin**: `LicenseLogic.VerifyStatus` (chữ ký, đúng máy, hạn **7 ngày** `StatusMaxAgeDays`, chặn ngày tương lai); `Activation` lưu `status.txt`, `CheckStatusAsync`, luật mở khóa `IsAllowed` = giấy phép + trạng thái active/offline còn hạn (build không có URL giữ nguyên như cũ); kiểm tra khi mở AutoCAD + mỗi 6 giờ; `Disabled` → thẻ 🔒 "Máy này đã bị chủ plugin tạm khóa…", trợ lý dừng, giấy phép **không** bị xóa (mở lại `Active` là chạy tiếp); thẻ kích hoạt thêm nút **Kiểm tra lại**; dán được 2 dòng CCL1+CCS1.
+- **Bộ cài**: trang key cho **Next không cần key** (hộp thoại xác nhận, chờ duyệt qua Sheet); lưu `status.txt` khi kích hoạt bằng key; nhận 2 dòng offline.
+- Test: agent 119 (5 bài mới có giả lập SpreadsheetApp), core 118 (3 bài VerifyStatus với cặp khóa vứt-đi).
+- Đổi cặp khóa (chưa phát hành nên không ảnh hưởng máy nào); chủ plugin đã triển khai Apps Script gắn Google Sheet. Thử từ cloud ngày 10/11/2026: `ping` OK; `request` mã máy thử `CC-7E57-0000-0001` → email + dòng Chờ duyệt; key bịa bị từ chối; `status` trả `pending` có chữ ký khớp `LicenseLogic.PublicModulus`.
+
+- Bổ sung sau khi chủ plugin duyệt thử: **tối đa 30 máy mới/giờ** vào Sheet (chống mã máy bịa làm đầy bảng); máy đã `Active` xin lại không gửi email; **máy chờ duyệt tự hỏi trạng thái khi mở AutoCAD** (và ~6 giờ/lần) → đổi `Active` là lần mở sau tự dùng được, không cần bấm "Kiểm tra lại".
+
+- **Đợt rà soát bảo mật (sau khi gộp skill theo đoạn chat + đợt 3):** link máy chủ nhúng vào DLL (xóa `Contents\activation.json` không tắt được kiểm tra trạng thái); chống vặn lùi đồng hồ (`clock.txt` + `HKCU\Software\ClaudeCAD\Activation`, đặt lại khi kiểm tra trực tuyến thành công); Thử lại / Chat mới / khởi động lại sau đăng nhập không chạy trợ lý trên máy chưa được phép; máy chủ: chặn công thức (`'` trước `= + - @`), kiểm tra trùng trong khóa, trần 40 email/ngày (PropertiesService); bộ cài: vẽ lại dòng trạng thái trước khi gửi, không gửi email khi có `/KEY=`, chờ trả lời 25 giây.
+- Test: agent 127, core 120; build net48 + net8.
+
+Cần test trên AutoCAD thật: K-8 … K-16 (cùng K-1 … K-7, R-1 … R-6).
+
+**Chờ chủ plugin quyết (sau khi thử trên máy thật):** đổi cặp khóa kích hoạt trước khi phát hành? SECRET + khóa riêng hiện tại có xuất hiện trong nhật ký nội bộ của phiên làm việc cloud (đoạn ngữ cảnh lưu tự động khi sửa dòng email trong Code.gs), không có trên GitHub hay trong chat. Đổi khóa: tạo cặp mới bằng lệnh kín (không mở/sửa file chứa khóa), cập nhật `LicenseLogic.PublicModulus` + fixture test, chủ plugin dán Code.gs mới + `kiemTra` + Phiên bản mới (URL giữ nguyên), build lại bộ cài thử.
