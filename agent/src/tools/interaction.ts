@@ -4,7 +4,7 @@ import type { SidecarToPlugin } from '../ipc/protocol.js';
 import { handles, type AnyTool } from './common.js';
 
 /** Tools answered by the sidecar itself (not forwarded to the plugin). */
-export const LOCAL_TOOL_NAMES = ['request_confirmation', 'propose_plan', 'suggest_next_steps', 'propose_skill'];
+export const LOCAL_TOOL_NAMES = ['request_confirmation', 'propose_plan', 'report_progress', 'suggest_next_steps', 'propose_skill'];
 
 export const SKILL_NAME_RX = /^[a-z0-9][a-z0-9-]{0,63}$/;
 
@@ -59,6 +59,27 @@ export function interactionTools(emit: (msg: SidecarToPlugin) => void): AnyTool[
         const id = `plan-${++seq}`;
         emit({ type: 'plan_request', id, summary: args.summary, steps: args.steps });
         return textResult('The plan card is shown to the user. End your turn now without changing the drawing; the answer comes in the next message.');
+      },
+      { annotations: { readOnlyHint: true, openWorldHint: false } },
+    ) as unknown as AnyTool,
+
+    tool(
+      'report_progress',
+      'Tell the palette which step of a multi-step task you are starting, so the user sees "Bước 3/7: Vẽ tường" with ✓ / ● / ○. ' +
+        'While carrying out an approved plan ("Làm theo kế hoạch."): call it with step = the plan step (1-based) right BEFORE you start that ' +
+        'step; the steps are the ones of your propose_plan card, do not repeat them. For a big task without a plan card (plan cards turned off), ' +
+        'call it once at the start with steps = 2-12 short Vietnamese steps and step = 1, then with step only. note: optional short detail of ' +
+        'the current step, e.g. "46 đoạn LINE". It does not touch the drawing and works in read-only mode. Not for small tasks.',
+      {
+        step: z.number().int().min(1).max(15),
+        steps: z.array(z.string().min(1).max(120)).min(2).max(15).optional(),
+        note: z.string().max(120).optional(),
+      },
+      async (args) => {
+        const steps = args.steps?.map((x) => x.trim()).filter(Boolean);
+        const step = steps && steps.length > 0 ? Math.min(args.step, steps.length) : args.step;
+        emit({ type: 'progress', step, ...(steps && steps.length > 0 ? { steps } : {}), ...(args.note?.trim() ? { note: args.note.trim() } : {}) });
+        return textResult('ok');
       },
       { annotations: { readOnlyHint: true, openWorldHint: false } },
     ) as unknown as AnyTool,

@@ -121,6 +121,18 @@ export interface PlanRequestMessage {
   steps: string[];
 }
 
+/**
+ * Step progress of a multi-step task (report_progress tool): the step Claude is starting, 1-based. steps is sent
+ * only when the task had no plan card; otherwise the palette uses the steps of the plan the user approved.
+ * Not a drawing operation: it is not counted by the confirmation gate and does not show as a tool call.
+ */
+export interface ProgressMessage {
+  type: 'progress';
+  step: number;
+  steps?: string[];
+  note?: string;
+}
+
 /** A SKILL.md drafted by Claude from the conversation, for the user to review and add. */
 export interface SkillDraftMessage {
   type: 'skill_draft';
@@ -165,6 +177,7 @@ export type SidecarToPlugin =
   | SkillsReloadedMessage
   | SuggestionsMessage
   | PlanRequestMessage
+  | ProgressMessage
   | SkillDraftMessage;
 
 // ---------------------------------------------------------------- plugin -> sidecar

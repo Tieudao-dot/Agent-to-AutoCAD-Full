@@ -811,6 +811,7 @@ namespace ClaudeCAD.Plugin
                 // two Retry() posts in one pump cycle (auto-retry timer + "Thử lại") would start the same turn twice
                 if (_busy) return;
                 _busy = true;
+                _turnCancelled = false;
                 _turnSeq++;
                 if (payload != null) payload["turn_id"] = "t-" + _turnSeq.ToString(CultureInfo.InvariantCulture);
                 _turnDoc = doc;
@@ -1012,6 +1013,7 @@ namespace ClaudeCAD.Plugin
                     bool canMacro = macroCalls != null;
                     if (canMacro) { _turnMacros.Remove(assistant); _turnMacros.Add(assistant, macroCalls); }
                     _transcript?.Entries.Add(assistant);
+                    Ui.EndProgress(string.IsNullOrEmpty(errorNote) && !_turnCancelled);
                     Ui.EndAssistant(assistant, wrote, canMacro);
                 }
                 else Ui.DiscardAssistant();
@@ -1600,12 +1602,18 @@ namespace ClaudeCAD.Plugin
             catch { Process.Start("notepad.exe", "\"" + file + "\""); }
         }
 
+        /// <summary>Steps of each plan card (by id), and the steps report_progress refers to (the approved plan).</summary>
+        private readonly Dictionary<string, List<string>> _planSteps = new Dictionary<string, List<string>>();
+        private List<string> _progressSteps;
+        private bool _turnCancelled;
+
         private void AnswerPlan(string id, string kind)
         {
             if (_busy) { _pendingPlan = (id, kind); return; } // the card arrived before the turn ended
             switch (kind)
             {
                 case "go":
+                    lock (_gate) _progressSteps = _planSteps.TryGetValue(id, out var approved) ? approved : null;
                     MainThread.Post(() => Send(new ComposedMessage { Text = "Làm theo kế hoạch." }, false, null, "approved"));
                     break;
                 case "edit":
@@ -2229,6 +2237,7 @@ namespace ClaudeCAD.Plugin
                         string err = msg.TryGetValue("error", out var e) ? e as string : null;
                         var usage = msg.TryGetValue("usage", out var u) ? u as Dictionary<string, object> : null;
                         bool cancelled = msg.TryGetValue("cancelled", out var c) && c is bool cb && cb;
+                        _turnCancelled = cancelled;
                         if (cancelled && string.IsNullOrEmpty(err)) Ui.AddNote("Đã dừng lượt.");
                         EndTurn(string.IsNullOrEmpty(err) ? null : "Lượt bị lỗi: " + err, true, usage);
                         break;
@@ -2369,9 +2378,26 @@ namespace ClaudeCAD.Plugin
                         string summary = msg.TryGetValue("summary", out var sv) ? sv as string : "";
                         var steps = msg.TryGetValue("steps", out var stv) && stv is List<object> sl ? sl.OfType<string>().ToList() : new List<string>();
                         _turnAsked = true;
+                        lock (_gate) _planSteps[id] = steps;
                         Ui.AddPlanCard(id, summary, steps);
                         _trayAttention = "có kế hoạch chờ cậu duyệt";
                         Ui.Enqueue(() => _transcript?.Entries.Add(new ChatEntry { Role = "note", Text = "Kế hoạch: " + summary + (steps.Count > 0 ? "\n" + string.Join("\n", steps.Select((x, i) => $"{i + 1}. {x}")) : "") }));
+                        break;
+                    }
+                case "progress":
+                    {
+                        // report_progress: the step Claude starts now; the steps are those of the approved plan unless sent
+                        int step = msg.TryGetValue("step", out var stv) ? Convert.ToInt32(stv, CultureInfo.InvariantCulture) : 0;
+                        var sent = msg.TryGetValue("steps", out var slv) && slv is List<object> sl2 ? sl2.OfType<string>().ToList() : null;
+                        string note = msg.TryGetValue("note", out var nv2) ? nv2 as string : null;
+                        List<string> steps;
+                        lock (_gate)
+                        {
+                            if (!_busy) break;
+                            if (sent != null && sent.Count > 0) _progressSteps = sent;
+                            steps = _progressSteps;
+                        }
+                        if (steps != null && step > 0) Ui.SetProgress(steps, step, note);
                         break;
                     }
                 case "skill_draft":

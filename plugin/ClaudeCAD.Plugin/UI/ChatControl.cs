@@ -395,12 +395,13 @@ namespace ClaudeCAD.Plugin.UI
             actions.Children.Add(_send);
             var left = new StackPanel { Orientation = Orientation.Horizontal };
             _leftActions = left;
-            _pickSel = MakeButton("Chọn đối tượng", "Quét chọn đối tượng trên bản vẽ để gửi kèm tin nhắn");
-            _pickPt = MakeButton("Lấy điểm", "Bấm điểm trên bản vẽ để chèn tọa độ vào tin nhắn (Enter để xong)");
-            _addImg = MakeButton("Ảnh", "Đính kèm ảnh phác thảo / ảnh scan (hoặc dán Ctrl+V, kéo thả vào khung chat)");
-            _capture = MakeButton("Chụp", "Chụp vùng bản vẽ đang xem gửi kèm tin nhắn, để chỉ cho Claude \"chỗ này sai\"");
+            // Same icon row as the toolbar (screen A1): glyph + "Tên — giải thích ngắn" tooltip.
+            _pickSel = IconButton("⬚", "Chọn đối tượng — quét chọn trên bản vẽ để gửi kèm tin nhắn");
+            _pickPt = IconButton("✛", "Lấy điểm — bấm điểm trên bản vẽ để chèn tọa độ vào tin nhắn (Enter để xong)");
+            _addImg = IconButton("▨", "Ảnh — đính kèm ảnh phác thảo / ảnh scan (hoặc dán Ctrl+V, kéo thả vào khung chat)");
+            _capture = IconButton("⛶", "Chụp — chụp vùng bản vẽ đang xem gửi kèm, để chỉ cho Claude \"chỗ này sai\"");
             _capture.Click += (s, e) => CaptureScreenRequested?.Invoke();
-            foreach (var b in new[] { _pickSel, _pickPt, _addImg, _capture }) { b.Margin = new Thickness(0, 0, 4, 0); left.Children.Add(b); }
+            foreach (var b in new[] { _pickSel, _pickPt, _addImg, _capture }) { b.Margin = new Thickness(0, 0, 2, 0); left.Children.Add(b); }
             actions.Children.Add(left);
             _pickSel.Click += (s, e) => PickSelectionRequested?.Invoke();
             _pickPt.Click += (s, e) => PickPointRequested?.Invoke();
@@ -645,6 +646,11 @@ namespace ClaudeCAD.Plugin.UI
             public void Expand()
             {
                 if (_content.Visibility != Visibility.Visible) Toggle();
+            }
+
+            public void Collapse()
+            {
+                if (_content.Visibility == Visibility.Visible) Toggle();
             }
 
             public void Toggle()
@@ -1673,6 +1679,23 @@ namespace ClaudeCAD.Plugin.UI
             ScrollToEnd();
         });
 
+        /// <summary>
+        /// Step progress of the running turn (screen D): <paramref name="steps"/> are the steps of the plan the user
+        /// approved (or that Claude declared), <paramref name="step"/> the 1-based step Claude is starting now.
+        /// </summary>
+        public void SetProgress(List<string> steps, int step, string note) => Ui(() =>
+        {
+            if (steps == null || steps.Count == 0) return;
+            step = Math.Max(1, Math.Min(step, steps.Count));
+            if (_current == null) _current = NewAssistant();
+            _current.SetProgress(steps, step, note);
+            _progressLabel = $"Bước {step}/{steps.Count}: {FirstLine(steps[step - 1], 40)}";
+            if (_busy) UpdateBusyLine();
+        });
+
+        /// <summary>The turn is over: <paramref name="clean"/> = Claude finished it (no error, not stopped).</summary>
+        public void EndProgress(bool clean) => Ui(() => _current?.SettleProgress(clean));
+
         public void UpdateTool(ToolLogEntry e) => Ui(() =>
         {
             if (_current == null) _current = NewAssistant();
@@ -1704,7 +1727,7 @@ namespace ClaudeCAD.Plugin.UI
 
         private void EndAssistantCore()
         {
-            if (_current != null) { _current.Flush(); _current = null; }
+            if (_current != null) { _current.Flush(); _current.SettleProgress(false); _current.Settle(); _current = null; }
         }
 
         public void SetUndoAvailable(bool available) => Ui(() => _lastAssistant?.SetUndo(available));
@@ -1938,10 +1961,13 @@ namespace ClaudeCAD.Plugin.UI
             return line.Length <= max ? line : line.Substring(0, max).TrimEnd() + "…";
         }
 
+        /// <summary>"Bước 3/7: Vẽ tường" while a turn reports its plan steps (report_progress); null otherwise.</summary>
+        private string _progressLabel;
+
         private void UpdateBusyLine()
         {
             int tools = _current?.ToolCount ?? 0;
-            _busyLine.Text = "● Đang làm · " + Elapsed(DateTime.UtcNow - _busySince)
+            _busyLine.Text = "● " + (_progressLabel ?? "Đang làm") + " · " + Elapsed(DateTime.UtcNow - _busySince)
                 + (tools > 0 ? $" · {tools} thao tác" : "") + " — Esc để dừng";
         }
 
@@ -2003,7 +2029,7 @@ namespace ClaudeCAD.Plugin.UI
             _stop.IsEnabled = busy;
             if (busy)
             {
-                if (!_busyTimer.IsEnabled) { _busySince = DateTime.UtcNow; _busyTimer.Start(); }
+                if (!_busyTimer.IsEnabled) { _busySince = DateTime.UtcNow; _busyTimer.Start(); _progressLabel = null; }
                 _busyLine.Visibility = Visibility.Visible;
                 UpdateBusyLine();
             }
@@ -2011,6 +2037,7 @@ namespace ClaudeCAD.Plugin.UI
             {
                 _busyTimer.Stop();
                 _busyLine.Visibility = Visibility.Collapsed;
+                _progressLabel = null;
             }
             _pickSel.IsEnabled = _pickPt.IsEnabled = !busy;
             foreach (var b in _macroRows.Children.OfType<FrameworkElement>().SelectMany(r => FindButtons(r)).Where(b => (b.Tag as string) == "run")) b.IsEnabled = !busy;
@@ -2605,40 +2632,145 @@ namespace ClaudeCAD.Plugin.UI
             ScrollToEnd();
         });
 
-        /// <summary>First start after installing: what is ready, sign-in, self-test.</summary>
+        /// <summary>Example request of step 3 of the "Bắt đầu" card: drawn on a scratch drawing by the self-test too.</summary>
+        public const string WelcomeExample = "Vẽ lưới trục 5x4 bước 4000";
+
+        /// <summary>
+        /// First start after installing (screen C): "Bắt đầu với ClaudeCAD — 3 bước" with numbered steps
+        /// Kích hoạt → Đăng nhập Claude → Thử một yêu cầu mẫu. A finished step shows ✓, the step to do now
+        /// has its number in the accent color and its buttons, a later step is muted. The other checks
+        /// (Node.js, sidecar, skill) stay out of the way: one muted line, or a ⊗ line when one is missing.
+        /// </summary>
         public void AddWelcomeCard(List<(string name, bool? ok, string detail)> checks, bool needLogin) => Ui(() =>
         {
+            (string name, bool? ok, string detail) Find(string name) => checks.FirstOrDefault(c => c.name == name);
+            var act = Find("Kích hoạt");
+            var acc = Find("Tài khoản Claude");
+            bool activated = act.name == null || act.ok != false;
+            bool signedIn = !needLogin;
+
             var stack = new StackPanel();
-            var title = new TextBlock { Text = "Chào mừng đến với ClaudeCAD", FontWeight = FontWeights.SemiBold, FontSize = FontSize + 1 };
-            Theme.Ref(title, TextBlock.ForegroundProperty, Theme.Fg);
-            stack.Children.Add(title);
-            foreach (var (name, ok, detail) in checks)
+            var head = new TextBlock { TextWrapping = TextWrapping.Wrap };
+            head.Inlines.Add(new System.Windows.Documents.Run("Bắt đầu với ClaudeCAD") { FontWeight = FontWeights.SemiBold });
+            var sub = new System.Windows.Documents.Run(" — 3 bước, khoảng 2 phút") { FontSize = 11 };
+            sub.SetResourceReference(System.Windows.Documents.TextElement.ForegroundProperty, Theme.MutedFg);
+            head.Inlines.Add(sub);
+            Theme.Ref(head, TextBlock.ForegroundProperty, Theme.Fg);
+            var headBar = new Border { Child = head, Padding = new Thickness(8, 5, 8, 5), BorderThickness = new Thickness(0, 0, 0, 1) };
+            Theme.Ref(headBar, Border.BackgroundProperty, Theme.HeaderBg);
+            Theme.Ref(headBar, Border.BorderBrushProperty, Theme.Border);
+            stack.Children.Add(headBar);
+
+            // a missing part of the plugin comes first: nothing below works without it
+            var others = checks.Where(c => c.name != "Kích hoạt" && c.name != "Tài khoản Claude").ToList();
+            foreach (var (name, ok, detail) in others.Where(c => c.ok == false))
             {
-                var row = new TextBlock { Text = $"{(ok == true ? "✓" : ok == false ? "✗" : "…")} {name}{(string.IsNullOrEmpty(detail) ? "" : " — " + detail)}", TextWrapping = TextWrapping.Wrap, Margin = new Thickness(4, 2, 0, 0) };
-                Theme.Ref(row, TextBlock.ForegroundProperty, ok == false ? Theme.ErrorFg : Theme.Fg);
-                stack.Children.Add(row);
+                var bad = IconLine("⊗", Theme.ErrorFg, name + (string.IsNullOrEmpty(detail) ? "" : " — " + detail));
+                bad.Margin = new Thickness(8, 6, 8, 0);
+                stack.Children.Add(bad);
             }
-            var buttons = new WrapPanel { Margin = new Thickness(0, 8, 0, 0) };
-            if (needLogin)
+
+            // 1. activation
+            var s1 = WelcomeStep(1, activated ? "done" : "now", "Kích hoạt máy này",
+                activated ? (string.IsNullOrEmpty(act.detail) ? "Đã kích hoạt" : "Đã kích hoạt · " + act.detail) : "Máy này chưa có key kích hoạt.", true);
+            stack.Children.Add(s1.root);
+
+            // 2. sign-in
+            var s2 = WelcomeStep(2, signedIn ? "done" : activated ? "now" : "later", "Đăng nhập Claude",
+                signedIn ? (string.IsNullOrEmpty(acc.detail) ? "Đã đăng nhập" : acc.detail)
+                         : "Trình duyệt mở trang cấp quyền, bấm đồng ý bằng tài khoản Pro / Max.", true);
+            if (!signedIn && activated)
             {
-                var login = new Button { Content = "Đăng nhập Claude", ToolTip = "Mở trình duyệt để đăng nhập lại tài khoản Claude, rồi bấm Thử lại", Padding = new Thickness(12, 2, 12, 2), Margin = new Thickness(0, 0, 6, 4), FontWeight = FontWeights.SemiBold };
+                var row = new WrapPanel { Margin = new Thickness(0, 4, 0, 0) };
+                var login = AccentButton("Đăng nhập Claude", "Mở trình duyệt để đăng nhập tài khoản Claude Pro / Max; xong là gửi tin nhắn được ngay");
                 login.Click += (s, e) => LoginRequested?.Invoke();
-                buttons.Children.Add(login);
+                row.Children.Add(login);
+                var key = SmallButton("Dùng API key", "Dán API key Anthropic (trả theo lượng dùng) thay cho tài khoản Pro/Max");
+                key.Click += (s, e) => ShowApiKeyPanel(ApiKeyMask?.Invoke());
+                row.Children.Add(key);
+                s2.body.Children.Add(row);
             }
-            var test = new Button { Content = "Chạy tự kiểm tra", Padding = new Thickness(10, 2, 10, 2), Margin = new Thickness(0, 0, 6, 4), ToolTip = "CLAUDECHATSELFTEST: thử trên một bản vẽ tạm, mở báo cáo ✓/✗" };
+            stack.Children.Add(s2.root);
+
+            // 3. first request
+            bool ready = activated && signedIn;
+            var s3 = WelcomeStep(3, ready ? "now" : "later", "Thử một yêu cầu mẫu",
+                $"\"{WelcomeExample}\" — Claude vẽ ngay trên bản vẽ đang mở; hoàn tác bằng 1 lần U.", false);
+            var row3 = new WrapPanel { Margin = new Thickness(0, 4, 0, 0) };
+            if (ready)
+            {
+                var tryIt = AccentButton("Điền vào ô nhập", "Đưa câu mẫu vào ô nhập để cậu xem lại rồi bấm Enter");
+                tryIt.Click += (s, e) => SetInputText(WelcomeExample);
+                row3.Children.Add(tryIt);
+            }
+            var test = SmallButton("Chạy tự kiểm tra", "CLAUDECHATSELFTEST: thử trên một bản vẽ tạm, mở báo cáo ✓/✗");
             test.Click += (s, e) => SelfTestRequested?.Invoke();
-            buttons.Children.Add(test);
-            stack.Children.Add(buttons);
-            var hint = MutedText("Gõ yêu cầu bằng tiếng Việt rồi Enter, ví dụ \"vẽ lưới trục 5x4 bước 4000\". Mở nhanh khung chat: Ctrl+Shift+Space hoặc lệnh CC. Xem lại hướng dẫn này: ⚙ ▸ Hướng dẫn bắt đầu.");
+            row3.Children.Add(test);
+            s3.body.Children.Add(row3);
+            stack.Children.Add(s3.root);
+
+            var okParts = others.Where(c => c.ok != false).Select(c => string.IsNullOrEmpty(c.detail) ? c.name : c.name + " " + c.detail);
+            var hint = MutedText((okParts.Any() ? "Plugin: " + string.Join(" · ", okParts) + ". " : "")
+                + "Mở nhanh khung chat: Ctrl+Shift+Space hoặc lệnh CC. Xem lại: ⚙ ▸ Hướng dẫn bắt đầu.");
             hint.TextWrapping = TextWrapping.Wrap;
-            hint.FontSize = 11;
-            hint.Margin = new Thickness(0, 4, 0, 0);
+            hint.TextTrimming = TextTrimming.None;
+            hint.FontSize = 10;
+            hint.Margin = new Thickness(8, 4, 8, 6);
             stack.Children.Add(hint);
-            var card = Card(stack, "welcome");
-            card.Margin = new Thickness(0, 4, 0, 4);
+
+            var card = new Border { Child = stack, BorderThickness = new Thickness(1), CornerRadius = Theme.Corner, Margin = new Thickness(0, 4, 0, 4), Tag = "welcome", Effect = Theme.Shadow() };
+            Theme.Ref(card, Border.BackgroundProperty, Theme.CardBg);
+            Theme.Ref(card, Border.BorderBrushProperty, Theme.Border);
             AppendMessage(card);
             ScrollToEnd();
         });
+
+        /// <summary>
+        /// One numbered row of the "Bắt đầu" card. <paramref name="state"/>: "done" (✓ green), "now" (number in
+        /// the accent color, title in full color), "later" (all muted). Buttons go into the returned body.
+        /// </summary>
+        private (Border root, StackPanel body) WelcomeStep(int n, string state, string title, string detail, bool divider)
+        {
+            var mark = new TextBlock
+            {
+                Text = state == "done" ? "✓" : n.ToString(),
+                Width = 18,
+                TextAlignment = TextAlignment.Center,
+                FontWeight = FontWeights.Bold,
+                FontSize = 12,
+                Margin = new Thickness(0, 0, 6, 0),
+                VerticalAlignment = VerticalAlignment.Top,
+                Tag = "step-" + state,
+            };
+            Theme.Ref(mark, TextBlock.ForegroundProperty, state == "done" ? Theme.OkFg : state == "now" ? Theme.Accent : Theme.MutedFg);
+            var body = new StackPanel();
+            var t = new TextBlock { Text = title, FontWeight = FontWeights.SemiBold, TextWrapping = TextWrapping.Wrap };
+            Theme.Ref(t, TextBlock.ForegroundProperty, state == "later" ? Theme.MutedFg : Theme.Fg);
+            body.Children.Add(t);
+            var d = MutedText(detail);
+            d.TextWrapping = TextWrapping.Wrap;
+            d.TextTrimming = TextTrimming.None;
+            d.FontSize = 11;
+            d.Margin = new Thickness(0, 1, 0, 0);
+            body.Children.Add(d);
+            var line = new DockPanel();
+            DockPanel.SetDock(mark, Dock.Left);
+            line.Children.Add(mark);
+            line.Children.Add(body);
+            var root = new Border { Child = line, Padding = new Thickness(8, 7, 8, 7), BorderThickness = new Thickness(0, 0, 0, divider ? 1 : 0) };
+            Theme.Ref(root, Border.BorderBrushProperty, Theme.Border);
+            return (root, body);
+        }
+
+        /// <summary>The one accent button of a card (Đồng ý, Đăng nhập Claude…), same look as the confirmation card.</summary>
+        private static Button AccentButton(string text, string tip)
+        {
+            var b = new Button { Content = text, ToolTip = tip, Padding = new Thickness(10, 2, 10, 2), Margin = new Thickness(0, 0, 6, 4), FontWeight = FontWeights.SemiBold, FontSize = 11, Cursor = Cursors.Hand };
+            Theme.Ref(b, BackgroundProperty, Theme.PressBg);
+            Theme.Ref(b, ForegroundProperty, Theme.AccentFg);
+            Theme.Ref(b, BorderBrushProperty, Theme.Accent);
+            return b;
+        }
 
         // ---------------------------------------------------------------- card: activation (v0.9.4)
 
@@ -2946,6 +3078,22 @@ namespace ClaudeCAD.Plugin.UI
                 _toolsCat = new Category("Thao tác", _toolRows, expanded: false) { Visibility = Visibility.Collapsed };
                 var stack = new StackPanel();
                 stack.Children.Add(SpeakerLabel("CLAUDE"));
+                _planRows = new StackPanel();
+                _planBar = new Grid { Height = 3, Margin = new Thickness(0, 0, 0, 3) };
+                _planBar.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(0, GridUnitType.Star) });
+                _planBar.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+                var fill = new Border();
+                Theme.Ref(fill, Border.BackgroundProperty, Theme.Accent);
+                var rest = new Border();
+                Theme.Ref(rest, Border.BackgroundProperty, Theme.Border);
+                Grid.SetColumn(rest, 1);
+                _planBar.Children.Add(fill);
+                _planBar.Children.Add(rest);
+                var planBody = new StackPanel();
+                planBody.Children.Add(_planBar);
+                planBody.Children.Add(_planRows);
+                _planCat = new Category("Bước", planBody, expanded: true) { Visibility = Visibility.Collapsed };
+                stack.Children.Add(_planCat.Root);
                 stack.Children.Add(_toolsCat.Root);
                 stack.Children.Add(_md);
                 stack.Children.Add(_cards);
@@ -2993,48 +3141,165 @@ namespace ClaudeCAD.Plugin.UI
                 _md.Render();
             }
 
-            /// <summary>Tool activity row (feature 12): running rows are updated when the same tool finishes.</summary>
+            private bool _live, _settled;
+            private readonly Category _planCat;
+            private readonly StackPanel _planRows;
+            private readonly Grid _planBar;
+            private List<string> _planSteps;
+            private int _planStep;
+            private string _planNote;
+            private bool? _planClean;
+
+            /// <summary>Current step (1-based) and number of steps, 0 when the turn reports no steps.</summary>
+            internal (int step, int total) Progress => (_planStep, _planSteps?.Count ?? 0);
+
+            /// <summary>
+            /// The approved plan as ✓ done / ● now / ○ not yet, with a 3 px bar of the finished steps. Only what
+            /// Claude reported: the step it is starting, never a guessed percentage.
+            /// </summary>
+            public void SetProgress(List<string> steps, int step, string note)
+            {
+                if (_planClean != null) return; // the turn is over
+                _planSteps = steps.ToList();
+                _planStep = step;
+                _planNote = string.IsNullOrWhiteSpace(note) ? null : note.Trim();
+                if (_planCat.Visibility != Visibility.Visible) _toolsCat.Collapse(); // first report: the steps take over
+                _planCat.Visibility = Visibility.Visible;
+                _planCat.Expand();
+                PaintPlan();
+            }
+
+            /// <summary>End of the turn: the step in progress is done if Claude finished cleanly, else marked unfinished.</summary>
+            public void SettleProgress(bool clean)
+            {
+                if (_planSteps == null || _planClean != null) return;
+                _planClean = clean;
+                PaintPlan();
+                _planCat.Collapse();
+            }
+
+            private void PaintPlan()
+            {
+                int n = _planSteps.Count;
+                _planRows.Children.Clear();
+                for (int i = 1; i <= n; i++)
+                {
+                    string name = _planSteps[i - 1];
+                    string state, text, color;
+                    if (i < _planStep || (i == _planStep && _planClean == true)) { state = "done"; text = "✓ " + name; color = Theme.OkFg; }
+                    else if (i == _planStep && _planClean == false) { state = "stopped"; text = "○ " + name + " — dừng giữa chừng"; color = Theme.WarnFg; }
+                    else if (i == _planStep) { state = "now"; text = "● " + name + (_planNote != null ? " — " + _planNote : ""); color = Theme.Fg; }
+                    else { state = "later"; text = "○ " + name; color = Theme.MutedFg; }
+                    var row = new TextBlock { Text = text, TextWrapping = TextWrapping.Wrap, FontSize = 11, Margin = new Thickness(14, 0, 0, 1), Tag = "plan-" + state };
+                    if (state == "now") row.FontWeight = FontWeights.SemiBold;
+                    Theme.Ref(row, TextBlock.ForegroundProperty, color);
+                    _planRows.Children.Add(row);
+                }
+                int done = _planStep - 1 + (_planClean == true ? 1 : 0);
+                _planBar.ColumnDefinitions[0].Width = new GridLength(done, GridUnitType.Star);
+                _planBar.ColumnDefinitions[1].Width = new GridLength(n - done, GridUnitType.Star);
+                _planBar.ToolTip = $"{done}/{n} bước đã xong";
+                string cur = n > 0 ? _planSteps[_planStep - 1] : "";
+                _planCat.SetTitle(_planClean == null ? $"Bước {_planStep}/{n}: {cur}"
+                    : _planClean == true ? $"Đã làm {done}/{n} bước" + (done < n ? $" · dừng sau bước {_planStep}" : "")
+                    : $"Dừng ở bước {_planStep}/{n}: {cur}");
+            }
+
+            /// <summary>
+            /// Tool activity (feature 12) as a step list (screen D): while the turn runs the group is open and
+            /// reads "Đang làm · bước 3: Vẽ tường"; each step is one row, ✓ done, ● running, ⚠ error. The same
+            /// tool called several times in a row is one step "×46", so a wall of LINE calls stays one line.
+            /// Steps that have not started are not shown: the plugin does not know them, and no % is made up.
+            /// </summary>
             public void AddTool(ToolLogEntry e)
             {
                 _toolsCat.Visibility = Visibility.Visible;
+                // with plan steps on screen the commands stay folded under them (screen D: "Xem chi tiết lệnh")
+                if (!_live && !_settled) { _live = true; if (_planSteps == null) _toolsCat.Expand(); }
+                TextBlock row = null;
                 if (e.State != "running")
                 {
                     var idx = _tools.FindIndex(t => t.entry.State == "running" && t.entry.Tool == e.Tool);
                     if (idx >= 0)
                     {
-                        _tools[idx] = (e, _tools[idx].row);
-                        Paint(_tools[idx].row, e);
-                        UpdateHeader();
-                        return;
+                        row = _tools[idx].row;
+                        _tools[idx] = (e, row);
                     }
                 }
-                var row = new TextBlock { TextWrapping = TextWrapping.Wrap, FontSize = 11, Margin = new Thickness(14, 0, 0, 1) };
-                Paint(row, e);
-                _tools.Add((e, row));
-                _toolRows.Children.Add(row);
+                if (row == null)
+                {
+                    var last = _tools.Count > 0 ? _tools[_tools.Count - 1] : default;
+                    if (last.row != null && last.entry.Tool == e.Tool && last.entry.State != "error") row = last.row;
+                    else
+                    {
+                        row = new TextBlock { TextWrapping = TextWrapping.Wrap, FontSize = 11, Margin = new Thickness(14, 0, 0, 1) };
+                        _toolRows.Children.Add(row);
+                    }
+                    _tools.Add((e, row));
+                }
+                Paint(row);
                 UpdateHeader();
             }
 
-            private static void Paint(TextBlock row, ToolLogEntry e)
+            /// <summary>Number of steps (rows) so far.</summary>
+            internal int StepCount => _toolRows.Children.Count;
+
+            private void Paint(TextBlock row)
             {
+                var group = _tools.Where(t => t.row == row).Select(t => t.entry).ToList();
+                var e = group[group.Count - 1];
                 string label = ToolLabels.Describe(e.Tool);
-                switch (e.State)
+                string times = group.Count > 1 ? " ×" + group.Count : "";
+                long ms = group.Sum(g => g.Ms);
+                if (group.Any(g => g.State == "running"))
                 {
-                    case "running": row.Text = "⏳ " + label; Theme.Ref(row, TextBlock.ForegroundProperty, Theme.MutedFg); break;
-                    case "error": row.Text = $"⚠ {label} — {e.Error} ({e.Ms} ms)"; Theme.Ref(row, TextBlock.ForegroundProperty, Theme.ErrorFg); break;
-                    default: row.Text = $"✓ {label}{(string.IsNullOrEmpty(e.Summary) ? "" : " — " + e.Summary)} ({e.Ms} ms)"; Theme.Ref(row, TextBlock.ForegroundProperty, Theme.MutedFg); break;
+                    row.Text = _settled ? $"○ {label}{times} — chưa xong" : $"● {label}{times} — đang chạy";
+                    row.Tag = "running";
+                    Theme.Ref(row, TextBlock.ForegroundProperty, _settled ? Theme.MutedFg : Theme.Fg);
+                }
+                else if (e.State == "error")
+                {
+                    row.Text = $"⚠ {label}{times} — {e.Error} ({ms} ms)";
+                    row.Tag = "error";
+                    Theme.Ref(row, TextBlock.ForegroundProperty, Theme.ErrorFg);
+                }
+                else
+                {
+                    row.Text = $"✓ {label}{times}{(string.IsNullOrEmpty(e.Summary) ? "" : " — " + e.Summary)} ({ms} ms)";
+                    row.Tag = "done";
+                    Theme.Ref(row, TextBlock.ForegroundProperty, Theme.OkFg);
                 }
             }
 
             private void UpdateHeader()
             {
+                if (_live)
+                {
+                    var cur = _tools.Count > 0 ? ToolLabels.Describe(_tools[_tools.Count - 1].entry.Tool) : "";
+                    _toolsCat.SetTitle($"Đang làm · bước {StepCount}: {cur}");
+                    return;
+                }
                 int errors = _tools.Count(t => t.entry.State == "error");
                 long ms = _tools.Sum(t => t.entry.Ms);
                 _toolsCat.SetTitle($"Thao tác ({_tools.Count}{(errors > 0 ? $", {errors} lỗi" : "")}) · {ms / 1000.0:0.0} s");
             }
 
+            /// <summary>The turn is over (finished, stopped or failed): back to the folded "Thao tác (N)" summary.</summary>
+            public void Settle()
+            {
+                if (_settled) return;
+                _settled = true;
+                bool wasLive = _live;
+                _live = false;
+                foreach (TextBlock row in _toolRows.Children) Paint(row);
+                UpdateHeader();
+                if (wasLive) _toolsCat.Collapse();
+            }
+
             public void Finish(ChatEntry e, bool canUndo, bool canSaveMacro = false)
             {
+                SettleProgress(true); // no-op when the controller already said how the turn ended
+                Settle();
                 _text.Clear();
                 _text.Append(e.Text ?? "");
                 Flush();

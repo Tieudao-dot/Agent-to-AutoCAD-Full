@@ -106,3 +106,39 @@ Lý do: sidecar và cổng xác nhận tính "một tin = một lượt" (đếm
 ghép kết quả với lượt). Chèn tin giữa lượt sẽ làm lệch các phép tính an toàn đó. Sau lỗi, hết hạn mức, Dừng,
 hoặc khi lượt vừa hỏi "đồng ý?", chữ được trả về ô nhập để người dùng tự quyết — một tin chờ không bao giờ
 tự trả lời hộ một câu hỏi xác nhận.
+
+## 9. Hàng icon dưới ô nhập (màn A1)
+Bốn nút đính kèm dưới ô nhập dùng cùng `IconButton` với thanh công cụ: ⬚ Chọn đối tượng, ✛ Lấy điểm,
+▨ Ảnh, ⛶ Chụp. Tooltip theo mẫu "Tên — giải thích ngắn". Nút **Gửi** vẫn là nút chữ, vì đó là hành động chính
+và nhãn của nó đổi thành "Gửi thêm" khi Claude đang làm. Các glyph có trong font Segoe UI Symbol của Windows;
+nếu máy nào hiện ô vuông trống thì ghi vào test-log UX-18.
+
+## 10. Thẻ "Bắt đầu" (màn C)
+`AddWelcomeCard` giữ nguyên chữ ký (danh sách kiểm tra + cần đăng nhập không) nên `ChatController.ShowWelcome`
+không đổi. Thẻ có thanh tiêu đề như nhóm Properties và ba hàng `WelcomeStep`: *done* (✓ màu `Theme.OkFg`),
+*now* (số màu nhấn, có nút), *later* (mờ). Kích hoạt lấy từ dòng "Kích hoạt", đăng nhập từ dòng "Tài khoản Claude";
+các dòng còn lại (Node.js, trợ lý, skill) chỉ hiện ⊗ khi thiếu, đủ thì gộp thành một dòng chữ nhỏ cuối thẻ.
+Bước 3 không tự gửi: *Điền vào ô nhập* chỉ đưa câu mẫu vào ô để người dùng xem rồi Enter.
+
+## 11. Danh sách bước (màn D, bản nhẹ)
+Chỉ sửa phía plugin, không đổi sidecar: nhóm "Thao tác" của mỗi câu trả lời là danh sách bước. Lúc lượt chạy
+nhóm mở và tiêu đề là "Đang làm · bước N: <lệnh cuối>"; khi `Finish` hoặc `EndAssistantCore` (Dừng, lỗi) gọi
+`Settle()` thì nhóm gập lại về "Thao tác (N) · x s". Lệnh giống nhau gọi liên tiếp gộp một dòng "×N".
+So với màn D còn thiếu: tên bước theo ý Claude ("Vẽ tường 220/110"), các bước chưa làm (○) và thanh %. Các phần
+đó cần sidecar gửi kế hoạch của Claude; chưa làm, để không bịa tiến độ.
+
+## 12. Tiến độ từng bước thật (màn D, bản đầy đủ)
+Nguồn bước là dữ liệu thật, theo thứ tự ưu tiên: các bước của thẻ kế hoạch người dùng đã bấm **Làm**
+(`plan_request` → `ChatController._planSteps[id]`, chọn khi "go"), hoặc danh sách Claude khai trong lần gọi
+`report_progress` đầu tiên khi không có thẻ kế hoạch (thẻ kế hoạch bị tắt). Claude gọi `report_progress(step)`
+ngay trước khi bắt đầu mỗi bước; sidecar gửi tin `progress` cho palette.
+
+Vì sao là tool riêng chứ không suy ra từ lệnh: plugin không biết lệnh nào thuộc bước nào, đoán sẽ là bịa.
+`report_progress` là tool cục bộ của sidecar (như `propose_plan`): không đi qua cổng xác nhận (`affectedCount` = 0),
+không gửi `tool_status` nên không đếm vào "N thao tác", không đặt cờ "lượt này đã hỏi", và vẫn chạy ở Chỉ xem.
+Phép tính "một tin = một lượt" không đổi vì tool này không tạo tin nhắn nào.
+
+Hiển thị: nhóm "Bước N/M: <tên>" trên câu trả lời, vạch mảnh = số bước xong / tổng; danh sách lệnh gập dưới.
+Dòng "đang làm" (vẫn hiện khi thu gọn) đổi thành "● Bước N/M: <tên> · thời gian · N thao tác". Hết lượt:
+sạch thì bước đang làm thành ✓ ("Đã làm N/M bước"); Dừng / lỗi thì bước đó "dừng giữa chừng". Không lưu vào lịch
+sử chat: mở lại đoạn chat cũ chỉ còn danh sách lệnh như trước.
