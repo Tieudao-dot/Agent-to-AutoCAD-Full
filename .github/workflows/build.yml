@@ -92,6 +92,52 @@ jobs:
           $url = "https://github.com/${{ github.repository }}/releases/download/v$v/ClaudeCAD-$v.zip"
           node bundle/make-bundle.mjs --zip --node-dir $env:NODE_DIR --download-url $url --update-url "https://github.com/${{ github.repository }}/releases/latest/download/latest.json"
 
+      # each folder of the bundle must hold the build PackageContents.xml expects there: the right .NET and the
+      # right AutoCAD libraries (24.x = 2022-2024, 25.x = 2025-2026, 26.x = 2027). Catches a dll copied to the wrong place.
+      - name: Bundle dlls match their AutoCAD release
+        run: |
+          $expect = @(
+            @{ Path = 'Contents/ClaudeCAD.Plugin.dll';      Tfm = '.NETFramework,Version=v4.8'; Acad = 24 },
+            @{ Path = 'Contents/2025/ClaudeCAD.Plugin.dll'; Tfm = '.NETCoreApp,Version=v8.0';   Acad = 25 },
+            @{ Path = 'Contents/2027/ClaudeCAD.Plugin.dll'; Tfm = '.NETCoreApp,Version=v10.0';  Acad = 26 }
+          )
+          $bad = 0
+          foreach ($e in $expect) {
+            $f = Join-Path bundle/out/ClaudeCAD.bundle $e.Path
+            if (-not (Test-Path $f)) { Write-Error "missing $f"; $bad++; continue }
+            $stream = [IO.File]::OpenRead((Resolve-Path $f))
+            try {
+              $pe = [System.Reflection.PortableExecutable.PEReader]::new($stream)
+              $md = [System.Reflection.Metadata.PEReaderExtensions]::GetMetadataReader($pe)
+              $tfm = $null
+              foreach ($h in $md.GetAssemblyDefinition().GetCustomAttributes()) {
+                $a = $md.GetCustomAttribute($h)
+                if ($a.Constructor.Kind -ne [System.Reflection.Metadata.HandleKind]::MemberReference) { continue }
+                $ctor = $md.GetMemberReference([System.Reflection.Metadata.MemberReferenceHandle]$a.Constructor)
+                if ($ctor.Parent.Kind -ne [System.Reflection.Metadata.HandleKind]::TypeReference) { continue }
+                $type = $md.GetTypeReference([System.Reflection.Metadata.TypeReferenceHandle]$ctor.Parent)
+                if ($md.GetString($type.Name) -eq 'TargetFrameworkAttribute') {
+                  $blob = $md.GetBlobReader($a.Value); [void]$blob.ReadUInt16(); $tfm = $blob.ReadSerializedString()
+                }
+              }
+              $acad = @()
+              foreach ($h in $md.AssemblyReferences) {
+                $r = $md.GetAssemblyReference($h); $n = $md.GetString($r.Name)
+                if ($n -in 'acdbmgd', 'acmgd', 'accoremgd', 'AcDbMgd', 'AcMgd', 'AcCoreMgd') { $acad += "$n $($r.Version)" ; if ($r.Version.Major -ne $e.Acad) { $bad++ ; Write-Error "$($e.Path): $n $($r.Version), expected $($e.Acad).x" } }
+              }
+              if ($acad.Count -eq 0) { $bad++; Write-Error "$($e.Path): no AutoCAD reference" }
+              if ($tfm -ne $e.Tfm) { $bad++; Write-Error "$($e.Path): target framework '$tfm', expected '$($e.Tfm)'" }
+              Write-Host "$($e.Path): $tfm · $($acad -join ', ')"
+            } finally { $stream.Dispose() }
+          }
+          if ($bad) { exit 1 }
+
+      - name: install.ps1 parses
+        run: |
+          $errs = $null
+          [void][System.Management.Automation.Language.Parser]::ParseFile((Resolve-Path installer/install.ps1), [ref]$null, [ref]$errs)
+          if ($errs) { $errs | ForEach-Object { Write-Error "$($_.Extent.StartLineNumber): $($_.Message)" }; exit 1 }
+
       - name: Setup.exe (Inno Setup)
         run: |
           choco install innosetup --no-progress -y

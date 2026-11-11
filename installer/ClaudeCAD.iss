@@ -167,11 +167,77 @@ begin
     end;
 end;
 
+{ AutoCAD releases installed on this machine, from HKLM\SOFTWARE\Autodesk\AutoCAD\R<major>.<minor>\ACAD-xxxx:yyy
+  (AutoCAD and its verticals; AutoCAD LT has its own key and cannot run .NET plugins). Supported = the releases
+  bundle\PackageContents.xml loads in: R24.1-R24.3 (2022-2024), R25.0-R25.1 (2025-2026), R26.0 (2027). }
+function IsSupportedRelease(const Rel: String): Boolean;
+begin
+  Result := (Rel = 'R24.1') or (Rel = 'R24.2') or (Rel = 'R24.3') or (Rel = 'R25.0') or (Rel = 'R25.1') or (Rel = 'R26.0');
+end;
+
+{ R26.1 / R27.0 ... : newer than the last release this build declares }
+function IsNewerRelease(const Rel: String): Boolean;
+var
+  Dot, Major, Minor: Integer;
+begin
+  Result := False;
+  if (Length(Rel) < 4) or (Rel[1] <> 'R') then exit;
+  Dot := Pos('.', Rel);
+  if Dot = 0 then exit;
+  Major := StrToIntDef(Copy(Rel, 2, Dot - 2), -1);
+  Minor := StrToIntDef(Copy(Rel, Dot + 1, 3), -1);
+  Result := (Major > 26) or ((Major = 26) and (Minor > 0));
+end;
+
+function AcadReleaseInstalled(const Rel: String): Boolean;
+var
+  Products: TArrayOfString;
+  i: Integer;
+  Loc: String;
+begin
+  Result := False;
+  if not RegGetSubkeyNames(HKLM64, 'SOFTWARE\Autodesk\AutoCAD\' + Rel, Products) then exit;
+  for i := 0 to GetArrayLength(Products) - 1 do
+    if RegQueryStringValue(HKLM64, 'SOFTWARE\Autodesk\AutoCAD\' + Rel + '\' + Products[i], 'AcadLocation', Loc) and DirExists(Loc) then
+    begin
+      Result := True;
+      exit;
+    end;
+end;
+
+{ Setup continues either way (AutoCAD may be installed later); the user only learns why ClaudeCAD would not load. }
+function CheckAutoCAD(): Boolean;
+var
+  Releases: TArrayOfString;
+  i: Integer;
+  Supported, Newer: String;
+begin
+  Result := True;
+  Supported := '';
+  Newer := '';
+  if RegGetSubkeyNames(HKLM64, 'SOFTWARE\Autodesk\AutoCAD', Releases) then
+    for i := 0 to GetArrayLength(Releases) - 1 do
+      if AcadReleaseInstalled(Releases[i]) then
+      begin
+        if IsSupportedRelease(Releases[i]) then Supported := Supported + ' ' + Releases[i]
+        else if IsNewerRelease(Releases[i]) then Newer := Newer + ' ' + Releases[i];
+      end;
+  Log('AutoCAD releases found: supported [' + Trim(Supported) + '] newer [' + Trim(Newer) + ']');
+  if Supported <> '' then exit;
+  if Newer <> '' then
+    Result := SuppressibleMsgBox('Máy này có AutoCAD bản mới hơn 2027 (' + Trim(Newer) + '). ClaudeCAD bản này chỉ chạy trên AutoCAD 2022–2027 nên sẽ không tự nạp vào bản đó.' + #13#10#13#10 +
+              'Vẫn cài tiếp?', mbConfirmation, MB_YESNO, IDYES) = IDYES
+  else
+    Result := SuppressibleMsgBox('Không tìm thấy AutoCAD 2022–2027 bản đầy đủ trên máy này. ClaudeCAD chỉ chạy trên AutoCAD bản đầy đủ (và các bản chuyên ngành như Civil 3D), không chạy trên AutoCAD LT.' + #13#10#13#10 +
+              'Vẫn cài tiếp? (Cài AutoCAD sau cũng được, ClaudeCAD tự nạp khi mở AutoCAD.)', mbConfirmation, MB_YESNO, IDYES) = IDYES;
+end;
+
 function InitializeSetup(): Boolean;
 var
   Major, ErrCode: Integer;
 begin
-  Result := True;
+  Result := CheckAutoCAD();
+  if not Result then exit;
 #ifdef BundledNode
   exit; { Node.js ships with the plugin }
 #endif

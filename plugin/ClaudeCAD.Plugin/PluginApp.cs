@@ -35,7 +35,7 @@ namespace ClaudeCAD.Plugin
             try
             {
                 MainThread.Initialize();
-                Logger.Info($"ClaudeCAD {DrawingService.PluginVersion} loaded into AutoCAD {AcApp.Version}");
+                Logger.Info("loaded: " + DrawingService.BuildInfo);
                 AcApp.QuitWillStart += (s, e) => Shutdown();
                 var settings = PaletteSettings.Load();
                 HotkeyEnabled = settings.Hotkey;

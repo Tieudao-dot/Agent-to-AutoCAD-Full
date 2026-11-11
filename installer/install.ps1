@@ -42,6 +42,29 @@ if ($acad) {
   exit 2
 }
 
+# ------------------------------------------------------------------ which AutoCAD is installed (warning only)
+# Same releases as bundle\PackageContents.xml: R24.1-R24.3 (2022-2024), R25.0-R25.1 (2025-2026), R26.0 (2027).
+# AutoCAD LT has its own key (AutoCAD LT) and cannot run .NET plugins.
+if (-not $Uninstall) {
+  $supported = 'R24.1', 'R24.2', 'R24.3', 'R25.0', 'R25.1', 'R26.0'
+  $found = @(Get-ChildItem 'HKLM:\SOFTWARE\Autodesk\AutoCAD' -ErrorAction SilentlyContinue | Where-Object {
+    $rel = $_
+    @(Get-ChildItem $rel.PSPath -ErrorAction SilentlyContinue | Where-Object {
+      $loc = (Get-ItemProperty -Path $_.PSPath -Name AcadLocation -ErrorAction SilentlyContinue).AcadLocation
+      $loc -and (Test-Path $loc)
+    }).Count -gt 0
+  } | ForEach-Object { $_.PSChildName })
+  $ok = @($found | Where-Object { $supported -contains $_ })
+  $newer = @($found | Where-Object { $_ -match '^R(\d+)\.(\d+)$' -and ([int]$Matches[1] -gt 26 -or ([int]$Matches[1] -eq 26 -and [int]$Matches[2] -gt 0)) })
+  if ($ok.Count -eq 0) {
+    if ($newer.Count -gt 0) {
+      Say "Máy này có AutoCAD bản mới hơn 2027 ($($newer -join ', ')): ClaudeCAD bản này chỉ chạy trên AutoCAD 2022-2027 nên sẽ không tự nạp vào bản đó." Yellow
+    } else {
+      Say 'Không tìm thấy AutoCAD 2022-2027 bản đầy đủ (AutoCAD LT không chạy được plugin). Vẫn cài tiếp; cài AutoCAD sau thì ClaudeCAD tự nạp khi mở AutoCAD.' Yellow
+    }
+  }
+}
+
 # ------------------------------------------------------------------ uninstall
 if ($Uninstall) {
   if (Test-Path $target) {

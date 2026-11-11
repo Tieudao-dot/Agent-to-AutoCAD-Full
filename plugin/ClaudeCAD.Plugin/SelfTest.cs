@@ -62,7 +62,7 @@ namespace ClaudeCAD.Plugin
                 steps.Add(st);
             }
 
-            Do("Phiên bản AutoCAD / plugin", () => $"AutoCAD {AcApp.Version} · ClaudeCAD {DrawingService.PluginVersion} · .NET {Environment.Version}");
+            Do("Phiên bản AutoCAD / plugin", () => DrawingService.BuildInfo);
 
             Do("Tạo bản vẽ thử (không đụng bản vẽ của cậu)", () =>
             {
