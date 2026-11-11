@@ -234,6 +234,84 @@ namespace ClaudeCAD.UI.Tests
             Assert.True(new FileInfo(Path.Combine(OutDir, "palette-layers.png")).Length > 5_000);
         }
 
+        /// <summary>Screen D with real steps: the approved plan as ✓ / ● / ○ while Claude reports the step it starts.</summary>
+        [Fact]
+        public void ApprovedPlanShowsRealProgress()
+        {
+            string[] live = null, done = null, stopped = null;
+            string busyLive = null, busyCompact = null, busyNoPlan = null, titleDone = null;
+            bool toolsFolded = false;
+            var plan = new List<string> { "Đọc bản vẽ và layer", "Lưới trục 4 x 3", "Tường 220 / 110", "Cửa đi, cửa sổ", "Kích thước", "Tên phòng, diện tích", "Kiểm tra bằng ảnh" };
+            string[] Tags(DependencyObject root) => FindAll<TextBlock>(root).Select(t => t.Tag as string).Where(t => t != null && t.StartsWith("plan-")).ToArray();
+            string Busy(ChatControl x) => ((TextBlock)typeof(ChatControl).GetField("_busyLine", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance).GetValue(x)).Text;
+            Sta(() =>
+            {
+                var c = new ChatControl { Width = 380, Height = 560 };
+                c.ApplySettings(new PaletteSettings());
+                c.SetDark(true);
+                c.LoadTranscript(new ChatTranscript(), false);
+                c.AddUserMessage(new ChatEntry { Role = "user", Text = "Làm theo kế hoạch." });
+                c.BeginAssistant();
+                c.SetBusy(true);
+                c.SetProgress(plan, 1, null);
+                c.UpdateTool(new ToolLogEntry { Tool = "get_drawing_info", State = "done", Ms = 40 });
+                c.SetProgress(plan, 2, null);
+                c.UpdateTool(new ToolLogEntry { Tool = "batch_execute", State = "done", Ms = 300 });
+                c.SetProgress(plan, 3, "46 đoạn LINE");
+                c.UpdateTool(new ToolLogEntry { Tool = "batch_execute", State = "running" });
+                Pump();
+                Shot(c, "shell-tien-do-buoc");
+                live = Tags(c);
+                busyLive = Busy(c);
+                var toolRow = FindAll<TextBlock>(c).First(t => (t.Tag as string) == "running" && t.FontSize == 11);
+                toolsFolded = ((FrameworkElement)toolRow.Parent).Visibility != Visibility.Visible;
+                c.SetCompact(true);
+                Pump();
+                busyCompact = Busy(c);
+                Shot(c, "shell-thu-gon-tien-do");
+                c.SetCompact(false);
+
+                c.UpdateTool(new ToolLogEntry { Tool = "batch_execute", State = "done", Ms = 500 });
+                c.EndProgress(true);
+                c.EndAssistant(new ChatEntry { Role = "assistant", Text = "Đã vẽ tường." }, true);
+                c.SetBusy(false);
+                Pump();
+                done = Tags(c);
+                titleDone = FindAll<Button>(c).Select(b => b.Content).OfType<StackPanel>().SelectMany(sp => sp.Children.OfType<TextBlock>()).Select(t => t.Text).LastOrDefault(t => t != null && t.StartsWith("Đã làm"));
+
+                // stopped half way: the step in progress is not ticked
+                var d = new ChatControl { Width = 380, Height = 400 };
+                d.ApplySettings(new PaletteSettings());
+                d.LoadTranscript(new ChatTranscript(), false);
+                d.BeginAssistant();
+                d.SetBusy(true);
+                d.SetProgress(plan, 2, null);
+                d.EndProgress(false);
+                d.EndAssistant(new ChatEntry { Role = "assistant", Text = "Đã dừng." }, true);
+                d.SetBusy(false);
+                Pump();
+                stopped = Tags(d);
+
+                // a turn without a plan keeps the time + operations line
+                var e = new ChatControl { Width = 380, Height = 400 };
+                e.ApplySettings(new PaletteSettings());
+                e.LoadTranscript(new ChatTranscript(), false);
+                e.BeginAssistant();
+                e.SetBusy(true);
+                e.UpdateTool(new ToolLogEntry { Tool = "draw_line", State = "done", Ms = 20 });
+                Pump();
+                busyNoPlan = Busy(e);
+            });
+            Assert.Equal(new[] { "plan-done", "plan-done", "plan-now", "plan-later", "plan-later", "plan-later", "plan-later" }, live);
+            Assert.StartsWith("● Bước 3/7: Tường 220 / 110 · ", busyLive);
+            Assert.StartsWith("● Bước 3/7: Tường 220 / 110 · ", busyCompact);
+            Assert.True(toolsFolded, "the command list stays folded under the plan steps");
+            Assert.Equal(new[] { "plan-done", "plan-done", "plan-done", "plan-later", "plan-later", "plan-later", "plan-later" }, done);
+            Assert.Equal("Đã làm 3/7 bước · dừng sau bước 3", titleDone);
+            Assert.Equal(new[] { "plan-done", "plan-stopped", "plan-later", "plan-later", "plan-later", "plan-later", "plan-later" }, stopped);
+            Assert.StartsWith("● Đang làm · ", busyNoPlan);
+        }
+
         /// <summary>Screen D (plugin side only): the turn's tool calls as a live step list, folded again when the turn ends.</summary>
         [Fact]
         public void WorkingTurnShowsItsSteps()

@@ -1678,6 +1678,23 @@ namespace ClaudeCAD.Plugin.UI
             ScrollToEnd();
         });
 
+        /// <summary>
+        /// Step progress of the running turn (screen D): <paramref name="steps"/> are the steps of the plan the user
+        /// approved (or that Claude declared), <paramref name="step"/> the 1-based step Claude is starting now.
+        /// </summary>
+        public void SetProgress(List<string> steps, int step, string note) => Ui(() =>
+        {
+            if (steps == null || steps.Count == 0) return;
+            step = Math.Max(1, Math.Min(step, steps.Count));
+            if (_current == null) _current = NewAssistant();
+            _current.SetProgress(steps, step, note);
+            _progressLabel = $"Bước {step}/{steps.Count}: {FirstLine(steps[step - 1], 40)}";
+            if (_busy) UpdateBusyLine();
+        });
+
+        /// <summary>The turn is over: <paramref name="clean"/> = Claude finished it (no error, not stopped).</summary>
+        public void EndProgress(bool clean) => Ui(() => _current?.SettleProgress(clean));
+
         public void UpdateTool(ToolLogEntry e) => Ui(() =>
         {
             if (_current == null) _current = NewAssistant();
@@ -1709,7 +1726,7 @@ namespace ClaudeCAD.Plugin.UI
 
         private void EndAssistantCore()
         {
-            if (_current != null) { _current.Flush(); _current.Settle(); _current = null; }
+            if (_current != null) { _current.Flush(); _current.SettleProgress(false); _current.Settle(); _current = null; }
         }
 
         public void SetUndoAvailable(bool available) => Ui(() => _lastAssistant?.SetUndo(available));
@@ -1943,10 +1960,13 @@ namespace ClaudeCAD.Plugin.UI
             return line.Length <= max ? line : line.Substring(0, max).TrimEnd() + "…";
         }
 
+        /// <summary>"Bước 3/7: Vẽ tường" while a turn reports its plan steps (report_progress); null otherwise.</summary>
+        private string _progressLabel;
+
         private void UpdateBusyLine()
         {
             int tools = _current?.ToolCount ?? 0;
-            _busyLine.Text = "● Đang làm · " + Elapsed(DateTime.UtcNow - _busySince)
+            _busyLine.Text = "● " + (_progressLabel ?? "Đang làm") + " · " + Elapsed(DateTime.UtcNow - _busySince)
                 + (tools > 0 ? $" · {tools} thao tác" : "") + " — Esc để dừng";
         }
 
@@ -2008,7 +2028,7 @@ namespace ClaudeCAD.Plugin.UI
             _stop.IsEnabled = busy;
             if (busy)
             {
-                if (!_busyTimer.IsEnabled) { _busySince = DateTime.UtcNow; _busyTimer.Start(); }
+                if (!_busyTimer.IsEnabled) { _busySince = DateTime.UtcNow; _busyTimer.Start(); _progressLabel = null; }
                 _busyLine.Visibility = Visibility.Visible;
                 UpdateBusyLine();
             }
@@ -2016,6 +2036,7 @@ namespace ClaudeCAD.Plugin.UI
             {
                 _busyTimer.Stop();
                 _busyLine.Visibility = Visibility.Collapsed;
+                _progressLabel = null;
             }
             _pickSel.IsEnabled = _pickPt.IsEnabled = !busy;
             foreach (var b in _macroRows.Children.OfType<FrameworkElement>().SelectMany(r => FindButtons(r)).Where(b => (b.Tag as string) == "run")) b.IsEnabled = !busy;
@@ -2980,6 +3001,22 @@ namespace ClaudeCAD.Plugin.UI
                 _toolsCat = new Category("Thao tác", _toolRows, expanded: false) { Visibility = Visibility.Collapsed };
                 var stack = new StackPanel();
                 stack.Children.Add(SpeakerLabel("CLAUDE"));
+                _planRows = new StackPanel();
+                _planBar = new Grid { Height = 3, Margin = new Thickness(0, 0, 0, 3) };
+                _planBar.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(0, GridUnitType.Star) });
+                _planBar.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+                var fill = new Border();
+                Theme.Ref(fill, Border.BackgroundProperty, Theme.Accent);
+                var rest = new Border();
+                Theme.Ref(rest, Border.BackgroundProperty, Theme.Border);
+                Grid.SetColumn(rest, 1);
+                _planBar.Children.Add(fill);
+                _planBar.Children.Add(rest);
+                var planBody = new StackPanel();
+                planBody.Children.Add(_planBar);
+                planBody.Children.Add(_planRows);
+                _planCat = new Category("Bước", planBody, expanded: true) { Visibility = Visibility.Collapsed };
+                stack.Children.Add(_planCat.Root);
                 stack.Children.Add(_toolsCat.Root);
                 stack.Children.Add(_md);
                 stack.Children.Add(_cards);
@@ -3028,6 +3065,68 @@ namespace ClaudeCAD.Plugin.UI
             }
 
             private bool _live, _settled;
+            private readonly Category _planCat;
+            private readonly StackPanel _planRows;
+            private readonly Grid _planBar;
+            private List<string> _planSteps;
+            private int _planStep;
+            private string _planNote;
+            private bool? _planClean;
+
+            /// <summary>Current step (1-based) and number of steps, 0 when the turn reports no steps.</summary>
+            internal (int step, int total) Progress => (_planStep, _planSteps?.Count ?? 0);
+
+            /// <summary>
+            /// The approved plan as ✓ done / ● now / ○ not yet, with a 3 px bar of the finished steps. Only what
+            /// Claude reported: the step it is starting, never a guessed percentage.
+            /// </summary>
+            public void SetProgress(List<string> steps, int step, string note)
+            {
+                if (_planClean != null) return; // the turn is over
+                _planSteps = steps.ToList();
+                _planStep = step;
+                _planNote = string.IsNullOrWhiteSpace(note) ? null : note.Trim();
+                if (_planCat.Visibility != Visibility.Visible) _toolsCat.Collapse(); // first report: the steps take over
+                _planCat.Visibility = Visibility.Visible;
+                _planCat.Expand();
+                PaintPlan();
+            }
+
+            /// <summary>End of the turn: the step in progress is done if Claude finished cleanly, else marked unfinished.</summary>
+            public void SettleProgress(bool clean)
+            {
+                if (_planSteps == null || _planClean != null) return;
+                _planClean = clean;
+                PaintPlan();
+                _planCat.Collapse();
+            }
+
+            private void PaintPlan()
+            {
+                int n = _planSteps.Count;
+                _planRows.Children.Clear();
+                for (int i = 1; i <= n; i++)
+                {
+                    string name = _planSteps[i - 1];
+                    string state, text, color;
+                    if (i < _planStep || (i == _planStep && _planClean == true)) { state = "done"; text = "✓ " + name; color = Theme.OkFg; }
+                    else if (i == _planStep && _planClean == false) { state = "stopped"; text = "○ " + name + " — dừng giữa chừng"; color = Theme.WarnFg; }
+                    else if (i == _planStep) { state = "now"; text = "● " + name + (_planNote != null ? " — " + _planNote : ""); color = Theme.Fg; }
+                    else { state = "later"; text = "○ " + name; color = Theme.MutedFg; }
+                    var row = new TextBlock { Text = text, TextWrapping = TextWrapping.Wrap, FontSize = 11, Margin = new Thickness(14, 0, 0, 1), Tag = "plan-" + state };
+                    if (state == "now") row.FontWeight = FontWeights.SemiBold;
+                    Theme.Ref(row, TextBlock.ForegroundProperty, color);
+                    _planRows.Children.Add(row);
+                }
+                int done = _planStep - 1 + (_planClean == true ? 1 : 0);
+                _planBar.ColumnDefinitions[0].Width = new GridLength(done, GridUnitType.Star);
+                _planBar.ColumnDefinitions[1].Width = new GridLength(n - done, GridUnitType.Star);
+                _planBar.ToolTip = $"{done}/{n} bước đã xong";
+                string cur = n > 0 ? _planSteps[_planStep - 1] : "";
+                _planCat.SetTitle(_planClean == null ? $"Bước {_planStep}/{n}: {cur}"
+                    : _planClean == true ? $"Đã làm {done}/{n} bước" + (done < n ? $" · dừng sau bước {_planStep}" : "")
+                    : $"Dừng ở bước {_planStep}/{n}: {cur}");
+            }
 
             /// <summary>
             /// Tool activity (feature 12) as a step list (screen D): while the turn runs the group is open and
@@ -3038,7 +3137,8 @@ namespace ClaudeCAD.Plugin.UI
             public void AddTool(ToolLogEntry e)
             {
                 _toolsCat.Visibility = Visibility.Visible;
-                if (!_live && !_settled) { _live = true; _toolsCat.Expand(); }
+                // with plan steps on screen the commands stay folded under them (screen D: "Xem chi tiết lệnh")
+                if (!_live && !_settled) { _live = true; if (_planSteps == null) _toolsCat.Expand(); }
                 TextBlock row = null;
                 if (e.State != "running")
                 {
@@ -3121,6 +3221,7 @@ namespace ClaudeCAD.Plugin.UI
 
             public void Finish(ChatEntry e, bool canUndo, bool canSaveMacro = false)
             {
+                SettleProgress(true); // no-op when the controller already said how the turn ended
                 Settle();
                 _text.Clear();
                 _text.Append(e.Text ?? "");

@@ -126,3 +126,19 @@ nhóm mở và tiêu đề là "Đang làm · bước N: <lệnh cuối>"; khi `
 `Settle()` thì nhóm gập lại về "Thao tác (N) · x s". Lệnh giống nhau gọi liên tiếp gộp một dòng "×N".
 So với màn D còn thiếu: tên bước theo ý Claude ("Vẽ tường 220/110"), các bước chưa làm (○) và thanh %. Các phần
 đó cần sidecar gửi kế hoạch của Claude; chưa làm, để không bịa tiến độ.
+
+## 12. Tiến độ từng bước thật (màn D, bản đầy đủ)
+Nguồn bước là dữ liệu thật, theo thứ tự ưu tiên: các bước của thẻ kế hoạch người dùng đã bấm **Làm**
+(`plan_request` → `ChatController._planSteps[id]`, chọn khi "go"), hoặc danh sách Claude khai trong lần gọi
+`report_progress` đầu tiên khi không có thẻ kế hoạch (thẻ kế hoạch bị tắt). Claude gọi `report_progress(step)`
+ngay trước khi bắt đầu mỗi bước; sidecar gửi tin `progress` cho palette.
+
+Vì sao là tool riêng chứ không suy ra từ lệnh: plugin không biết lệnh nào thuộc bước nào, đoán sẽ là bịa.
+`report_progress` là tool cục bộ của sidecar (như `propose_plan`): không đi qua cổng xác nhận (`affectedCount` = 0),
+không gửi `tool_status` nên không đếm vào "N thao tác", không đặt cờ "lượt này đã hỏi", và vẫn chạy ở Chỉ xem.
+Phép tính "một tin = một lượt" không đổi vì tool này không tạo tin nhắn nào.
+
+Hiển thị: nhóm "Bước N/M: <tên>" trên câu trả lời, vạch mảnh = số bước xong / tổng; danh sách lệnh gập dưới.
+Dòng "đang làm" (vẫn hiện khi thu gọn) đổi thành "● Bước N/M: <tên> · thời gian · N thao tác". Hết lượt:
+sạch thì bước đang làm thành ✓ ("Đã làm N/M bước"); Dừng / lỗi thì bước đó "dừng giữa chừng". Không lưu vào lịch
+sử chat: mở lại đoạn chat cũ chỉ còn danh sách lệnh như trước.

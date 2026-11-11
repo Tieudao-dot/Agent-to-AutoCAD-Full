@@ -15,6 +15,7 @@ import { SYSTEM_PROMPT } from '../src/agent/systemPrompt.js';
 import { parsePluginMessage, type SidecarToPlugin } from '../src/ipc/protocol.js';
 import { captureTools, toCaptureResult } from '../src/tools/capture.js';
 import { LOCAL_TOOL_NAMES, interactionTools, skillMarkdown } from '../src/tools/interaction.js';
+import { affectedCount, confirmationError } from '../src/agent/confirmation.js';
 
 describe('capture_view', () => {
   it('turns the plugin result into an image block plus metadata', () => {
@@ -65,6 +66,20 @@ describe('plan / next-step / skill-draft tools', () => {
     assert.deepEqual(m.steps, ['Lưới trục 5x4', 'Tường 220']);
     assert.match(m.id, /^plan-\d+$/);
     assert.match((r.content[0] as { text: string }).text, /End your turn/);
+  });
+
+  it('report_progress sends the step of the approved plan, and the steps only when there was no plan card', async () => {
+    const r = await tools.report_progress!.handler({ step: 3, note: '46 đoạn LINE' }, {});
+    assert.deepEqual(emitted.at(-1), { type: 'progress', step: 3, note: '46 đoạn LINE' });
+    assert.equal((r.content[0] as { text: string }).text, 'ok');
+    await tools.report_progress!.handler({ step: 9, steps: ['Lưới trục', ' Tường ', 'Cửa'] }, {});
+    assert.deepEqual(emitted.at(-1), { type: 'progress', step: 3, steps: ['Lưới trục', 'Tường', 'Cửa'] }); // clamped to the list
+  });
+
+  it('report_progress is not a drawing operation for the confirmation gate', () => {
+    assert.equal(affectedCount('report_progress', { step: 2 }), 0);
+    assert.equal(confirmationError('report_progress', { step: 2 }, { userText: 'vẽ mặt bằng', answersQuestion: false, alreadyAffected: 500 }), undefined);
+    assert.ok(SYSTEM_PROMPT.includes('report_progress'));
   });
 
   it('suggest_next_steps emits tool suggestions', async () => {
