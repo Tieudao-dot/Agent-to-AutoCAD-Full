@@ -1,6 +1,6 @@
 # Checklist thử thật trên AutoCAD (một lượt ~20 phút)
 
-*Soạn 11/11/2026 cho bản cài thử 0.9.4 + 0.9.5 (+ 2026/2027). Chi tiết từng mục: `docs/test-log.md` (cột "Mã gốc").*
+*Soạn 11/11/2026 cho bộ cài thử 0.9.5 (đã gộp khóa key, giao diện mới, AutoCAD 2026 / 2027). Chi tiết từng mục: `docs/test-log.md` (cột "Mã gốc").*
 
 Mục đích: một lượt thử trên máy có AutoCAD thật, xếp theo rủi ro. Phần **A–E hỏng thì không phát hành**; phần F–H
 hỏng thì ghi lại, sửa sau vẫn được. Mỗi bước đánh dấu **Đạt** hoặc **Lỗi** (lỗi thì ghi 1 dòng ở cuối file và làm
@@ -13,21 +13,23 @@ Ký hiệu: ★ bắt buộc · ○ bỏ qua được khi ít thời gian (lư�
 | Cần có | Ghi chú |
 | --- | --- |
 | Máy Windows có AutoCAD bản đầy đủ (không phải LT), đã đóng AutoCAD | Tốt nhất là máy **chưa từng cài** ClaudeCAD; nếu đã cài thì bước A1–A3 ghi "đã kích hoạt từ trước" |
-| `ClaudeCAD-Setup.exe` của bản cài thử | Lấy từ lượt CI của nhánh cần thử (mục Artifacts) |
+| `ClaudeCAD-Setup.exe` của bộ cài thử | Lấy từ lượt CI của nhánh gộp (mục Artifacts) |
 | Tài khoản Claude Pro / Max (hoặc API key) | Để đăng nhập ở bước B2 |
 | Chủ plugin mở sẵn Gmail + Google Sheet "Thiết bị" | Chỉ cần cho phần A |
 
-**Bản cài nào cho phần nào** (nếu 4 nhánh *đã gộp* thành một bản cài thử thì làm cả checklist một lần, bỏ qua bảng này):
+**Bản cài:** một bộ cài thử duy nhất build từ nhánh gộp `claude/release-0.9.5` (khóa key + giao diện mới +
+AutoCAD 2026 / 2027 + tự kiểm tra mở rộng). Làm cả checklist **một lần** trên bản đó; không cần cài riêng từng nhánh.
 
-| Phần | Cần bản cài của nhánh | Thử trên bản khác thì |
+Nếu vì lý do nào đó phải thử bản cài của một nhánh riêng:
+
+| Phần | Cần nhánh | Thử trên bản khác thì |
 | --- | --- | --- |
-| A — kích hoạt + quản lý thiết bị | `claude/device-management` | A1–A3 chạy được ở mức key cơ bản; A4–A5 bỏ |
-| B, C, D, E, G — chat, vẽ, xác nhận, hoàn tác, skill / macro / phiên bản | nhánh nào cũng được | — |
+| A — kích hoạt + quản lý thiết bị | `claude/device-management` | A1 (nhập key tay), A6 chạy được; A2–A5 bỏ |
 | F — giao diện mới | `claude/ux-autocad` | bỏ cả phần F |
 | H — AutoCAD 2026 / 2027 | `claude/acad-2026-2027` | bỏ cả phần H |
-| B4 — các mục tự kiểm tra mới (theme, thanh trạng thái, thu gọn, đúng bản build) | `claude/test-checklist` | báo cáo ngắn hơn, vẫn đọc ✓ / ✗ như thường |
+| B4 — các mục tự kiểm tra mới | `claude/test-checklist` | báo cáo ngắn hơn, vẫn đọc ✓ / ✗ như thường |
 
-## A. Cài đặt + kích hoạt key (~4 phút)
+## A. Cài đặt + kích hoạt key — bài test 6 bước về key (~4 phút)
 
 | # | | Làm gì | Kết quả mong đợi | Đạt | Lỗi | Mã gốc |
 | --- | --- | --- | --- | --- | --- | --- |
@@ -81,7 +83,7 @@ icon thanh trạng thái đã gắn, thu gọn không mất tin nhắn, DLL đú
 | E2 | ★ | Gõ "bản vẽ có bao nhiêu đối tượng?" rồi gõ `U` một lần | U hoàn tác lượt *vẽ / xóa* gần nhất, không bị "hụt" vì lượt chỉ đọc | ☐ | ☐ | 1b |
 | E3 | ○ | Gõ "vẽ thêm 1 hình tròn bán kính 500" → bấm **Hoàn tác lượt này** trong khung chat | Hình tròn mất; nút ẩn đi sau khi hoàn tác | ☐ | ☐ | UI-5 |
 
-## F. Giao diện mới (~4 phút, cần bản có `claude/ux-autocad`)
+## F. Giao diện mới (~4 phút)
 
 | # | | Làm gì | Kết quả mong đợi | Đạt | Lỗi | Mã gốc |
 | --- | --- | --- | --- | --- | --- | --- |
@@ -109,7 +111,7 @@ icon thanh trạng thái đã gắn, thu gọn không mất tin nhắn, DLL đú
 | G5 | ○ | Mở bản vẽ thứ hai (đã lưu), chat 1 câu, chuyển qua lại hai tab bản vẽ | Mỗi bản vẽ có lịch sử chat và bộ skill riêng | ☐ | ☐ | UI-17, S-4 |
 | G6 | ○ | ⚙ ▸ **Gửi báo cáo lỗi** | Có file .zip trên Desktop, Explorer mở; trong zip không có nội dung chat / API key | ☐ | ☐ | R-1 (báo cáo), R-6 |
 
-## H. Riêng cho AutoCAD 2026 / 2027 (~3 phút mỗi bản, cần bản có `claude/acad-2026-2027`)
+## H. Riêng cho AutoCAD 2026 / 2027 (~3 phút mỗi bản)
 
 Làm trên máy có AutoCAD 2026 và / hoặc 2027. Phần A–G chỉ cần làm đủ trên **một** đời AutoCAD; ở đời còn lại làm H.
 
