@@ -75,6 +75,7 @@ Trạng thái: ⬜ chưa chạy · ✅ đạt · ❌ không đạt · ⚠️ đ�
 | 2027 | Bộ cài nhận AutoCAD 2027 (R26.0): TRUSTEDPATHS của R26.0 có thư mục plugin; mở AutoCAD không hỏi "load this plugin?" | ⬜ chưa chạy | |
 | 2027 | Plugin nạp `Contents\2027` (net10) không cảnh báo; `CLAUDECHATLOG` không có lỗi nạp | ⬜ chưa chạy | |
 | 2027 | Khung chat mở (`CLAUDECHAT`), đổi Color theme sáng/tối → khung chat đổi theo; icon thanh trạng thái + bong bóng | ⬜ chưa chạy | |
+| 2026/2027 | Máy không có AutoCAD (hoặc chỉ có LT): Setup.exe hiện cảnh báo, bấm Yes vẫn cài được; `install.ps1` in cảnh báo vàng. ⚙ ▸ *Gửi báo cáo lỗi* ghi đúng bản build + runtime | ⬜ chưa chạy | |
 | 2027 | Vẽ thử (hình chữ nhật, chữ, layer mới), xem ảnh chụp bản vẽ (capture_view), "Hoàn tác lượt này" = một U; kéo ảnh vào ô chat không lỗi | ⬜ chưa chạy | |
 | 3 | Cập nhật: đặt `CLAUDECAD_UPDATE_URL` tới latest.json có version cao hơn → palette báo; `CLAUDECHATUPDATE` tải, kiểm SHA-256; đóng AutoCAD → bundle được thay, skill đã sửa còn nguyên | ⬜ chưa chạy | |
 | 3 | latest.json sai SHA-256 → hủy, không đụng bundle | ⬜ chưa chạy | |
