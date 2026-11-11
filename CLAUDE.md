@@ -3,8 +3,8 @@
 ## Dự án
 
 Plugin AutoCAD 2022–2027: khung chat WPF (C#, `plugin/`) + trợ lý Node/TS chạy Claude Agent SDK (`agent/`),
-bộ cài Inno Setup (`installer/`), skill (`skills/`). Đọc trước: `docs/plugin-tong-quan.md`,
-`docs/tong-quan-du-an.md`, `docs/ke-hoach-gop-nhanh.md`, `bo-cai/README.md`.
+bộ cài Inno Setup (`installer/`), skill (`skills/`). Đọc trước: `docs/tong-quan-du-an.md` (tổng quan duy nhất:
+tình hình, việc chờ quyết, thread, plugin, nhật ký; báo cáo 19h hằng ngày cập nhật file này), `bo-cai/README.md`.
 
 ## Giao tiếp với chủ dự án
 
