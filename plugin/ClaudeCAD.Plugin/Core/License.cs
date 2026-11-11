@@ -44,7 +44,7 @@ namespace ClaudeCAD.Plugin.Core
     {
         // RSA-2048 public key of the activation service (activation/make-apps-script.mjs --print-public)
         public const string PublicModulus =
-            "ly8mbF79pCsd1uopgsASy2WL/buoK1Go87uHdqzv1PjGc2VZRePqHv6NXNhgguKeatwDDDTlp6og3RCwTlIcL1TLiVtnVuKIljnrOD3XckX0UaWv6T8+Pj/fxh7yNnlmqPNGccv8Br9gv8CaGOu96Iykyf3OL22uFMXLAWPe0IagRUCcEnXJ9qSJbpn9fPhTSbsqRetdVzCdC3NYxPkxUvbYwyQaTrjITkoHlv2O3dwNmcxt6ie58iw7EvjTIhKC74sr6moNu0Vs/93NBdCXOT9infPxIxMCsjZ5vaAL0HVAlQ+0GAVQI1yWxyChN/GyXxMHr0YM1Le3OfEYck9AFQ==";
+            "yony8l3I8ydAqJt3mEYhnHoRzi9udou/8YlRPTo9p8Wyv0DTp85FWlRcYWtqHUDDK7hJIe6oeE1GuX7qt9YwvNHlxFjUDLz0mwnNNg+2d+ve9G5HJYXD+brYhtYpKmfzsuE6fEsfo+nJEZEz1BFQ1QNw3n8pE6ABZMVtKf6/MwZhCVvgZ3VsOF0busb/LO6exE1cBJZfu8rUCFiaYuoFCzWK0tchPGDMy6T+nxcsO5mSGOrErp49cR2Q769TBVgghRA730F7uD84VE5OnE0rc5xBWK3vPopcU4H/VLf+hf5Ek2Bj4kDOjfj0bysMLcMbTXRhketDpsRaRnyY0rwXYQ==";
         public const string PublicExponent = "AQAB";
 
         public const string DefaultContact = "Liên hệ Zalo owner: 0344644415";
