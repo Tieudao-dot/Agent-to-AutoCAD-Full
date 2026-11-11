@@ -1,6 +1,6 @@
 # Tổng quan dự án ClaudeCAD
 
-*Cập nhật: 11/11/2026 14:00 (giờ Việt Nam). Mục "Tình hình" và "Nhật ký" được cập nhật tự động lúc 19h hằng ngày.*
+*Cập nhật: 11/11/2026 14:00 (giờ Việt Nam). Luồng chính cập nhật mục "Tình hình" và "Nhật ký" khi có mốc mới.*
 
 File này là tổng quan duy nhất của dự án. Nó gộp các file cũ `plugin-tong-quan.md` và `ke-hoach-gop-nhanh.md`.
 
@@ -136,7 +136,7 @@ theo tài khoản Windows. Chỉ nội dung yêu cầu và dữ liệu bản v�
 
 ## 8. Nhật ký hằng ngày
 
-*Báo cáo 19h tự động thêm dòng mới lên đầu, giữ 14 ngày gần nhất.*
+*Dòng mới thêm lên đầu, giữ 14 ngày gần nhất.*
 
 | Ngày | Tình hình |
 | --- | --- |
