@@ -21,7 +21,7 @@
         references — AutoCAD.NET 24.1.51000 (2022 API), 25.0.1 (2025 API, net8.0; the 2025 API is
         also what the 2026 build compiles against, so the dll stays loadable in both) and 26.0.0 (2027 API, net10.0).
     Force a mode with -p:AcadRefSource=Install|NuGet. Build only one target with -f net48
-    (rm -rf obj bin between targets when switching).
+    (obj is per target, see IntermediateOutputPath).
   -->
 
   <PropertyGroup>
@@ -37,6 +37,9 @@
     <Deterministic>true</Deterministic>
     <GenerateDocumentationFile>false</GenerateDocumentationFile>
     <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
+    <!-- bin keeps the folder names the bundle expects, but obj must stay per target: three targets sharing obj\<Config>\
+         lock each other's files in a parallel build and leak the TargetPlatformAttribute of one target into another. -->
+    <IntermediateOutputPath>obj\$(Configuration)\$(TargetFramework)\</IntermediateOutputPath>
     <!-- Allow building the Windows-only targets from Linux/macOS. -->
     <EnableWindowsTargeting>true</EnableWindowsTargeting>
     <AcadDir Condition="'$(AcadDir)' == ''">C:\Program Files\Autodesk\AutoCAD 2022</AcadDir>

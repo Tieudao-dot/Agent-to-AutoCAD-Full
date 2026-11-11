@@ -82,7 +82,7 @@ Kết quả (từ phase 3 project build hai bản):
 - `plugin/ClaudeCAD.Plugin/bin/Release/acad2025/ClaudeCAD.Plugin.dll` — AutoCAD 2025 / 2026 (.NET 8, R25.0–R25.1)
 - `plugin/ClaudeCAD.Plugin/bin/Release/acad2027/ClaudeCAD.Plugin.dll` — AutoCAD 2027 (.NET 10, R26.0)
 
-Chỉ build một bản: thêm `-f net48`, `-f net8.0-windows` hoặc `-f net10.0-windows` (xóa `obj` `bin` giữa các lần đổi bản). AutoCAD 2025 / 2027 cài chỗ khác: `-p:AcadDir2025="..."` / `-p:AcadDir2027="..."`.
+Chỉ build một bản: thêm `-f net48`, `-f net8.0-windows` hoặc `-f net10.0-windows` (mỗi bản có thư mục `obj` riêng, không cần xóa giữa các lần). AutoCAD 2025 / 2027 cài chỗ khác: `-p:AcadDir2025="..."` / `-p:AcadDir2027="..."`.
 
 - Nếu có `C:\Program Files\Autodesk\AutoCAD 2022\acmgd.dll`, project tham chiếu `accoremgd.dll`, `acdbmgd.dll`, `acmgd.dll` từ thư mục cài (Copy Local = false). AutoCAD cài chỗ khác: thêm `-p:AcadDir="D:\Autodesk\AutoCAD 2022"`.
 - Nếu không có AutoCAD (máy build/CI), project tự dùng package NuGet chính thức `AutoCAD.NET 24.1.51000` (= AutoCAD 2022) làm reference assemblies (bản 2025–2026: `25.0.1`, bản 2027: `26.0.0`). Ép chế độ: `-p:AcadRefSource=Install` hoặc `-p:AcadRefSource=NuGet`.

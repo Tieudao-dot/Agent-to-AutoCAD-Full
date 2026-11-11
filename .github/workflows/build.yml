@@ -63,7 +63,12 @@ jobs:
           if-no-files-found: warn
 
       - name: Plugin build (net48 for AutoCAD 2022-2024, net8.0-windows for 2025-2026, net10.0-windows for 2027)
-        run: dotnet build plugin/ClaudeCAD.Plugin/ClaudeCAD.Plugin.csproj -c Release -p:AcadRefSource=NuGet
+        # one target at a time: a clear log per AutoCAD build, no parallel inner builds racing on shared files
+        run: |
+          foreach ($tfm in 'net48', 'net8.0-windows', 'net10.0-windows') {
+            dotnet build plugin/ClaudeCAD.Plugin/ClaudeCAD.Plugin.csproj -c Release -f $tfm -p:AcadRefSource=NuGet
+            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          }
 
       - name: All three plugin builds present
         run: |
