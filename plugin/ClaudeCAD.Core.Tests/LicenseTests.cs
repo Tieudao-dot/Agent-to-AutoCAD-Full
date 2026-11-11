@@ -11,8 +11,8 @@ namespace ClaudeCAD.Core.Tests
         private const string TestModulus = "0V+Bpb3lCQeXMrGOx3x2fO7bBX0f3KtWsAKLoP6PlyAqcbFIQFyg1UAbBpHkmvbTs8irFCMgY7juPNB+JfZhBsMc2EjvCfgkiebMCBjzCbBAV/O0SfmYWAiWeXccWfOsu1Hf/pgSrF7LVJbG3WgrCr0MZ+B2/oO2951gleOZ9HIu1BEFHadIDjaGJowMlaauC+bKR3JxmTzfjSeAG8uW1ZGqifyS33SCBUX5C4vYibTp8RKkXpcT3M2vZW4gzDnF9RmQcwoX5E+8cVIuoVdztqz0TSGyXkk0zJ2hsI1uCHpzwhDcbutw3gGkYf5fPPxdkVYk53I7bHBFd4hL07cVDw==";
         private const string TestLicense = "CCL1|CC-1A2B-3C4D-5E6F|2026-11-09|lpDMHR2fKXtrS04nhNFzmaXhltPp88AQjwonYTLn6L2WwZ4CjFSBLM71HiVPLJd_zRzlJhpAsqbiAQGkS6lyuUwkSPWE2TnNk5BlD0s-m6sl1GdaPL4oiPDIdyhIHPBIklB9giunIV3S0Gvb5O1RAPsW5wA-HTdALimiy5_eB-uamNxuK2rmER9WJEajn5KJZ41_xr6LjTkVV--v3ug75g3-HY7_kHB-E5i7rmAf3FtId17Xy0jLZNP6edjzp94lCJyl23cNH0rJjjAysiHUwwag0k_Ckdl2uwcw--HpVjH4CqV-NTFijBAnnsXsR_fhGmXiD4r2C7ccpLyaKqNfOg";
         // signed with the real activation-service key for a machine that does not exist: the embedded public key matches it
-        private const string ProductionLicense = "CCL1|CC-0000-0000-0000|2026-11-10|FZ51_6S4rbzWJWVK0XZL6VB0D5QoTLhUBdVQZf17dTXRqtn7OC4kUv6u5ki7lsfyh8nMvfM8_Nf8rlaHDcLSob_ukKLmhgp3v7XiMbXqVT3mGv3dTHH27-vViZgGFeeIN2tCPLgFh0hzfg2MkSJTVGJP2QTQ01DgabhIqMfRq_9WJQyqmG4LwwWI07ez2od5xz3VXRB08xGvgmg2gG8Hr8FZMkOcZ4EjVyxa6p19GkIQrUW19tMuiYo-H-cEFyvj5psKa5VHvFCziXZ01R3eTLRbydnyRMPxD7gqjLxiNUHFcBfA8mJSjpCEUYRYzK--SMm1eUBOz_Oh9of7VoshcA";
-        private const string ProductionStatus = "CCS1|CC-0000-0000-0000|offline|2026-11-10|ZZ3xABnIhmmNof3PR3xU4wWMTPeX11wFFmMhrIlAJdlEA1Ne0LcocGy04ziaX9R0qVKyzdhErn9ihEeuRS8rdVXsPjVSqrI-HHh23MTbQdS-JpncHQTlXbQ-HKIYYe99SDR2EqHSAzk6oDmGQF6KPwquxdduuOA6Xepm6KnBaW_7RDp7azB6ZTVmg0I-2ogjQkirzh8w_XRkm5Kco5_9AyBv-nWsuVHZpDS20M-IMqIOX_MSSt5T_oNgewUGraqF8BPJFqIltfXYiF0aNEytOSlFpMI2qr10z0sCPzeAFQoNhNPXjJez65WBdAgr2CLTH5bAh029CjbtKpD_aKKYjQ";
+        private const string ProductionLicense = "CCL1|CC-0000-0000-0000|2026-11-11|LP3BJ0ySIW3mmzE5OvRSZqb0bBeYw0tJy3Z6sWs0dKW5BIkCHYojZCm5ICvF_zJUJzlJDlwNHdObed-PdAEDUn4EMivnVjWh0c6F-zJRdIq7607vvBgREd5U1exf2NSpAvHXGyn7EHjU_daAsXELIrZVpj7hKWzS--1bIMYJ53HAc_z3DmdevJCtby-vnosadRCNccl3YfvT08Wf9en3KKM9O-nKTg_VsNGReyOildTdGjhAhaFdS6AeV_-fjjVBiTpMJjrPYAjOxTqYfL6rzHUWuoNEffhQLJxPAR4rY0p7DRW460bUpr39a8IVwz24BLNXm3FiO5gFtvU3oFP6AQ";
+        private const string ProductionStatus = "CCS1|CC-0000-0000-0000|offline|2026-11-11|oI_WBQeJyLxyXuHVlt8neLOuhlAucTwf_My9-dLre8ktLfxHubJSiw0zAoGo0MxSzfqoHw-AkFNMZS1dfoxv8s6SYStBx79zmc-udl30PVRJesjHPY1O3t8TGJPBqvusiAHHwrI72WauTCCEfaYhnPnXsj8RBFgygkfEg0LEagaV_NeRTsO6LJTlA57EYng1qSL3vnfhnophGOowlmXmgya3j0v6xizNizWJsY3Hjzxs40za_81Kn61G6D-ZJ1BV0hWKv9Yr_96WJxx_EQwPWM_2PL6oUwL5Z2QwdXmpp6DVLURIziexhzkjMBoDolalPeumQf0KGpuqCer67qMFqA";
 
         [Fact]
         public void MachineCodeIsStableAndMatchesTheInstallerFormula()
@@ -51,7 +51,7 @@ namespace ClaudeCAD.Core.Tests
             Assert.True(LicenseLogic.Verify(ProductionLicense, "CC-0000-0000-0000").Ok);
             Assert.False(LicenseLogic.Verify(TestLicense, "CC-1A2B-3C4D-5E6F").Ok); // signed by another key
             // the same production key signs the device statuses (CCS1)
-            var st = LicenseLogic.VerifyStatus(ProductionStatus, "CC-0000-0000-0000", new System.DateTime(2026, 11, 10, 12, 0, 0, System.DateTimeKind.Utc));
+            var st = LicenseLogic.VerifyStatus(ProductionStatus, "CC-0000-0000-0000", new System.DateTime(2026, 11, 11, 12, 0, 0, System.DateTimeKind.Utc));
             Assert.True(st.Ok, st.Reason);
             Assert.True(st.Fresh); // "offline" never goes stale
         }
