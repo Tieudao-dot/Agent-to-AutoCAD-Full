@@ -140,7 +140,8 @@ if ($LASTEXITCODE -ge 8) { Say "Copy skill thất bại (robocopy $LASTEXITCODE)
 $entry = Join-Path $target 'Contents\...'
 $base = 'HKCU:\Software\Autodesk\AutoCAD'
 if (Test-Path $base) {
-  Get-ChildItem $base -ErrorAction SilentlyContinue | Where-Object { $_.PSChildName -match '^R2[456]' }  # R24 = 2022-2024, R25 = 2025-2026, R26 = 2027 | ForEach-Object {
+  # R24 = 2022-2024, R25 = 2025-2026, R26 = 2027
+  Get-ChildItem $base -ErrorAction SilentlyContinue | Where-Object { $_.PSChildName -match '^R2[456]' } | ForEach-Object {
     Get-ChildItem $_.PSPath -ErrorAction SilentlyContinue | ForEach-Object {
       $profiles = Join-Path $_.PSPath 'Profiles'
       if (Test-Path $profiles) {
