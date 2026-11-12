@@ -308,19 +308,25 @@ namespace ClaudeCAD.Plugin.Core
 
         /// <summary>
         /// A revolve profile must stay on one side of its axis (crossing it gives a self-intersecting solid that
-        /// AutoCAD refuses). Checks the profile points against the axis in the XY plane (profiles are planar, Z
-        /// ignored): null when fine, else an error text. Points on the axis are allowed.
+        /// AutoCAD refuses) and the axis must lie in the profile's plane. The side of each point is measured in the
+        /// plane with the given normal (default +Z, the XY plane), so profiles on vertical planes are checked too.
+        /// The caller passes points sampled along the curves (bulges, arcs, circles), not only the vertices.
+        /// null when fine, else an error text. Points on the axis are allowed.
         /// </summary>
-        public static string ProfileCrossesAxis(IList<double[]> profile, double[] axisStart, double[] axisEnd, string tool = "revolve")
+        public static string ProfileCrossesAxis(IList<double[]> profile, double[] axisStart, double[] axisEnd, double[] normal = null, string tool = "revolve")
         {
             if (profile == null || profile.Count == 0) return null;
-            double ax = axisEnd[0] - axisStart[0], ay = axisEnd[1] - axisStart[1];
-            double l = Math.Sqrt(ax * ax + ay * ay);
-            if (l < Eps) return null; // axis along Z: a profile in the XY plane is not checked here
+            var n = Unit(normal ?? Z, $"{tool}: the profile normal is zero");
+            var axis = Sub(axisEnd, axisStart);
+            double l = Len(axis);
+            if (l < Eps) return null; // RevolveAxis already refuses this
+            var d = Scale(axis, 1 / l);
+            if (Math.Abs(Dot(d, n)) > 1e-6)
+                return $"{tool}: the axis does not lie in the profile's plane (it points out of it). Put axis_start and axis_end in the plane of the profile, e.g. both with the profile's z for a profile drawn on XY.";
             int pos = 0, neg = 0;
             foreach (var p in profile)
             {
-                double side = (ax * (p[1] - axisStart[1]) - ay * (p[0] - axisStart[0])) / l;
+                double side = Dot(Cross(d, Sub(p, axisStart)), n);
                 if (side > 1e-6) pos++;
                 else if (side < -1e-6) neg++;
             }
@@ -328,6 +334,11 @@ namespace ClaudeCAD.Plugin.Core
                 ? $"{tool}: the profile crosses the axis (points on both sides). Move the axis to one edge of the profile or split the profile."
                 : null;
         }
+
+        /// <summary>solid_intersect: the solids up to 'handles' (in order) have no common volume (KT-28).</summary>
+        public static string EmptyIntersectionMessage(string tool, IList<string> handles) =>
+            $"{tool}: the solids do not overlap: {string.Join(", ", handles)} have no common volume, so the intersection is empty. Nothing was changed. " +
+            "Check their positions with get_solid_info (min / max).";
 
         /// <summary>Box placement: the corner (min X, min Y, min Z before rotation) or the centre of the box.</summary>
         public static double[] BoxCenter(double[] corner, double length, double width, double height, double rotationDeg)
