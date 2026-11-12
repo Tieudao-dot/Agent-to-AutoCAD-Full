@@ -95,7 +95,6 @@ Lỗi từ `docs/ban-giao/kiem-tra-doc-lap.md` (nhánh `full/kiem-tra-doc-lap`).
 | KT-06 | `upsertDevice` (Apps Script): tên giữ chỗ "(…)" chỉ điền ô Thiết bị trống, không ghi đè tên máy gửi lên | `activation.test.ts` (KT-06) |
 | KT-35 | `buildTools(…, plan)`: gói 2D bỏ `view` / `direction` / `visual_style` và câu "3D:" khỏi `capture_view` | `plan-fixes.test.ts` |
 | KT-36 | Regex `plan:` bỏ phần `# ghi chú`; `propose_skill` ghi `plan: 2d` / `plan: 3d` theo gói đang dùng (Full: không ghi, dùng ở mọi gói) | `plan-fixes.test.ts` |
-
 | KT-42 | Chấp nhận, không chặn chèn block (luồng chính chốt thay chủ dự án 12/11/2026, chủ dự án xem lại). Gói 3D: chèn block có sẵn vẫn hiện chữ mặc định của block; Claude không đặt / sửa được chữ thuộc tính: `insert_block` không truyền được giá trị thuộc tính, `set_block_attributes` thuộc nhóm 2D (đã có từ bản sửa KT-02) | `PlanTests.KT42_*`, `plan-fixes.test.ts` (KT-42) |
 
 Còn biết: cùng ngày UTC, `plan.txt` chỉ đọc vẫn giữ dòng Full cũ tới hết ngày (dòng cùng ngày được tin). Chấp nhận, vì
