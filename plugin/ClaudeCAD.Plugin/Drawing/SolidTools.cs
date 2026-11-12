@@ -604,7 +604,7 @@ namespace ClaudeCAD.Plugin.Drawing
         /// Points the current model-space view along v and frames min–max (null = keep the target and size).
         /// No undo step (like ZoomTo).
         /// </summary>
-        internal static void ApplyView3d(Document doc, ViewPreset v, Point3d? min, Point3d? max)
+        internal static void ApplyView3d(Document doc, ViewPreset v, Point3d? min, Point3d? max, double twist = 0)
         {
             var ed = doc.Editor;
             using (doc.LockDocument())
@@ -612,13 +612,15 @@ namespace ClaudeCAD.Plugin.Drawing
             using (var view = ed.GetCurrentView())
             {
                 view.ViewDirection = Acad.V3(v.Direction);
-                view.ViewTwist = 0;
+                view.ViewTwist = twist;
                 view.PerspectiveEnabled = false;
                 if (min.HasValue && max.HasValue)
                 {
                     var a = min.Value; var b = max.Value;
                     var (w, h, c) = SolidLogic.ProjectedSize(new[] { a.X, a.Y, a.Z }, new[] { b.X, b.Y, b.Z }, v);
                     w = Math.Max(w, 1) * 1.1; h = Math.Max(h, 1) * 1.1;
+                    // a twisted view turns the framed box on screen: frame its diagonal both ways
+                    if (Math.Abs(twist) > 1e-9) { double d = Math.Sqrt(w * w + h * h); w = d; h = d; }
                     view.Target = P(c);
                     view.CenterPoint = new Point2d(0, 0);
                     double ratio = view.Width / Math.Max(view.Height, 1e-9);

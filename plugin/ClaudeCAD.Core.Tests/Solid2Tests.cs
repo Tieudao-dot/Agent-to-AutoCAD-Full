@@ -107,9 +107,9 @@ namespace ClaudeCAD.Core.Tests
             var longer = Box();
             longer.edges[0].End = new double[] { 1200, 0, 0 };
             Assert.NotEqual(id, Solid2Logic.TopologyId(longer.edges, longer.faces, longer.min));
-            // sub-0.01 mm noise is ignored
+            // floating-point noise is ignored
             var noisy = Box();
-            noisy.edges[3].Start = noisy.edges[3].Start.Select(x => x + 1e-4).ToArray();
+            noisy.edges[3].Start = noisy.edges[3].Start.Select(x => x + 1e-9).ToArray();
             Assert.Equal(id, Solid2Logic.TopologyId(noisy.edges, noisy.faces, noisy.min));
             Assert.Contains("get_solid_info again", Solid2Logic.StaleMessage("fillet_edges", "2F4A"));
         }
@@ -339,6 +339,7 @@ namespace ClaudeCAD.Core.Tests
             Has("MinLoftSections", Solid2Logic.MinLoftSections);
             Has("MaxLoftSections", Solid2Logic.MaxLoftSections);
             Has("MaxInterferenceSolids", Solid2Logic.MaxInterferenceSolids);
+            Has("MaxInterferenceCandidates", Solid2Logic.MaxInterferenceCandidates);
             Has("MaxTwist", Solid2Logic.MaxTwist);
             Has("MinSweepScale", Solid2Logic.MinSweepScale);
             Has("MaxSweepScale", Solid2Logic.MaxSweepScale);
@@ -374,6 +375,108 @@ namespace ClaudeCAD.Core.Tests
             Assert.Contains("new ToolDef(\"set_ucs\", true, SetUcs, noTransaction: true)", src);
             var disp = Root("plugin", "ClaudeCAD.Plugin", "Drawing", "ToolDispatcher.cs");
             Assert.DoesNotContain("\"set_ucs\"", disp);
+        }
+
+        // ------------------------------------------------------------ fixes after the independent review (12/11/2026)
+
+        /// <summary>KT-13 (đợt 2): an edge with no start point (closed edge whose curve could not be read) must not crash a side filter.</summary>
+        [Fact]
+        public void KT13_edge_side_filter_does_not_crash_on_edge_without_points()
+        {
+            var edges = new List<EdgeDesc> { new EdgeDesc { Index = 0, Straight = false } };
+            var ex = Record.Exception(() => Solid2Logic.FilterEdges(edges, new[] { "top" }, new double[] { 0, 0, 0 }, new double[] { 100, 100, 100 }, "fillet_edges"));
+            Assert.True(ex == null || ex is ToolException, "FilterEdges threw " + ex?.GetType().Name + " (internal plugin error) instead of skipping the edge");
+            // nor the axis filters on a straight edge without points
+            var straight = new List<EdgeDesc> { new EdgeDesc { Index = 0, Straight = true } };
+            Assert.Empty(Solid2Logic.FilterEdges(straight, new[] { "parallel_z" }, new double[] { 0, 0, 0 }, new double[] { 100, 100, 100 }, "t"));
+            Assert.Empty(Solid2Logic.FilterEdges(edges, new[] { "top" }, new double[] { 0, 0, 0 }, new double[] { 100, 100, 100 }, "t"));
+        }
+
+        /// <summary>KT-13 (đợt 2): a planar face with no bounds and no centre must not crash a face filter.</summary>
+        [Fact]
+        public void KT13_face_side_filter_does_not_crash_on_face_without_points()
+        {
+            var faces = new List<FaceDesc> { new FaceDesc { Index = 0, Planar = true, Normal = new double[] { 0, 0, 1 } } };
+            var ex = Record.Exception(() => Solid2Logic.FilterFaces(faces, new[] { "top" }, new double[] { 0, 0, 0 }, new double[] { 100, 100, 100 }, "shell_solid"));
+            Assert.True(ex == null || ex is ToolException, "FilterFaces threw " + ex?.GetType().Name + " (internal plugin error) instead of skipping the face");
+            Assert.Empty(Solid2Logic.FilterFaces(faces, new[] { "top" }, new double[] { 0, 0, 0 }, new double[] { 100, 100, 100 }, "t"));
+        }
+
+        /// <summary>KT-27: moving the solid by an odd amount or turning it keeps the id; the topology id has no absolute position in it.</summary>
+        [Fact]
+        public void KT27_topology_id_survives_odd_moves_and_turns()
+        {
+            var a = Box();
+            var id = Solid2Logic.TopologyId(a.edges, a.faces);
+            Assert.Equal(id, Solid2Logic.TopologyId(a.edges, a.faces, a.min));
+            foreach (var ox in new[] { 0.004999, 0.005, 0.005001, 12345.678901, -0.0049 })
+            {
+                var m = Box(ox);
+                Assert.Equal(id, Solid2Logic.TopologyId(m.edges, m.faces, m.min));
+            }
+            // turned 37° about Z and moved: the same edges in the same order
+            double c = Math.Cos(37 * Math.PI / 180), sn = Math.Sin(37 * Math.PI / 180);
+            double[] T(double[] p) => p == null ? null : new[] { 500.25 + c * p[0] - sn * p[1], -77.7 + sn * p[0] + c * p[1], p[2] + 3.3 };
+            var turned = Box();
+            foreach (var e in turned.edges) { e.Start = T(e.Start); e.End = T(e.End); e.Mid = T(e.Mid); }
+            Assert.Equal(id, Solid2Logic.TopologyId(turned.edges, turned.faces));
+            // a stretched box is another shape
+            var wide = Box();
+            foreach (var e in wide.edges) { e.Start = new[] { e.Start[0] * 1.5, e.Start[1], e.Start[2] }; e.End = new[] { e.End[0] * 1.5, e.End[1], e.End[2] }; e.Mid = new[] { e.Mid[0] * 1.5, e.Mid[1], e.Mid[2] }; }
+            Assert.NotEqual(id, Solid2Logic.TopologyId(wide.edges, wide.faces));
+        }
+
+        /// <summary>KT-24: a pair AutoCAD flags whose common volume cannot be measured stays a clash, never "touching".</summary>
+        [Fact]
+        public void KT24_unmeasured_overlap_is_still_a_clash()
+        {
+            Assert.Equal("clash_unmeasured", Solid2Logic.ClassifyInterference(null));
+            Assert.Equal("clash_unmeasured", Solid2Logic.ClassifyInterference(double.NaN));
+            Assert.Equal("touching", Solid2Logic.ClassifyInterference(0));
+            Assert.Equal("clash", Solid2Logic.ClassifyInterference(5e8));
+            var src = Root("plugin", "ClaudeCAD.Plugin", "Drawing", "Solid2Tools.cs");
+            Assert.Contains("internal static double? OverlapVolume", src);
+            Assert.Contains("catch (Autodesk.AutoCAD.Runtime.Exception) { return null; }", src);
+            Assert.Contains("[\"interfere\"] = clashes > 0", src);
+        }
+
+        /// <summary>KT-25: the work is capped (pairs past the bounding-box test, measured volumes) and Claude is told when it was cut.</summary>
+        [Fact]
+        public void KT25_interference_work_is_capped_and_reported()
+        {
+            Assert.Equal(2000, Solid2Logic.MaxInterferenceCandidates);
+            Assert.True(Solid2Logic.MaxInterferencePairs < Solid2Logic.MaxInterferenceCandidates);
+            var note = Solid2Logic.InterferenceTruncatedNote(4950, 2000);
+            Assert.Contains("2000 of 4950", note);
+            Assert.Contains("smaller groups", note);
+            var src = Root("plugin", "ClaudeCAD.Plugin", "Drawing", "Solid2Tools.cs");
+            Assert.Contains("Math.Min(candidates.Count, Solid2Logic.MaxInterferenceCandidates)", src);
+            Assert.Contains("measured < Solid2Logic.MaxInterferencePairs ? OverlapVolume(sa, sb)", src);
+            Assert.Contains("r[\"truncated\"] = true;", src);
+        }
+
+        /// <summary>KT-26: plan_view of a turned UCS turns the view so the UCS x axis points right; an unturned UCS needs no twist.</summary>
+        [Fact]
+        public void KT26_plan_twist_follows_the_ucs_x_axis()
+        {
+            // UCS turned 30° about Z: looking down (right = X, up = Y), PLAN gives VIEWTWIST 330°
+            var x30 = new[] { Math.Cos(Math.PI / 6), Math.Sin(Math.PI / 6), 0 };
+            Assert.Equal(2 * Math.PI - Math.PI / 6, Solid2Logic.PlanTwist(x30, new double[] { 1, 0, 0 }, new double[] { 0, 1, 0 }), 9);
+            Assert.Equal(0, Solid2Logic.PlanTwist(new double[] { 1, 0, 0 }, new double[] { 1, 0, 0 }, new double[] { 0, 1, 0 }), 9);
+            // a tilted UCS: its x is checked on the screen axes of the same view direction
+            foreach (var (xa, ya) in new[] { (new double[] { 1, 0, 0 }, new double[] { 0, 0.6, 0.8 }), (new double[] { 0.6, 0.8, 0 }, new double[] { 0, 0, 1 }), (new double[] { 0, 0.8, 0.6 }, new double[] { 1, 0, 0 }) })
+            {
+                var (ux, uy, uz) = Solid2Logic.UcsAxes(xa, ya);
+                var view = SolidLogic.Custom(uz);
+                var (right, up) = SolidLogic.ScreenAxes(view);
+                double t = Solid2Logic.PlanTwist(ux, right, up);
+                // turning the screen axes by the twist puts the UCS x on the screen right
+                double sx = SolidLogic.Dot(ux, right), sy = SolidLogic.Dot(ux, up);
+                Assert.Equal(1, Math.Cos(t) * sx - Math.Sin(t) * sy, 6);
+                Assert.Equal(0, Math.Sin(t) * sx + Math.Cos(t) * sy, 6);
+            }
+            var src = Root("plugin", "ClaudeCAD.Plugin", "Drawing", "Solid2Tools.cs");
+            Assert.Contains("Solid2Logic.PlanTwist(", src);
         }
     }
 }

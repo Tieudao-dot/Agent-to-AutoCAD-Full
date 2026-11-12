@@ -319,7 +319,7 @@ namespace ClaudeCAD.Plugin
                     var a = AddBox(tr, 1000, 1000, 1000, new double[] { 15000, 0, 0 });
                     var b = AddBox(tr, 1000, 1000, 1000, new double[] { 15500, 0, 0 });
                     hit = a.CheckInterference(b);
-                    overlap = DrawingService.OverlapVolume(a, b);
+                    overlap = DrawingService.OverlapVolume(a, b) ?? double.NaN;
                     tr.Commit();
                 }
                 if (!hit) return new SelfTestRules.Verdict(false, "CheckInterference báo không va chạm");

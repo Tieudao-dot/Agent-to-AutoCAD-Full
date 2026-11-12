@@ -194,6 +194,9 @@ Bổ sung sau Test & sửa đợt 2 ([`ban-giao/ve-3d-test-2.md`](ban-giao/ve-3d
 | K19 | ○ | Có cả AutoCAD 2022–2024 và 2025–2027 trên một máy: ghi macro "dựng hộp, liệt kê cạnh, bo cạnh số 3 R50" ở đời này, chạy ở đời kia | Macro chạy được, hộp mới bo đúng cạnh số 3 (không báo "solid has changed") | ☐ | ☐ | 3D2-19 |
 | K20 | ★ | 3 hộp A, B, C chồng nhau; "kiểm tra va chạm A, B với A, B, C" | Mỗi cặp nêu một lần (A–B, A–C, B–C), không có A–A, không lặp B–A | ☐ | ☐ | 3D2-20 |
 | K21 | ★ | "căn hộp bằng 3 cặp điểm: góc (0,0,0)→(5000,0,0), (1000,0,0)→(5000,1000,0), (0,800,0)→(4200,0,0)" | Hộp dời và xoay 90° quanh Z về quanh (5000,0,0); không có lỗi "internal check of the transform" | ☐ | ☐ | 3D2-21 |
+| K22 | ★ | Hai hộp 1000×1000×1000 chồng một phần và **chung một mặt phẳng**: hộp A tại (0,0,0), hộp B tại (500,0,0) (cùng đáy z = 0, cùng mặt y = 0); "kiểm tra va chạm A và B" | `interfere: true`, cặp A–B có trong danh sách (thể tích ≈ 0,5 m³, hoặc `volume: null` kèm ghi chú nếu AutoCAD không đo được); **không** báo "chỉ chạm" / không va chạm | ☐ | ☐ | 3D2-22 |
+| K23 | ○ | "đặt UCS có trục X theo hướng (1,1,0), trục Y theo (0,0,1), xem thẳng vào mặt phẳng đó (plan_view)" | Biểu tượng UCS: trục X nằm ngang chỉ sang phải màn hình, Y chỉ lên | ☐ | ☐ | 3D2-23 |
+| K24 | ○ | Dựng hộp, "liệt kê cạnh của hộp"; tay dời hộp một đoạn lẻ (vd. 12,345 mm) hoặc xoay 37° quanh Z; rồi "bo cạnh số 3 R50" (Claude dùng `topology_id` cũ) | Bo được ngay, đúng cạnh số 3, không báo "solid has changed" | ☐ | ☐ | 3D2-24 |
 
 Còn chỉ thấy trên AutoCAD thật: `FilletEdges` với setback 0, căn tiết diện của `sweep` (tâm tiết diện đặt vào đầu
 đường dẫn), U hoàn tác `set_ucs` (K10), quy ước mảng của `Matrix3d(double[])` (plugin tự kiểm, K21).

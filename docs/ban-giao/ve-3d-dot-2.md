@@ -126,6 +126,23 @@ test lõi + trợ lý, build net48 / net8 / net10, tài liệu (checklist phần
   (`BasePoint` = tâm tiết diện), thứ tự Brep giữa khối và bản sao (shell dựa vào đó; khác thì báo lỗi, không đoán),
   U hoàn tác `set_ucs`, `CreateLoftedSolid` với tiết diện tạm chưa vào bản vẽ.
 
+## Sửa sau kiểm tra độc lập (12/11/2026)
+
+Luồng chính giao 5 lỗi đợt 2 từ thread Kiểm tra độc lập (`docs/ban-giao/kiem-tra-doc-lap.md` trên nhánh
+`full/kiem-tra-doc-lap`). Nhánh `full/ve-3d-dot-2` gộp fast-forward `full/test-tong-the` @ `3f05da7` trước khi sửa. Không
+chạy CI (CI chung chạy sau khi thread Test tổng thể gộp các bản sửa).
+
+| Mã | Mức | Sửa |
+| --- | --- | --- |
+| KT-24 | vừa | `OverlapVolume` trả `double?`: phép giao hoặc đo thể tích lỗi → `null`, không còn 0. Cặp AutoCAD báo va chạm mà không đo được (hay gặp khi chung một mặt phẳng) vẫn là va chạm: có trong `clashes` với `volume: null` + ghi chú, `interfere: true`, đếm ở `unmeasured_clashes`. Chỉ thể tích đo được bằng 0 mới vào `touching_pairs` (`Solid2Logic.ClassifyInterference`) |
+| KT-25 | vừa | Lọc hộp bao trước (rẻ), rồi so tối đa `MaxInterferenceCandidates` = 2000 cặp qua lọc mỗi lần gọi; thừa thì `truncated: true` + `truncated_note` (câu cho Claude báo người dùng và chia nhóm nhỏ hơn). Chỉ đo thể tích chồng cho 200 va chạm đầu; sau đó vẫn đếm va chạm, ghi "not measured". Giới hạn 2000 cũng ở `SOLID2_LIMITS` của trợ lý (test so khớp) |
+| KT-13 | nhẹ | `OnSide` coi điểm thiếu là không nằm trên mặt bên; `Parallel` bỏ qua cạnh thiếu điểm. Cạnh / mặt Brep không đọc được điểm không còn gây `NullReference`, chỉ không khớp bộ lọc. 2 test của nhánh kiểm tra chép vào `Solid2Tests.cs` (không skip), xanh |
+| KT-26 | nhẹ | `set_ucs` `plan_view` với UCS tùy chọn / tên đã lưu: tính `ViewTwist` (`Solid2Logic.PlanTwist`) để trục X của UCS nằm ngang chỉ sang phải; theo quy ước PLAN (UCS quay 30° quanh Z → VIEWTWIST 330°). Preset giữ twist 0 như cũ (đã đúng). `ApplyView3d` nhận thêm `twist` (mặc định 0, các lệnh khác không đổi); khung zoom lấy đường chéo khi có twist. Thử tay: K23 |
+| KT-27 | nhẹ | `topology_id` không còn chứa vị trí tuyệt đối: băm loại cạnh, chiều dài, khoảng cách các điểm của cạnh tới trọng tâm các điểm cạnh, danh sách mặt kề, loại mặt; làm tròn theo 1e-5 kích thước khối. Dời (kể cả đoạn lẻ) hay xoay cả khối không đổi id; đổi hình thì đổi. Bỏ diện tích mặt (AutoCAD ước lượng số, có thể lệch giữa hai bản). **Hệ quả đã chấp nhận:** macro ghi trước bản sửa này có `topology_id` theo công thức cũ, phát lại sẽ báo "solid has changed" ở lệnh dùng số thứ tự cạnh (không bo nhầm); ghi lại macro là xong. Chưa có người dùng nên không làm đường chuyển đổi. Thử tay: K24 |
+
+Test: lõi **337/337** (sau khi gộp nhánh tích hợp; thêm 6 test KT-13 ×2, KT-24, KT-25, KT-26, KT-27), trợ lý **201/201**;
+build net48 / net8.0-windows / net10.0-windows 0 lỗi, 0 cảnh báo. Checklist phần K thêm K22 (KT-24), K23 (KT-26), K24 (KT-27).
+
 ## Tiến độ
 
 - [x] Lệnh plugin + nhãn 3D
