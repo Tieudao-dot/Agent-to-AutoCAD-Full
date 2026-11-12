@@ -186,7 +186,16 @@ namespace ClaudeCAD.Core.Tests
             Assert.Contains("Result := SaveLicense(Lic);", act);
             // plan.txt, or plan-new.txt when one exists (the plugin applies it with the "not older" rule, KT-43)
             Assert.Contains("SaveSignedLine('plan', Line)", Body(Iss, "function SavePlanLine(const Line: String): Boolean;"));
+            Assert.Contains("SaveSignedLine('status', Line)", Body(Iss, "function SaveStatusLine(const Line: String): Boolean;"));
             Assert.Contains("Target := Dir + '\\' + Name + '.txt';", Iss);
+            // … in the folder the plugin reads (Activation.Root), under the names it reads
+            var signed = Body(Iss, "function SaveSignedLine(const Name, Line: String): Boolean;");
+            Assert.Contains(@"Dir := ExpandConstant('{localappdata}\ClaudeCAD');", signed);
+            Assert.Contains("if FileExists(Target) then Target := Dir + '\\' + Name + '-new.txt';", signed);
+            var activation = Src("plugin", "ClaudeCAD.Plugin", "Sidecar", "Activation.cs");
+            Assert.Contains("Root => Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), \"ClaudeCAD\")", activation);
+            foreach (var f in new[] { "\"status.txt\"", "\"plan.txt\"", "\"status-new.txt\"", "\"plan-new.txt\"" })
+                Assert.Contains("Path.Combine(Root, " + f + ")", activation);
             // KT-08: an online activation keeps the plan line too
             Assert.Contains("Pl := JsonValue(Body, 'plan');", act);
             // the paste box keeps several lines (a one-line box keeps only the first line of a paste)
