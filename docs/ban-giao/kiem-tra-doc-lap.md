@@ -341,3 +341,40 @@ trong một vòng ngắn hoặc để sau khi thử thật.
 
 ~45 phút, tự soát diff (không dùng tác vụ con). Tốn nhất: đọc diff trợ lý / dispatcher / macro (~60 KB) và chạy thử probe mặt
 bằng. Không có số token chính xác.
+
+---
+
+## Lượt 3 (12/11/2026)
+
+*Soát nhanh vòng sửa 2: gộp `full/test-tong-the` @ `813ab45` vào nhánh này. Không chạy CI (CI 43267347630 đã xanh trên
+nhánh tích hợp, gồm UI test KT-41 và `Setup.exe`).*
+
+**Chạy:** lõi 367/367, trợ lý 216/216, build net48 / net8.0-windows / net10.0-windows xanh, 0 cảnh báo.
+
+| Mã | Trạng thái | Ghi chú |
+| --- | --- | --- |
+| KT-25 / KT-40 | Đã sửa đúng | Cặp quá giới hạn đo là "chưa xác nhận" (`unconfirmed_count` / `unconfirmed_pairs` / `unconfirmed_note`), không cộng vào `interfere` / `clash_count`; cặp đã đo mà chỉ chạm vẫn là `touching`. Mô tả lệnh cho Claude nói rõ "không phải va chạm, cũng chưa chắc an toàn" |
+| KT-41 | Đã sửa đúng | Ô key thẻ Kích hoạt nhiều dòng (`AcceptsReturn`, Enter gửi, Shift+Enter xuống dòng); thẻ 🔒 có ô "Dùng mã"; ⚙ ▸ Tài khoản AI có "Kiểm tra lại" và "Dán mã của chủ plugin". Cả 3 đều đi qua `Activation.ActivateAsync`, nên mỗi dòng vẫn được kiểm chữ ký **và đúng mã máy** (mã của máy khác bị từ chối); không ghi mã ra log hay toast; dòng gói vẫn theo luật C4. Máy chưa kích hoạt và luồng key có mạng không đổi; không đụng lệnh vẽ / hành vi 2D |
+| KT-42 | Đã chấp nhận | Gói 3D chèn block có sẵn vẫn hiện chữ mặc định; Claude không đặt / sửa được giá trị thuộc tính (có test + tài liệu) |
+
+### Lỗi mới
+
+**KT-43 · nhẹ · gói dịch vụ · `plugin/ClaudeCAD.Plugin/Sidecar/Activation.cs:290-296` (`SaveStatus`), lối vào mới ở thẻ 🔒 "Dùng mã"**
+- Tái hiện: máy từng được cấp mã miễn kiểm tra (`CCS1|…|offline|`) rồi được nối mạng; chủ plugin đổi máy sang `Disabled`,
+  máy hiện thẻ 🔒. Người dùng dán lại dòng `CCS1…offline` cũ vào ô "Dùng mã" mới của thẻ 🔒.
+- Sai: dòng trạng thái không có luật "không cũ hơn" như dòng gói (C4): dòng `offline` cũ hợp lệ mãi, ghi đè dòng
+  `disabled` mới hơn → máy mở khóa. Có mạng thì lần hỏi trạng thái sau (mở AutoCAD / ~6 giờ) khóa lại; chặn mạng tới máy chủ
+  kích hoạt thì giữ được lâu. Trước vòng 2 cũng làm được qua bộ cài (dán lại mã offline), nay chỉ cần một lần bấm trong khung
+  chat. Đúng với thiết kế "máy có mã miễn kiểm tra không khóa được từ xa", nên để mức nhẹ.
+- Sửa (cần chủ dự án đồng ý, cùng tinh thần C4): `SaveStatus` từ chối dòng `CCS1` cũ hơn dòng đang lưu khi dòng đang lưu là
+  `disabled`; hoặc ghi rõ trong `activation/README.md`: "đã cấp mã miễn kiểm tra cho máy nào thì không khóa hẳn được máy đó".
+- Test đề xuất: hàm lõi `LicenseLogic.AcceptStatus(incoming, current)` giống `AcceptPlan`, test ca `disabled` 20/11 rồi
+  `offline` 01/11 → từ chối.
+
+### Kết luận chung cho cả 3 lượt
+
+Qua 3 lượt kiểm tra độc lập, tớ tìm được 42 lỗi; 3 lỗi nặng trong số đó (máy offline bị khóa khi cài, cửa sát góc phòng bị
+khoét nhầm tường, dựng tầng 2 bị chặn kèm gợi ý xóa tầng 1). Tới nay 38 lỗi đã sửa đúng, 4 lỗi được chủ dự án / luồng chính
+chấp nhận giữ nguyên, không còn lỗi nặng hay vừa nào mở. Lượt cuối chỉ còn một điểm nhẹ mới (KT-43: mã miễn kiểm tra cũ mở lại
+được máy đã bị khóa), cần chủ dự án chọn chặn hay chỉ ghi vào tài liệu. Bản 2D vẫn chạy như cũ, mọi test và build đều xanh.
+Phần còn lại là thử trên AutoCAD thật theo `docs/checklist-tong-the.md` (có thêm mục M cho các điểm chỉ thử được trên máy thật).
