@@ -16,7 +16,7 @@ namespace ClaudeCAD.Plugin.Core
     }
 
     /// <summary>
-    /// Service plans per machine (2D / 3D / 2D + 3D), AutoCAD-free so it is unit-tested on CI. The owner picks the
+    /// Service plans per machine (2D / 3D / Full), AutoCAD-free so it is unit-tested on CI. The owner picks the
     /// plan in the "Gói" column of the device sheet; the activation service signs it ("CCF1|machine|plan|date|sig",
     /// see LicenseLogic.VerifyPlan) and the dispatcher refuses every tool outside the plan. The assistant only
     /// hides those tools to save tokens: the real gate is ToolDispatcher.
@@ -45,13 +45,13 @@ namespace ClaudeCAD.Plugin.Core
         public static bool Has2D(string plan) { var p = Normalize(plan); return p == Plan2D || p == PlanFull; }
         public static bool Has3D(string plan) { var p = Normalize(plan); return p == Plan3D || p == PlanFull; }
 
-        /// <summary>What the palette shows: "2D", "3D", "2D + 3D".</summary>
+        /// <summary>What the palette shows: "2D", "3D", "Full".</summary>
         public static string Label(string plan)
         {
             switch (Normalize(plan))
             {
                 case Plan3D: return "3D";
-                case PlanFull: return "2D + 3D";
+                case PlanFull: return "Full";
                 default: return "2D";
             }
         }
@@ -115,7 +115,7 @@ namespace ClaudeCAD.Plugin.Core
         public static string BlockedMessage(string tool, string plan, string contact)
         {
             var g = GroupOf(tool);
-            var need = g == ToolGroup.ThreeD ? "3D" : g == ToolGroup.TwoD ? "2D" : "2D + 3D";
+            var need = g == ToolGroup.ThreeD ? "3D" : g == ToolGroup.TwoD ? "2D" : "Full";
             return $"{tool}: this machine's plan is \"{Label(plan)}\" and this tool belongs to the {need} group, which the plan does not include. " +
                    "Do not try other tools to get the same result. Tell the user in Vietnamese that this machine uses the " +
                    $"\"{Label(plan)}\" plan and that the plugin owner can open the {need} group" +

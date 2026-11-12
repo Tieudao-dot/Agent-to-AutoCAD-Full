@@ -2575,7 +2575,7 @@ namespace ClaudeCAD.Plugin.UI
 
         // ---------------------------------------------------------------- account
 
-        /// <summary>Service plan of this machine ("2D", "3D", "2D + 3D"); null or empty hides it.</summary>
+        /// <summary>Service plan of this machine ("2D", "3D", "Full"); null or empty hides it.</summary>
         public void SetPlan(string label) => Ui(() =>
         {
             bool show = !string.IsNullOrWhiteSpace(label);

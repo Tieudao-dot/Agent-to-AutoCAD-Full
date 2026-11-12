@@ -467,7 +467,7 @@ describe('skills per chat', () => {
   });
 });
 
-describe('service plan (2D / 3D / 2D + 3D)', () => {
+describe('service plan (2D / 3D / Full)', () => {
   it('states the plan in the system prompt and restarts Claude (same conversation) when the plan changes', async () => {
     const texts: string[] = [];
     const starts: any[] = [];
@@ -496,11 +496,11 @@ describe('service plan (2D / 3D / 2D + 3D)', () => {
     await tick();
     assert.equal(starts.length, 1);
 
-    sent({ service_plan: '2d3d' }); // the owner opened 2D + 3D
+    sent({ service_plan: '2d3d' }); // the owner opened Full
     await tick();
     assert.equal(starts.length, 2);
     assert.equal(starts[1].resume, 's1');
-    assert.match(starts[1].systemPrompt, /service plan: 2D \+ 3D/);
+    assert.match(starts[1].systemPrompt, /service plan: Full/);
     assert.doesNotMatch(starts[1].systemPrompt, /Máy này dùng gói/);
     assert.doesNotMatch(texts.at(-1)!, /Gói của máy này/); // the full plan needs no line in every message
 

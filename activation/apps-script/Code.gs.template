@@ -9,7 +9,7 @@
  *   - "Disabled": máy bị khóa ở lần kiểm tra kế tiếp (plugin kiểm tra mỗi lần mở AutoCAD và ~6 giờ/lần;
  *     máy mất mạng dùng được tối đa 7 ngày kể từ lần kiểm tra cuối rồi tự khóa tới khi có mạng).
  *   - Xóa dòng = máy quay về "Chờ duyệt" ở lần kiểm tra kế tiếp.
- * Cột "Gói" chọn máy đó được dùng nhóm lệnh nào: "2D", "3D" hoặc "2D + 3D". Máy mới tự nhận GOI_MAC_DINH;
+ * Cột "Gói" chọn máy đó được dùng nhóm lệnh nào: "2D", "3D" hoặc "Full" (Full = 2D và 3D; ô gõ "2D + 3D" cũng hiểu là Full). Máy mới tự nhận GOI_MAC_DINH;
  * ô trống hoặc gõ sai cũng tính là GOI_MAC_DINH. Đổi gói có hiệu lực ở lần kiểm tra kế tiếp của máy đó.
  *
  * Bộ cài / plugin gọi web app này:
@@ -40,8 +40,8 @@ var MAY_THU_CONG = 'CC-0000-0000-0000';
 var SHEET_NAME = 'Thiết bị';
 var STATUS_VALUES = ['Chờ duyệt', 'Active', 'Disabled'];
 // Service plan of a machine: the "Gói" cell (column 10) → the code inside the signed CCF1 line.
-var PLAN_VALUES = ['2D', '3D', '2D + 3D'];
-var PLAN_CODES = { '2D': '2d', '3D': '3d', '2D+3D': '2d3d' };
+var PLAN_VALUES = ['2D', '3D', 'Full'];
+var PLAN_CODES = { '2D': '2d', '3D': '3d', 'FULL': '2d3d', '2D+3D': '2d3d' }; // keys: cell text without spaces, upper case
 var GOI_MAC_DINH = '2D'; // new machines, empty or mistyped cells
 var PLAN_COL = 10;
 var LOCKED_MSG = 'Máy này đã bị chủ plugin tạm khóa.';
@@ -223,7 +223,7 @@ function sendRequestMail(machine, device, user, from) {
     'ĐỒNG Ý CHO DÙNG (chọn 1 trong 2 cách):\n' +
     '  1. Mở Google Sheet "' + SHEET_NAME + '", tìm dòng có mã máy trên, đổi Trạng thái thành Active.\n' +
     '     Lần sau người đó mở AutoCAD là tự dùng được (hoặc bấm "Kiểm tra lại" để dùng ngay), không cần key.\n' +
-    '     Cùng dòng đó, cột "Gói" đang là ' + GOI_MAC_DINH + ': đổi thành 2D, 3D hoặc 2D + 3D nếu cần.\n' +
+    '     Cùng dòng đó, cột "Gói" đang là ' + GOI_MAC_DINH + ': đổi thành 2D, 3D hoặc Full nếu cần.\n' +
     '  2. Hoặc gửi KEY dưới đây qua Zalo cho người đó:\n' +
     'KEY: ' + key + '\n\n' +
     'Không đồng ý: bỏ qua email này (máy nằm ở "Chờ duyệt" và không dùng được), ' +
@@ -394,7 +394,7 @@ function kiemTra() {
   MailApp.sendEmail(EMAIL, '[ClaudeCAD] Máy chủ kích hoạt hoạt động',
     'Đã cài xong máy chủ kích hoạt + quản lý thiết bị ClaudeCAD.\n' +
     'Trang "' + SHEET_NAME + '" trong Google Sheet là nơi duyệt (Active) / khóa (Disabled) từng máy,\n' +
-    'và chọn gói (2D / 3D / 2D + 3D) cho từng máy ở cột "Gói".\n' +
+    'và chọn gói (2D / 3D / Full) cho từng máy ở cột "Gói".\n' +
     'Key thử cho máy thử ' + machine + ': ' + key + ' — máy thử này đang là Active trong Sheet, có thể xóa dòng đó.\n' +
     '(Email này chỉ để kiểm tra.)');
   Logger.log('OK — key thử ' + key + ', đã gửi email kiểm tra tới ' + EMAIL);

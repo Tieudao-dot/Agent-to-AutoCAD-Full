@@ -2,7 +2,7 @@
 
 > **Bản Agent to AutoCAD Full:** dùng máy chủ kích hoạt, Google Sheet và cặp khóa **riêng**, không chung với dự án
 > gốc. Các bước dựng: [`../docs/dung-may-chu-kich-hoat-full.md`](../docs/dung-may-chu-kich-hoat-full.md). Mẫu Apps
-> Script ở đây đã có cột **Gói** (2D / 3D / 2D + 3D), và plugin trên nhánh `full/goi-dich-vu` đã đọc gói và chặn lệnh
+> Script ở đây đã có cột **Gói** (2D / 3D / Full), và plugin trên nhánh `full/goi-dich-vu` đã đọc gói và chặn lệnh
 > ngoài gói (chưa phát hành, chưa thử trên AutoCAD thật).
 
 Mỗi máy muốn dùng ClaudeCAD cần được **chủ plugin cho phép**. Chủ plugin quản lý mọi máy trong một **Google Sheet "ClaudeCAD – Thiết bị"**: thấy máy nào đang dùng, duyệt máy mới (`Active`) hoặc ngưng cho dùng (`Disabled`) chỉ bằng cách đổi một ô. Key gửi qua Zalo vẫn dùng được làm đường dự phòng.
@@ -29,7 +29,7 @@ Mỗi dòng là một máy: **Mã máy · Thiết bị · User Windows · Ngày 
 | Ngưng cho dùng | Đổi thành `Disabled`. Máy đó bị khóa ở lần kiểm tra kế tiếp: khung chat hiện *"Máy này đã bị chủ plugin tạm khóa. Liên hệ Zalo owner: 0344644415"*; trợ lý dừng; key cũ cũng không kích hoạt lại được. |
 | Cho dùng lại | Đổi lại thành `Active`. Máy bấm **Kiểm tra lại** (hoặc đợi lần kiểm tra kế tiếp) là dùng tiếp ngay, không cần key mới. |
 | Xem máy nào còn dùng | Cột **Lần cuối dùng** (cập nhật mỗi lần máy kiểm tra, tối đa 30 phút/lần) và **Phiên bản**. |
-| Chọn nhóm lệnh máy được dùng | Đổi ô **Gói**: `2D`, `3D` hoặc `2D + 3D`. Máy mới tự nhận `2D`; ô trống hoặc gõ sai cũng tính là `2D`. Có hiệu lực ở lần kiểm tra kế tiếp của máy đó. |
+| Chọn nhóm lệnh máy được dùng | Đổi ô **Gói**: `2D`, `3D` hoặc `Full`. Máy mới tự nhận `2D`; ô trống hoặc gõ sai cũng tính là `2D`. Có hiệu lực ở lần kiểm tra kế tiếp của máy đó. |
 | Bỏ một máy khỏi danh sách | Xóa dòng — máy đó quay về "Chờ duyệt" ở lần kiểm tra kế tiếp (bị khóa cho tới khi duyệt lại). |
 
 Lưu ý:
@@ -85,7 +85,7 @@ Key vẫn riêng cho từng máy. Cài ngầm mà không có `/KEY=` thì plugin
   - `Core/Plans.cs` (`PlanLogic`) gắn nhãn Chung / 2D / 3D cho mọi lệnh. Lệnh chưa có nhãn chỉ mở cho gói `2d3d`;
     test lõi `PlanTests` đỏ khi một lệnh đăng ký trong `Drawing/*.cs` chưa có nhãn.
   - `LicenseLogic.VerifyPlan` kiểm chữ ký dòng `CCF1` và đúng máy; `EffectivePlan`: dòng gói cũ hơn dòng trạng thái thì
-    về gói mặc định (chặn việc giữ lại dòng `2D + 3D` cũ), máy có mã miễn kiểm tra giữ dòng gói được cấp.
+    về gói mặc định (chặn việc giữ lại dòng `Full` cũ), máy có mã miễn kiểm tra giữ dòng gói được cấp.
   - Lưu ở `%LocalAppData%\ClaudeCAD\plan.txt`. Bản build không có máy chủ kích hoạt: mọi lệnh, như trước.
   - `ToolDispatcher` từ chối lệnh ngoài gói với mã `NOT_IN_PLAN` (lệnh lẻ, từng lệnh trong `batch_execute`, macro).
   - Plugin gửi `context.service_plan` + `context.plan_tools` kèm mỗi tin nhắn; trợ lý chỉ nạp các lệnh đó, system prompt

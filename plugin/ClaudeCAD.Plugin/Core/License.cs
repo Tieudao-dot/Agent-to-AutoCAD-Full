@@ -224,7 +224,7 @@ namespace ClaudeCAD.Plugin.Core
 
         /// <summary>
         /// The plan this machine runs on. A signed plan line counts only when it is at least as new as the signed
-        /// status line next to it (both come in one answer of the service): keeping an old "2D + 3D" line while
+        /// status line next to it (both come in one answer of the service): keeping an old "Full" line while
         /// the status keeps refreshing — e.g. by making the plan file read-only — falls back to the default plan.
         /// A machine on the owner's no-network pass ("offline") keeps the plan line it was given.
         /// </summary>

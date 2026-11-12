@@ -15,7 +15,7 @@ export const ERROR_CODES = [
   'TOO_MANY_ENTITIES',
   'READ_ONLY', // the user turned on "Chỉ xem" for this drawing
   'UNKNOWN_TOOL',
-  'NOT_IN_PLAN', // the tool is outside this machine's service plan (2D / 3D / 2D + 3D)
+  'NOT_IN_PLAN', // the tool is outside this machine's service plan (2D / 3D / Full)
 ] as const;
 export type ErrorCode = (typeof ERROR_CODES)[number] | (string & {});
 
@@ -232,9 +232,9 @@ export interface UserContext {
 export const SERVICE_PLANS = ['2d', '3d', '2d3d'] as const;
 export type ServicePlan = (typeof SERVICE_PLANS)[number];
 
-/** "2D", "3D", "2D + 3D" — as the palette shows it. */
+/** "2D", "3D", "Full" — as the palette shows it. */
 export function servicePlanLabel(plan: ServicePlan): string {
-  return plan === '2d3d' ? '2D + 3D' : plan === '3d' ? '3D' : '2D';
+  return plan === '2d3d' ? 'Full' : plan === '3d' ? '3D' : '2D';
 }
 
 const TOOL_NAME_RX = /^[a-z][a-z0-9_]{0,63}$/;

@@ -57,7 +57,7 @@ Lệnh in ra 2 dòng `PublicModulus = "…"` và `PublicExponent = "…"`. Hai d
 4. Chọn hàm **`kiemTra`**, bấm ▶ **Chạy**. Google hỏi quyền: **Xem lại quyền** → chọn tài khoản → **Nâng cao** →
    **Đi tới … (không an toàn)** → **Cho phép**.
 5. Kết quả phải thấy:
-   - trang **"Thiết bị"** có 10 cột, cột cuối là **Gói** với danh sách chọn `2D` / `3D` / `2D + 3D`;
+   - trang **"Thiết bị"** có 10 cột, cột cuối là **Gói** với danh sách chọn `2D` / `3D` / `Full`;
    - một dòng máy thử `CC-1234-5678-9ABC`, Trạng thái `Active`, Gói `2D` (xóa được);
    - email "[ClaudeCAD] Máy chủ kích hoạt hoạt động".
 
@@ -81,7 +81,7 @@ Lệnh in ra 2 dòng `PublicModulus = "…"` và `PublicExponent = "…"`. Hai d
 
 ## Dùng cột Gói
 
-- Máy mới xin kích hoạt tự nhận gói **2D** (hằng `GOI_MAC_DINH` ở đầu `Code.gs`; đổi được, ví dụ `'2D + 3D'`).
+- Máy mới xin kích hoạt tự nhận gói **2D** (hằng `GOI_MAC_DINH` ở đầu `Code.gs`; đổi được, ví dụ `'Full'`).
 - Đổi ô **Gói** của một máy: có hiệu lực ở lần máy đó kiểm tra kế tiếp (mở AutoCAD, ~6 giờ một lần, hoặc bấm
   "Kiểm tra lại").
 - Ô trống hoặc gõ sai tính là gói mặc định, nên lỗi gõ không mở nhầm 3D.

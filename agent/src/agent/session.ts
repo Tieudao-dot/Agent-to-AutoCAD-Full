@@ -102,7 +102,7 @@ export class AgentSession {
   private lastSentSkills?: string[];
   /** Skills last sent per conversation: the "−" / "+" note survives a switch to another drawing and back. */
   private readonly skillsBySession = new Map<string, string[]>();
-  // service plan of this machine (2D / 3D / 2D + 3D) and its tools, from the palette (undefined = an older plugin:
+  // service plan of this machine (2D / 3D / Full) and its tools, from the palette (undefined = an older plugin:
   // every tool); the tool list is fixed when a Claude process starts, so a changed plan restarts it (resumed)
   private servicePlan?: ServicePlan;
   private planTools?: string[];

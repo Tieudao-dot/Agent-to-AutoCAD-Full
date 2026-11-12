@@ -344,19 +344,19 @@ describe('activation service (Apps Script)', () => {
     assert.match(r.plan, /^CCF1\|CC-1A2B-3C4D-5E6F\|2d\|\d{4}-\d{2}-\d{2}\|/);
     assert.ok(verify(r.plan, s.publicKey));
     // the owner picks another plan (letter case and spaces do not matter)
-    for (const [cell, code] of [['3D', '3d'], ['2D + 3D', '2d3d'], [' 2d+3d ', '2d3d'], ['3d', '3d'], ['2D', '2d']] as const) {
+    for (const [cell, code] of [['3D', '3d'], ['Full', '2d3d'], [' full ', '2d3d'], ['2D + 3D', '2d3d'], [' 2d+3d ', '2d3d'], ['3d', '3d'], ['2D', '2d']] as const) {
       row[9] = cell;
       r = s.get({ action: 'status', machine });
       assert.equal(r.plan.split('|')[2], code, cell);
       assert.ok(verify(r.plan, s.publicKey));
     }
     // empty or mistyped: never more than the default plan
-    for (const cell of ['', '4D', 'full', '2D, 3D']) {
+    for (const cell of ['', '4D', 'Fulll', '2D, 3D']) {
       row[9] = cell;
       assert.equal(s.get({ action: 'status', machine }).plan.split('|')[2], '2d', cell);
     }
     // a plan line of one machine is not valid for another, and the plan cannot be edited
-    row[9] = '2D + 3D';
+    row[9] = 'Full';
     r = s.get({ action: 'status', machine });
     const forged = r.plan.replace('|2d3d|', '|3d|');
     assert.equal(verify(forged, s.publicKey), false);

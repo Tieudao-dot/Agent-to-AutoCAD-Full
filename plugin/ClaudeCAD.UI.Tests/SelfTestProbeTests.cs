@@ -62,7 +62,7 @@ namespace ClaudeCAD.UI.Tests
                 hidden = c.ProbeForSelfTest();
             });
             Assert.Equal("", none.PlanBadge);
-            Assert.Equal("Gói: 2D + 3D", full.PlanBadge);
+            Assert.Equal("Gói: Full", full.PlanBadge);
             Assert.Equal("", hidden.PlanBadge);
         }
 

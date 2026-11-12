@@ -9,7 +9,7 @@ using Xunit;
 
 namespace ClaudeCAD.Core.Tests
 {
-    /// <summary>Service plans per machine (2D / 3D / 2D + 3D): signed plan line, effective plan, tool labels.</summary>
+    /// <summary>Service plans per machine (2D / 3D / Full): signed plan line, effective plan, tool labels.</summary>
     public class PlanTests
     {
         private const string Machine = "CC-1A2B-3C4D-5E6F";
@@ -135,7 +135,7 @@ namespace ClaudeCAD.Core.Tests
         [Fact]
         public void Effective_plan_falls_back_when_the_plan_line_is_older_than_the_status()
         {
-            // a kept old "2D + 3D" line (plan.txt made read-only) while status.txt keeps refreshing
+            // a kept old "Full" line (plan.txt made read-only) while status.txt keeps refreshing
             var old = Verify(Sign(Machine, "2d3d", "2026-11-01"));
             Assert.Equal(PlanLogic.DefaultPlan, LicenseLogic.EffectivePlan(old, Status("2026-11-12")));
         }
@@ -174,7 +174,7 @@ namespace ClaudeCAD.Core.Tests
             Assert.Equal(PlanLogic.DefaultPlan, PlanLogic.Normalize(null));
             Assert.Equal("2D", PlanLogic.Label("2d"));
             Assert.Equal("3D", PlanLogic.Label("3d"));
-            Assert.Equal("2D + 3D", PlanLogic.Label("2d3d"));
+            Assert.Equal("Full", PlanLogic.Label("2d3d"));
         }
 
         [Fact]

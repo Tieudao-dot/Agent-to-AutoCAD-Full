@@ -10,7 +10,7 @@
 - Hiện plugin có 89 lệnh, gần như toàn bộ là 2D. Điểm đã nhận tọa độ z nhưng **chưa có lệnh 3D nào**. Phải thêm ~25 lệnh
   mới, chia 3 đợt.
 - **Gói dịch vụ làm được, và dựa trên cơ chế có sẵn.**
-  - Thêm cột **"Gói"** vào trang "Thiết bị" trong Google Sheet, chọn `2D` / `3D` / `2D + 3D`.
+  - Thêm cột **"Gói"** vào trang "Thiết bị" trong Google Sheet, chọn `2D` / `3D` / `Full`.
   - Máy chủ ký số giá trị gói giống như cách đang ký trạng thái Active / Disabled.
   - Plugin chặn những lệnh không thuộc gói, chặn ngay tại chỗ đã dùng cho chế độ "Chỉ xem". Chỗ này cũng là nơi mọi lệnh,
     batch và macro phải đi qua.
@@ -88,7 +88,7 @@ Lệnh này dựa trên đợt 1 nên làm sau cùng.
 - **Skill mẫu "3D kiến trúc":** chiều cao tầng, dày sàn, layer khối (A-WALL-3D, A-SLAB-3D…). Skill mẫu "3D cơ khí" để
   sau, nếu cậu cần.
 
-## Phần 2 — Gói dịch vụ theo máy (2D / 3D / 2D + 3D)
+## Phần 2 — Gói dịch vụ theo máy (2D / 3D / Full)
 
 ### Cơ chế có sẵn
 
@@ -101,12 +101,12 @@ Lệnh này dựa trên đợt 1 nên làm sau cùng.
 
 | Phần | Việc |
 | --- | --- |
-| Google Sheet | Thêm cột **"Gói"** có ô chọn `2D` / `3D` / `2D + 3D`. Hàm `caiDat()` tự thêm cột vào trang có sẵn. Email "máy mới xin kích hoạt" ghi thêm dòng nhắc chọn gói |
+| Google Sheet | Thêm cột **"Gói"** có ô chọn `2D` / `3D` / `Full`. Hàm `caiDat()` tự thêm cột vào trang có sẵn. Email "máy mới xin kích hoạt" ghi thêm dòng nhắc chọn gói |
 | Máy chủ (Apps Script) | Trả thêm một dòng ký số mới `CCF1\|máy\|gói\|ngày\|chữ ký`. Dòng `CCS1` cũ giữ nguyên, nên máy cài bản cũ không bị ảnh hưởng |
 | Plugin (lõi) | • Đọc và kiểm chữ ký dòng gói, lưu cạnh `status.txt`, dùng chung luật 7 ngày.<br>• Máy chủ cũ chưa trả dòng gói thì dùng gói mặc định |
 | Plugin (chặn lệnh) | • Mỗi lệnh có một nhãn **Chung / 2D / 3D**.<br>• Trình điều phối lệnh từ chối lệnh ngoài gói với mã lỗi riêng.<br>• Đây cũng là chỗ đang chặn chế độ "Chỉ xem", và lệnh lẻ, `batch_execute` lẫn macro đều đi qua nên không lách được.<br>• Có test bắt buộc: lệnh nào chưa có nhãn thì CI đỏ |
 | Trợ lý (Node) | • Plugin gửi gói kèm mỗi tin nhắn, giống cờ "Chỉ xem".<br>• Trợ lý chỉ nạp những lệnh thuộc gói, nên Claude không thấy lệnh 3D trên máy gói 2D.<br>• System prompt nói rõ máy đang dùng gói nào, để khi người dùng xin việc ngoài gói, Claude trả lời "máy này dùng gói 2D, liên hệ chủ plugin để mở 3D" |
-| Giao diện | Header hoặc ⚙ hiện "Gói: 2D + 3D". Đổi gói thì có thông báo nhỏ "Gói đã đổi sang …" ở lượt kiểm tra kế tiếp |
+| Giao diện | Header hoặc ⚙ hiện "Gói: Full". Đổi gói thì có thông báo nhỏ "Gói đã đổi sang …" ở lượt kiểm tra kế tiếp |
 | Bộ cài | Không đổi. Trang kích hoạt vẫn chỉ cần key |
 
 ### Trạng thái (12/11/2026)
@@ -118,9 +118,11 @@ Lệnh này dựa trên đợt 1 nên làm sau cùng.
     (`NOT_IN_PLAN`, cả `batch_execute` và macro), test bắt buộc nhãn;
   - trợ lý: chỉ nạp lệnh của gói, system prompt và dòng ngữ cảnh nói rõ gói, đổi gói thì khởi động lại phiên (cùng chat);
   - giao diện: "Gói: …" trên thanh trên cùng và trong ⚙, toast "Gói đã đổi sang …".
+- **Đổi tên (12/11/2026):** gói "2D + 3D" gọi là **Full**. Mã trong dòng ký số vẫn là `2d3d`; ô Sheet gõ "2D + 3D"
+  vẫn được hiểu là Full.
 - **Còn chờ chốt:** gói mặc định cho máy mới, đang **tạm `2D`**.
 - Lệnh 3D mới phải thêm nhãn `ToolGroup.ThreeD` trong `Core/Plans.cs`; quên thì test lõi đỏ, và lệnh chỉ mở cho gói
-  `2D + 3D`.
+  `Full`.
 - Thử thật: phần I của [`checklist-thu-that.md`](checklist-thu-that.md).
 
 ### Chia lệnh theo gói (đề xuất A)

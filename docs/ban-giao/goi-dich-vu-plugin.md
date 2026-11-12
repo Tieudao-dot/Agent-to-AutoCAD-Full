@@ -1,4 +1,4 @@
-# Bàn giao: gói dịch vụ trong plugin (2D / 3D / 2D + 3D)
+# Bàn giao: gói dịch vụ trong plugin (2D / 3D / Full)
 
 *12/11/2026 · luồng chính bàn giao cho sub-thread "Gói dịch vụ".*
 
@@ -31,7 +31,7 @@
 - `plugin/ClaudeCAD.Plugin/Core/License.cs`:
   - `PlanCheck`, `PlanPrefix = "CCF1"`, `IsPlanText`, `VerifyPlan`;
   - `EffectivePlan(plan, status)`: dòng gói cũ hơn dòng trạng thái thì về gói mặc định. Việc này chặn trường hợp giữ
-    lại một dòng `2D + 3D` cũ (ví dụ đặt `plan.txt` chỉ đọc) trong khi trạng thái vẫn được làm mới. Máy dùng mã miễn
+    lại một dòng `Full` cũ (ví dụ đặt `plan.txt` chỉ đọc) trong khi trạng thái vẫn được làm mới. Máy dùng mã miễn
     kiểm tra (`offline`) giữ dòng gói được cấp;
   - `ParseResponse` trả thêm `plan`. **Đổi kiểu tuple:** kiểm tra lại `LicenseTests.cs` và mọi chỗ gọi.
 - `plugin/ClaudeCAD.Plugin/Core/ToolException.cs`: mã lỗi `NOT_IN_PLAN`.
@@ -73,7 +73,7 @@ tên trường). Khác với gợi ý ban đầu: ngữ cảnh gửi trợ lý d
    - Lưu ý: danh sách lệnh của trợ lý (`cadTool(b, '…'`) thiếu `capture_view` và `ping` so với plugin, vì hai lệnh
      này khai báo theo cách khác. Bộ lọc phải tính cả chúng.
 4. **Giao diện:**
-   - hiện "Gói: 2D + 3D" ở header hoặc trong ⚙;
+   - hiện "Gói: Full" ở header hoặc trong ⚙;
    - gói đổi sau một lượt kiểm tra: thông báo nhỏ "Gói đã đổi sang …" (`CheckDeviceStatus` trong
      `ChatController.cs`).
 5. **CI:** **1 lượt** `.github/workflows/build.yml`, workflow_dispatch, `release: "false"`, cho nhánh của sub-thread.
