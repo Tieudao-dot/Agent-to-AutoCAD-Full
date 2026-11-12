@@ -32,12 +32,18 @@ Người dùng đang chạy bản gốc v0.9.3 vẫn cập nhật từ repo gố
 
 ## 3. Trùng danh tính với bản gốc trên cùng một máy
 
-| Chỗ | Hiện trạng | Hệ quả |
+**Đã chốt 12/11/2026:** bản Full **thay thế bản gốc như nâng cấp, có cảnh báo**. Giữ danh tính kỹ thuật, chỉ đổi tên hiển
+thị thành "Agent to AutoCAD Full". Cách làm: [`ban-giao/test-tong-the.md`](ban-giao/test-tong-the.md); hướng dẫn người
+dùng: [`../bo-cai/README.md`](../bo-cai/README.md) mục *Nâng cấp từ ClaudeCAD bản gốc*.
+
+| Chỗ | Hiện trạng | Đã chốt |
 | --- | --- | --- |
-| `installer/ClaudeCAD.iss:33` | `AppId` giống bản gốc | Cài bản Full sẽ được Windows coi là nâng cấp bản gốc |
-| `installer/ClaudeCAD.iss:34-37, 43` | `AppName=ClaudeCAD`, thư mục `ApplicationPlugins\ClaudeCAD.bundle`, file `ClaudeCAD-Setup.exe` | Bản Full ghi đè bản gốc; không cài song song được |
-| `bundle/PackageContents.xml` | Tên gói và các lệnh `CLAUDECHAT…` | Trùng lệnh với bản gốc |
-| `%LocalAppData%\ClaudeCAD` (`UpdateService.cs`, nhật ký, giấy phép) | Chung thư mục trạng thái | Bản Full đọc giấy phép và bản cập nhật chờ cài của bản gốc |
+| `installer/ClaudeCAD.iss` `AppId` | Giống bản gốc | **Giữ**: Windows coi bản Full là nâng cấp bản gốc, một mục trong danh sách ứng dụng |
+| `installer/ClaudeCAD.iss` `AppName`, `AppVerName`, `UninstallDisplayName`, các trang | Trước là `ClaudeCAD` | **Đổi** thành "Agent to AutoCAD Full" (hằng `AppDisplayName`) |
+| Thư mục `ApplicationPlugins\ClaudeCAD.bundle`, file `ClaudeCAD-Setup.exe` | Giống bản gốc | **Giữ**: cài đè; không cài song song |
+| `bundle/PackageContents.xml` `ProductCode` / `UpgradeCode`, `AppName` của thành phần, lệnh `CLAUDECHAT…` | Giống bản gốc | **Giữ**. Chỉ đổi `Name`, `Description`, mô tả thành phần (phần hiển thị) |
+| `%LocalAppData%\ClaudeCAD`, `%AppData%\ClaudeCAD` | Chung thư mục trạng thái | **Giữ**: lịch sử chat, cài đặt, skill, macro còn nguyên. Giấy phép cũ không dùng được với khóa của bản Full: bộ cài hiện lại trang kích hoạt. Bản cập nhật bản gốc đã tải chờ cài (`updates\stage`) bị bộ cài bỏ |
+| `Contents\edition.json` (mới) | — | Dấu nhận diện bản Full (`bundle/edition.json`): bộ cài và plugin nhận ra bản Full mà không cần link cập nhật |
 
 ## 4. Liên hệ hiển thị cho người dùng
 
@@ -61,3 +67,4 @@ Dòng "Liên hệ Zalo owner: …" nằm ở: `activation/activation.json`, `act
    [`dung-may-chu-kich-hoat-full.md`](dung-may-chu-kich-hoat-full.md); URL và khóa công khai trong repo đổi sau khi dựng xong.
 2. Bản Full phát hành ở Releases của repo Full hay nơi khác.
 3. Bản Full thay thế bản gốc trên máy người dùng (giữ `AppId`, thư mục) hay cài song song (đổi tên, `AppId`, lệnh).
+   **Đã chốt 12/11/2026:** thay thế như nâng cấp, có cảnh báo (mục 3).

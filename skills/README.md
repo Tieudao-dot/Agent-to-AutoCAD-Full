@@ -63,9 +63,11 @@ Chọn một file tên `SKILL.md` thì plugin chép cả các file `.md/.txt/.cs
   mẫu 2D có dòng này.
 - Gói `Full` nạp mọi skill. Skill của cậu không có dòng này thì dùng ở mọi gói.
 
-Skill không nạp vẫn hiện trong thư viện, kể cả khi đoạn chat đã bấm **+**; Claude chỉ không thấy nó. Bộ cài không ghi
-đè skill đã có trên máy: máy đã cài bản cũ giữ `ve-kien-truc` / `ve-mep` / `ve-ha-tang` cũ **không có** dòng `plan: 2d`,
-nên các skill đó vẫn nạp ở gói 3D. Thêm tay dòng `plan: 2d` vào phần đầu file, hoặc xóa thư mục skill đó rồi cài lại để
-bộ cài chép bản mới.
+Skill không nạp vẫn hiện trong thư viện, kể cả khi đoạn chat đã bấm **+**; Claude chỉ không thấy nó.
+
+**Máy nâng cấp từ ClaudeCAD bản gốc:** bộ cài không ghi đè skill đã có trên máy, nên máy đó giữ `ve-kien-truc` / `ve-mep` /
+`ve-ha-tang` cũ **không có** dòng `plan: 2d`. Không cần sửa tay: ba tên skill mẫu này, khi thiếu dòng `plan`, vẫn được coi
+là `plan: 2d` (chốt 12/11/2026). Dòng `plan` trong file luôn được ưu tiên: muốn một skill mẫu nạp ở mọi gói thì ghi
+`plan: all`. Skill cậu tự viết (tên khác) không bị ảnh hưởng.
 
 Nên có mục **"Quy trình chuẩn bị"** nhắc Claude gọi `get_drawing_info` + `list_layers` trước, tạo layer/style còn thiếu theo bảng chuẩn, rồi mới vẽ. Xem `ve-kien-truc/SKILL.md` làm mẫu.

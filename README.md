@@ -4,8 +4,12 @@
 > **vẽ 3D** và **gói dịch vụ theo máy (2D / 3D / Full)**. Dự án độc lập với repo gốc. Bản 2D lúc tách được giữ
 > nguyên ở nhánh lưu trữ `luu-tru/2d-base`. Kế hoạch: [`docs/ke-hoach-3d-goi-dich-vu.md`](docs/ke-hoach-3d-goi-dich-vu.md).
 >
-> Tên plugin, lệnh và bộ cài trong code vẫn là `ClaudeCAD`. Link tải, nguồn cập nhật và máy chủ kích hoạt bên dưới
-> **còn trỏ về dự án gốc**, chưa đổi: xem [`docs/cho-tro-ve-repo-goc.md`](docs/cho-tro-ve-repo-goc.md).
+> Tên người dùng thấy là **Agent to AutoCAD Full** (bộ cài, danh sách ứng dụng của Windows, khung chat, ⚙, báo cáo tự
+> kiểm tra). Danh tính kỹ thuật vẫn là `ClaudeCAD` (mã cài đặt `AppId`, thư mục `ClaudeCAD.bundle`, `ProductCode` /
+> `UpgradeCode`, lệnh `CLAUDECHAT` / `CC`, file `ClaudeCAD-Setup.exe`, thư mục dữ liệu `ClaudeCAD`, tên trong code) để bản
+> Full cài đè bản gốc như nâng cấp (chốt 12/11/2026, xem [`bo-cai/README.md`](bo-cai/README.md)). Link tải, nguồn cập
+> nhật và máy chủ kích hoạt bên dưới **còn trỏ về dự án gốc**, chưa đổi: xem
+> [`docs/cho-tro-ve-repo-goc.md`](docs/cho-tro-ve-repo-goc.md).
 
 Plugin cho AutoCAD 2022 (bản full, Windows; từ phase 3 hỗ trợ cả 2023, 2024, 2025): chat tiếng Việt trong một palette, Claude **vẽ, đọc, sửa, xóa đối tượng trực tiếp trên bản vẽ đang mở**. Spec đầy đủ: [`docs/spec.md`](docs/spec.md). Tiến độ từng phase: [`docs/progress.md`](docs/progress.md).
 

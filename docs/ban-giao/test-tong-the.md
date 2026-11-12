@@ -44,10 +44,15 @@ Logic gói: **không sửa**. Không đổi `activation/activation.json`, `Licen
 
 ## Test và build
 
-- Lõi `dotnet test plugin/ClaudeCAD.Core.Tests`: **309/309** (304 + 5) ở lượt đầu; **322/322** sau 3 điểm đã chốt (+13).
-- Trợ lý `npm test`: **191/191** (185 + 6) ở lượt đầu; **199/199** (+8) sau 3 điểm đã chốt.
+- Lõi `dotnet test plugin/ClaudeCAD.Core.Tests`: **309/309** (304 + 5) ở lượt đầu; **322/322** sau 3 điểm đã chốt (+13);
+  **331/331** sau phần thay bản gốc (+9).
+- Trợ lý `npm test`: **191/191** (185 + 6) ở lượt đầu; **199/199** (+8) sau 3 điểm đã chốt; **201/201** (+2) sau phần thay
+  bản gốc.
 - Build Linux (.NET SDK 10, xóa `obj` / `bin` giữa các lần): net48, net8.0-windows, net10.0-windows: 0 lỗi, 0 cảnh báo.
 - CI Windows lượt đầu: run 43230375890 (`build.yml`, workflow_dispatch, `release: false`, commit `fa68791`) **xanh** (~10 phút, gồm UI test WPF, build 3 bản, Setup.exe).
+- `make-bundle` chạy thử trên Linux (DLL giả, `--skip-npm`): `Contents\edition.json` đúng, `PackageContents.xml` có tên
+  mới và phiên bản.
+- CI Windows sau phần thay bản gốc: CI3.
 - CI Windows sau 3 điểm đã chốt: run 43236499463 (`build.yml`, workflow_dispatch, `release: false`, commit `6e9193d`) **xanh** (~9 phút, gồm UI test WPF, build 3 bản, Setup.exe; các bước phát hành bỏ qua).
 
 ## Chủ dự án đã chốt (12/11/2026) và đã làm
@@ -89,8 +94,8 @@ Sau báo cáo đầu, chủ dự án chốt 3 điểm; làm trên cùng nhánh, 
   bảng layer mặt bằng, cách vẽ tường 220 / 110 (hai nét, đối xứng trục, đóng mép lỗ), ký hiệu cửa đi / cửa sổ, đường bao
   sàn và lỗ sàn, polyline có bề rộng, đường trục + `thickness`, cột không được đọc, ví dụ phòng 4 × 6 m chỉ bằng đường cơ
   bản. Không chép phần chữ / kích thước / dim style (có test).
-- **Lưu ý:** bộ cài không ghi đè skill đã có trên máy (`onlyifdoesntexist`). Máy đã cài bản cũ giữ 3 skill 2D cũ không
-  có `plan: 2d`, nên vẫn nạp ở gói 3D: thêm tay dòng đó hoặc xóa thư mục skill rồi cài lại (`skills/README.md`).
+- Bộ cài không ghi đè skill đã có trên máy (`onlyifdoesntexist`), nên máy nâng cấp từ bản gốc giữ 3 skill 2D cũ không có
+  `plan: 2d`. Đã xử lý ở mục "Thay bản gốc như nâng cấp" bên dưới: không phải sửa tay.
 - Test cũ đổi kỳ vọng (`plan3d.test.ts`): `skillPlan('ve-kien-truc')` từ `undefined` thành `'2d'`; gói 3D từ "nạp mọi
   skill" thành "chỉ `ve-3d-kien-truc`". Lý do: quyết định 12/11/2026 ở trên.
 
@@ -107,6 +112,57 @@ Sau báo cáo đầu, chủ dự án chốt 3 điểm; làm trên cùng nhánh, 
   `min_thickness` là nét in" chuyển vào mô tả tham số `min_thickness`. Công dụng từng lệnh, ví dụ, `area_min` cho mặt
   bằng lớn, `openings` cho khe hở chuyển sang skill `ve-3d-kien-truc` (mục 0, 3, 4, 5, 6).
 - Không làm đề xuất 2 (gộp 6 lệnh khối) và 4 (câu mô tả điểm dùng chung).
+
+## Thay bản gốc như nâng cấp (chốt 12/11/2026)
+
+Máy đang có ClaudeCAD bản gốc (chỉ 2D) thì bản Full thay nó như một bản nâng cấp, có cảnh báo. Khách giữ lịch sử chat,
+cài đặt, đăng nhập Claude; máy xin kích hoạt lại ở bảng thiết bị mới; sau đó đổi gói chỉ bằng ô Gói. Commit: `b6ad539`.
+
+1. **Giữ danh tính kỹ thuật** (không đổi): `AppId`, thư mục `ClaudeCAD.bundle`, `ProductCode` / `UpgradeCode` và `AppName`
+   của 3 thành phần trong `PackageContents.xml` (khóa registry của bộ nạp AutoCAD), lệnh `CLAUDECHAT` / `CC` /
+   `CLAUDECHAT*`, thư mục dữ liệu `%LocalAppData%` / `%AppData%\ClaudeCAD`, GUID của palette, tên file `ClaudeCAD-Setup.exe`
+   (giữ: link "bản mới nhất" cố định và nhận diện log cài đặt trong "Gửi báo cáo lỗi" dựa vào tên này).
+2. **Tên hiển thị "Agent to AutoCAD Full"** (`ProductInfo.DisplayName` trong `Core/Edition.cs`, `AppDisplayName` trong `.iss`):
+   - bộ cài: `AppName`, `AppVerName` (= tên + phiên bản), `UninstallDisplayName` (mục trong danh sách ứng dụng), tiêu đề,
+     trang Kích hoạt, trang cuối, các hộp thoại; `AppPublisher` giữ `ClaudeCAD`;
+   - `PackageContents.xml`: `Name`, `Description`, mô tả thành phần;
+   - plugin: tiêu đề palette, dòng đầu ⚙ "Agent to AutoCAD Full 0.9.4", thẻ "Bắt đầu với …", thẻ 🔒 Kích hoạt / tạm khóa,
+     icon và bong bóng ở thanh trạng thái, thông báo Windows, dòng lệnh khi nạp và khi tự kiểm tra, dòng đầu báo cáo
+     `CLAUDECHATSELFTEST` và "Gửi báo cáo lỗi". Câu trả lời của Claude và log kỹ thuật không đổi.
+3. **Dấu nhận diện bản:** `bundle/edition.json` = `{"edition": "full", "name": "Agent to AutoCAD Full", "repo":
+   "Tieudao-dot/Agent-to-AutoCAD-Full"}`, `make-bundle` chép vào `Contents\edition.json` (và từ chối nếu `edition` khác
+   `full`). Plugin đọc nó (`UpdateService.BundleEdition`) để ghi "edition full" vào dòng phiên bản của tự kiểm tra và báo
+   cáo lỗi.
+4. **Bộ cài nhận ra bản đang có** (`installer/ClaudeCAD.iss`, `DetectEdition`, `ExistingAppVersion`, `ConfirmReplaceOriginal`),
+   cùng luật với `EditionLogic` (C#, có test):
+   - `Contents\edition.json` có `"edition":"full"` → Full: nâng cấp bình thường, không hỏi;
+   - không có, `Contents\update-config.json` chứa `agent-to-autocad/` (repo gốc; v0.9.3 đã phát hành cũng có file này) →
+     bản gốc; chứa `agent-to-autocad-full/` → Full (bản Full build trước khi có `edition.json`);
+   - có thư mục bundle mà không đọc được hai file → không rõ, xử lý như bản gốc;
+   - so chữ thường, bỏ khoảng trắng / xuống dòng. Phiên bản đọc từ `AppVersion="…"` của `PackageContents.xml`;
+   - bản gốc / không rõ: hộp thoại tiếng Việt (bản gì, phiên bản, giữ gì, mất gì) với **OK / Cancel**. Bộ cài chỉ có
+     giao diện tiếng Anh nên nút là OK / Cancel; câu trong hộp thoại ghi rõ "Bấm OK để tiếp tục cài, Cancel để hủy".
+     Hủy thì bản gốc giữ nguyên;
+   - `/SILENT`, `/VERYSILENT`: không hỏi, cài tiếp, ghi log "existing install: …" và "silent install: replacing …".
+5. **Thêm hai việc để nâng cấp thật sự an toàn** (ngoài danh sách giao, cùng mục đích):
+   - giấy phép bản gốc (`license.txt`) không còn được tính là "đã kích hoạt" khi thay bản gốc / không rõ, nên bộ cài hiện
+     lại **trang Kích hoạt** và gửi yêu cầu tới máy chủ của bản Full ngay lúc cài. Không xóa file nào của giấy phép: key
+     mới ghi đè khi kích hoạt. Trước đây bộ cài chỉ xem tiền tố của file nên sẽ bỏ qua trang này, máy chỉ xin kích hoạt
+     khi mở khung chat;
+   - bản cập nhật bản gốc đã tải sẵn chờ cài (`%LocalAppData%\ClaudeCAD\updates\stage`, do `CLAUDECHATUPDATE` của bản
+     gốc tạo) bị xóa lúc bắt đầu cài (`ssInstall`, chỉ khi thay bản gốc / không rõ). Nếu để lại, script cập nhật của bản
+     gốc chép nó đè ngược lên bản Full lúc đóng AutoCAD. Đây là thư mục tạm của một bản tải về, không phải dữ liệu người dùng.
+6. **Skill mẫu 2D cũ không phải sửa tay:** trợ lý (`skills.ts`, `SAMPLE_2D_SKILLS`) coi `ve-kien-truc`, `ve-mep`,
+   `ve-ha-tang` thiếu dòng `plan` là `plan: 2d`. Dòng `plan` trong file luôn thắng (`plan: all` = mọi gói); skill tên khác
+   (người dùng tự viết) giữ nguyên "mọi gói". Chọn theo tên vì skill mẫu là file người dùng được sửa: so nội dung sẽ sai
+   ngay khi họ sửa. Danh sách khớp `SkillStore.BuiltinNames` của plugin (có test).
+7. **Test:** `EditionTests.cs` (9: luật nhận diện full / gốc / không rõ, phiên bản từ `PackageContents.xml`, tên và phiên
+   bản, danh tính kỹ thuật không đổi, tên hiển thị ở bộ cài / `PackageContents` / palette / ⚙ / self-test / báo cáo lỗi,
+   bộ cài dùng đúng dấu và thứ tự của `EditionLogic`, cài ngầm không hỏi, trang kích hoạt hiện lại, bỏ bản cập nhật chờ);
+   trợ lý +2 (skill mẫu cũ thiếu dòng `plan` ở 3 gói, `plan: all` / `plan: 3d` thắng, danh sách khớp skill có `plan: 2d` và
+   `SkillStore.BuiltinNames`). Bộ cài `.iss` chỉ biên dịch được trên Windows: CI là lần biên dịch đầu tiên (biên dịch thử
+   trên máy cloud bằng Inno Setup tải từ npm bị chế độ Auto chặn vì là mã từ ngoài).
+8. **Thử tay:** I6 trong `docs/checklist-thu-that.md`, T5 trong `docs/checklist-tong-the.md`.
 
 ## Số token theo gói
 
@@ -147,8 +203,8 @@ dấu góc vát (J11), dấu `ShellBody` (K17), thứ tự ma trận `align` (K2
 3. **Bộ cài thử** build sau bước 1, chủ dự án thử theo `docs/checklist-tong-the.md`.
 4. **Secret CI** của repo Full (chủ dự án tự cài); hiện bước phát hành của CI bị chặn.
 5. **Merge `main`**: cần chủ dự án đồng ý rõ ràng (merge `main` có phiên bản mới là CI tự phát hành).
-6. **Các chỗ trỏ về dự án gốc** trong `docs/cho-tro-ve-repo-goc.md`: nguồn cập nhật / Releases, `AppId` và thư mục bộ
-   cài (thay thế hay cài song song bản gốc), số Zalo liên hệ, link tải trong `README.md` / `bo-cai/README.md`.
+6. **Các chỗ trỏ về dự án gốc** trong `docs/cho-tro-ve-repo-goc.md`: nguồn cập nhật / Releases, số Zalo liên hệ, link
+   tải trong `README.md` / `bo-cai/README.md`. (`AppId` và thư mục bộ cài: đã chốt 12/11/2026, bản Full thay bản gốc.)
 7. Đề xuất giảm token 2 và 4 (tùy chọn, chưa chốt).
 
 ## Tiến độ
@@ -159,3 +215,5 @@ dấu góc vát (J11), dấu `ShellBody` (K17), thứ tự ma trận `align` (K2
 - [x] CI Windows (1 lượt, xanh: run 43230375890)
 - [x] 3 điểm chủ dự án chốt 12/11/2026: phá khối 3D qua thẻ, skill 2D không nạp ở gói 3D, giảm token (commit `41e4b37`)
 - [x] CI Windows sau 3 điểm (1 lượt, xanh: run 43236499463)
+- [x] Thay bản gốc như nâng cấp (chốt 12/11/2026): tên hiển thị, `edition.json`, bộ cài nhận ra bản gốc, skill mẫu cũ (commit `b6ad539`)
+- [ ] CI Windows sau phần thay bản gốc (1 lượt)

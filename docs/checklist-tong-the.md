@@ -1,7 +1,7 @@
 # Checklist tổng: thử bản Full trên AutoCAD (gói dịch vụ + 3D đợt 1, 2, 3)
 
-*12/11/2026 · thread "Test tổng thể", nhánh `full/test-tong-the`. Một lượt đủ ~90 phút; lượt rút gọn (phần 0–5)
-~50 phút. Chi tiết từng mục (bước, kết quả đúng đầy đủ): [`checklist-thu-that.md`](checklist-thu-that.md) phần I, J, K,
+*12/11/2026 · thread "Test tổng thể", nhánh `full/test-tong-the`. Một lượt đủ ~100 phút; lượt rút gọn (phần 0–5)
+~60 phút. Chi tiết từng mục (bước, kết quả đúng đầy đủ): [`checklist-thu-that.md`](checklist-thu-that.md) phần I, J, K,
 L. File này chỉ xếp thứ tự và ghi phần cần nhìn kỹ.*
 
 Bản dùng thử AutoCAD của cậu hết khoảng **10/12/2026**: làm phần 0–5 trước.
@@ -16,6 +16,8 @@ Bản dùng thử AutoCAD của cậu hết khoảng **10/12/2026**: làm phần
    thử** từ nhánh này. Bộ cài CI hiện có trỏ máy chủ của bản gốc: chỉ để kiểm build, **đừng cài thử bản đó**.
 
 Cần thêm: máy Windows có AutoCAD bản đầy đủ (không phải LT), tài khoản Claude, chủ plugin mở sẵn Sheet "Thiết bị" mới.
+Cho mục T5 (cài đè lên bản gốc): một máy đang dùng ClaudeCAD bản gốc v0.9.3 đã kích hoạt, có vài cuộc chat. Làm T5
+**trước** khi cài bản Full lên máy đó bằng cách khác.
 
 ## Cách ghi kết quả và báo lỗi
 
@@ -35,7 +37,7 @@ Cần thêm: máy Windows có AutoCAD bản đầy đủ (không phải LT), tà
 | Phần | Việc | Thời gian | Vì sao làm lúc này |
 | --- | --- | --- | --- |
 | 0 | Tự kiểm tra | ~3 phút | Một lệnh chạy hết 7 bước 3D của 3 đợt nối tiếp: hỏng ở đây thì các phần sau khó đọc |
-| 1 | Gói dịch vụ (I1–I5 + T1–T4) | ~12 phút | Gói sai thì máy được / bị chặn sai lệnh: quan trọng nhất |
+| 1 | Gói dịch vụ (I1–I6 + T1–T5) | ~20 phút | Gói sai thì máy được / bị chặn sai lệnh; khách đang dùng bản gốc chuyển sang bản Full bằng cài đè: quan trọng nhất |
 | 2 | Nét phía sau, hình chiếu (L9, L11) | ~6 phút | `GenerateSectionGeometry` chưa kiểm được ngoài AutoCAD |
 | 3 | 3D đợt 1 sau sửa (J10–J15) | ~8 phút | Hướng nêm, góc vát, macro, AutoCAD không phải tiếng Anh |
 | 4 | 3D đợt 2 sau sửa (K17–K21) | ~8 phút | Làm rỗng, đường tạm, macro theo số cạnh, căn khối |
@@ -43,7 +45,7 @@ Cần thêm: máy Windows có AutoCAD bản đầy đủ (không phải LT), tà
 | 6 | Một lượt dùng lệnh của cả 3 đợt (X1–X4) | ~10 phút | Hoàn tác U, thẻ xác nhận (cả khi phá khối 3D), "Chỉ xem" khi trộn đợt |
 | 7 | Phần còn lại: J1–J9, K1–K16, L1–L8, L10, L12–L16 | ~35 phút | Đã có từ lúc viết từng đợt |
 
-Phần 0–5 là lượt rút gọn (~50 phút). Mục ○ trong `checklist-thu-that.md` bỏ được khi ít thời gian.
+Phần 0–5 là lượt rút gọn (~60 phút). Mục ○ trong `checklist-thu-that.md` bỏ được khi ít thời gian.
 
 ### 0. Tự kiểm tra (~3 phút)
 
@@ -63,8 +65,9 @@ cuộc chat; `plan.txt` chỉ đọc). Thêm 3 mục rà chéo:
 | --- | --- | --- |
 | T1 | Gói `3D`: "vẽ mặt bằng phòng 4x6 m tường 220 có ghi kích thước" | Claude vẽ được tường bằng đường cơ bản hoặc nói dựng 3D được; **không** gọi offset / kích thước / chữ; nói rõ máy dùng gói 3D, chưa có kích thước, liên hệ chủ plugin |
 | T2 | Ở gói Full lưu macro lượt J2 (tường + cửa, trừ khối); đổi máy về `2D`, Kiểm tra lại, chạy macro đó | Lệnh 3D trong macro báo lỗi ngoài gói (NOT_IN_PLAN), bản vẽ không có khối mới, AutoCAD không treo |
-| T3 | Một đoạn chat dùng cả 4 skill mẫu (bấm **+**). Gói `2D`: gửi một tin, xem log (`CLAUDECHATLOG`) dòng "skills loaded"; đổi sang `3D`, gửi tiếp; đổi sang `Full`, gửi tiếp | 2D: `ve-kien-truc`, `ve-mep`, `ve-ha-tang`, **không** có `ve-3d-kien-truc`. 3D: **chỉ** `ve-3d-kien-truc` (3 skill 2D không nạp; cả 4 vẫn hiện trong thư viện). Full: cả 4. Cuộc chat cũ vẫn còn sau mỗi lần đổi. Máy từng cài bản cũ mà 3D vẫn nạp skill 2D: xem `skills/README.md` (skill cũ chưa có dòng `plan: 2d`) |
+| T3 | Một đoạn chat dùng cả 4 skill mẫu (bấm **+**). Gói `2D`: gửi một tin, xem log (`CLAUDECHATLOG`) dòng "skills loaded"; đổi sang `3D`, gửi tiếp; đổi sang `Full`, gửi tiếp | 2D: `ve-kien-truc`, `ve-mep`, `ve-ha-tang`, **không** có `ve-3d-kien-truc`. 3D: **chỉ** `ve-3d-kien-truc` (3 skill 2D không nạp; cả 4 vẫn hiện trong thư viện). Full: cả 4. Cuộc chat cũ vẫn còn sau mỗi lần đổi. Cả trên máy nâng cấp từ bản gốc (skill cũ không có dòng `plan: 2d`): gói 3D vẫn không nạp 3 skill 2D; có nạp là lỗi |
 | T4 | Gói `Full`: một cuộc chat có dựng 3D (vd. J2); đổi máy về `2D`, Kiểm tra lại, gửi tiếp trong **cùng** cuộc chat "đếm số khối 3D trong bản vẽ" | Claude trả lời bình thường trong cuộc chat cũ (không lỗi kết nối, không mất lịch sử); không dựng / sửa khối |
+| T5 | **Cài đè lên máy đang có ClaudeCAD bản gốc** (I6 trong `checklist-thu-that.md`, cần một máy có bản gốc v0.9.3). (a) Chạy bộ cài, đọc hộp thoại, bấm **Cancel**. (b) Chạy lại, bấm **OK**, đi hết trang Kích hoạt. (c) Mở AutoCAD, chủ plugin duyệt máy ở bảng thiết bị mới, chọn gói `3D`, **Kiểm tra lại**; rồi đổi ô Gói sang `Full`, **Kiểm tra lại**. (d) Nếu được: thử lại trên một máy bản gốc khác bằng `ClaudeCAD-Setup.exe /VERYSILENT` | (a) Bản gốc giữ nguyên, AutoCAD vẫn dùng bản gốc. (b) Hộp thoại ghi đúng "bản gốc, chỉ 2D" + phiên bản; trang Kích hoạt hiện lại; cài xong không lỗi. (c) Khung chat tên **Agent to AutoCAD Full**, cuộc chat cũ còn, đăng nhập Claude còn; sau duyệt hiện "Gói: 3D", đổi ô Gói thì thành "Gói: Full" mà không cài lại; máy gói 3D không nạp 3 skill mẫu 2D cũ (log "skills loaded"). (d) Không hỏi gì; log cài đặt (`%TEMP%\Setup Log …`) có dòng "existing install: original …" và "silent install: replacing …". Lỗi: gửi log cài đặt + ảnh hộp thoại |
 
 ### 2. Nét phía sau và hình chiếu (L9, L11, ~6 phút)
 

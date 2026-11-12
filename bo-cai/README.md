@@ -20,7 +20,7 @@ Trang [phát hành](https://github.com/Tieudao-dot/Agent-to-Autocad/releases/lat
 
 1. Tải `ClaudeCAD-Setup.exe` ở link trên.
 2. Chạy file. Nếu Windows hiện "Windows protected your PC" → **More info → Run anyway** (bộ cài chưa ký số). Không cần quyền admin, không cần cài Node.js hay Claude Code. Nên đóng AutoCAD trước khi cài.
-3. **Kích hoạt:** bộ cài hiện **mã máy** và dòng *"Liên hệ Zalo owner: 0344644415"*; yêu cầu được gửi tự động cho chủ plugin (email + một dòng **Chờ duyệt** trong bảng thiết bị của chủ plugin). Hai cách: **(a)** chờ chủ plugin duyệt — bấm **Next** cài tiếp không cần key, sau khi được duyệt mở AutoCAD là tự dùng được (hoặc bấm **Kiểm tra lại** trong khung chat để dùng ngay); **(b)** nhận **key** qua Zalo, dán vào ô **Key kích hoạt** rồi bấm **Next**. Máy đã kích hoạt rồi (cài đè, cập nhật) thì không hỏi lại.
+3. **Kích hoạt:** bộ cài hiện **mã máy** và dòng *"Liên hệ Zalo owner: 0344644415"*; yêu cầu được gửi tự động cho chủ plugin (email + một dòng **Chờ duyệt** trong bảng thiết bị của chủ plugin). Hai cách: **(a)** chờ chủ plugin duyệt — bấm **Next** cài tiếp không cần key, sau khi được duyệt mở AutoCAD là tự dùng được (hoặc bấm **Kiểm tra lại** trong khung chat để dùng ngay); **(b)** nhận **key** qua Zalo, dán vào ô **Key kích hoạt** rồi bấm **Next**. Máy đã kích hoạt rồi (cài đè, cập nhật) thì không hỏi lại, trừ máy đang có **ClaudeCAD bản gốc** (xem mục *Nâng cấp từ ClaudeCAD bản gốc*).
 4. Trang cuối bộ cài: giữ ô **Đăng nhập Claude ngay** rồi bấm **Finish** → trình duyệt mở trang cấp quyền, bấm **đồng ý** bằng tài khoản Claude Pro/Max (một cửa sổ đen hiện lên và tự đóng khi xong). Không cần mở AutoCAD. Máy đã đăng nhập sẵn thì ô này không hiện. Sau đó mở AutoCAD 2022–2025 là dùng được (2026 và 2027: đang làm, chưa phát hành) (nếu bỏ qua bước này, lần đầu mở AutoCAD plugin tự mở trang đăng nhập).
 
 Sau khi cài: gõ `CLAUDECHATSELFTEST` để tự kiểm tra (báo cáo ✓/✗ mở trong Notepad). Mở khung chat: `CLAUDECHAT`, `CC` hoặc **Ctrl+Shift+Space**.
@@ -30,9 +30,43 @@ Sau khi cài: gõ `CLAUDECHATSELFTEST` để tự kiểm tra (báo cáo ✓/✗ 
 - Khung chat tự kiểm tra bản mới mỗi ngày và báo trong chat. Gõ `CLAUDECHATUPDATE` để tải; bản mới được cài khi đóng AutoCAD.
 - Hoặc tải lại `ClaudeCAD-Setup.exe` ở link trên và chạy đè. Skill cậu đã thêm/sửa, macro, mẫu lệnh, lịch sử chat đều được giữ nguyên.
 
+## Nâng cấp từ ClaudeCAD bản gốc
+
+*Chốt 12/11/2026.* Bản **Agent to AutoCAD Full** thay ClaudeCAD bản gốc (chỉ 2D) như một bản nâng cấp. Hai bản dùng chung
+danh tính kỹ thuật (mã cài đặt, thư mục `ClaudeCAD.bundle`, lệnh `CLAUDECHAT` / `CC`, thư mục dữ liệu `ClaudeCAD`), nên
+cài đè là xong, không gỡ bản cũ trước.
+
+1. Đóng AutoCAD, chạy `ClaudeCAD-Setup.exe` của bản Full (tên file giữ nguyên).
+2. Bộ cài tự nhận ra bản đang có. Máy đang có bản gốc thì hiện hộp thoại: *"Máy này đang có ClaudeCAD (bản gốc, chỉ 2D),
+   phiên bản …. Cài Agent to AutoCAD Full sẽ thay bản này. Lịch sử chat, cài đặt và đăng nhập Claude được giữ. Key cũ
+   không dùng được: máy sẽ xin kích hoạt lại…"*. Bấm **OK** để cài tiếp, **Cancel** để thôi (bản gốc giữ nguyên). Nút
+   hiện bằng tiếng Anh vì bộ cài chỉ có giao diện tiếng Anh.
+3. Trang **Kích hoạt** hiện lại (dù máy đã có key của bản gốc), mã máy giữ như cũ. Yêu cầu tự gửi tới máy chủ của bản
+   Full; chủ plugin duyệt máy ở bảng thiết bị mới, hoặc gửi key mới.
+4. Chủ plugin chọn gói cho máy ở ô **Gói** (2D / 3D / Full; mặc định 2D). Sau đó đổi gói chỉ cần sửa ô Gói: máy nhận ở lần
+   kiểm tra kế tiếp (mở AutoCAD, ~6 giờ/lần, hoặc bấm **Kiểm tra lại**), không cài lại.
+
+| Giữ nguyên | Mất / đổi |
+| --- | --- |
+| Lịch sử chat, cài đặt ⚙, đăng nhập Claude (hoặc API key), skill đã thêm / sửa, macro, mẫu lệnh `/`, phiên bản DWG, ghi chú dự án | Key và trạng thái kích hoạt của bản gốc: không dùng được với máy chủ bản Full, máy xin kích hoạt lại |
+| Lệnh `CLAUDECHAT`, `CC`, `CLAUDECHATSELFTEST`… | Tên hiển thị thành **Agent to AutoCAD Full** (danh sách ứng dụng của Windows chỉ còn một mục này, khung chat, ⚙) |
+| | Bản cập nhật của bản gốc đã tải sẵn chờ cài (nếu có) bị bỏ, để nó không cài ngược lại lúc đóng AutoCAD |
+
+- **Skill mẫu 2D cũ** (`ve-kien-truc`, `ve-mep`, `ve-ha-tang`): bộ cài không ghi đè skill đã có trên máy, nên máy nâng
+  cấp giữ bản cũ của 3 skill này (không có dòng `plan: 2d`). Không cần sửa tay: trợ lý vẫn coi chúng là skill 2D, máy gói
+  3D không nạp. Muốn một skill mẫu nạp ở mọi gói thì thêm dòng `plan: all` vào phần đầu của nó.
+- **Cài ngầm** (`/VERYSILENT`, `/SILENT`): không hỏi, cài đè luôn và ghi vào log cài đặt (`%TEMP%\Setup Log …txt`) hai
+  dòng *"existing install: original 0.9.3 …"* và *"silent install: replacing …"*. Thêm `/KEY=` (key của máy chủ bản Full)
+  để kích hoạt ngay.
+- Bộ cài nhận ra bản đang có từ file trong thư mục `ClaudeCAD.bundle`: `Contents\edition.json` (`"edition": "full"`: bản Full,
+  cài đè bình thường không hỏi); không có file đó mà `Contents\update-config.json` trỏ repo gốc `Agent-to-Autocad/`: bản
+  gốc; không đọc được cả hai: coi như bản gốc (vẫn hỏi).
+- **Lưu ý trước khi có máy chủ kích hoạt riêng:** bộ cài build từ nhánh hiện còn trỏ máy chủ kích hoạt của bản gốc. Đừng
+  cài thử lên máy khách cho tới khi luồng chính gắn URL + khóa công khai của bản Full.
+
 ## Cài cho nhiều máy
 
-- Cài ngầm, không hỏi gì: `ClaudeCAD-Setup.exe /VERYSILENT /KEY=XXXX-XXXX-XXXX-XXXX` (key của đúng máy đó; mỗi máy vẫn cần bấm **Đăng nhập Claude** một lần).
+- Cài ngầm, không hỏi gì: `ClaudeCAD-Setup.exe /VERYSILENT /KEY=XXXX-XXXX-XXXX-XXXX` (key của đúng máy đó; mỗi máy vẫn cần bấm **Đăng nhập Claude** một lần). Máy đang có bản gốc cũng không bị hỏi: bộ cài cài đè và ghi log (mục *Nâng cấp từ ClaudeCAD bản gốc*).
 - Hoặc bằng PowerShell: giải nén `ClaudeCAD-<version>.zip`, đặt `install.ps1` cạnh thư mục `ClaudeCAD.bundle`, chạy `powershell -ExecutionPolicy Bypass -File install.ps1`.
 
 ## Duyệt và quản lý thiết bị (chủ plugin)
@@ -75,7 +109,7 @@ Windows **Settings → Apps → ClaudeCAD for AutoCAD → Uninstall** (hoặc `i
 
 | Phiên bản | Nội dung chính |
 | --- | --- |
-| Full · Test tổng thể *(nhánh `full/test-tong-the`, chưa phát hành)* | Rà chéo gói dịch vụ × 3 đợt 3D: máy gói 3D không còn được Claude gợi ý dùng lệnh 2D không có trong gói (offset, kích thước, kiểu chữ); thêm test tự động cho macro, chặn theo gói, thẻ xác nhận của mọi lệnh 3D. Theo chốt 12/11/2026: **phá (explode) khối 3D có từ trước luôn hỏi xác nhận** (khối vừa dựng trong lượt và đối tượng 2D giữ như cũ); máy gói 3D không nạp 3 skill mẫu 2D (`ve-kien-truc`, `ve-mep`, `ve-ha-tang`), skill `ve-3d-kien-truc` có sẵn quy ước mặt bằng mà lệnh dựng 3D đọc; lệnh dựng khối gọn hơn (khối lấy màu theo layer, đổi màu sau bằng lệnh đổi thuộc tính), bớt ~7 % token ở gói 3D. Checklist thử tay một lượt: [`docs/checklist-tong-the.md`](../docs/checklist-tong-the.md). |
+| Full · Test tổng thể *(nhánh `full/test-tong-the`, chưa phát hành)* | Rà chéo gói dịch vụ × 3 đợt 3D: máy gói 3D không còn được Claude gợi ý dùng lệnh 2D không có trong gói (offset, kích thước, kiểu chữ); thêm test tự động cho macro, chặn theo gói, thẻ xác nhận của mọi lệnh 3D. Theo chốt 12/11/2026: **phá (explode) khối 3D có từ trước luôn hỏi xác nhận** (khối vừa dựng trong lượt và đối tượng 2D giữ như cũ); máy gói 3D không nạp 3 skill mẫu 2D (`ve-kien-truc`, `ve-mep`, `ve-ha-tang`), skill `ve-3d-kien-truc` có sẵn quy ước mặt bằng mà lệnh dựng 3D đọc; lệnh dựng khối gọn hơn (khối lấy màu theo layer, đổi màu sau bằng lệnh đổi thuộc tính), bớt ~7 % token ở gói 3D. **Thay ClaudeCAD bản gốc như nâng cấp** (chốt 12/11/2026): tên hiển thị **Agent to AutoCAD Full**, cài đè giữ lịch sử chat, cài đặt, đăng nhập Claude; bộ cài nhận ra bản gốc và hỏi trước (cài ngầm thì không hỏi, ghi log), máy xin kích hoạt lại; skill mẫu 2D cũ không phải sửa. Checklist thử tay một lượt: [`docs/checklist-tong-the.md`](../docs/checklist-tong-the.md). |
 | Full · 3D đợt 2 *(nhánh `full/ve-3d-dot-2`, chưa phát hành)* | **Thêm lệnh 3D (máy gói 3D hoặc Full):** quét tiết diện theo đường dẫn (sweep: ống, tay vịn, gờ chỉ) và loft qua nhiều tiết diện (móng vuông lên cột tròn…); cắt khối bằng mặt phẳng (giữ một hoặc cả hai nửa); bo tròn / vát cạnh khối (chọn theo số thứ tự cạnh hoặc "cạnh đứng", "cạnh mặt trên"…); làm rỗng khối thành vỏ có mặt hở (bể, hộp); xoay quanh trục bất kỳ, đối xứng qua mặt phẳng, căn theo 1–3 cặp điểm; đặt / trả UCS (mặt phẳng làm việc của người dùng; Claude vẫn tính tọa độ theo WCS); kiểm tra va chạm giữa các khối (không đổi bản vẽ). Cắt / bo / vát / làm rỗng khối đã có từ trước luôn hỏi xác nhận. AutoCAD từ chối hình (bán kính quá lớn, quét tự cắt…) thì Claude báo rõ, bản vẽ không đổi. `CLAUDECHATSELFTEST` có thêm 3 bước (bo cạnh, cắt đôi, va chạm). Đổi UCS bị chặn khi "Chỉ xem". |
 | Full · 3D đợt 3 *(nhánh `full/ve-3d-dot-3`, chưa phát hành)* | **Dựng 3D từ mặt bằng và bản vẽ 2D từ mô hình (máy gói 3D hoặc Full):** "dựng 3D mặt bằng này, tường cao 3,3 m" → Claude đọc tường (hai nét song song trên `A-WALL`, hoặc đường tim + chiều dày, polyline có bề rộng), cửa đi / cửa sổ (`A-DOOR`, `A-WIND`, block `CUA-DI-*` / `CUA-SO-*`) và sàn (đường bao kín trên `A-SLAB`), dựng tường có lỗ cửa (lanh tô, bậu) trên `A-WALL-3D` và sàn trên `A-SLAB-3D`. Claude chạy thử trước, báo phần không hiểu (tường cong, block, nét đơn… kèm handle) và hỏi cậu về khe hở không có ký hiệu cửa; không đoán. Nét 2D của cậu chỉ được đọc, không bị sửa. Dựng lại cùng mặt bằng thì Claude báo và hỏi, không tạo trùng. **Mặt cắt** (đường bao + hatch, có thể kèm nét phía sau) và **mặt đứng / hình chiếu** vẽ thành nét 2D cạnh mô hình, layer riêng `A-SECT`, `A-SECT-PAT`, `A-SECT-BACK`, `A-ELEV`. Skill mẫu mới `ve-3d-kien-truc` (chiều cao tầng, dày sàn, cao cửa, layer khối, quy trình tự kiểm) — máy gói 2D không nạp skill này dù có trong thư viện. `CLAUDECHATSELFTEST` có thêm 2 bước (dựng phòng có cửa, cắt ngang). |
 | Full · Test & sửa 3D đợt 3 *(nhánh `full/ve-3d-test-3`, chưa phát hành)* | Sửa lỗi dựng 3D từ mặt bằng: chạy thử giờ báo đủ phần bị bỏ qua và khối của lần dựng trước; khoảng trống giữa hai tường song song (hộp kỹ thuật, khe lún) không còn bị dựng thành tường; polyline có bề rộng làm nét in được đọc như nét mặt tường (không thành tường mỏng); tường đổi dày và góc L hai tường khác dày không còn lồi khối; cửa sổ vẽ bằng nét trên layer tường được báo thay vì mất im; cửa chỉ định ở góc / quá đầu tường bị từ chối có lý do; sàn vẽ trùng chỉ dựng một; dựng lại mặt bằng chỉ có sàn cũng được báo trùng. Mặt cắt: khối AutoCAD không cắt được được nêu tên. |
