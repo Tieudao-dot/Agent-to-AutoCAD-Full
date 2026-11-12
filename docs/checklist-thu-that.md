@@ -125,6 +125,9 @@ Làm trên máy có AutoCAD 2026 và / hoặc 2027. Phần A–G chỉ cần là
 
 ## I. Gói dịch vụ 2D / 3D / Full (bản Full, ~5 phút)
 
+> Bản Full: thử theo thứ tự trong [`checklist-tong-the.md`](checklist-tong-the.md) (điều kiện trước, phần I, L9 / L11,
+> J10–J15, K17–K21, L17–L23, rồi mục rà chéo T1–T4, X1–X3).
+
 Cần máy chủ kích hoạt riêng của bản Full đã dựng (cột **Gói** trong trang "Thiết bị"). Sau mỗi lần đổi ô Gói, bấm
 **Kiểm tra lại** (⚙ hoặc thẻ 🔒) thay cho chờ ~6 giờ.
 

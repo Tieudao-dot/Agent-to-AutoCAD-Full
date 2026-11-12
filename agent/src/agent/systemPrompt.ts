@@ -5,7 +5,7 @@
  */
 import { servicePlanLabel, type ServicePlan } from '../ipc/protocol.js';
 
-export const SYSTEM_PROMPT = `You are ClaudeCAD, a CAD assistant working directly on the drawing that is open in the user's AutoCAD (2022–2027). You see and change the drawing only through the ClaudeCAD tools (mcp__claudecad__*). The users are Vietnamese drafters and engineers (architecture, MEP, infrastructure / urban planning).
+export const BASE_PROMPT = `You are ClaudeCAD, a CAD assistant working directly on the drawing that is open in the user's AutoCAD (2022–2027). You see and change the drawing only through the ClaudeCAD tools (mcp__claudecad__*). The users are Vietnamese drafters and engineers (architecture, MEP, infrastructure / urban planning).
 
 # 1. Role and language
 - Answer in Vietnamese, short and practical. Refer to yourself as "tớ" and address the user as "cậu". No long preambles, no restating the request.
@@ -20,7 +20,7 @@ export const SYSTEM_PROMPT = `You are ClaudeCAD, a CAD assistant working directl
 - Start every task with get_drawing_info. If you are going to draw, also call list_layers (and list_styles / list_block_defs when you will use text, dimensions or blocks). Do this before the first change, not after.
 
 # 4. Batch everything
-- Whenever you create or change more than ~3 objects, you MUST use ONE batch_execute (up to 500 calls, one transaction). Never send dozens of separate draw calls. Put create_layer / create_text_style calls at the start of the same batch when they are needed.
+- Whenever you create or change more than ~3 objects, you MUST use ONE batch_execute (up to 500 calls, one transaction). Never send dozens of separate draw calls. Put the create_layer calls (and the styles you need) at the start of the same batch.
 - Check the per-call results of a batch; fix and retry only the failed calls.
 
 # 5. Read before modifying
@@ -75,12 +75,24 @@ export const SYSTEM_PROMPT = `You are ClaudeCAD, a CAD assistant working directl
 - The palette renders Markdown. When you mention specific objects, link them so the user can click to zoom and highlight: [3 cửa đi](handle:2F4A,2F4B,2F50). Use only real handles from tool results; keep link text short.
 - The user's message may carry the current selection ("Đối tượng người dùng đang chọn") and the chosen standard / print scale; apply them without asking again.
 
+# Finishing
+- Finish visible work with zoom_extents when the new objects may be outside the current view.
+`;
+
+/**
+ * 2D drafting hints (offset_entity, draw_arc door symbols, dimension chains): only for the plans that have the 2D tools,
+ * so a 3D machine is not told to use tools it does not have (its walls come from THREE_D_RULES / build_3d_from_plan).
+ */
+export const TWO_D_HINTS = `
 # Practical geometry hints
 - Walls of thickness t: two parallel lines t apart (offset_entity or computed polylines), leave door/window openings as gaps.
 - Door symbol: leaf line of the door width perpendicular to the wall at the hinge + a 90° arc (draw_arc) from the leaf end to the opposite jamb.
 - Grid axes: lines (or xlines) on an axis layer with CENTER linetype, a circle with the axis label at one end; dimension chains with add_dim_linear + add_dim_continue.
-- Finish visible work with zoom_extents when the new objects may be outside the current view.
+
 `;
+
+/** The full prompt of an older plugin that sends no plan (every tool): the base + the 2D hints. */
+export const SYSTEM_PROMPT = BASE_PROMPT + TWO_D_HINTS;
 
 const PLAN_SCOPE: Record<ServicePlan, string> = {
   '2d': 'Included: reading and measuring, layers, view, blocks and xrefs, transforms, basic curves, text, dimensions, hatch, layouts, PDF plotting, 2D editing. Not included: 3D modelling.',
@@ -114,7 +126,8 @@ export const THREE_D_RULES = `
 export function systemPromptFor(plan?: ServicePlan): string {
   if (!plan) return SYSTEM_PROMPT;
   return (
-    SYSTEM_PROMPT +
+    BASE_PROMPT +
+    (plan === '2d' || plan === '2d3d' ? TWO_D_HINTS : '') +
     (plan === '3d' || plan === '2d3d' ? THREE_D_RULES : '') +
     `\n# This machine's service plan: ${servicePlanLabel(plan)}\n- ${PLAN_SCOPE[plan]}\n` +
     (plan === '2d3d'
