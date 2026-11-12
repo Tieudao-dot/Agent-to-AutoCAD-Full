@@ -495,6 +495,20 @@ namespace ClaudeCAD.Plugin.Core
         public static string ClassifyInterference(double? overlap) =>
             !overlap.HasValue || double.IsNaN(overlap.Value) ? "clash_unmeasured" : overlap.Value <= 1e-6 ? "touching" : "clash";
 
+        /// <summary>
+        /// KT-40: what a pair CheckInterference flagged counts as. tried = its overlap volume was measured (the first
+        /// MaxInterferencePairs flagged pairs). Not tried → "unconfirmed": it may only touch, so it is neither a clash
+        /// (interfere stays false for it) nor reported as safe. Tried → ClassifyInterference (KT-24).
+        /// </summary>
+        public static string InterferenceKind(bool tried, double? overlap) => tried ? ClassifyInterference(overlap) : "unconfirmed";
+
+        /// <summary>interfere is true only for confirmed overlaps and for pairs whose measuring failed (KT-24), never for unconfirmed ones.</summary>
+        public static bool Interferes(IEnumerable<string> kinds) => kinds.Any(k => k == "clash" || k == "clash_unmeasured");
+
+        public static string InterferenceUnconfirmedNote(int n) =>
+            $"{n} more pair(s) touch or may overlap but were not measured (only the first {MaxInterferencePairs} flagged pairs are measured per call), " +
+            "so they are neither confirmed clashes nor confirmed safe. Tell the user this in Vietnamese, and check a smaller list (unconfirmed_pairs, or handles against other_handles) to measure them.";
+
         public static string InterferenceTruncatedNote(int candidates, int checkedPairs) =>
             $"Only the first {checkedPairs} of {candidates} pairs whose bounding boxes touch were checked (limit {MaxInterferenceCandidates} per call), " +
             "so there may be more clashes. Tell the user, and check smaller groups (e.g. one storey, or handles against other_handles) to cover the rest.";

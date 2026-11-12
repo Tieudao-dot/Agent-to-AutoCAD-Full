@@ -200,6 +200,7 @@ Bổ sung sau Test & sửa đợt 2 ([`ban-giao/ve-3d-test-2.md`](ban-giao/ve-3d
 | K22 | ★ | Hai hộp 1000×1000×1000 chồng một phần và **chung một mặt phẳng**: hộp A tại (0,0,0), hộp B tại (500,0,0) (cùng đáy z = 0, cùng mặt y = 0); "kiểm tra va chạm A và B" | `interfere: true`, cặp A–B có trong danh sách (thể tích ≈ 0,5 m³, hoặc `volume: null` kèm ghi chú nếu AutoCAD không đo được); **không** báo "chỉ chạm" / không va chạm | ☐ | ☐ | 3D2-22 |
 | K23 | ○ | "đặt UCS có trục X theo hướng (1,1,0), trục Y theo (0,0,1), xem thẳng vào mặt phẳng đó (plan_view)" | Biểu tượng UCS: trục X nằm ngang chỉ sang phải màn hình, Y chỉ lên | ☐ | ☐ | 3D2-23 |
 | K24 | ○ | Dựng hộp, "liệt kê cạnh của hộp"; tay dời hộp một đoạn lẻ (vd. 12,345 mm) hoặc xoay 37° quanh Z; rồi "bo cạnh số 3 R50" (Claude dùng `topology_id` cũ) | Bo được ngay, đúng cạnh số 3, không báo "solid has changed" | ☐ | ☐ | 3D2-24 |
+| K25 | ○ | Mô hình nhiều tường chạm nhau ở góc (vd. 30 tường quanh nhiều phòng, chỉ chạm, không chồng), cộng 1 dầm xuyên qua một tường; "kiểm tra va chạm tất cả" | Chỉ cặp dầm–tường là va chạm; các cặp tường chạm nhau là "chạm" hoặc "chưa xác nhận" (Claude nói rõ, gợi ý kiểm nhóm nhỏ hơn), **không** bị báo là va chạm | ☐ | ☐ | 3D2-25 |
 
 Còn chỉ thấy trên AutoCAD thật: `FilletEdges` với setback 0, căn tiết diện của `sweep` (tâm tiết diện đặt vào đầu
 đường dẫn), U hoàn tác `set_ucs` (K10), quy ước mảng của `Matrix3d(double[])` (plugin tự kiểm, K21).
