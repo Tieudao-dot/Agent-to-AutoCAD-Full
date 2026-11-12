@@ -76,6 +76,9 @@ Mở dự án Apps Script (từ bảng tính: Tiện ích mở rộng → Apps S
     cùng ngày không đè được dòng `disabled`. Báo người dùng: "Mã này … cũ hơn trạng thái máy đang có; liên hệ chủ plugin
     để nhận mã mới". Muốn cho máy dùng lại: đổi `Active` (máy có mạng) hoặc cấp mã miễn kiểm tra **mới** (ngày sau ngày
     khóa). Trả lời trực tiếp của máy chủ vẫn được khóa / mở trong cùng một ngày.
+  - ⚠️ **Khóa máy (`Disabled`) rồi cấp lại mã không cần mạng trong cùng ngày** thì máy từ chối mã mới. Ngày tính theo
+    giờ UTC: ngày mới bắt đầu lúc 7h sáng giờ Việt Nam. Đợi sang ngày rồi chạy lại `taoKeyThuCong`, hoặc khi máy có mạng
+    thì đổi ô Trạng thái trong Sheet về `Active` rồi bấm **Kiểm tra lại**.
   - Bộ cài không kiểm được chữ ký, nên khi máy đã có `status.txt` / `plan.txt` nó ghi dòng mới vào `status-new.txt` /
     `plan-new.txt`; plugin áp dụng hai file này theo cùng luật rồi xóa.
   - Máy offline **chưa từng nhận** dòng `disabled` thì vẫn không khóa từ xa được (đúng thiết kế mã miễn kiểm tra).

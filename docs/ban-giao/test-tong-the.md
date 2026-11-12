@@ -268,9 +268,12 @@ vẫn kiểm đúng ý, và thêm câu kiểm thư mục `{localappdata}\ClaudeC
 
 ### Tổng cả 3 lượt kiểm tra độc lập
 
-**43 mã** (3 nặng, 9 vừa, 31 nhẹ): **39 đã sửa** (gồm KT-25, sửa đủ nhờ KT-40), **4 chấp nhận** (KT-05, KT-27, KT-30 phần
-layer, KT-42), **0 chưa sửa**. KT-43 sửa sau lượt 3, chưa có lượt kiểm tra độc lập soát lại. Ba lỗi nặng (KT-01 dán mã
-offline ở bộ cài, KT-11 cửa sát góc, KT-14 dựng tầng 2) đã khỏi, có test tự động.
+**Lượt 4** (12/11/2026): KT-43 sửa đúng, không có lỗi mới.
+
+**Tổng kết cuối: 43 lỗi** (3 nặng, 9 vừa, 31 nhẹ): **39 đã sửa đúng** (gồm KT-25, sửa đủ nhờ KT-40), **4 được chấp nhận**
+(KT-05, KT-27, KT-30 phần layer, KT-42), **0 lỗi còn mở**. Ba lỗi nặng (KT-01 dán mã offline ở bộ cài, KT-11 cửa sát góc,
+KT-14 dựng tầng 2) đã khỏi, có test tự động. Hệ quả của KT-43 cho chủ dự án (khóa máy rồi cấp lại mã không cần mạng trong
+cùng ngày UTC thì máy từ chối mã mới) ghi trong `activation/README.md`.
 
 Test sau gộp vòng 3: lõi 369/369, trợ lý 215/215, build net48 / net8.0-windows / net10.0-windows và project UI test 0 lỗi,
 0 cảnh báo. CI run `43272295317` (1 lượt): **xanh**, cả `Setup.exe` với phần `.iss` mới của KT-43.
@@ -346,3 +349,4 @@ thẻ 🔒 và ⚙ (M10–M12; UI test chỉ dán được khi máy CI có clipb
 - [x] CI chung vòng 2 (1 lượt, xanh: run 43267347630 trên `e8b4ede`, ~10 phút; UI test WPF gồm `KT41_code_boxes_take_every_line_of_the_offline_email` xanh, `Setup.exe` xanh; bước phát hành bỏ qua)
 - [x] Vòng 3: gộp KT-43 (`fc7654d`), test `EditionTests.KT01` kiểm thêm thư mục / tên file; lõi 369/369, trợ lý 215/215, build 3 bản
 - [x] CI chung vòng 3 (1 lượt, xanh: run 43272295317 trên `0c789ef`, ~10 phút; `Setup.exe` biên dịch được `.iss` mới của KT-43, UI test WPF xanh; bước phát hành bỏ qua)
+- [x] Lượt 4 kiểm tra độc lập: KT-43 sửa đúng, không lỗi mới. Tổng kết 43 lỗi: 39 đã sửa đúng, 4 chấp nhận, 0 còn mở. Tài liệu cuối (`activation/README.md`: hệ quả KT-43), không chạy CI
