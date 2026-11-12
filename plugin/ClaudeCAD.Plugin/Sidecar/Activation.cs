@@ -408,7 +408,9 @@ namespace ClaudeCAD.Plugin.Sidecar
                     if (license == null)
                         return IsActivated && DeviceAllowed
                             ? (true, "Đã lưu mã miễn kiểm tra cho máy này.")
-                            : (false, "Đã lưu dòng CCS1, còn thiếu dòng giấy phép CCL1| — dán cả hai dòng trong email của chủ plugin.");
+                            : IsActivated
+                                ? (false, "Đã lưu dòng CCS1 nhưng máy chưa dùng được: " + BlockedMessage)
+                                : (false, "Đã lưu dòng CCS1, còn thiếu dòng giấy phép CCL1| — dán đủ các dòng trong email của chủ plugin.");
                 }
                 if (license == null) return (false, "Thiếu dòng giấy phép CCL1| trong mã dán vào.");
             }

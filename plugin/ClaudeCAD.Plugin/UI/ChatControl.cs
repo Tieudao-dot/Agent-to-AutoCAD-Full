@@ -89,6 +89,11 @@ namespace ClaudeCAD.Plugin.UI
         public event Action ActivationRequestRequested;
         public event Action<string> ActivationKeySubmitted;
         public event Action ActivationCheckRequested; // "Kiểm tra lại": ask the owner's device list again
+        /// <summary>
+        /// KT-41: codes pasted on the 🔒 card or in the "Dán mã của chủ plugin" card (⚙) of a machine that has a licence:
+        /// the CCS1 / CCF1 lines of the owner's no-network email, or all three lines. Same handling as a key.
+        /// </summary>
+        public event Action<string> OfflineCodeSubmitted;
         /// <summary>"sk-ant-…AbCd" of the saved key, or null (shown in the API key editor).</summary>
         public Func<string> ApiKeyMask;
         /// <summary>Layer / block / style names of the active drawing for "@" (called on the UI thread).</summary>
@@ -125,6 +130,8 @@ namespace ClaudeCAD.Plugin.UI
         private TextBlock _accountStatus;
         /// <summary>"Gói 2D" in the top bar and "Gói dịch vụ của máy này: …" in ⚙ (hidden for a build without plans).</summary>
         private TextBlock _planBadge, _planLine;
+        /// <summary>"Kiểm tra lại" / "Dán mã của chủ plugin" under the plan line in ⚙ (KT-41).</summary>
+        private WrapPanel _planButtons;
         private Category _accountCat;
         private Border _apiKeyPanel;
         private PasswordBox _apiKeyBox;
@@ -825,6 +832,11 @@ namespace ClaudeCAD.Plugin.UI
                 into.Children.Add(b);
                 return b;
             }
+            // KT-41: shown with the plan line (activated machine): ask the device list now, or paste the owner's codes
+            _planButtons = new WrapPanel { Margin = new Thickness(0, 4, 0, 0), Visibility = Visibility.Collapsed };
+            Act(_planButtons, "Kiểm tra lại", "Hỏi lại chủ plugin ngay (trạng thái máy, gói) thay cho chờ lượt tự kiểm tra ~6 giờ/lần", () => ActivationCheckRequested?.Invoke());
+            Act(_planButtons, "Dán mã của chủ plugin", "Máy không có mạng: dán dòng gói / mã miễn kiểm tra chủ plugin gửi qua email", () => AddCodePasteCard());
+            account.Children.Add(_planButtons);
             Act(accButtons, "Đăng nhập Claude", "Đăng nhập tài khoản Claude Pro/Max trên trình duyệt (dùng Claude Code có sẵn trong plugin)", () => LoginRequested?.Invoke());
             Act(accButtons, "Đổi tài khoản", "Đăng xuất tài khoản hiện tại rồi đăng nhập tài khoản Claude khác", () => SwitchAccountRequested?.Invoke());
             Act(accButtons, "Đăng xuất", "Đăng xuất tài khoản Claude trên máy này (cả Claude Code nếu có)", () => LogoutRequested?.Invoke());
@@ -2600,6 +2612,7 @@ namespace ClaudeCAD.Plugin.UI
                 _planLine.Text = show ? "Gói dịch vụ của máy này: " + label : "";
                 _planLine.Visibility = vis;
             }
+            if (_planButtons != null) _planButtons.Visibility = vis;
         });
 
         public void SetAccountStatus(string text) => Ui(() =>
@@ -2817,6 +2830,122 @@ namespace ClaudeCAD.Plugin.UI
 
         // ---------------------------------------------------------------- card: activation (v0.9.4)
 
+        /// <summary>
+        /// KT-41 (12/11/2026): a box for what the owner sends — a key, or the no-network email of up to three lines (CCL1 /
+        /// CCS1 / CCF1). Several lines: a paste keeps every line (a one-line WPF box may keep only the first). Enter submits,
+        /// Shift+Enter adds a line.
+        /// </summary>
+        private TextBox CodeBox(string tip)
+        {
+            var box = new TextBox
+            {
+                Padding = new Thickness(3, 2, 3, 2),
+                FontFamily = new FontFamily("Consolas"),
+                AcceptsReturn = true,
+                TextWrapping = TextWrapping.Wrap,
+                MaxHeight = 96,
+                VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
+                ToolTip = tip,
+            };
+            Theme.Ref(box, BackgroundProperty, Theme.InputBg);
+            Theme.Ref(box, ForegroundProperty, Theme.Fg);
+            Theme.Ref(box, BorderBrushProperty, Theme.Border);
+            return box;
+        }
+
+        /// <summary>Enter (without Shift) in a code box submits; handled before the box would add a line.</summary>
+        private static void SubmitOnEnter(TextBox box, Action submit) =>
+            box.PreviewKeyDown += (s, e) =>
+            {
+                if (e.Key == Key.Enter && (Keyboard.Modifiers & ModifierKeys.Shift) == 0) { e.Handled = true; submit(); }
+            };
+
+        /// <summary>
+        /// Hint + code box + "Dùng mã" for a machine that has a licence (🔒 card, ⚙ "Dán mã của chủ plugin"); the text goes
+        /// to OfflineCodeSubmitted, the answer to <paramref name="status"/> (SetCodeStatus).
+        /// </summary>
+        private void AddCodeRow(StackPanel stack, TextBlock status, string hint)
+        {
+            var h = MutedText(hint);
+            h.TextWrapping = TextWrapping.Wrap;
+            h.TextTrimming = TextTrimming.None;
+            h.FontSize = 11;
+            h.Margin = new Thickness(0, 4, 0, 0);
+            stack.Children.Add(h);
+            var row = new DockPanel { Margin = new Thickness(0, 4, 0, 4), LastChildFill = true };
+            var use = new Button { Content = "Dùng mã", ToolTip = "Kiểm tra mã cho máy này rồi lưu (không cần mạng)", Padding = new Thickness(12, 2, 12, 2), Margin = new Thickness(6, 0, 0, 0), VerticalAlignment = VerticalAlignment.Top, FontWeight = FontWeights.SemiBold };
+            DockPanel.SetDock(use, Dock.Right);
+            row.Children.Add(use);
+            var box = CodeBox("Mã không cần mạng của chủ plugin: dòng CCS1… (mã miễn kiểm tra), CCF1… (gói), hoặc cả 3 dòng trong email");
+            row.Children.Add(box);
+            stack.Children.Add(row);
+            void Submit()
+            {
+                _codeStatus = status;
+                var k = box.Text.Trim();
+                if (k.Length == 0) { SetCodeStatus("Dán mã chủ plugin gửi vào ô trên.", true); return; }
+                SetCodeStatus("Đang kiểm tra mã...", false);
+                OfflineCodeSubmitted?.Invoke(k);
+            }
+            use.Click += (s, e) => Submit();
+            SubmitOnEnter(box, Submit);
+            ForwardWheel(box);
+        }
+
+        /// <summary>Status line of the code box used last (🔒 card or "Dán mã của chủ plugin"); a toast when neither is shown.</summary>
+        private TextBlock _codeStatus;
+
+        public void SetCodeStatus(string text, bool error) => Ui(() =>
+        {
+            if (_codeStatus == null || !(_codeStatus.Parent is FrameworkElement f) || !IsInMessages(f))
+            {
+                if (!string.IsNullOrEmpty(text)) ShowToast(text, error ? ToastKind.Warning : ToastKind.Info, 8);
+                return;
+            }
+            _codeStatus.Text = text ?? "";
+            Theme.Ref(_codeStatus, TextBlock.ForegroundProperty, error ? Theme.ErrorFg : Theme.MutedFg);
+        });
+
+        /// <summary>The element still sits in the message list (a card removed or rebuilt is not).</summary>
+        private bool IsInMessages(FrameworkElement e)
+        {
+            for (DependencyObject d = e; d != null; d = LogicalTreeHelper.GetParent(d))
+                if (d == _messages) return true;
+            return false;
+        }
+
+        private Border _codeCard;
+
+        /// <summary>
+        /// ⚙ "Dán mã của chủ plugin" (KT-41): a machine in use without network pastes the codes the owner emailed — a new
+        /// plan line (CCF1), a no-network pass (CCS1), or all three lines. One live card.
+        /// </summary>
+        public void AddCodePasteCard() => Ui(() =>
+        {
+            ExpandForDecision();
+            if (_codeCard != null && IsInMessages(_codeCard))
+            {
+                _codeCard.BringIntoView();
+                return;
+            }
+            var stack = new StackPanel();
+            var title = new TextBlock { Text = "Dán mã của chủ plugin", FontWeight = FontWeights.SemiBold, FontSize = FontSize + 1 };
+            Theme.Ref(title, TextBlock.ForegroundProperty, Theme.Fg);
+            stack.Children.Add(title);
+            var st = MutedText("");
+            st.TextWrapping = TextWrapping.Wrap;
+            st.TextTrimming = TextTrimming.None;
+            st.FontSize = 11;
+            AddCodeRow(stack, st, "Máy không có mạng: dán mã chủ plugin gửi qua email (dòng gói CCF1…, mã miễn kiểm tra CCS1…, hoặc cả 3 dòng) rồi bấm \"Dùng mã\". Máy có mạng không cần: gói tự cập nhật, hoặc bấm \"Kiểm tra lại\" trong ⚙.");
+            stack.Children.Add(st);
+            _codeStatus = st;
+            var card = Card(stack, "offline-code");
+            _codeCard = card;
+            card.Margin = new Thickness(0, 4, 24, 4);
+            AppendMessage(card);
+            ScrollToEnd();
+        });
+
         private TextBlock _activationStatus;
         private TextBox _activationKey;
         private Button _activationGo, _activationAsk;
@@ -2880,10 +3009,7 @@ namespace ClaudeCAD.Plugin.UI
             var go = new Button { Content = "Kích hoạt", ToolTip = "Kiểm tra key cho máy này rồi mở khung chat (key vĩnh viễn, cập nhật không hỏi lại)", Padding = new Thickness(12, 2, 12, 2), Margin = new Thickness(6, 0, 0, 0), FontWeight = FontWeights.SemiBold };
             DockPanel.SetDock(go, Dock.Right);
             keyRow.Children.Add(go);
-            var key = new TextBox { Padding = new Thickness(3, 2, 3, 2), FontFamily = new FontFamily("Consolas"), ToolTip = "Key dạng XXXX-XXXX-XXXX-XXXX (hoặc mã kích hoạt offline bắt đầu bằng CCL1|)" };
-            Theme.Ref(key, BackgroundProperty, Theme.InputBg);
-            Theme.Ref(key, ForegroundProperty, Theme.Fg);
-            Theme.Ref(key, BorderBrushProperty, Theme.Border);
+            var key = CodeBox("Key dạng XXXX-XXXX-XXXX-XXXX, hoặc mã không cần mạng: dán đủ các dòng trong email (CCL1…, CCS1…, CCF1…)");
             keyRow.Children.Add(key);
             stack.Children.Add(keyRow);
 
@@ -2912,7 +3038,7 @@ namespace ClaudeCAD.Plugin.UI
                 ActivationKeySubmitted?.Invoke(k);
             }
             go.Click += (s, e) => Submit();
-            key.KeyDown += (s, e) => { if (e.Key == Key.Enter) { e.Handled = true; Submit(); } };
+            SubmitOnEnter(key, Submit);
             ask.Click += (s, e) => { ask.IsEnabled = false; SetActivationStatus("Đang gửi yêu cầu...", false); ActivationRequestRequested?.Invoke(); };
 
             ForwardWheel(code);
@@ -2975,9 +3101,12 @@ namespace ClaudeCAD.Plugin.UI
             st.TextWrapping = TextWrapping.Wrap;
             st.TextTrimming = TextTrimming.None;
             st.FontSize = 11;
+            // KT-41: a machine without network cannot use "Kiểm tra lại": it pastes the codes the owner emailed instead
+            AddCodeRow(stack, st, "Máy không có mạng: dán mã chủ plugin gửi qua email (dòng CCS1…, CCF1…, hoặc cả 3 dòng) rồi bấm \"Dùng mã\".");
             stack.Children.Add(st);
             _lockedMsg = msg;
             _lockedStatus = st;
+            _codeStatus = st;
             var card = Card(stack, "device-lock");
             _lockedCard = card;
             card.Margin = new Thickness(0, 4, 24, 4);
@@ -2999,6 +3128,7 @@ namespace ClaudeCAD.Plugin.UI
         {
             if (_lockedCard == null) return;
             if (_lockedCard.Parent is Panel p) p.Children.Remove(_lockedCard);
+            if (_codeStatus == _lockedStatus) _codeStatus = null;
             _lockedCard = null;
             _lockedMsg = null;
             _lockedStatus = null;

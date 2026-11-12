@@ -451,7 +451,8 @@ namespace ClaudeCAD.Core.Tests
             Assert.Contains("smaller groups", note);
             var src = Root("plugin", "ClaudeCAD.Plugin", "Drawing", "Solid2Tools.cs");
             Assert.Contains("Math.Min(candidates.Count, Solid2Logic.MaxInterferenceCandidates)", src);
-            Assert.Contains("measured < Solid2Logic.MaxInterferencePairs ? OverlapVolume(sa, sb)", src);
+            Assert.Contains("bool tried = measured < Solid2Logic.MaxInterferencePairs;", src);
+            Assert.Contains("double? v = tried ? OverlapVolume(sa, sb) : (double?)null;", src);
             Assert.Contains("r[\"truncated\"] = true;", src);
         }
 
@@ -477,6 +478,31 @@ namespace ClaudeCAD.Core.Tests
             }
             var src = Root("plugin", "ClaudeCAD.Plugin", "Drawing", "Solid2Tools.cs");
             Assert.Contains("Solid2Logic.PlanTwist(", src);
+        }
+
+        /// <summary>KT-40: pairs past the measuring limit are "unconfirmed": never a clash, never safe, and Claude is told.</summary>
+        [Fact]
+        public void KT40_unmeasured_pairs_past_the_limit_are_unconfirmed_not_clashes()
+        {
+            Assert.Equal("unconfirmed", Solid2Logic.InterferenceKind(false, null));
+            Assert.Equal("clash_unmeasured", Solid2Logic.InterferenceKind(true, null));
+            Assert.Equal("touching", Solid2Logic.InterferenceKind(true, 0));
+            Assert.Equal("clash", Solid2Logic.InterferenceKind(true, 1e6));
+            // a large model of walls that only touch: 200 measured as touching, the rest unconfirmed → no clash reported
+            var kinds = Enumerable.Range(0, 500).Select(i => Solid2Logic.InterferenceKind(i < Solid2Logic.MaxInterferencePairs, i < Solid2Logic.MaxInterferencePairs ? 0.0 : (double?)null)).ToList();
+            Assert.False(Solid2Logic.Interferes(kinds));
+            Assert.Equal(300, kinds.Count(k => k == "unconfirmed"));
+            // one real overlap, or one failed measurement (KT-24), still says interfere
+            Assert.True(Solid2Logic.Interferes(kinds.Concat(new[] { "clash" })));
+            Assert.True(Solid2Logic.Interferes(kinds.Concat(new[] { "clash_unmeasured" })));
+            var note = Solid2Logic.InterferenceUnconfirmedNote(300);
+            Assert.Contains("300 more pair(s)", note);
+            Assert.Contains("not measured", note);
+            Assert.Contains("smaller list", note);
+            var src = Root("plugin", "ClaudeCAD.Plugin", "Drawing", "Solid2Tools.cs");
+            Assert.Contains("if (kind == \"unconfirmed\")", src);
+            Assert.Contains("r[\"unconfirmed_note\"] = Solid2Logic.InterferenceUnconfirmedNote(unconfirmed);", src);
+            Assert.DoesNotContain("not measured (only the first", src);
         }
     }
 }

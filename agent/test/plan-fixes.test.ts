@@ -45,6 +45,16 @@ describe('KT-02: block attributes need 2D', () => {
   });
 });
 
+describe('KT-42: 3D inserts blocks but sets no attribute values', () => {
+  it('insert_block on 3D has no attribute values; set_block_attributes is not a 3D tool in the plugin labels', () => {
+    assert.ok(shapeOf('3d', 'insert_block').includes('name'));
+    assert.ok(!shapeOf('3d', 'insert_block').includes('attributes'));
+    const src = fs.readFileSync(path.resolve(path.dirname(new URL(import.meta.url).pathname), '..', '..', '..', 'plugin', 'ClaudeCAD.Plugin', 'Core', 'Plans.cs'), 'utf8');
+    const twoD = /Add\(ToolGroup\.TwoD,([\s\S]*?)\);/.exec(src)![1]!;
+    assert.match(twoD, /\bset_block_attributes\b/);
+  });
+});
+
 describe('KT-35: capture_view without 3D parameters on a 2D machine', () => {
   it('drops view / direction / visual_style and the 3D sentence on 2D only', () => {
     const two = shapeOf('2d', 'capture_view');

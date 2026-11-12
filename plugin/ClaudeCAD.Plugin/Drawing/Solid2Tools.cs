@@ -853,7 +853,8 @@ namespace ClaudeCAD.Plugin.Drawing
                 candidates.Add((a, b));
             }
             var hits = new List<object>();
-            int touching = 0, clashes = 0, measured = 0, unmeasured = 0;
+            var unconfirmedPairs = new List<object>();
+            int touching = 0, clashes = 0, measured = 0, unmeasured = 0, unconfirmed = 0;
             double total = 0;
             int compared = Math.Min(candidates.Count, Solid2Logic.MaxInterferenceCandidates);
             for (int i = 0; i < compared; i++)
@@ -864,25 +865,31 @@ namespace ClaudeCAD.Plugin.Drawing
                 try { hit = sa.CheckInterference(sb); }
                 catch (Autodesk.AutoCAD.Runtime.Exception ex) { throw ToolException.Invalid($"check_interference: AutoCAD could not compare {a} and {b} ({ex.ErrorStatus})."); }
                 if (!hit) continue;
-                // the overlap volume is measured for the first MaxInterferencePairs clashes only (two copies and a boolean each)
-                double? v = measured < Solid2Logic.MaxInterferencePairs ? OverlapVolume(sa, sb) : (double?)null;
+                // the overlap volume is measured for the first MaxInterferencePairs flagged pairs only (two copies and a
+                // boolean each). KT-40: a pair past that limit is neither a clash nor safe: it is "unconfirmed" (it may only touch).
                 bool tried = measured < Solid2Logic.MaxInterferencePairs;
+                double? v = tried ? OverlapVolume(sa, sb) : (double?)null;
                 if (tried) measured++;
-                var kind = Solid2Logic.ClassifyInterference(v);
-                if (tried && kind == "touching") { touching++; continue; }
+                var kind = Solid2Logic.InterferenceKind(tried, v);
+                if (kind == "touching") { touching++; continue; }
+                if (kind == "unconfirmed")
+                {
+                    unconfirmed++;
+                    if (unconfirmedPairs.Count < Solid2Logic.MaxInterferencePairs)
+                        unconfirmedPairs.Add(new Dictionary<string, object> { ["a"] = a, ["b"] = b });
+                    continue;
+                }
                 clashes++;
-                if (v.HasValue && kind == "clash") total += v.Value;
+                if (kind == "clash") total += v.Value;
                 else unmeasured++;
                 if (hits.Count < Solid2Logic.MaxInterferencePairs)
                 {
                     var row = new Dictionary<string, object> { ["a"] = a, ["b"] = b };
-                    if (v.HasValue && kind == "clash") { row["volume"] = Acad.R(v.Value); row["volume_m3"] = Math.Round(SolidLogic.ToCubicMetres(v.Value), 6); }
+                    if (kind == "clash") { row["volume"] = Acad.R(v.Value); row["volume_m3"] = Math.Round(SolidLogic.ToCubicMetres(v.Value), 6); }
                     else
                     {
                         row["volume"] = null;
-                        row["note"] = tried
-                            ? "AutoCAD reports a clash but could not measure the common volume (often faces that coincide): treat it as a clash."
-                            : $"not measured (only the first {Solid2Logic.MaxInterferencePairs} clashes are measured)";
+                        row["note"] = "AutoCAD reports a clash but could not measure the common volume (often faces that coincide): treat it as a clash.";
                     }
                     hits.Add(row);
                 }
@@ -897,6 +904,12 @@ namespace ClaudeCAD.Plugin.Drawing
             };
             if (touching > 0) r["touching_pairs"] = touching;
             if (unmeasured > 0) r["unmeasured_clashes"] = unmeasured;
+            if (unconfirmed > 0)
+            {
+                r["unconfirmed_count"] = unconfirmed;
+                r["unconfirmed_pairs"] = unconfirmedPairs;
+                r["unconfirmed_note"] = Solid2Logic.InterferenceUnconfirmedNote(unconfirmed);
+            }
             if (clashes > hits.Count) r["note"] = $"only the first {Solid2Logic.MaxInterferencePairs} clashes are listed";
             if (candidates.Count > compared)
             {
