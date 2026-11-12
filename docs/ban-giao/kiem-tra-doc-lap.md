@@ -371,10 +371,42 @@ nhánh tích hợp, gồm UI test KT-41 và `Setup.exe`).*
 - Test đề xuất: hàm lõi `LicenseLogic.AcceptStatus(incoming, current)` giống `AcceptPlan`, test ca `disabled` 20/11 rồi
   `offline` 01/11 → từ chối.
 
-### Kết luận chung cho cả 3 lượt
+### Kết luận chung cho cả 3 lượt (đã thay bằng kết luận ở Lượt 4)
 
 Qua 3 lượt kiểm tra độc lập, tớ tìm được 42 lỗi; 3 lỗi nặng trong số đó (máy offline bị khóa khi cài, cửa sát góc phòng bị
 khoét nhầm tường, dựng tầng 2 bị chặn kèm gợi ý xóa tầng 1). Tới nay 38 lỗi đã sửa đúng, 4 lỗi được chủ dự án / luồng chính
 chấp nhận giữ nguyên, không còn lỗi nặng hay vừa nào mở. Lượt cuối chỉ còn một điểm nhẹ mới (KT-43: mã miễn kiểm tra cũ mở lại
 được máy đã bị khóa), cần chủ dự án chọn chặn hay chỉ ghi vào tài liệu. Bản 2D vẫn chạy như cũ, mọi test và build đều xanh.
 Phần còn lại là thử trên AutoCAD thật theo `docs/checklist-tong-the.md` (có thêm mục M cho các điểm chỉ thử được trên máy thật).
+
+---
+
+## Lượt 4 (12/11/2026)
+
+*Soát nhanh KT-43: gộp `full/test-tong-the` @ `b3901f8`. Không chạy CI (CI 43272295317 đã xanh trên nhánh tích hợp).*
+
+**Chạy:** lõi 369/369, trợ lý 216/216, build net48 / net8.0-windows / net10.0-windows xanh, 0 cảnh báo.
+
+| Mã | Trạng thái | Ghi chú soát lại |
+| --- | --- | --- |
+| KT-43 | Đã sửa đúng | `LicenseLogic.StatusRefusal` áp ở mọi đường ghi `status.txt` (thẻ Kích hoạt, "Dùng mã" trên 🔒, ⚙, kích hoạt bằng key, kiểm tra trạng thái, file của bộ cài) |
+
+Đã kiểm thêm:
+- **Máy offline hợp lệ không bị khóa nhầm:**
+  - dòng mới hơn vẫn nhận;
+  - luật chỉ so **ngày ký của máy chủ** giữa hai dòng, không dùng đồng hồ máy. `VerifyStatus` vẫn trả `Ok` cho dòng "ở tương lai" hay quá 7 ngày, nên đồng hồ sai không làm mất dòng đang lưu và cũng không mở được đường lách.
+  - Dòng đang lưu hỏng hoặc ký bằng khóa khác (ví dụ của bản gốc khi cài đè) thì được thay. Đúng ý.
+- **`status-new.txt` / `plan-new.txt` bị sửa tay hay giả:**
+  - đọc một lần, xóa, rồi kiểm chữ ký, mã máy và cùng luật ngày như dòng dán tay. File giả bị bỏ qua, có ghi log.
+  - File để chỉ đọc thì không xóa được nên không áp dụng (lần sau thử lại). Vô hại.
+- **Luồng 2D / kích hoạt cũ:**
+  - máy mới chưa có file thì bộ cài ghi thẳng `status.txt` / `plan.txt` như trước;
+  - trả lời của máy chủ chỉ cần không cũ hơn, nên chủ plugin vẫn khóa / mở trong ngày;
+  - không đụng lệnh vẽ.
+- **Hệ quả của chốt (không phải lỗi):** chủ plugin khóa một máy offline rồi cấp lại mã miễn kiểm tra **trong cùng ngày** UTC thì máy từ chối mã mới. Chủ plugin phải chờ sang ngày sau (sau 7h sáng giờ Việt Nam) hoặc cho máy nối mạng một lần. Nên ghi một dòng vào `activation/README.md` nếu chưa có.
+
+**Lỗi mới:** không có.
+
+### Kết luận chung (cả 4 lượt)
+
+Kiểm tra độc lập qua 4 lượt tìm được 43 lỗi, trong đó 3 lỗi nặng. Đó là: máy offline bị khóa khi cài, cửa sát góc phòng bị khoét nhầm tường, và dựng tầng 2 bị chặn kèm gợi ý xóa tầng 1. Tới nay **39 lỗi đã sửa đúng** và **4 lỗi được chấp nhận giữ nguyên** theo chốt. Không còn lỗi nào mở. Bản 2D vẫn chạy như cũ, mọi test và build đều xanh. Việc còn lại là thử trên AutoCAD thật theo `docs/checklist-tong-the.md`; mục M ghi các điểm chỉ thử được trên máy thật, như dán mã nhiều dòng, cài đè khi có bản cập nhật chờ, và thứ tự cạnh khối sau khi mở lại.
