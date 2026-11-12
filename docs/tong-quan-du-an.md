@@ -1,6 +1,6 @@
 # Tổng quan dự án ClaudeCAD
 
-*Cập nhật: 11/11/2026 14:00 (giờ Việt Nam). Luồng chính cập nhật mục "Tình hình" và "Nhật ký" khi có mốc mới.*
+*Cập nhật: 12/11/2026 (giờ Việt Nam). Luồng chính cập nhật mục "Tình hình" và "Nhật ký" khi có mốc mới.*
 
 File này là tổng quan duy nhất của dự án. Nó gộp các file cũ `plugin-tong-quan.md` và `ke-hoach-gop-nhanh.md`.
 
@@ -41,7 +41,9 @@ File này là tổng quan duy nhất của dự án. Nó gộp các file cũ `pl
    - Lỗi `install.ps1` của v0.9.3 (dòng `"Node.js v$major: OK"`) đã được sửa và hết lỗi ở bản này.
 4. Sau phát hành:
    - viết hướng dẫn cho người dùng cuối;
-   - tách `ChatControl.cs` cho dễ bảo trì.
+   - tách `ChatControl.cs` cho dễ bảo trì;
+   - **vẽ 3D + gói dịch vụ theo máy (2D / 3D / 2D + 3D)**, dự kiến 0.10.0. Plan ở
+     [`ke-hoach-3d-goi-dich-vu.md`](ke-hoach-3d-goi-dich-vu.md), đang chờ cậu chốt 5 điểm.
 
 ## 4. Các thread
 
@@ -129,6 +131,7 @@ theo tài khoản Windows. Chỉ nội dung yêu cầu và dữ liệu bản v�
 - `checklist-thu-that.md`: checklist thử trên AutoCAD thật.
 - `test-log.md`: kết quả kiểm thử.
 - `autocad-2026-2027.md`: chi tiết hỗ trợ AutoCAD 2026 / 2027.
+- `ke-hoach-3d-goi-dich-vu.md`: plan vẽ 3D + gói dịch vụ theo máy.
 - `ux-autocad.md`: thiết kế giao diện.
 - `palette-features.md`: từng tính năng khung chat.
 - `skills/README.md`: cách viết skill.
@@ -140,4 +143,5 @@ theo tài khoản Windows. Chỉ nội dung yêu cầu và dữ liệu bản v�
 
 | Ngày | Tình hình |
 | --- | --- |
+| 12/11 | Không có commit code. Nghiên cứu xong và viết plan vẽ 3D + gói dịch vụ theo máy, chờ cậu chốt. Vẫn chờ cậu thử bộ cài trên AutoCAD 2026 |
 | 11/11 | Gộp xong 5 nhánh vào `claude/release-0.9.5`, đổi cặp khóa kích hoạt, có bộ cài thử cuối (run 43000757496). Mở thread cài đặt plugin. Chờ cậu thử trên AutoCAD 2026 |
