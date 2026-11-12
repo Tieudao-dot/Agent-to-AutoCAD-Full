@@ -91,7 +91,7 @@ workflow_dispatch, `release: "false"`, nhánh `full/ve-3d`); docs cập nhật; 
 - Lõi `dotnet test plugin/ClaudeCAD.Core.Tests`: **225/225** (185 cũ + 40 mới). Test nhãn gói vẫn xanh.
 - Trợ lý `npm test`: **157/157** (144 cũ + 13 mới).
 - Build Linux (NuGet): net48, net8.0-windows, net10.0-windows: 0 lỗi, 0 cảnh báo.
-- CI Windows: xem mục Tiến độ.
+- CI Windows: run 43192673511 (`build.yml`, workflow_dispatch, `release: false`, commit `9dcf4a0`) **xanh** (~8 phút).
 
 ### Chỉ kiểm được trên AutoCAD thật (phần J của `checklist-thu-that.md`)
 
@@ -105,5 +105,5 @@ workflow_dispatch, `release: "false"`, nhánh `full/ve-3d`); docs cập nhật; 
 - [x] Trợ lý: định nghĩa lệnh, system prompt, cổng xác nhận
 - [x] Self-test
 - [x] Test lõi + trợ lý
-- [ ] CI Windows (1 lượt)
+- [x] CI Windows (1 lượt, xanh)
 - [x] Tài liệu (checklist phần J, kế hoạch, `bo-cai/README.md`, file này)
