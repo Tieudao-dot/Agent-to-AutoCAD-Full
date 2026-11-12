@@ -49,11 +49,61 @@ workflow_dispatch, `release: "false"`, nhánh `full/ve-3d`); docs cập nhật; 
 - Không làm đợt 2 / 3 (sweep, loft, slice, fillet 3D, UCS, va chạm, `build_3d_from_plan`).
 - Mức gấp: khá gấp; chủ dự án muốn thử trên AutoCAD trước khi bản dùng thử hết hạn (~10/12/2026).
 
+## Kết quả (12/11/2026, nhánh `full/ve-3d`)
+
+### Plugin (`plugin/ClaudeCAD.Plugin`)
+
+- `Drawing/SolidTools.cs` (mới): 14 lệnh, tất cả nhãn `ToolGroup.ThreeD` trong `Core/Plans.cs`.
+  - Khối: `draw_box` (corner hoặc center, rotation quanh Z, height âm dựng xuống), `draw_cylinder` (top_radius 0 = nón;
+    trục theo `height` hoặc `top_center`), `draw_sphere`, `draw_wedge` (mặt đứng cao ở phía corner, dốc xuống theo +X;
+    hướng của `CreateWedge` không có tài liệu nên plugin đọc trọng tâm rồi xoay cho đúng), `draw_torus`,
+    `draw_pyramid` (3–32 cạnh, `radius` = bán kính đường tròn **nội tiếp** đáy, như API).
+  - `extrude` / `revolve`: biên dạng `profile_points` (đa giác kín, không thêm vào bản vẽ) hoặc `profile_handles`
+    (đường kín, region, hay line / arc khép vòng → `Region.CreateFromCurves`); `taper_angle`; `erase_profile`
+    (mặc định giữ biên dạng). `revolve` kiểm biên dạng không cắt trục.
+  - `solid_union` / `solid_intersect` (gộp vào khối đầu, xóa các khối kia), `solid_subtract` (`target`, `subtract`,
+    `keep_tools`). Kết quả rỗng → báo lỗi, transaction lùi lại, bản vẽ không đổi.
+  - `get_solid_info`: thể tích (mm³, m³), trọng tâm, hộp bao, kích thước, số mặt / cạnh / đỉnh (Brep).
+  - `set_view_3d` (10 hướng + `direction` tùy ý, khung theo cả mô hình hoặc `handles`), `set_visual_style`
+    (2d_wireframe, wireframe, hidden, conceptual, shaded, shaded_with_edges, realistic, xray). Hai lệnh này chỉ đổi
+    hiển thị như zoom: không thêm bước U, được phép khi "Chỉ xem" (`ToolDispatcher.ReadOnlyAllowed`), không ghi macro.
+  - Mọi lệnh dựng / cộng trừ trả `volume`, `volume_m3`, `min`, `max` để Claude tự soát bằng số.
+- `capture_view` (vẫn nhóm Chung): thêm `view`, `direction`, `visual_style`; ảnh 3D song song, mặc định khung cả mô hình.
+- `Core/Solids.cs` (mới, không cần AutoCAD): hướng nhìn, trục màn hình, kích thước chiếu, tên kiểu hiển thị, kiểm tham
+  số, trục xoay, thể tích kỳ vọng. Test: `ClaudeCAD.Core.Tests/SolidTests.cs`.
+- `CLAUDECHATSELFTEST`: thêm "Khối 3D: dựng hộp, trừ trụ, kiểm thể tích" (hộp 1000×800×600 trừ trụ R200, cần
+  0,404602 m³ ± 0,1 %) và "Góc nhìn 3D (SW iso) + kiểu Conceptual + ảnh 3D" (`capture-3d.png`). Chạy trên bản vẽ tạm.
+- `ClaudeCAD.Plugin.csproj`: chế độ Install tham chiếu thêm `acdbmgdbrep.dll` (Brep); chế độ NuGet đã có sẵn.
+
+### Trợ lý (`agent/`)
+
+- `src/tools/solids.ts` (mới): khai báo 14 lệnh; đi qua bộ lọc `plan_tools` có sẵn, nên máy gói 2D không nạp.
+- `src/agent/systemPrompt.ts`: `THREE_D_RULES` chỉ thêm cho gói `3d` / `2d3d` (máy 2D không tốn token): Z lên, mm;
+  biên dạng trên XY rồi extrude; mỗi loại khối một layer; lỗ cửa = dựng khối rồi trừ; dựng xong `set_view_3d` sw_iso,
+  `capture_view` conceptual, đối chiếu `get_solid_info`.
+- `src/agent/confirmation.ts`: cộng / trừ / giao vào khối **có trước lượt này** (kể cả khối Claude dựng ở lượt trước)
+  luôn cần xác nhận, dù chỉ 1 khối; khối dựng trong cùng lượt thì không. Kiểm cả trong `batch_execute`.
+  `extrude` / `revolve` có `erase_profile` tính như xóa đối tượng có sẵn.
+- Test: `test/solids.test.ts`. `test/tools.test.ts`: regex tên lệnh nhận cả chữ số (`set_view_3d`), giống test C#.
+
+### Test
+
+- Lõi `dotnet test plugin/ClaudeCAD.Core.Tests`: **225/225** (185 cũ + 40 mới). Test nhãn gói vẫn xanh.
+- Trợ lý `npm test`: **157/157** (144 cũ + 13 mới).
+- Build Linux (NuGet): net48, net8.0-windows, net10.0-windows: 0 lỗi, 0 cảnh báo.
+- CI Windows: xem mục Tiến độ.
+
+### Chỉ kiểm được trên AutoCAD thật (phần J của `checklist-thu-that.md`)
+
+- Hướng mặt dốc của `draw_wedge` và góc vát dương của `extrude` (thu nhỏ lên trên) dựa trên tài liệu API; cần nhìn tận mắt.
+- `set_visual_style` đổi kiểu qua `ViewportTableRecord.VisualStyleId` + `UpdateTiledViewportsFromDatabase`; ảnh 3D dùng
+  `GsView.VisualStyleId`. Nếu ảnh 3D không có màu Conceptual, đó là chỗ cần sửa đầu tiên.
+
 ## Tiến độ
 
-- [ ] Lệnh plugin + nhãn 3D
-- [ ] Trợ lý: định nghĩa lệnh, system prompt, cổng xác nhận
-- [ ] Self-test
-- [ ] Test lõi + trợ lý
+- [x] Lệnh plugin + nhãn 3D
+- [x] Trợ lý: định nghĩa lệnh, system prompt, cổng xác nhận
+- [x] Self-test
+- [x] Test lõi + trợ lý
 - [ ] CI Windows (1 lượt)
-- [ ] Tài liệu
+- [x] Tài liệu (checklist phần J, kế hoạch, `bo-cai/README.md`, file này)

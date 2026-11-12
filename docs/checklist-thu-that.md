@@ -136,6 +136,22 @@ Cần máy chủ kích hoạt riêng của bản Full đã dựng (cột **Gói*
 | I4 | ★ | Đổi ô Gói thành `Full`, Kiểm tra lại, gõ lại câu ở I2 | Toast "Gói đã đổi sang Full"; có kích thước; cuộc chat cũ vẫn còn | ☐ | ☐ | GOI-4 |
 | I5 | ○ | Đặt `%LocalAppData%\ClaudeCAD\plan.txt` chỉ đọc, đổi ô Gói về `2D`, Kiểm tra lại | Máy không giữ được gói cũ: về gói mặc định | ☐ | ☐ | GOI-5 |
 
+## J. 3D đợt 1 (bản Full, gói 3D hoặc Full, ~8 phút)
+
+Máy phải ở gói `3D` hoặc `Full` (phần I). Mở một bản vẽ mới (acadiso.dwt), tab Model.
+
+| # | | Làm gì | Kết quả mong đợi | Đạt | Lỗi | Mã gốc |
+| --- | --- | --- | --- | --- | --- | --- |
+| J1 | ★ | Gõ `CLAUDECHATSELFTEST` | Hai dòng mới ✓: "Khối 3D: dựng hộp, trừ trụ, kiểm thể tích" (≈ 0,404602 m³) và "Góc nhìn 3D (SW iso) + kiểu Conceptual + ảnh 3D"; thư mục thử có `capture-3d.png` thấy hộp có lỗ tròn | ☐ | ☐ | 3D-1 |
+| J2 | ★ | Gõ "dựng tường dài 4 m, dày 220, cao 3,3 m, khoét 1 cửa đi 900x2100 cách đầu tường 500" | Claude tạo layer riêng (vd. A-WALL-3D), dựng tường + khối cửa, trừ khối cửa **không hỏi xác nhận** (cùng một lượt); đặt góc SW iso, chụp ảnh Conceptual; báo thể tích ≈ 2,904 − 0,416 = 2,488 m³ | ☐ | ☐ | 3D-2 |
+| J3 | ★ | Gõ U một lần | Cả tường và lỗ cửa biến mất cùng lúc (một lượt = một U) | ☐ | ☐ | 3D-3 |
+| J4 | ★ | Dựng lại J2, lượt sau gõ "khoét thêm cửa sổ 1200x1200 cao 900" | Claude hiện **thẻ xác nhận** trước khi trừ vào tường đã có; Đồng ý → có lỗ cửa sổ; Hủy → tường giữ nguyên | ☐ | ☐ | 3D-4 |
+| J5 | ★ | "vẽ biên dạng chữ L rồi đùn cao 200", "xoay biên dạng hình chữ nhật 300x1000 quanh trục Y thành trụ", "dựng hình nón, cầu, nêm, xuyến, chóp 4 cạnh" | Mỗi khối đúng hình (xem ở góc iso); `get_solid_info` trả thể tích, hộp bao, số mặt / cạnh | ☐ | ☐ | 3D-5 |
+| J6 | ★ | "xem từ phía trước", "xem góc đông bắc", "chuyển kiểu Realistic", "về 2D Wireframe" | Góc nhìn và kiểu hiển thị đổi đúng; **không** thêm bước U (gõ U không hoàn tác việc đổi góc nhìn) | ☐ | ☐ | 3D-6 |
+| J7 | ○ | Bật 🔒 Chỉ xem, gõ "xem góc iso kiểu Conceptual" rồi "dựng hộp 1x1x1 m" | Góc nhìn / kiểu đổi được; dựng hộp bị từ chối (chỉ xem) | ☐ | ☐ | 3D-7 |
+| J8 | ★ | Đổi máy về gói `2D`, Kiểm tra lại, gõ "dựng hộp 1000x1000x1000" | Claude nói máy dùng gói 2D, chưa có 3D, liên hệ chủ plugin; không cố vẽ hộp bằng đường | ☐ | ☐ | 3D-8 |
+| J9 | ○ | AutoCAD 2022–2024 và 2025–2027 (nếu có): chạy J1 | J1 ✓ trên từng đời | ☐ | ☐ | 3D-9 |
+
 ## Gửi lại gì khi lỗi
 
 1. **Mã bước** bị lỗi (ví dụ `D2`) + một dòng: đã làm gì, thấy gì khác với "kết quả mong đợi".

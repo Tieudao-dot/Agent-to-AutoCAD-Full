@@ -22,6 +22,12 @@
 
 ## Phần 1 — Plugin vẽ 3D
 
+> **Đợt 1: đã làm (12/11/2026, nhánh `full/ve-3d`, chưa thử trên AutoCAD thật).** 14 lệnh nhãn 3D: `draw_box`,
+> `draw_cylinder` (cả nón), `draw_sphere`, `draw_wedge`, `draw_torus`, `draw_pyramid`, `extrude`, `revolve`,
+> `solid_union`, `solid_subtract`, `solid_intersect`, `set_view_3d`, `set_visual_style`, `get_solid_info`;
+> `capture_view` thêm `view` / `direction` / `visual_style` (vẫn nhóm Chung). Chi tiết và việc còn lại:
+> [`ban-giao/ve-3d-dot-1.md`](ban-giao/ve-3d-dot-1.md). Thử thật: phần J của `checklist-thu-that.md`.
+
 ### Hiện trạng
 
 - Tọa độ điểm đã nhận `[x, y, z]`. Polyline có cao độ (elevation). Plugin đọc được polyline 3D có sẵn trong bản vẽ.
@@ -163,7 +169,7 @@ thẳng trong lệnh 3D. Đổi lại, gói 3D sẽ khó dùng hơn nhiều.
 | --- | --- | --- |
 | 0 | Phát hành 0.9.5 như kế hoạch, sau khi cậu thử bộ cài | Thread gộp nhánh & phát hành |
 | 1 | Gói dịch vụ:<br>• cột Sheet, dòng ký số;<br>• nhãn lệnh, chặn lệnh, trợ lý nạp lệnh theo gói;<br>• giao diện "Gói" | Thread mới "Vẽ 3D & gói dịch vụ" (đề xuất). Phần Apps Script nhờ thread bảo mật rà lại vì nó thuộc phạm vi thread đó |
-| 2 | 3D đợt 1:<br>• khối cơ bản, extrude / revolve, cộng trừ khối;<br>• góc nhìn, kiểu hiển thị, thông tin khối, chụp ảnh 3D;<br>• system prompt, tự kiểm tra | Thread "Vẽ 3D & gói dịch vụ" |
+| 2 | 3D đợt 1 ✅ *(12/11/2026, nhánh `full/ve-3d`, chờ thử thật)*:<br>• khối cơ bản, extrude / revolve, cộng trừ khối;<br>• góc nhìn, kiểu hiển thị, thông tin khối, chụp ảnh 3D;<br>• system prompt, tự kiểm tra | Thread "Vẽ 3D" |
 | 3 | Bộ cài thử 0.10.0 → cậu thử phần gói + 3D đợt 1 trên AutoCAD → phát hành | Thread gộp nhánh & phát hành |
 | 4 | 3D đợt 2 (sweep, loft, cắt, bo cạnh, UCS, va chạm) | Thread "Vẽ 3D & gói dịch vụ" |
 | 5 | 3D đợt 3 (dựng 3D từ mặt bằng, mặt cắt / hình chiếu, skill 3D kiến trúc) | Thread "Vẽ 3D & gói dịch vụ" |

@@ -97,6 +97,7 @@ export const THREE_D_RULES = `
 - One layer per kind of solid (e.g. A-WALL-3D, A-SLAB-3D, A-COLS-3D, A-DOOR-3D, or what the skill says), created with create_layer first; never layer 0.
 - Changing or erasing solids that existed before this turn with solid_union / solid_subtract / solid_intersect (also when you built them in an earlier turn) needs the user's yes: call request_confirmation with the handles first and end the turn. A "Confirmation required" error means exactly that.
 - Self-check after building: call set_view_3d with sw_iso (or the side that shows the work best), look with capture_view (view "sw_iso", visual_style "conceptual", handles of what you built) and check the numbers with get_solid_info: volume and bounding box against the sizes you meant (a 4000 × 220 × 3300 wall is 2.904 m³; each 900 × 2100 opening through it removes 0.416 m³). Fix what does not match before reporting. One picture per task, not after every solid.
+- Existing solids are type 3DSOLID in list_entities / count_entities; read them with get_solid_info before changing them.
 - Report volumes in m³ and sizes in m or mm. The user's U still undoes the whole turn at once.
 - 3D phase 1 has no sweep, loft, slice, 3D fillet / chamfer, UCS or interference check yet: say so in Vietnamese if asked, and offer what the tools can do.
 `;
