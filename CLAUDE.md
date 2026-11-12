@@ -98,5 +98,6 @@ dự án gốc), `bo-cai/README.md`.
 | --- | --- | --- |
 | Luồng chính | `session_01D56HmFT5bwapmbypmLY5nr` | Tổng quan, trao đổi với chủ dự án, điều phối sub-thread. Không tự làm việc kỹ thuật |
 | Gói dịch vụ | `session_01D56HmJEU9szFU3rjc38bwT` | Nhánh `full/goi-dich-vu`: gói 2D / 3D / Full trong plugin (đọc gói, nhãn lệnh, chặn lệnh, trợ lý, giao diện), mẫu Apps Script phần gói. Bàn giao: `docs/ban-giao/goi-dich-vu-plugin.md` |
+| Vẽ 3D | `session_01D56HmEKLjGrgQjCYBHyRFV` | Nhánh `full/ve-3d` (tách từ `full/goi-dich-vu`): 3D đợt 1 (khối cơ bản, extrude / revolve, cộng trừ khối, góc nhìn, kiểu hiển thị, thông tin khối, chụp ảnh 3D), nhãn gói 3D. Bàn giao: `docs/ban-giao/ve-3d-dot-1.md` |
 
 Link mở thread: `https://claude.ai/code/<session id>`.
