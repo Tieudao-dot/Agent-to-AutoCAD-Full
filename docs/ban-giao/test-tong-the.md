@@ -52,7 +52,7 @@ Logic gói: **không sửa**. Không đổi `activation/activation.json`, `Licen
 - CI Windows lượt đầu: run 43230375890 (`build.yml`, workflow_dispatch, `release: false`, commit `fa68791`) **xanh** (~10 phút, gồm UI test WPF, build 3 bản, Setup.exe).
 - `make-bundle` chạy thử trên Linux (DLL giả, `--skip-npm`): `Contents\edition.json` đúng, `PackageContents.xml` có tên
   mới và phiên bản.
-- CI Windows sau phần thay bản gốc: CI3.
+- CI Windows sau phần thay bản gốc: run 43243835815 (`build.yml`, workflow_dispatch, `release: false`, commit `3881429`) **xanh** (~10 phút, gồm UI test WPF, build 3 bản, bundle có `edition.json`, **bộ cài `.iss` mới biên dịch được và Setup.exe build được**; các bước phát hành bỏ qua).
 - CI Windows sau 3 điểm đã chốt: run 43236499463 (`build.yml`, workflow_dispatch, `release: false`, commit `6e9193d`) **xanh** (~9 phút, gồm UI test WPF, build 3 bản, Setup.exe; các bước phát hành bỏ qua).
 
 ## Chủ dự án đã chốt (12/11/2026) và đã làm
@@ -216,4 +216,4 @@ dấu góc vát (J11), dấu `ShellBody` (K17), thứ tự ma trận `align` (K2
 - [x] 3 điểm chủ dự án chốt 12/11/2026: phá khối 3D qua thẻ, skill 2D không nạp ở gói 3D, giảm token (commit `41e4b37`)
 - [x] CI Windows sau 3 điểm (1 lượt, xanh: run 43236499463)
 - [x] Thay bản gốc như nâng cấp (chốt 12/11/2026): tên hiển thị, `edition.json`, bộ cài nhận ra bản gốc, skill mẫu cũ (commit `b6ad539`)
-- [ ] CI Windows sau phần thay bản gốc (1 lượt)
+- [x] CI Windows sau phần thay bản gốc (1 lượt, xanh: run 43243835815)
