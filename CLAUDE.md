@@ -123,5 +123,6 @@ dự án gốc), `bo-cai/README.md`.
 | ↳ Test & sửa đợt 1 (con của Vẽ 3D đợt 1) | `session_01D56HmF7xQDkumeCZ4v5kMJ` | Nhánh `full/ve-3d-test-1` (tách từ `full/ve-3d`): rà soát, thêm test tự động, sửa lỗi đợt 1; 1 lượt CI. Báo về thread đợt 1. Bàn giao: `docs/ban-giao/ve-3d-test-1.md` |
 | Vẽ 3D đợt 2 | `session_01D56HmFnBJGpH2Jp3Gz2Rps` | Nhánh `full/ve-3d-dot-2` (tách từ `full/ve-3d-test-1` @ `9332985`): sweep, loft, cắt / bo / vát / làm rỗng khối, xoay / đối xứng / căn 3D, UCS, va chạm, danh sách cạnh / mặt. Viết xong tự mở thread con Test & sửa đợt 2. Bàn giao: `docs/ban-giao/ve-3d-dot-2.md` |
 | ↳ Test & sửa đợt 2 (con của Vẽ 3D đợt 2) | `session_01D56HmFawNpHoQo4t7E9eQq` | Nhánh `full/ve-3d-test-2` (tách từ `full/ve-3d-dot-2` @ `695909e`): rà soát, thêm test tự động, sửa lỗi đợt 2; 1 lượt CI. Báo về thread đợt 2. Bàn giao: `docs/ban-giao/ve-3d-test-2.md` |
+| Vẽ 3D đợt 3 | `session_01D56HmJn6B9q2BakrVAExkg` | Nhánh `full/ve-3d-dot-3` (tách từ `full/ve-3d-test-2` @ `a51cd63`): `build_3d_from_plan` (dựng 3D từ mặt bằng 2D), mặt cắt / hình chiếu 2D từ khối 3D, skill mẫu "3D kiến trúc". Viết xong tự mở thread con Test & sửa đợt 3. Bàn giao: `docs/ban-giao/ve-3d-dot-3.md` |
 
 Link mở thread: `https://claude.ai/code/<session id>`.
