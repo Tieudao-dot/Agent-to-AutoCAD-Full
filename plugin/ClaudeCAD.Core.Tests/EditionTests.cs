@@ -184,7 +184,9 @@ namespace ClaudeCAD.Core.Tests
             Assert.Contains("if Pos('CCS1|' + MachineCode() + '|', St) = 1 then SaveStatusLine(St)", act);
             Assert.Contains("if Pos('CCF1|' + MachineCode() + '|', Pl) = 1 then SavePlanLine(Pl)", act);
             Assert.Contains("Result := SaveLicense(Lic);", act);
-            Assert.Contains(@"'{localappdata}\ClaudeCAD\plan.txt'", Body(Iss, "function SavePlanLine(const Line: String): Boolean;"));
+            // plan.txt, or plan-new.txt when one exists (the plugin applies it with the "not older" rule, KT-43)
+            Assert.Contains("SaveSignedLine('plan', Line)", Body(Iss, "function SavePlanLine(const Line: String): Boolean;"));
+            Assert.Contains("Target := Dir + '\\' + Name + '.txt';", Iss);
             // KT-08: an online activation keeps the plan line too
             Assert.Contains("Pl := JsonValue(Body, 'plan');", act);
             // the paste box keeps several lines (a one-line box keeps only the first line of a paste)
