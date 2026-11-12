@@ -151,7 +151,7 @@ Phía plugin, danh sách skill của khung chat vẫn hiện skill này trong th
 - Trợ lý `npm test`: **184/184** (171 cũ + 13 trong `test/plan3d.test.ts`). `solids2.test.ts` cũ: kim "next phase" đổi
   thành `build_3d_from_plan` (câu "đợt sau mới có" đã bỏ có chủ đích; thêm kiểm câu đó không còn).
 - Build Linux (.NET SDK 10, xóa `obj` / `bin` giữa các lần): net48, net8.0-windows, net10.0-windows: 0 lỗi, 0 cảnh báo.
-- CI Windows: *(điền sau lượt chạy)*.
+- CI Windows: run 43220181366 (`build.yml`, workflow_dispatch, `release: false`, commit `5d737b6`) **xanh** (~10 phút, gồm UI test WPF, bộ cài).
 
 ### Chỉ kiểm được trên AutoCAD thật (phần L của `checklist-thu-that.md`, L1–L16)
 
@@ -165,6 +165,6 @@ hộp, nhận diện trên mặt bằng thật của cậu.
 - [x] Mặt cắt / hình chiếu
 - [x] Skill 3D kiến trúc
 - [x] Trợ lý, nhãn, self-test, test
-- [ ] CI Windows (1 lượt)
+- [x] CI Windows (1 lượt, xanh: run 43220181366)
 - [x] Tài liệu (checklist phần L, kế hoạch, `bo-cai/README.md`, `skills/README.md`, file này)
 - [ ] Mở thread con Test & sửa đợt 3
