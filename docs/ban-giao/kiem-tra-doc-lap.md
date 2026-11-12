@@ -228,3 +228,116 @@ Run `43249502517` trên `full/kiem-tra-doc-lap` @ `219a7bf`: **xanh**. Mọi bư
 ~1 giờ 15 phút. Tốn nhất: 4 tác vụ rà soát song song (đọc `ChatController.cs`, `FloorPlan.cs`, `PlanTo3dTools.cs`,
 `installer/ClaudeCAD.iss`, `agent/src/agent/*`, tải `AcDbMgd.xml`), mỗi tác vụ ~200k token; không thấy số token chính xác
 của cả thread.
+
+---
+
+## Lượt 2 (12/11/2026)
+
+*Soát lại sau khi 5 thread sửa và gộp vào `full/test-tong-the` @ `efd5792`; gộp vào `full/kiem-tra-doc-lap`. Test chứng
+minh lỗi của lượt 1 đã được chép vào test từng phần ở nhánh tích hợp: bỏ bản trùng ở nhánh này (chạy lại trước khi bỏ:
+cả 6 đều xanh trên code mới).*
+
+### Kết quả chạy
+
+| Việc | Kết quả |
+| --- | --- |
+| `dotnet test plugin/ClaudeCAD.Core.Tests` | 364/364 xanh (369/369 khi còn 5 test lượt 1 của nhánh này: đều xanh) |
+| `cd agent && npm ci && npm test` | 214/214 xanh (215/215 khi còn test KT-09 lượt 1: xanh) |
+| Build net48 / net8.0-windows / net10.0-windows | cả 3 xanh, 0 cảnh báo |
+| Thử lại bằng probe (ngoài repo) | KT-11 cửa sát góc: góc dưới phải, **góc trên phải, góc dưới trái** đều vào đúng tường, có lanh tô; KT-17 trụ 50 / 110 / 200: 4 tường 220; KT-18 hai tường thẳng hàng khác dày: nhận cửa |
+| CI | không chạy (CI 43259984843 đã xanh trên nhánh tích hợp; lượt này không thêm test cần Windows) |
+
+### 39 lỗi lượt 1
+
+| Mã | Phần | Trạng thái | Ghi chú soát lại |
+| --- | --- | --- | --- |
+| KT-01 | bộ cài | Đã sửa đúng | Bộ cài: ô key nhiều dòng (`TNewMemo`), tách token, lưu license / status / plan riêng, kiểm đúng máy; plugin `PickLine` đọc được file cũ. Phần ô key trong khung chat: xem KT-41 |
+| KT-02 | gói | Đã sửa đúng | `BlockedParam` chặn `attributes` của `define_block` / `insert_block` ở lệnh lẻ, batch, macro; `set_block_attributes` sang 2D; schema gói 3D không còn `attributes` (đã chạy thử `buildTools(…, '3d')`). Còn khe nhỏ: KT-42 |
+| KT-03 | gói | Đã sửa đúng | `skills_added` / `removed` lọc qua `skillsForPlan` |
+| KT-04 | gói | Đã sửa đúng | Macro có lệnh ngoài gói không chạy lệnh nào, báo tiếng Việt |
+| KT-05 | gói | Đã chấp nhận | C4 làm đúng (`AcceptPlan`: mới hơn hoặc cùng ngày); phần cùng ngày + `plan.txt` chỉ đọc: chấp nhận |
+| KT-06 | gói | Đã sửa đúng | Tên tạm `(…)` chỉ điền ô trống |
+| KT-07 | bộ cài | Đã sửa đúng | Xóa stage + `apply-update.cmd` trong `PrepareToInstall`. Thứ tự với Restart Manager: M2 trên Windows |
+| KT-08 | bộ cài | Đã sửa đúng | Lưu `plan` khi kích hoạt bằng key có mạng |
+| KT-09 | tích hợp | Đã sửa đúng (C2) | Khối 3D có trước lượt chỉ mở bằng nút Đồng ý của thẻ, chỉ cho handle trên thẻ (`cardConfirmed`, `confirm_id`); chữ "ok" và nút "Làm" không mở. Luật 2D giữ nguyên (đã đọc lại `userConfirmed`) |
+| KT-10 | tích hợp | Đã sửa đúng | `Record` bỏ `user_confirmed`; macro sửa khối không do macro dựng thì không chạy (kiểm cả `target` / `subtract`); macro cũ có `user_confirmed: true` không mở khóa (`ConfirmedHandles` chỉ nhận danh sách) |
+| KT-11 | đợt 3 | Đã sửa đúng | Thử thêm 2 góc khác: đúng |
+| KT-12 | tích hợp | Đã sửa đúng (C1) | `erase_entities` lên khối 3D có trước lượt cần thẻ, kiểm ở plugin (cả trong batch); đường lách sao chép → trừ → xóa đã đóng |
+| KT-13 | đợt 2 | Đã sửa đúng | |
+| KT-14 | đợt 3 | Đã sửa đúng | `CheckRerun` tách tường / sàn theo cao độ; sàn tầng trên chồng tường tầng dưới chỉ ghi chú, không chặn; skill dùng tường = cao tầng − dày sàn, không gợi ý xóa tầng khác |
+| KT-15 | đợt 3 | Đã sửa đúng | `ReadsWhen`: `dry_run` không lưu phiên bản, không nhóm hoàn tác, không ghi macro, chạy được ở Chỉ xem (trả trước khi tạo layer) |
+| KT-16 | đợt 3 | Đã sửa đúng | `base_z` (mm) chia theo INSUNITS như chiều cao |
+| KT-17 | đợt 3 | Đã sửa đúng | |
+| KT-18 | đợt 3 | Đã sửa đúng | |
+| KT-19 | đợt 3 | Đã sửa đúng | |
+| KT-20 | đợt 3 | Đã sửa đúng | Xét tên block trước layer |
+| KT-21 | đợt 3 | Đã sửa đúng | `A-SLAB` thêm vào `ve-kien-truc` |
+| KT-22 | đợt 3 | Đã sửa đúng | Độ lồng chẵn / lẻ |
+| KT-23 | đợt 3 | Đã sửa đúng | |
+| KT-24 | đợt 2 | Đã sửa đúng | `volume: null` + ghi chú, vẫn tính là va chạm |
+| KT-25 | đợt 2 | Sửa chưa đủ | Giới hạn 2000 cặp + `truncated` đúng; nhưng phần "chỉ đo 200 cặp" sinh lỗi mới KT-40 |
+| KT-26 | đợt 2 | Đã sửa đúng | `PlanTwist` khi không có preset |
+| KT-27 | đợt 2 | Đã chấp nhận | `topology_id` bỏ vị trí tuyệt đối; macro ghi trước bản sửa phải ghi lại |
+| KT-28 | đợt 1 | Đã sửa đúng | |
+| KT-29 | đợt 1 | Đã sửa đúng | |
+| KT-30 | đợt 1 | Đã chấp nhận (layer) / Đã sửa đúng (trục revolve) | Kiểm trục lấy mẫu dọc đường cong, theo pháp tuyến biên dạng |
+| KT-31 | tài liệu | Đã sửa đúng, câu mới hơi quá | Câu "thẻ 🔒 trong khung chat nhận cả ba dòng" chưa đúng hẳn: xem KT-41 |
+| KT-32 | tài liệu | Đã sửa đúng | Thời gian / đầu mục khớp; "89 lệnh" đã sửa trong `tong-quan-du-an.md` ở nhánh luồng chính |
+| KT-33 | tài liệu | Đã sửa đúng | I5 đổi sang ô `3D` + dòng Full hôm trước |
+| KT-34 | tích hợp | Đã sửa đúng | |
+| KT-35 | gói | Đã sửa đúng | `capture_view` gói 2D không có `view` / `direction` / `visual_style` |
+| KT-36 | gói | Đã sửa đúng | Regex nhận `# ghi chú`; `propose_skill` ghi dòng `plan` ở gói 2D / 3D |
+| KT-37 | tích hợp | Đã sửa đúng | Đổi luật 2D có chủ ý: bo / vát góc, gộp block thay đối tượng gốc, xóa layout tính vào luật > 20. Đối tượng vừa tạo trong lượt vẫn không tính (`CREATES_TOO`) |
+| KT-38 | bộ cài | Đã sửa đúng | `[InstallDelete]` khi thay bản gốc |
+| KT-39 | bộ cài | Đã sửa đúng | `*.gs` trong `.gitignore`; `make-apps-script.mjs` từ chối `--out` trong repo |
+
+C1–C5 làm đúng như luồng chính chốt: C1 (KT-12), C2 (KT-09), C3 (KT-02), C4 (KT-05: `AcceptPlan`, ở cả plugin; bộ cài lưu
+dòng offline không so ngày, đã chấp nhận), C5 (gói 3D vẫn không có `offset_entity` / `join_entities` / `explode_entities`,
+đã kiểm `Plans.cs`).
+
+**Tổng:** 35 đã sửa đúng, 1 sửa chưa đủ (KT-25), 3 đã chấp nhận (KT-05, KT-27, KT-30 phần layer).
+
+### Lỗi mới do sửa / gộp
+
+**KT-40 · nhẹ · đợt 2 · `plugin/ClaudeCAD.Plugin/Drawing/Solid2Tools.cs:866-874`**
+- Tái hiện: `check_interference` trên mô hình lớn có hơn 200 cặp mà `CheckInterference` trả true (gồm cả cặp chỉ chạm
+  nhau, như code giả định khi tính `touching_pairs`).
+- Sai: `measured` đếm cả cặp chạm nhau; từ cặp thứ 201, thể tích không đo nữa (`tried = false`) nên cặp **chỉ chạm nhau**
+  cũng bị tính là va chạm (`clashes++`, `interfere: true`, ghi chú "not measured"). Claude báo va chạm giả. Trước bản sửa
+  KT-25 mọi cặp đều được đo.
+- Sửa: chỉ đếm vào giới hạn 200 các cặp đo ra là va chạm (cặp chạm nhau không tính); hoặc khi hết lượt đo, ghi cặp vào
+  nhóm "chưa phân loại" riêng, không cộng vào `clash_count` / `interfere`.
+- Test: logic nằm trong code AutoCAD; tách vòng phân loại thành hàm lõi (danh sách kết quả `CheckInterference` + thể tích
+  đo được → clashes / touching / unmeasured) rồi test với 201 cặp chạm nhau → `interfere: false`.
+
+**KT-41 · nhẹ · bộ cài-tài liệu-tích hợp · `plugin/ClaudeCAD.Plugin/UI/ChatControl.cs:2883` (ô key thẻ kích hoạt), `:2952-2975` (thẻ 🔒); `docs/dung-may-chu-kich-hoat-full.md:93`**
+- Tái hiện: máy không mạng chưa kích hoạt, dán email 3 dòng vào ô key **trong khung chat** (thay vì bộ cài).
+- Sai: ô key là `TextBox` một dòng (không `AcceptsReturn`); WPF có thể chỉ giữ dòng đầu khi dán nhiều dòng (cần thử trên
+  Windows). Nếu vậy chỉ lưu được CCL1 → máy có giấy phép nhưng không có trạng thái → thẻ 🔒 chỉ có "Kiểm tra lại" (cần mạng):
+  kẹt như KT-01 cũ, ở đường khung chat. Tài liệu lại ghi "bộ cài và thẻ 🔒 trong khung chat nhận cả ba dòng", trong khi thẻ 🔒
+  không có ô dán.
+- Sửa: ô key `AcceptsReturn = true` + `TextWrapping` (hoặc thay xuống dòng bằng dấu cách khi dán); thêm ô dán mã vào thẻ 🔒
+  (máy offline có giấy phép, trạng thái hỏng); sửa câu tài liệu cho đúng.
+- Kiểm thật: thêm mục checklist "khung chat: dán 3 dòng vào ô key, máy rút mạng → dùng được ngay, đúng gói".
+
+**KT-42 · nhẹ · gói dịch vụ · `plugin/ClaudeCAD.Plugin/Drawing/BlockTools.cs:117-137` (`AddAttributes`)**
+- Tái hiện: gói 3D, bản vẽ có sẵn block `TEN_PHONG` có thuộc tính (vd. mặc định "PHÒNG"); "chèn block TEN_PHONG vào 10 chỗ".
+- Sai: `insert_block` không có `attributes` vẫn tạo `AttributeReference` cho mọi thuộc tính không hằng với chữ mặc định →
+  gói 3D vẫn đặt chữ lên bản vẽ (C3: "gói không có 2D thì chặn thuộc tính block"). Chỉ chữ có sẵn trong block, không phải chữ
+  Claude tự viết, nên nhẹ.
+- Sửa (tùy ý chủ dự án): gói không có 2D thì chèn block không tạo thuộc tính, hoặc từ chối block có thuộc tính không hằng,
+  hoặc ghi rõ trong tài liệu gói là cho phép.
+
+### Đánh giá chung
+
+Các lỗi lượt 1 đã được sửa gần hết và sửa đúng: 35 trên 39 lỗi đã sửa đúng, 3 lỗi được chấp nhận theo chốt, 1 lỗi sửa chưa
+đủ. Cả 3 lỗi nặng (dán mã offline ở bộ cài, cửa sát góc phòng, dựng tầng 2) đã khỏi, có test tự động kèm theo. Thử thêm các
+ca đối xứng cũng đúng. Phần gộp của 5 thread không làm hỏng bản 2D: luật xác nhận 2D chỉ đổi đúng chỗ đã định (KT-37), và
+toàn bộ test, build đều xanh. Còn 3 lỗi mới đều nhẹ, không làm mất dữ liệu: một lỗi báo va chạm giả trên mô hình rất lớn,
+một chỗ dán mã offline trong khung chat cần thử trên Windows, và một khe nhỏ cho chữ của block có sẵn ở gói 3D. Sửa được
+trong một vòng ngắn hoặc để sau khi thử thật.
+
+### Thời gian lượt 2
+
+~45 phút, tự soát diff (không dùng tác vụ con). Tốn nhất: đọc diff trợ lý / dispatcher / macro (~60 KB) và chạy thử probe mặt
+bằng. Không có số token chính xác.
