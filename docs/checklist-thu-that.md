@@ -161,6 +161,7 @@ Máy phải ở gói `3D` hoặc `Full` (phần I). Mở một bản vẽ mới 
 | J13 | ★ | Lượt J2 (tường + cửa, trừ trong cùng lượt) → ⋯ ▸ Lưu thành macro → mở bản vẽ mới, chạy macro; rồi chạy macro lần nữa trong **chính bản vẽ cũ** | Mỗi lần chạy có một tường mới có lỗ cửa; tường cũ trong bản vẽ cũ **không** bị khoét thêm | ☐ | ☐ | 3D-13 |
 | J14 | ○ | AutoCAD bản ngôn ngữ khác tiếng Anh (nếu có), hoặc bản vẽ từ mẫu tiếng nước ngoài: "chuyển kiểu Conceptual", "chụp ảnh góc iso kiểu Conceptual" | Kiểu đổi được, ảnh có màu; nếu lỗi thì Claude nêu tên các kiểu có trong bản vẽ — ghi lại danh sách đó | ☐ | ☐ | 3D-14 |
 | J15 | ○ | Dựng hộp 1000×1000×1000 và hộp thứ hai chạm đúng mặt (cạnh nhau, không chồng), gõ "giao hai hộp" | Claude báo hai khối không giao nhau / AutoCAD không ghép được, **bản vẽ không đổi**, AutoCAD không treo | ☐ | ☐ | 3D-15 |
+| J16 | ○ | "xoay biên dạng nửa hình tròn quanh trục cắt qua nó"; rồi "giao 3 khối" với 2 khối đầu tách rời; rồi `set_view_3d` với handle đã xóa | Revolve báo biên dạng cắt trục; giao báo các khối không giao nhau, bản vẽ không đổi; góc nhìn báo không tìm thấy handle | ☐ | ☐ | KT-28/29/30 |
 
 ## K. 3D đợt 2 (bản Full, gói 3D hoặc Full, ~10 phút)
 
