@@ -159,7 +159,7 @@ Lệnh này dựa trên đợt 1 nên làm sau cùng.
   - hỏi bản vẽ, đo, đếm, tìm;
   - layer, zoom, lưu, hoàn tác, chụp ảnh, xác nhận / kế hoạch;
   - di chuyển / sao chép / xoay / tỉ lệ / đối xứng / xóa / mảng / đổi thuộc tính;
-  - block, xref;
+  - block, xref (gói 3D: block **không thuộc tính**, vì thuộc tính là chữ; chốt C3 12/11/2026);
   - đường cơ bản (line, polyline, circle, arc, spline, ellipse, rectangle, polygon). 3D cần các đường này làm biên dạng và
     đường dẫn.
 - **2D:**

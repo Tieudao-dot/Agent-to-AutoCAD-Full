@@ -304,6 +304,12 @@ namespace ClaudeCAD.Plugin.Sidecar
             if (string.IsNullOrWhiteSpace(line)) return false;
             var pc = LicenseLogic.VerifyPlan(line, MachineCode);
             if (!pc.Ok) { Logger.Warn("plan line refused: " + pc.Reason); return false; }
+            var current = PlanLine;
+            if (!LicenseLogic.AcceptPlan(pc, current))
+            {
+                Logger.Warn($"plan line refused: dated {pc.Date}, older than the saved one ({current.Date})");
+                return false;
+            }
             try
             {
                 Directory.CreateDirectory(Root);
@@ -387,7 +393,8 @@ namespace ClaudeCAD.Plugin.Sidecar
                 {
                     var pc = LicenseLogic.VerifyPlan(planLine, MachineCode);
                     if (!pc.Ok) return (false, "Dòng CCF1 (gói) không dùng được: " + pc.Reason + ".");
-                    SavePlan(planLine);
+                    if (!SavePlan(planLine))
+                        return (false, $"Dòng gói này ngày {pc.Date}, cũ hơn dòng gói máy đang có ({PlanLine.Date}): không dùng được. Dán dòng gói mới nhất trong email của chủ plugin.");
                     if (license == null && statusLine == null)
                         return IsActivated
                             ? (true, "Đã lưu gói " + PlanLogic.Label(pc.Plan) + " cho máy này.")

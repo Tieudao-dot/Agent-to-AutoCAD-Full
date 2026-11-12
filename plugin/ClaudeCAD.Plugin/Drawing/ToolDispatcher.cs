@@ -112,6 +112,7 @@ namespace ClaudeCAD.Plugin.Drawing
                 var paramsObj = msg.TryGetValue("params", out var pv) ? pv : null;
                 if (paramsObj != null && !(paramsObj is Dictionary<string, object>))
                     throw ToolException.Invalid($"{tool}: 'params' must be a JSON object.");
+                RequireParamsInPlan(tool, paramsObj as Dictionary<string, object>);
                 var p = new Params(tool, paramsObj as Dictionary<string, object>);
 
                 var result = await MainThread.InvokeAsync(() => ExecuteOnMain(def, p)).ConfigureAwait(false);
@@ -138,6 +139,15 @@ namespace ClaudeCAD.Plugin.Drawing
             var plan = _host.Plan;
             if (!PlanLogic.Allowed(plan, tool))
                 throw new ToolException(ErrorCodes.NotInPlan, PlanLogic.BlockedMessage(tool, plan, _host.PlanContact));
+        }
+
+        /// <summary>Block attributes are text: refused on a plan without 2D (decided 12/11/2026, C3); the block itself is not.</summary>
+        private void RequireParamsInPlan(string tool, Dictionary<string, object> p)
+        {
+            var plan = _host.Plan;
+            var param = PlanLogic.BlockedParam(plan, tool, p);
+            if (param != null)
+                throw new ToolException(ErrorCodes.NotInPlan, PlanLogic.BlockedParamMessage(tool, param, plan, _host.PlanContact));
         }
 
         public static Dictionary<string, object> Ok(string id, object result) => new Dictionary<string, object>
@@ -320,6 +330,7 @@ namespace ClaudeCAD.Plugin.Drawing
                         if (def.Writes && !ctx.Writable) ctx.RequireWritable(tool);
 
                         var pobj = call.TryGetValue("params", out var pv) ? pv as Dictionary<string, object> : null;
+                        RequireParamsInPlan(tool, pobj);
                         var p = new Params(tool, pobj);
 
                         using (var nested = ctx.Doc.TransactionManager.StartTransaction())

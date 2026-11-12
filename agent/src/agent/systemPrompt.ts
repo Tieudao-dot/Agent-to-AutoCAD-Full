@@ -96,7 +96,7 @@ export const SYSTEM_PROMPT = BASE_PROMPT + TWO_D_HINTS;
 
 const PLAN_SCOPE: Record<ServicePlan, string> = {
   '2d': 'Included: reading and measuring, layers, view, blocks and xrefs, transforms, basic curves, text, dimensions, hatch, layouts, PDF plotting, 2D editing. Not included: 3D modelling.',
-  '3d': 'Included: reading and measuring, layers, view, blocks and xrefs, transforms, basic curves (as profiles and paths) and the 3D tools (solids, extrude / revolve, booleans, 3D views and visual styles, solid info, 3D from a floor plan, sections and projections with their own outline and hatch). Not included: text, dimensions, leaders, tables, hatch (other than inside section_view), layouts and viewports, PDF plotting, text / dimension styles, 2D editing (offset, fillet, chamfer, trim, extend, join, explode, polyline edit).',
+  '3d': 'Included: reading and measuring, layers, view, blocks without attributes and xrefs, transforms, basic curves (as profiles and paths) and the 3D tools (solids, extrude / revolve, booleans, 3D views and visual styles, solid info, 3D from a floor plan, sections and projections with their own outline and hatch). Not included: text, block attributes (no attribute definitions or values: blocks are defined and inserted without them), dimensions, leaders, tables, hatch (other than inside section_view), layouts and viewports, PDF plotting, text / dimension styles, 2D editing (offset, fillet, chamfer, trim, extend, join, explode, polyline edit).',
   '2d3d': 'Every tool is included.',
 };
 

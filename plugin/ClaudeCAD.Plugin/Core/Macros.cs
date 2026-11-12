@@ -85,6 +85,13 @@ namespace ClaudeCAD.Plugin.Core
 
         public const int MaxCalls = 2000;
 
+        /// <summary>
+        /// Tools of the macro outside this machine's plan (e.g. recorded on Full, run on 2D / 3D). The macro is then
+        /// not run at all: running only the calls in the plan would leave half a drawing.
+        /// </summary>
+        public static List<string> BlockedCalls(Macro m, string plan) =>
+            PlanLogic.BlockedCalls(plan, (m?.Calls ?? new List<MacroCall>()).Select(c => (c.Tool, (IDictionary<string, object>)c.Params)));
+
         public static bool ShouldRecord(string tool, bool writes) => writes && !string.IsNullOrEmpty(tool) && !NotRecorded.Contains(tool);
 
         /// <summary>The "handles" array of a tool result (strings only).</summary>

@@ -60,7 +60,7 @@ export function skillPlan(skillsDir: string, name: string): '2d' | '3d' | undefi
     return undefined;
   }
   const fm = /^---\r?\n([\s\S]*?)\r?\n---/.exec(md);
-  const m = fm ? /^plan:\s*["']?([A-Za-z0-9]+)["']?\s*$/m.exec(fm[1]!) : null;
+  const m = fm ? /^plan:\s*["']?([A-Za-z0-9]+)["']?\s*(?:#.*)?$/m.exec(fm[1]!) : null;
   if (m) {
     const v = m[1]!.toLowerCase();
     return v === '3d' ? '3d' : v === '2d' ? '2d' : undefined;

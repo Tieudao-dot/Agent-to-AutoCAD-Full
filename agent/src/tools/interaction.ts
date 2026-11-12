@@ -10,20 +10,25 @@ export const SKILL_NAME_RX = /^[a-z0-9][a-z0-9-]{0,63}$/;
 
 let seq = 0;
 
-/** The SKILL.md text of a drafted skill (frontmatter + body). */
-export function skillMarkdown(name: string, description: string, body: string): string {
+/**
+ * The SKILL.md text of a drafted skill (frontmatter + body). plan: the machine's service plan; on 2D or 3D the skill
+ * gets a "plan:" line, so a standard made on a 2D machine is not loaded on a 3D machine (whose tools it would ask for).
+ * Full and an older plugin: no plan line (every plan).
+ */
+export function skillMarkdown(name: string, description: string, body: string, plan?: string): string {
   // quoted: a ": " or " #" in a Vietnamese description must not break the YAML frontmatter
   const desc = JSON.stringify(description.replace(/\r?\n/g, ' ').replace(/"/g, "'").trim());
   const text = body.replace(/\r\n/g, '\n').trim();
   // Claude sometimes repeats the frontmatter in the body: keep only ours
   const withoutFrontmatter = text.startsWith('---') ? text.replace(/^---\n[\s\S]*?\n---\n?/, '').trim() : text;
-  return `---\nname: ${name}\ndescription: ${desc}\n---\n\n${withoutFrontmatter}\n`;
+  const planLine = plan === '2d' || plan === '3d' ? `plan: ${plan}\n` : '';
+  return `---\nname: ${name}\ndescription: ${desc}\n${planLine}---\n\n${withoutFrontmatter}\n`;
 }
 
 const textResult = (text: string) => ({ content: [{ type: 'text' as const, text }] });
 
 /** Palette-side tools: confirmation card, plan card, next-step buttons, skill draft card. */
-export function interactionTools(emit: (msg: SidecarToPlugin) => void): AnyTool[] {
+export function interactionTools(emit: (msg: SidecarToPlugin) => void, plan?: string): AnyTool[] {
   return [
     tool(
       'request_confirmation',
@@ -112,7 +117,7 @@ export function interactionTools(emit: (msg: SidecarToPlugin) => void): AnyTool[
         body: z.string().min(40).max(60_000),
       },
       async (args) => {
-        emit({ type: 'skill_draft', name: args.name, description: args.description, content: skillMarkdown(args.name, args.description, args.body) });
+        emit({ type: 'skill_draft', name: args.name, description: args.description, content: skillMarkdown(args.name, args.description, args.body, plan) });
         return textResult('The draft is shown to the user with "Xem / sửa" and "Thêm vào plugin" buttons. Tell them briefly what the skill contains and end your turn.');
       },
       { annotations: { readOnlyHint: true, openWorldHint: false } },
