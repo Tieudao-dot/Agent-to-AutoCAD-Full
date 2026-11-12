@@ -533,7 +533,7 @@ namespace ClaudeCAD.Plugin
         private static string Report(List<Step> steps, string dir)
         {
             var sb = new StringBuilder();
-            sb.AppendLine("ClaudeCAD — tự kiểm tra " + DateTime.Now.ToString("yyyy-MM-dd HH:mm", CultureInfo.InvariantCulture));
+            sb.AppendLine(ProductInfo.DisplayName + " — tự kiểm tra " + DateTime.Now.ToString("yyyy-MM-dd HH:mm", CultureInfo.InvariantCulture));
             sb.AppendLine(new string('=', 60));
             foreach (var s in steps)
                 sb.AppendLine($"{(s.Ok ? "✓" : "✗")} {s.Name}{(s.Ms > 0 ? $" ({s.Ms} ms)" : "")}: {s.Detail}");

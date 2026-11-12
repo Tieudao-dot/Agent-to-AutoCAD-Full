@@ -39,21 +39,33 @@ export function enabledSkills(skillsDir: string | undefined): string[] {
 }
 
 /**
+ * The 2D samples shipped with the plugin (plugin: SkillStore.BuiltinNames, with ve-3d-kien-truc). The installer never
+ * overwrites a skill already on the machine, so a machine upgraded from the original ClaudeCAD keeps its old copies,
+ * which have no "plan: 2d" line: they still count as 2D, so the user has nothing to edit (decided 12/11/2026). A plan
+ * line in the file always wins ("plan: all" loads a sample on every plan); the user's own skills are not touched.
+ */
+export const SAMPLE_2D_SKILLS: readonly string[] = ['ve-kien-truc', 've-mep', 've-ha-tang'];
+
+/**
  * The service plan a skill needs, from its SKILL.md frontmatter: "plan: 3d" = only useful with the 3D tools (3D kiến
  * trúc), "plan: 2d" = a 2D drafting standard (text, dimensions, hatch, offset… that a 3D machine does not have: the
- * samples ve-kien-truc, ve-mep, ve-ha-tang; decided 12/11/2026). undefined = every plan (the user's own skills).
+ * samples ve-kien-truc, ve-mep, ve-ha-tang; decided 12/11/2026). Any other value = every plan. No plan line: every
+ * plan, except an old copy of a 2D sample (SAMPLE_2D_SKILLS), which is 2D.
  */
 export function skillPlan(skillsDir: string, name: string): '2d' | '3d' | undefined {
+  let md: string;
   try {
-    const md = fs.readFileSync(path.join(skillsDir, name, 'SKILL.md'), 'utf8').replace(/^\uFEFF/, '');
-    const fm = /^---\r?\n([\s\S]*?)\r?\n---/.exec(md);
-    if (!fm) return undefined;
-    const m = /^plan:\s*["']?([A-Za-z0-9]+)["']?\s*$/m.exec(fm[1]!);
-    const v = m ? m[1]!.toLowerCase() : undefined;
-    return v === '3d' ? '3d' : v === '2d' ? '2d' : undefined;
+    md = fs.readFileSync(path.join(skillsDir, name, 'SKILL.md'), 'utf8').replace(/^\uFEFF/, '');
   } catch {
     return undefined;
   }
+  const fm = /^---\r?\n([\s\S]*?)\r?\n---/.exec(md);
+  const m = fm ? /^plan:\s*["']?([A-Za-z0-9]+)["']?\s*$/m.exec(fm[1]!) : null;
+  if (m) {
+    const v = m[1]!.toLowerCase();
+    return v === '3d' ? '3d' : v === '2d' ? '2d' : undefined;
+  }
+  return SAMPLE_2D_SKILLS.includes(name) ? '2d' : undefined;
 }
 
 /**

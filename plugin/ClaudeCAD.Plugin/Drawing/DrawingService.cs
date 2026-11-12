@@ -39,7 +39,9 @@ namespace ClaudeCAD.Plugin.Drawing
             {
                 string acad = "?";
                 try { acad = AcApp.Version + " · " + System.Convert.ToString(AcApp.GetSystemVariable("ACADVER")); } catch { }
-                return $"ClaudeCAD {PluginVersion} · bản {PluginBuild} · runtime {RuntimeName} · AutoCAD {acad}";
+                string edition = "?";
+                try { edition = EditionLogic.Label(Sidecar.UpdateService.BundleEdition); } catch { }
+                return $"{ProductInfo.DisplayName} {PluginVersion} · edition {edition} · bản {PluginBuild} · runtime {RuntimeName} · AutoCAD {acad}";
             }
         }
 

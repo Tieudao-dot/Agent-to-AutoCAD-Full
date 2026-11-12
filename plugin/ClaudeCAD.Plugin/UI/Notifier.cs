@@ -44,7 +44,7 @@ namespace ClaudeCAD.Plugin.UI
             {
                 if (_icon == null)
                 {
-                    _icon = new NotifyIcon { Icon = System.Drawing.SystemIcons.Information, Text = "ClaudeCAD" };
+                    _icon = new NotifyIcon { Icon = System.Drawing.SystemIcons.Information, Text = ProductInfo.DisplayName };
                     _hide = new Timer { Interval = 10000 };
                     _hide.Tick += (s, e) => { _hide.Stop(); if (_icon != null) _icon.Visible = false; };
                 }

@@ -27,7 +27,8 @@ namespace ClaudeCAD.Plugin.UI
         {
             if (_ps == null)
             {
-                _ps = new PaletteSet("ClaudeCAD", "CLAUDECHAT", PaletteGuid)
+                // the name people see; the GUID (AutoCAD remembers the palette's place by it) and the command stay ClaudeCAD's
+                _ps = new PaletteSet(Core.ProductInfo.DisplayName, "CLAUDECHAT", PaletteGuid)
                 {
                     Style = PaletteSetStyles.ShowPropertiesMenu | PaletteSetStyles.ShowAutoHideButton | PaletteSetStyles.ShowCloseButton,
                     MinimumSize = new Size(MinWidth, FullMinHeight),

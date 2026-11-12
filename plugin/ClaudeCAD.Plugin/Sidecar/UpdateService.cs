@@ -51,6 +51,29 @@ namespace ClaudeCAD.Plugin.Sidecar
             }
         }
 
+        /// <summary>
+        /// The edition of the installed bundle (Contents\edition.json, or the update link of a bundle without it; see
+        /// EditionLogic): shown in the self-test and the bug report. None for a dev build (NETLOAD).
+        /// </summary>
+        public static InstalledEdition BundleEdition
+        {
+            get
+            {
+                var bundle = InstalledBundle;
+                if (bundle == null) return InstalledEdition.None;
+                string Read(string name)
+                {
+                    try
+                    {
+                        var f = Path.Combine(bundle, "Contents", name);
+                        return File.Exists(f) ? File.ReadAllText(f) : null;
+                    }
+                    catch { return null; }
+                }
+                return EditionLogic.Detect(true, Read(EditionLogic.EditionFile), Read(EditionLogic.UpdateConfigFile));
+            }
+        }
+
         public static string ManifestUrl
         {
             get

@@ -142,7 +142,7 @@ namespace ClaudeCAD.Plugin.UI
                 _item.CloseBubbleWindows();
                 var bubble = new TrayItemBubbleWindow
                 {
-                    Title = string.IsNullOrEmpty(title) ? "ClaudeCAD" : title,
+                    Title = string.IsNullOrEmpty(title) ? ProductInfo.DisplayName : title,
                     Text = text,
                     HyperText = "Mở khung chat",
                     HyperLink = "",
@@ -193,7 +193,7 @@ namespace ClaudeCAD.Plugin.UI
                 case State.Ready: what = "sẵn sàng"; break;
                 default: what = "chưa kết nối"; break;
             }
-            return "ClaudeCAD — " + what + (string.IsNullOrWhiteSpace(detail) ? "" : ": " + detail.Trim()) + ". Bấm để mở khung chat";
+            return ProductInfo.DisplayName + " — " + what + (string.IsNullOrWhiteSpace(detail) ? "" : ": " + detail.Trim()) + ". Bấm để mở khung chat";
         }
 
         private static void Apply()

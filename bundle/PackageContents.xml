@@ -1,6 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-  Autodesk autoloader manifest for ClaudeCAD.
+  Autodesk autoloader manifest for ClaudeCAD (shown as "Agent to AutoCAD Full").
+  Decided 12/11/2026: the Full edition replaces the original ClaudeCAD as an upgrade, so ProductCode, UpgradeCode,
+  the ComponentEntry AppName values and the commands stay the same; only the names people read changed.
   Install: copy the whole ClaudeCAD.bundle folder to %AppData%\Autodesk\ApplicationPlugins
   (per user) or %ProgramData%\Autodesk\ApplicationPlugins (all users), or run installer\install.ps1.
 
@@ -18,8 +20,8 @@
     SchemaVersion="1.0"
     AutodeskProduct="AutoCAD"
     ProductType="Application"
-    Name="ClaudeCAD"
-    Description="Chat với Claude trong AutoCAD: vẽ, đọc, sửa bản vẽ bằng tiếng Việt."
+    Name="Agent to AutoCAD Full"
+    Description="Agent to AutoCAD Full: chat với Claude trong AutoCAD, vẽ 2D và dựng 3D, đọc, sửa bản vẽ bằng tiếng Việt."
     AppVersion="0.9.4"
     Author="ClaudeCAD"
     ProductCode="{8D3C1A52-6E4B-4F0A-9C27-3B5E7A1D9F40}"
@@ -28,13 +30,13 @@
   <CompanyDetails Name="ClaudeCAD" />
   <RuntimeRequirements OS="Win64" Platform="AutoCAD*" SeriesMin="R24.1" SeriesMax="R26.0" />
 
-  <Components Description="ClaudeCAD for AutoCAD 2022-2024 (.NET Framework 4.8)">
+  <Components Description="Agent to AutoCAD Full for AutoCAD 2022-2024 (.NET Framework 4.8)">
     <RuntimeRequirements OS="Win64" Platform="AutoCAD*" SeriesMin="R24.1" SeriesMax="R24.3" />
     <ComponentEntry
         AppName="ClaudeCAD"
         Version="0.9.4"
         ModuleName="./Contents/ClaudeCAD.Plugin.dll"
-        AppDescription="ClaudeCAD chat palette and drawing tools"
+        AppDescription="Agent to AutoCAD Full: chat palette and 2D / 3D drawing tools"
         LoadOnAutoCADStartup="True">
       <Commands GroupName="CLAUDECAD">
         <Command Global="CLAUDECHAT" Local="CLAUDECHAT" />
@@ -45,13 +47,13 @@
     </ComponentEntry>
   </Components>
 
-  <Components Description="ClaudeCAD for AutoCAD 2025-2026 (.NET 8)">
+  <Components Description="Agent to AutoCAD Full for AutoCAD 2025-2026 (.NET 8)">
     <RuntimeRequirements OS="Win64" Platform="AutoCAD*" SeriesMin="R25.0" SeriesMax="R25.1" />
     <ComponentEntry
         AppName="ClaudeCAD2025"
         Version="0.9.4"
         ModuleName="./Contents/2025/ClaudeCAD.Plugin.dll"
-        AppDescription="ClaudeCAD chat palette and drawing tools"
+        AppDescription="Agent to AutoCAD Full: chat palette and 2D / 3D drawing tools"
         LoadOnAutoCADStartup="True">
       <Commands GroupName="CLAUDECAD">
         <Command Global="CLAUDECHAT" Local="CLAUDECHAT" />
@@ -62,13 +64,13 @@
     </ComponentEntry>
   </Components>
 
-  <Components Description="ClaudeCAD for AutoCAD 2027 (.NET 10)">
+  <Components Description="Agent to AutoCAD Full for AutoCAD 2027 (.NET 10)">
     <RuntimeRequirements OS="Win64" Platform="AutoCAD*" SeriesMin="R26.0" SeriesMax="R26.0" />
     <ComponentEntry
         AppName="ClaudeCAD2027"
         Version="0.9.4"
         ModuleName="./Contents/2027/ClaudeCAD.Plugin.dll"
-        AppDescription="ClaudeCAD chat palette and drawing tools"
+        AppDescription="Agent to AutoCAD Full: chat palette and 2D / 3D drawing tools"
         LoadOnAutoCADStartup="True">
       <Commands GroupName="CLAUDECAD">
         <Command Global="CLAUDECHAT" Local="CLAUDECHAT" />

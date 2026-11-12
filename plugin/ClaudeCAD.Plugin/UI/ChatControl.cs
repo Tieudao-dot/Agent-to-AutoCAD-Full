@@ -710,6 +710,18 @@ namespace ClaudeCAD.Plugin.UI
             Theme.Ref(border, Border.BackgroundProperty, Theme.PanelBg);
             Theme.Ref(border, Border.BorderBrushProperty, Theme.Border);
 
+            // product + version on top of ⚙ (the name people see; commands and folders stay ClaudeCAD's)
+            var product = new TextBlock
+            {
+                Text = ProductInfo.WithVersion(ProductInfo.ShortVersion(typeof(ChatControl).Assembly.GetName().Version)),
+                FontWeight = FontWeights.SemiBold,
+                FontSize = 12,
+                Margin = new Thickness(8, 6, 8, 2),
+                ToolTip = "Tên bản cài và phiên bản (lệnh trong AutoCAD vẫn là CLAUDECHAT / CC)",
+            };
+            Theme.Ref(product, TextBlock.ForegroundProperty, Theme.Fg);
+            p.Children.Add(product);
+
             Grid NewGrid()
             {
                 var g = new Grid();
@@ -769,7 +781,7 @@ namespace ClaudeCAD.Plugin.UI
             fonts.Children.Add(minus);
             fonts.Children.Add(plus);
             Row(look, "Cỡ chữ", fonts, "Mặc định theo cỡ chữ palette của AutoCAD; chọn cỡ ở đây thì giữ cỡ của cậu");
-            _notify = CheckRow(look, "Báo khi lượt xong", "Bong bóng ở icon ClaudeCAD trên thanh trạng thái khi khung chat đang đóng / tự ẩn; và thông báo Windows khi AutoCAD không phải cửa sổ trước mặt");
+            _notify = CheckRow(look, "Báo khi lượt xong", "Bong bóng ở icon " + ProductInfo.DisplayName + " trên thanh trạng thái khi khung chat đang đóng / tự ẩn; và thông báo Windows khi AutoCAD không phải cửa sổ trước mặt");
             _hotkey = CheckRow(look, "Phím tắt Ctrl+Shift+Space", "Mở palette và đặt con trỏ vào ô nhập (lệnh tắt: CC)");
             p.Children.Add(new Category("CHUNG — GIAO DIỆN", look).Root);
 
@@ -2682,7 +2694,7 @@ namespace ClaudeCAD.Plugin.UI
 
             var stack = new StackPanel();
             var head = new TextBlock { TextWrapping = TextWrapping.Wrap };
-            head.Inlines.Add(new System.Windows.Documents.Run("Bắt đầu với ClaudeCAD") { FontWeight = FontWeights.SemiBold });
+            head.Inlines.Add(new System.Windows.Documents.Run("Bắt đầu với " + ProductInfo.DisplayName) { FontWeight = FontWeights.SemiBold });
             var sub = new System.Windows.Documents.Run(" — 3 bước, khoảng 2 phút") { FontSize = 11 };
             sub.SetResourceReference(System.Windows.Documents.TextElement.ForegroundProperty, Theme.MutedFg);
             head.Inlines.Add(sub);
@@ -2828,7 +2840,7 @@ namespace ClaudeCAD.Plugin.UI
             }
             _activationDone = false;
             var stack = new StackPanel();
-            var title = new TextBlock { Text = "🔒 Kích hoạt ClaudeCAD", FontWeight = FontWeights.SemiBold, FontSize = FontSize + 1 };
+            var title = new TextBlock { Text = "🔒 Kích hoạt " + ProductInfo.DisplayName, FontWeight = FontWeights.SemiBold, FontSize = FontSize + 1 };
             Theme.Ref(title, TextBlock.ForegroundProperty, Theme.Fg);
             stack.Children.Add(title);
             var intro = new TextBlock
@@ -2948,7 +2960,7 @@ namespace ClaudeCAD.Plugin.UI
                 return;
             }
             var stack = new StackPanel();
-            var title = new TextBlock { Text = "🔒 ClaudeCAD tạm khóa", FontWeight = FontWeights.SemiBold, FontSize = FontSize + 1 };
+            var title = new TextBlock { Text = "🔒 " + ProductInfo.DisplayName + " tạm khóa", FontWeight = FontWeights.SemiBold, FontSize = FontSize + 1 };
             Theme.Ref(title, TextBlock.ForegroundProperty, Theme.Fg);
             stack.Children.Add(title);
             var msg = new TextBlock { Text = message ?? "", TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 3, 0, 0) };

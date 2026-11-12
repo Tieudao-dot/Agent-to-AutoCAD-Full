@@ -9,6 +9,7 @@
  *       2025/ClaudeCAD.Plugin.dll    (AutoCAD 2025-2026 build, net8.0-windows)
  *       2027/ClaudeCAD.Plugin.dll    (AutoCAD 2027 build, net10.0-windows)
  *       update-config.json           (only with --update-url)
+ *       edition.json                 (bundle/edition.json: tells the Full edition apart from the original ClaudeCAD)
  *       activation.json              (activation service url + owner contact, from activation/activation.json)
  *       README.md
  *       agent/                       (dist + package.json + production node_modules for win32-x64)
@@ -91,6 +92,12 @@ if (values['update-url']) {
   fs.writeFileSync(path.join(contents, 'update-config.json'), JSON.stringify({ manifest_url: values['update-url'] }, null, 2), 'utf8');
 }
 fs.copyFileSync(path.join(repo, 'README.md'), path.join(contents, 'README.md'));
+
+// edition mark (decided 12/11/2026): the Full edition installs over the original ClaudeCAD with the same identity
+// (AppId, ClaudeCAD.bundle, ProductCode / UpgradeCode); the installer and the plugin tell the editions apart by this file
+const edition = JSON.parse(fs.readFileSync(path.join(here, 'edition.json'), 'utf8'));
+if (edition.edition !== 'full') fail(`bundle/edition.json: "edition" must be "full" (got ${edition.edition})`);
+fs.writeFileSync(path.join(contents, 'edition.json'), JSON.stringify(edition, null, 2) + '\n', 'utf8');
 
 // v0.9.4 activation: the plugin reads Contents/activation.json, the installer includes bundle/out/activation.iss
 // (UTF-8 with BOM so Inno Setup keeps the Vietnamese contact text).

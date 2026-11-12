@@ -6,6 +6,9 @@
   #define AppVersion "0.9.4"
 #endif
 #define BundleDir "..\bundle\out\ClaudeCAD.bundle"
+; the name people see (decided 12/11/2026). The technical identity stays ClaudeCAD's (AppId, ClaudeCAD.bundle, the
+; commands, %LocalAppData%\ClaudeCAD) so this edition installs over the original ClaudeCAD like an upgrade.
+#define AppDisplayName "Agent to AutoCAD Full"
 ; one installer for AutoCAD 2022-2027: refuse to build it without all three plugin builds
 #if !FileExists(AddBackslash(SourcePath) + BundleDir + "\Contents\ClaudeCAD.Plugin.dll")
   #error ClaudeCAD.bundle has no AutoCAD 2022-2024 build (Contents\ClaudeCAD.Plugin.dll)
@@ -30,8 +33,10 @@
 #define ContactPas StringChange(ActivationContact, "'", "''")
 
 [Setup]
+; AppId: the same as the original ClaudeCAD, so Windows treats this install as its upgrade (one entry in the app list)
 AppId={{8D3C1A52-6E4B-4F0A-9C27-3B5E7A1D9F40}
-AppName=ClaudeCAD
+AppName={#AppDisplayName}
+AppVerName={#AppDisplayName} {#AppVersion}
 AppVersion={#AppVersion}
 AppPublisher=ClaudeCAD
 DefaultDirName={userappdata}\Autodesk\ApplicationPlugins\ClaudeCAD.bundle
@@ -48,7 +53,7 @@ ArchitecturesInstallIn64BitMode=x64compatible
 CloseApplications=yes
 ; always write %TEMP%\Setup Log yyyy-mm-dd #nnn.txt — "Gửi báo cáo lỗi" in the palette attaches it
 SetupLogging=yes
-UninstallDisplayName=ClaudeCAD for AutoCAD
+UninstallDisplayName={#AppDisplayName}
 
 [Languages]
 Name: "english"; MessagesFile: "compiler:Default.isl"
@@ -68,7 +73,7 @@ Source: "{#BundleDir}\Contents\skills\*"; DestDir: "{app}\Contents\skills"; Flag
 Filename: "{#ClaudeExe}"; Parameters: "auth login --claudeai"; Description: "Đăng nhập Claude ngay (trình duyệt mở ra, bấm đồng ý một lần — không cần mở AutoCAD)"; Flags: postinstall runasoriginaluser skipifsilent nowait; Check: NeedsLogin
 
 [Messages]
-FinishedLabel=ClaudeCAD đã được cài.%n%nĐể dùng ngay: giữ ô "Đăng nhập Claude ngay" rồi bấm Finish — trình duyệt mở trang cấp quyền, cậu bấm đồng ý bằng tài khoản Claude Pro/Max (một cửa sổ đen hiện lên trong lúc đăng nhập và tự đóng khi xong). Sau đó mở AutoCAD 2022–2027 là dùng được.%n%nNếu bỏ qua bước này, lần đầu mở AutoCAD plugin sẽ tự mở trang đăng nhập.
+FinishedLabel={#AppDisplayName} đã được cài (lệnh mở khung chat: CLAUDECHAT).%n%nĐể dùng ngay: giữ ô "Đăng nhập Claude ngay" rồi bấm Finish — trình duyệt mở trang cấp quyền, cậu bấm đồng ý bằng tài khoản Claude Pro/Max (một cửa sổ đen hiện lên trong lúc đăng nhập và tự đóng khi xong). Sau đó mở AutoCAD 2022–2027 là dùng được.%n%nNếu bỏ qua bước này, lần đầu mở AutoCAD plugin sẽ tự mở trang đăng nhập.
 
 [Code]
 #if FileExists(AddBackslash(SourcePath) + BundleDir + "\Contents\node\node.exe")
@@ -225,11 +230,149 @@ begin
   Log('AutoCAD releases found: supported [' + Trim(Supported) + '] newer [' + Trim(Newer) + ']');
   if Supported <> '' then exit;
   if Newer <> '' then
-    Result := SuppressibleMsgBox('Máy này có AutoCAD bản mới hơn 2027 (' + Trim(Newer) + '). ClaudeCAD bản này chỉ chạy trên AutoCAD 2022–2027 nên sẽ không tự nạp vào bản đó.' + #13#10#13#10 +
+    Result := SuppressibleMsgBox('Máy này có AutoCAD bản mới hơn 2027 (' + Trim(Newer) + '). {#AppDisplayName} bản này chỉ chạy trên AutoCAD 2022–2027 nên sẽ không tự nạp vào bản đó.' + #13#10#13#10 +
               'Vẫn cài tiếp?', mbConfirmation, MB_YESNO, IDYES) = IDYES
   else
-    Result := SuppressibleMsgBox('Không tìm thấy AutoCAD 2022–2027 bản đầy đủ trên máy này. ClaudeCAD chỉ chạy trên AutoCAD bản đầy đủ (và các bản chuyên ngành như Civil 3D), không chạy trên AutoCAD LT.' + #13#10#13#10 +
-              'Vẫn cài tiếp? (Cài AutoCAD sau cũng được, ClaudeCAD tự nạp khi mở AutoCAD.)', mbConfirmation, MB_YESNO, IDYES) = IDYES;
+    Result := SuppressibleMsgBox('Không tìm thấy AutoCAD 2022–2027 bản đầy đủ trên máy này. {#AppDisplayName} chỉ chạy trên AutoCAD bản đầy đủ (và các bản chuyên ngành như Civil 3D), không chạy trên AutoCAD LT.' + #13#10#13#10 +
+              'Vẫn cài tiếp? (Cài AutoCAD sau cũng được, {#AppDisplayName} tự nạp khi mở AutoCAD.)', mbConfirmation, MB_YESNO, IDYES) = IDYES;
+end;
+
+{ ======================================================================= the Full edition over the original ClaudeCAD
+  Decided 12/11/2026: this edition keeps ClaudeCAD's technical identity, so on a machine with the original ClaudeCAD
+  (2D only) it installs over it like an upgrade: chats, settings and the Claude sign-in are kept; the machine asks the
+  Full edition's activation service again (the old key cannot work). Same rules as EditionLogic in
+  plugin\ClaudeCAD.Plugin\Core\Edition.cs (EditionTests keeps them in step):
+    Contents\edition.json with "edition":"full"           -> full: a normal upgrade, no question
+    no edition.json, update-config.json -> agent-to-autocad/ (the original repository) -> original
+    update-config.json -> agent-to-autocad-full/           -> full (a Full build from before edition.json)
+    a bundle folder without either                         -> unknown, treated like the original
+  Texts are compared in lower case without spaces / line breaks. }
+
+var
+  ExistingEdition, ExistingVersion: String;
+
+function BundlePath(): String;
+begin
+  Result := ExpandConstant('{userappdata}\Autodesk\ApplicationPlugins\ClaudeCAD.bundle');
+end;
+
+{ the file in lower case without spaces, tabs or line breaks ('' when missing / unreadable) }
+function ReadSqueezed(const FileName: String; var Text: String): Boolean;
+var
+  Raw: AnsiString;
+  T: String;
+begin
+  Text := '';
+  Result := False;
+  if not FileExists(FileName) then exit;
+  if not LoadStringFromFile(FileName, Raw) then exit;
+  T := Lowercase(String(Raw));
+  StringChangeEx(T, ' ', '', True);
+  StringChangeEx(T, #9, '', True);
+  StringChangeEx(T, #13, '', True);
+  StringChangeEx(T, #10, '', True);
+  Text := T;
+  Result := True;
+end;
+
+{ none / full / original / unknown }
+function DetectEdition(): String;
+var
+  Dir, Text: String;
+begin
+  Dir := BundlePath();
+  if not DirExists(Dir) then
+  begin
+    Result := 'none';
+    exit;
+  end;
+  if ReadSqueezed(Dir + '\Contents\edition.json', Text) and (Pos('"edition":"', Text) > 0) then
+  begin
+    if Pos('"edition":"full"', Text) > 0 then Result := 'full' else Result := 'unknown';
+    exit;
+  end;
+  if ReadSqueezed(Dir + '\Contents\update-config.json', Text) then
+  begin
+    if Pos('agent-to-autocad/', Text) > 0 then
+    begin
+      Result := 'original';
+      exit;
+    end;
+    if Pos('agent-to-autocad-full/', Text) > 0 then
+    begin
+      Result := 'full';
+      exit;
+    end;
+  end;
+  Result := 'unknown';
+end;
+
+{ AppVersion="..." of PackageContents.xml in the bundle folder ('' when it cannot be read) }
+function ExistingAppVersion(): String;
+var
+  Raw: AnsiString;
+  Text: String;
+  p: Integer;
+begin
+  Result := '';
+  if not FileExists(BundlePath() + '\PackageContents.xml') then exit;
+  if not LoadStringFromFile(BundlePath() + '\PackageContents.xml', Raw) then exit;
+  Text := String(Raw);
+  p := Pos('AppVersion="', Text);
+  if p = 0 then exit;
+  Text := Copy(Text, p + 12, 30);
+  p := Pos('"', Text);
+  if (p > 1) and (p <= 21) then Result := Copy(Text, 1, p - 1);
+end;
+
+function ReplacesOriginal(): Boolean;
+begin
+  Result := (ExistingEdition = 'original') or (ExistingEdition = 'unknown');
+end;
+
+{ The original ClaudeCAD (or a bundle that cannot be identified) is about to be replaced: say what is kept and what is
+  not, and let the user stop. Silent installs (/SILENT, /VERYSILENT) do not ask: the log says what was replaced. }
+function ConfirmReplaceOriginal(): Boolean;
+var
+  What: String;
+begin
+  Result := True;
+  ExistingEdition := DetectEdition();
+  ExistingVersion := ExistingAppVersion();
+  Log('existing install: ' + ExistingEdition + ' ' + ExistingVersion + ' (' + BundlePath() + ')');
+  if not ReplacesOriginal() then exit;
+  if ExistingEdition = 'original' then
+    What := 'ClaudeCAD (bản gốc, chỉ 2D)'
+  else
+    What := 'một bản ClaudeCAD chưa rõ loại (có thể là bản gốc, chỉ 2D)';
+  if ExistingVersion <> '' then What := What + ', phiên bản ' + ExistingVersion;
+  if WizardSilent() then
+  begin
+    Log('silent install: replacing ' + What + ' with {#AppDisplayName} {#AppVersion} without asking');
+    exit;
+  end;
+  Result := MsgBox('Máy này đang có ' + What + '.' + #13#10#13#10 +
+                   'Cài {#AppDisplayName} sẽ thay bản này. Lịch sử chat, cài đặt và đăng nhập Claude được giữ.' + #13#10 +
+                   'Key cũ không dùng được: máy sẽ xin kích hoạt lại, chủ plugin duyệt và chọn gói cho máy.' + #13#10#13#10 +
+                   'Bấm OK để tiếp tục cài, Cancel để hủy (giữ nguyên bản đang có).',
+                   mbConfirmation, MB_OKCANCEL) = IDOK;
+  if Result then Log('the user agreed to replace ' + What)
+  else Log('the user cancelled: ' + What + ' is kept');
+end;
+
+{ An update the original ClaudeCAD downloaded (CLAUDECHATUPDATE) waits in %LocalAppData%\ClaudeCAD\updates\stage and
+  is copied over the bundle when AutoCAD closes: it would put the original back over this edition. Only for a
+  replaced original / unknown bundle, once the user went ahead. }
+procedure DropOriginalStagedUpdate();
+var
+  Stage: String;
+begin
+  Stage := ExpandConstant('{localappdata}\ClaudeCAD\updates\stage');
+  if not DirExists(Stage) then exit;
+  if DelTree(Stage, True, True, True) then
+    Log('removed the update staged by the replaced edition: ' + Stage)
+  else
+    Log('could not remove the staged update ' + Stage);
 end;
 
 function InitializeSetup(): Boolean;
@@ -238,14 +381,16 @@ var
 begin
   Result := CheckAutoCAD();
   if not Result then exit;
+  Result := ConfirmReplaceOriginal();
+  if not Result then exit;
 #ifdef BundledNode
   exit; { Node.js ships with the plugin }
 #endif
   Major := NodeMajor();
   if Major < 18 then
   begin
-    if MsgBox('ClaudeCAD needs Node.js 18 or newer, which was not found on this computer.' + #13#10 +
-              'Open the Node.js download page now? (Setup continues; install Node.js before using ClaudeCAD.)',
+    if MsgBox('{#AppDisplayName} needs Node.js 18 or newer, which was not found on this computer.' + #13#10 +
+              'Open the Node.js download page now? (Setup continues; install Node.js before using it.)',
               mbConfirmation, MB_YESNO) = IDYES then
       ShellExec('open', 'https://nodejs.org/en/download', '', '', SW_SHOWNORMAL, ewNoWait, ErrCode);
   end;
@@ -294,6 +439,9 @@ var
   Text: AnsiString;
 begin
   Result := False;
+  { a licence the original ClaudeCAD saved (or one of a bundle that cannot be identified) is not this edition's: the
+    Full edition has its own activation service and key pair. Show the key page, which asks the owner again. }
+  if ReplacesOriginal() then exit;
   { CCL1|machine|date|signature (≈ 380 characters): a truncated / empty file does not hide the key page }
   if LoadStringFromFile(LicenseFile(), Text) then
     Result := (Pos('CCL1|' + MachineCode() + '|', String(Text)) = 1) and (Length(Text) > 100);
@@ -415,7 +563,7 @@ procedure CopyClick(Sender: TObject);
 var
   ResultCode: Integer;
 begin
-  if Exec(ExpandConstant('{cmd}'), '/C echo Ma may ClaudeCAD: ' + MachineCode() + ' (' + GetComputerNameString() + ')| clip', '', SW_HIDE, ewWaitUntilTerminated, ResultCode) then
+  if Exec(ExpandConstant('{cmd}'), '/C echo Ma may {#AppDisplayName}: ' + MachineCode() + ' (' + GetComputerNameString() + ')| clip', '', SW_HIDE, ewWaitUntilTerminated, ResultCode) then
     SetStatus('Đã sao chép mã máy — dán vào Zalo gửi cho chủ plugin.');
 end;
 
@@ -484,19 +632,19 @@ var
   Intro, CodeLabel, KeyLabel: TNewStaticText;
   CopyButton: TNewButton;
 begin
-  KeyPage := CreateCustomPage(wpWelcome, 'Kích hoạt ClaudeCAD', 'Chủ plugin cấp quyền dùng cho từng máy.');
+  KeyPage := CreateCustomPage(wpWelcome, 'Kích hoạt {#AppDisplayName}', 'Chủ plugin cấp quyền dùng cho từng máy.');
 
   Intro := TNewStaticText.Create(KeyPage);
   Intro.Parent := KeyPage.Surface;
   Intro.WordWrap := True;
   Intro.Width := KeyPage.SurfaceWidth;
   if '{#ActivationUrl}' <> '' then
-    Intro.Caption := 'ClaudeCAD chỉ dùng được khi máy này được chủ plugin cho phép. Yêu cầu được gửi tự động;' + #13#10 +
+    Intro.Caption := '{#AppDisplayName} chỉ dùng được khi máy này được chủ plugin cho phép. Yêu cầu được gửi tự động;' + #13#10 +
                      '{#ContactPas} để được duyệt nhanh.' + #13#10 +
                      'Có key thì dán vào ô dưới. Chưa có key vẫn bấm Next cài tiếp được — sau khi được duyệt,' + #13#10 +
                      'mở AutoCAD là tự dùng được (hoặc bấm "Kiểm tra lại" trong khung chat Claude).'
   else
-    Intro.Caption := 'ClaudeCAD chỉ cài được khi có mã kích hoạt do chủ plugin cấp, riêng cho từng máy.' + #13#10 +
+    Intro.Caption := '{#AppDisplayName} chỉ cài được khi có mã kích hoạt do chủ plugin cấp, riêng cho từng máy.' + #13#10 +
                      '{#ContactPas}, gửi mã máy bên dưới để nhận mã kích hoạt (dòng dài bắt đầu bằng CCL1|).';
 
   CodeLabel := TNewStaticText.Create(KeyPage);
@@ -603,6 +751,8 @@ begin
       if Activate(ExpandConstant('{param:KEY|}'), Err) then Log('activation: activated') else Log('activation: ' + Err);
     end
     else Log('activation: silent install without /KEY= — the plugin will ask for the key');
+  { replacing the original ClaudeCAD: its staged update must not come back over this edition when AutoCAD closes }
+  if (CurStep = ssInstall) and ReplacesOriginal() then DropOriginalStagedUpdate();
   { sign-in now happens inside AutoCAD ("Đăng nhập Claude" button) — nothing to type in a terminal }
   if CurStep = ssPostInstall then TrustBundle();
 end;

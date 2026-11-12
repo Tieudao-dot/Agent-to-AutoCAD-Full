@@ -11,7 +11,8 @@ import path from 'node:path';
 import { describe, it } from 'node:test';
 import { fileURLToPath } from 'node:url';
 import { ALWAYS_CONFIRM, PLUGIN_CONFIRMED, USER_CONFIRMED_PARAM, affectedCount, applyUserConfirmation, existingSolidsChanged, refusedForConfirmation } from '../src/agent/confirmation.js';
-import { librarySkills, skillsForPlan } from '../src/agent/skills.js';
+import { SAMPLE_2D_SKILLS, librarySkills, skillPlan, skillsForPlan } from '../src/agent/skills.js';
+import os from 'node:os';
 import { BASE_PROMPT, SYSTEM_PROMPT, TWO_D_HINTS, THREE_D_RULES, systemPromptFor } from '../src/agent/systemPrompt.js';
 import type { ToolBridge } from '../src/tools/common.js';
 import { buildTools } from '../src/tools/index.js';
@@ -194,5 +195,44 @@ describe('3D token cut (decided 12/11/2026): no tool renamed, parameter meanings
     const b3 = shape('build_3d_from_plan') as Record<string, { description?: string }>;
     for (const k of ['wall_handles', 'centerline_handles', 'thickness', 'openings', 'min_thickness', 'area_min', 'on_existing', 'dry_run'])
       assert.ok((b3[k]?.description ?? '').length > 10, `build_3d_from_plan.${k} still described`);
+  });
+});
+
+describe('upgrade from the original ClaudeCAD (decided 12/11/2026): old 2D sample skills need no edit', () => {
+  const write = (dir: string, name: string, frontmatter: string) => {
+    fs.mkdirSync(path.join(dir, name), { recursive: true });
+    fs.writeFileSync(path.join(dir, name, 'SKILL.md'), `---\nname: ${name}\ndescription: x\n${frontmatter}---\n# ${name}\n`);
+  };
+
+  it('a 2D sample without a plan line (the copy the installer kept) is 2D; the user\'s own skills and plan lines are untouched', () => {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'cc-oldskills-'));
+    try {
+      for (const n of SAMPLE_2D_SKILLS) write(dir, n, ''); // old copies: no "plan:" line
+      write(dir, 'khung-ten-cty', ''); // the user's own skill
+      write(dir, 've-3d-kien-truc', 'plan: 3d\n');
+      for (const n of SAMPLE_2D_SKILLS) assert.equal(skillPlan(dir, n), '2d', n);
+      assert.equal(skillPlan(dir, 'khung-ten-cty'), undefined);
+      const all = [...SAMPLE_2D_SKILLS, 'khung-ten-cty', 've-3d-kien-truc'];
+      assert.deepEqual(skillsForPlan(dir, all, '3d'), ['khung-ten-cty', 've-3d-kien-truc']);
+      assert.deepEqual(skillsForPlan(dir, all, '2d'), [...SAMPLE_2D_SKILLS, 'khung-ten-cty']);
+      assert.deepEqual(skillsForPlan(dir, all, '2d3d'), all);
+      // a plan line in the file always wins: "plan: all" loads a sample everywhere, "plan: 3d" makes it 3D-only
+      write(dir, 've-mep', 'plan: all\n');
+      write(dir, 've-ha-tang', 'plan: 3d\n');
+      assert.equal(skillPlan(dir, 've-mep'), undefined);
+      assert.equal(skillPlan(dir, 've-ha-tang'), '3d');
+      assert.equal(skillPlan(dir, 'missing'), undefined);
+    } finally {
+      fs.rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it('the sample list matches the shipped 2D skills and the plugin\'s built-in names', () => {
+    const shipped = librarySkills(path.join(repo, 'skills'));
+    const tagged2d = shipped.filter((n) => /^plan:\s*2d\s*$/m.test(fs.readFileSync(path.join(repo, 'skills', n, 'SKILL.md'), 'utf8')));
+    assert.deepEqual([...SAMPLE_2D_SKILLS].sort(), tagged2d.sort());
+    const store = fs.readFileSync(path.join(repo, 'plugin', 'ClaudeCAD.Plugin', 'Core', 'SkillStore.cs'), 'utf8');
+    const builtin = /BuiltinNames\s*=\s*\{([^}]*)\}/.exec(store)![1]!.match(/"([^"]+)"/g)!.map((x) => x.slice(1, -1));
+    for (const n of SAMPLE_2D_SKILLS) assert.ok(builtin.includes(n), n);
   });
 });
