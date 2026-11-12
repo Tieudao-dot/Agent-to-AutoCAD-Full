@@ -47,7 +47,7 @@ Logic gói: **không sửa**. Không đổi `activation/activation.json`, `Licen
 - Lõi `dotnet test plugin/ClaudeCAD.Core.Tests`: **309/309** (304 + 5).
 - Trợ lý `npm test`: **191/191** (185 + 6).
 - Build Linux (.NET SDK 10, xóa `obj` / `bin` giữa các lần): net48, net8.0-windows, net10.0-windows: 0 lỗi, 0 cảnh báo.
-- CI Windows: xem mục Tiến độ.
+- CI Windows: run 43230375890 (`build.yml`, workflow_dispatch, `release: false`, commit `fa68791`) **xanh** (~10 phút, gồm UI test WPF, build 3 bản, Setup.exe).
 
 ## Số token theo gói
 
@@ -107,4 +107,4 @@ dấu góc vát (J11), dấu `ShellBody` (K17), thứ tự ma trận `align` (K2
 - [x] Bước 0: gộp tài liệu luồng chính (không xung đột)
 - [x] Rà soát + sửa lỗi + test
 - [x] Tài liệu: file này, `docs/checklist-tong-the.md`, checklist thử thật, kế hoạch, `bo-cai/README.md`
-- [ ] CI Windows (1 lượt)
+- [x] CI Windows (1 lượt, xanh: run 43230375890)
