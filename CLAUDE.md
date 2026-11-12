@@ -97,5 +97,6 @@ dự án gốc), `bo-cai/README.md`.
 | Thread | Session id | Phạm vi |
 | --- | --- | --- |
 | Luồng chính | `session_01D56HmFT5bwapmbypmLY5nr` | Tổng quan, trao đổi với chủ dự án, điều phối sub-thread. Không tự làm việc kỹ thuật |
+| Gói dịch vụ | `session_01D56HmJEU9szFU3rjc38bwT` | Nhánh `full/goi-dich-vu`: gói 2D / 3D / 2D + 3D trong plugin (đọc gói, nhãn lệnh, chặn lệnh, trợ lý, giao diện), mẫu Apps Script phần gói. Bàn giao: `docs/ban-giao/goi-dich-vu-plugin.md` |
 
 Link mở thread: `https://claude.ai/code/<session id>`.

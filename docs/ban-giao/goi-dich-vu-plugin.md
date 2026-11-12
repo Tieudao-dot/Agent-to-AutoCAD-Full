@@ -1,6 +1,7 @@
 # Bàn giao: gói dịch vụ trong plugin (2D / 3D / 2D + 3D)
 
-*12/11/2026 · luồng chính bàn giao cho sub-thread "Gói dịch vụ".*
+*12/11/2026 · luồng chính bàn giao cho sub-thread "Gói dịch vụ" (`session_01D56HmJEU9szFU3rjc38bwT`, nhánh
+`full/goi-dich-vu`).*
 
 Đọc trước: [`../ke-hoach-3d-goi-dich-vu.md`](../ke-hoach-3d-goi-dich-vu.md) (Phần 2),
 [`../dung-may-chu-kich-hoat-full.md`](../dung-may-chu-kich-hoat-full.md), `activation/README.md`.
