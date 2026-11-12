@@ -83,6 +83,11 @@ describe('3D phase 3 tools', () => {
   it('the 3D system prompt explains when to use them; a 2D machine does not get it', () => {
     for (const needle of ['build_3d_from_plan', 'dry_run: true', 'open_gaps', 'skipped', 'never guess them', 'already built', 'on_existing', 'section_view', 'projection_view', 'cut_area_m2'])
       assert.ok(THREE_D_RULES.includes(needle), needle);
+    // KT-14 / KT-16 (independent check): never propose erasing another storey; base_z is mm
+    assert.ok(THREE_D_RULES.includes('never propose erasing another storey or the storey below'));
+    assert.ok(!THREE_D_RULES.includes('erase them first'));
+    assert.match(byName('build_3d_from_plan').inputSchema.base_z!.description ?? '', /in mm/);
+    assert.match(byName('build_3d_from_plan').description, /it only reads/);
     assert.ok(!systemPromptFor('2d').includes('build_3d_from_plan'));
     assert.ok(systemPromptFor('3d').includes('build_3d_from_plan'));
     assert.ok(systemPromptFor('2d3d').includes('section_view'));

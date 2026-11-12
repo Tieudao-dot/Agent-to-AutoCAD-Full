@@ -108,6 +108,28 @@ namespace ClaudeCAD.Plugin.Core
         public int Caps;
         /// <summary>Gaps filled because another wall crosses them (a + junction drawn with broken lines).</summary>
         public int JunctionsFilled;
+        /// <summary>
+        /// Gaps beyond a wall's end, up to the wall it faces (a door next to a room corner, a door between a 220 and a
+        /// 110 wall in line): [s0, s1] outside the wall's solid parts. Also in the gap list of AssignSymbols / OpenGaps.
+        /// </summary>
+        public List<(int wall, double s0, double s1)> EndGaps = new List<(int, double, double)>();
+    }
+
+    /// <summary>A solid of an earlier run on the result layers (rerun check of build_3d_from_plan).</summary>
+    public sealed class Existing3d
+    {
+        public string Handle;
+        public bool IsSlab;
+        public double[] Min, Max; // 3D box
+    }
+
+    public sealed class RerunCheck
+    {
+        /// <summary>Solids of an earlier run at this level over this plan: building again would double them.</summary>
+        public List<string> Rerun = new List<string>();
+        /// <summary>Walls of the storey below that this storey's slab cuts into (wall_height = storey height − slab).</summary>
+        public List<string> SlabIntoWallsBelow = new List<string>();
+        public double SlabIntoWallsBy;
     }
 
     /// <summary>
@@ -360,7 +382,11 @@ namespace ClaudeCAD.Plugin.Core
                     var caps = new List<int>();
                     if (ov < d - o.LineTol)
                     {
-                        // short piece: only with a cap at an end (a pier between two openings), never two jambs facing each other
+                        // short piece: only with a cap at an end (a pier between two openings), never two jambs facing each other.
+                        // The longer line may run past by at most the thickness (a pier at a room corner): a jamb line next to
+                        // a long face of the wall across is not a 330 / 420 "wall" (KT-17)
+                        double over0 = o0 - Math.Min(0, ja), over1 = Math.Max(li, jb) - o1;
+                        if (over0 > d + o.JoinTol || over1 > d + o.JoinTol) continue;
                         foreach (var end in new[] { o0, o1 })
                         {
                             double ax = si.X1 + u[0] * end, ay = si.Y1 + u[1] * end;
@@ -573,6 +599,7 @@ namespace ClaudeCAD.Plugin.Core
             rects.AddRange(CenterRects(centers, o));
             res.Walls = MergeRects(rects, o);
             DropWallsInsideWalls(res, o);
+            FindEndGaps(res, o);
 
             // face lines without a partner: a short end line between paired lines is a cap (door jamb / wall end)
             var pairedEnds = new List<double[]>();
@@ -633,6 +660,98 @@ namespace ClaudeCAD.Plugin.Core
             }
             if (drop.Count == 0) return;
             res.Walls = res.Walls.Where((w, i) => !drop.Contains(i)).ToList();
+        }
+
+        /// <summary>
+        /// The τ range (along w's direction dir from w's point at sEnd, offset p across) inside the solid part [a, b]
+        /// of wall x; null when the ray misses it.
+        /// </summary>
+        private static (double t0, double t1)? RayInPart(PlanWall w, double sEnd, int dir, double p, PlanWall x, double a, double b)
+        {
+            var n = new[] { -w.Dir[1], w.Dir[0] };
+            var start = w.At(sEnd);
+            double ox = start[0] + n[0] * p, oy = start[1] + n[1] * p;
+            double dx = w.Dir[0] * dir, dy = w.Dir[1] * dir;
+            var (s0, p0) = ToFrame(x, ox, oy);
+            // derivatives of (s, p) of x per unit τ
+            double ds = dx * x.Dir[0] + dy * x.Dir[1], dp = -dx * x.Dir[1] + dy * x.Dir[0];
+            double lo = double.NegativeInfinity, hi = double.PositiveInfinity;
+            bool Range(double v0, double dv, double min, double max)
+            {
+                if (Math.Abs(dv) < 1e-12) return v0 >= min && v0 <= max;
+                double ta = (min - v0) / dv, tb = (max - v0) / dv;
+                lo = Math.Max(lo, Math.Min(ta, tb)); hi = Math.Min(hi, Math.Max(ta, tb));
+                return true;
+            }
+            if (!Range(s0, ds, a, b) || !Range(p0, dp, -x.Thickness / 2, x.Thickness / 2) || hi < lo) return null;
+            return (lo, hi);
+        }
+
+        /// <summary>
+        /// Gaps at wall ends (KT-11, KT-18): beyond a wall's end, the distance to the wall it faces — a wall across it
+        /// that blocks its whole width (a door next to a room corner: the jamb is the wall's end, the other side is the
+        /// face of the wall across), or a wall in line with another thickness (220 | door | 110: the gap goes to the
+        /// thinner one). MinOpening–MaxOpening long → an end gap (then a door / window gap, or an open gap).
+        /// </summary>
+        private static void FindEndGaps(PlanResult res, PlanOptions o)
+        {
+            double tolRad = o.AngleTolDeg * Math.PI / 180;
+            for (int wi = 0; wi < res.Walls.Count; wi++)
+            {
+                var w = res.Walls[wi];
+                if (w.Solid.Count == 0) continue;
+                double half = w.Thickness / 2;
+                foreach (var (sEnd, dir) in new[] { (w.End, 1), (w.Start, -1) })
+                {
+                    double best = double.PositiveInfinity;
+                    bool mine = true;
+                    for (int k = 0; k < res.Walls.Count; k++)
+                    {
+                        if (k == wi) continue;
+                        var x = res.Walls[k];
+                        double cross = Math.Abs(x.Dir[0] * w.Dir[1] - x.Dir[1] * w.Dir[0]);
+                        if (cross < Math.Sin(tolRad))
+                        {
+                            // in line: its strip covers this wall's middle, its near part starts beyond this end
+                            var c = x.At(0);
+                            var (_, px) = ToFrame(w, c[0], c[1]);
+                            double pov = Math.Min(half, px + x.Thickness / 2) - Math.Max(-half, px - x.Thickness / 2);
+                            if (pov < 0.5 * Math.Min(w.Thickness, x.Thickness)) continue;
+                            foreach (var iv in x.Solid)
+                            {
+                                var a = x.At(iv[0]); var b = x.At(iv[1]);
+                                double sa = ToFrame(w, a[0], a[1]).s, sb = ToFrame(w, b[0], b[1]).s;
+                                double near = dir > 0 ? Math.Min(sa, sb) - sEnd : sEnd - Math.Max(sa, sb);
+                                if (near < -o.JoinTol) continue;
+                                if (near < best)
+                                {
+                                    best = near;
+                                    // one gap for the pair: the thinner wall (the same thickness: the lower index) owns it
+                                    mine = w.Thickness < x.Thickness - o.LineTol || (Math.Abs(w.Thickness - x.Thickness) <= o.LineTol && wi < k);
+                                }
+                            }
+                            continue;
+                        }
+                        // across: every ray over this wall's width must hit the same part of x
+                        foreach (var iv in x.Solid)
+                        {
+                            double hit = double.NegativeInfinity;
+                            bool all = true;
+                            foreach (var p in new[] { -0.9 * half, 0, 0.9 * half })
+                            {
+                                var r = RayInPart(w, sEnd, dir, p, x, iv[0], iv[1]);
+                                if (r == null || r.Value.t1 < -o.JoinTol) { all = false; break; }
+                                hit = Math.Max(hit, r.Value.t0);
+                            }
+                            if (!all) continue;
+                            hit = Math.Max(hit, 0);
+                            if (hit < best) { best = hit; mine = true; }
+                        }
+                    }
+                    if (!mine || double.IsInfinity(best) || best < o.MinOpening - o.LineTol || best > o.MaxOpening + o.LineTol) continue;
+                    res.EndGaps.Add(dir > 0 ? (wi, sEnd, sEnd + best) : (wi, sEnd - best, sEnd));
+                }
+            }
         }
 
         /// <summary>
@@ -699,6 +818,7 @@ namespace ClaudeCAD.Plugin.Core
                 var w = res.Walls[wi];
                 for (int k = 1; k < w.Solid.Count; k++) gaps.Add((wi, w.Solid[k - 1][1], w.Solid[k][0]));
             }
+            gaps.AddRange(res.EndGaps);
             var gapTaken = new Dictionary<int, PlanOpening>();
             foreach (var sym in clusters)
             {
@@ -734,21 +854,28 @@ namespace ClaudeCAD.Plugin.Core
                     res.Openings.Add(op);
                     continue;
                 }
-                // 2. over a continuous wall: the wall part under the symbol
-                // (a symbol drawn only beside the wall face, like a swing arc, touches it: pov ≈ 0 still counts)
+                // 2. over a continuous wall: the wall part under the symbol. Only a symbol drawn INTO the wall's
+                // strip counts (a door block with its frame in the wall): a swing arc that only touches a face
+                // (a door next to a corner touching the wall across) is never cut into that wall (KT-11)
                 int bw = -1; double bestArea = 0, secondArea = 0; double bs0 = 0, bs1 = 0;
+                bool touches = false;
                 for (int wi = 0; wi < res.Walls.Count; wi++)
                 {
                     var w = res.Walls[wi];
                     var (s0, s1, p0, p1) = BoxInFrame(w, sym.Min, sym.Max);
                     double pov = Math.Min(p1, w.Thickness / 2) - Math.Max(p0, -w.Thickness / 2);
                     if (pov < -o.JoinTol) continue;
+                    if (pov <= o.JoinTol)
+                    {
+                        if (w.Solid.Any(iv => Math.Min(s1, iv[1]) - Math.Max(s0, iv[0]) > o.JoinTol)) touches = true;
+                        continue;
+                    }
                     double wBest = 0, wa = 0, wb = 0;
                     foreach (var iv in w.Solid)
                     {
                         double a = Math.Max(s0, iv[0]), b = Math.Min(s1, iv[1]);
                         if (b - a <= o.JoinTol) continue;
-                        double score = (b - a) * Math.Max(pov, o.JoinTol);
+                        double score = (b - a) * pov;
                         if (score > wBest) { wBest = score; wa = a; wb = b; }
                     }
                     if (wBest <= 0) continue;
@@ -776,7 +903,9 @@ namespace ClaudeCAD.Plugin.Core
                     res.Openings.Add(new PlanOpening { Wall = bw, S0 = bs0, S1 = bs1, Kind = sym.Kind, From = "symbol", Sources = new List<string>(sym.Sources) });
                     continue;
                 }
-                foreach (var h in sym.Sources.Distinct()) res.Skipped.Add(new PlanSkip(h, sym.Kind, "not on or next to any recognised wall: no opening"));
+                foreach (var h in sym.Sources.Distinct()) res.Skipped.Add(new PlanSkip(h, sym.Kind, touches
+                    ? "only touches the face of a wall (not in a gap, not drawn over the wall): not guessed; pass it in 'openings' with its point and width"
+                    : "not on or next to any recognised wall: no opening"));
             }
             for (int gi = 0; gi < gaps.Count; gi++)
                 if (!gapTaken.ContainsKey(gi)) res.OpenGaps.Add(gaps[gi]);
@@ -794,7 +923,8 @@ namespace ClaudeCAD.Plugin.Core
                 var w = res.Walls[g.wall];
                 double width = g.s1 - g.s0;
                 bool junction = false;
-                if (width <= o.MaxThickness + 2 * o.JoinTol)
+                bool between = res.EndGaps.IndexOf(g) < 0;
+                if (between && width <= o.MaxThickness + 2 * o.JoinTol)
                 {
                     var mid = w.At((g.s0 + g.s1) / 2);
                     for (int k = 0; k < res.Walls.Count && !junction; k++)
@@ -839,7 +969,11 @@ namespace ClaudeCAD.Plugin.Core
                 var w = res.Walls[wi];
                 var (s, p) = ToFrame(w, at[0], at[1]);
                 if (Math.Abs(p) > w.Thickness / 2 + o.JoinTol) continue;
-                if (s < w.Start - o.JoinTol || s > w.End + o.JoinTol) continue;
+                bool inWall = s >= w.Start - o.JoinTol && s <= w.End + o.JoinTol;
+                // also in a gap at the wall's end or an opening already found there (a door next to a corner)
+                bool inGap = res.OpenGaps.Any(g => g.wall == wi && s >= g.s0 - o.JoinTol && s <= g.s1 + o.JoinTol) ||
+                             res.Openings.Any(x => x.Wall == wi && s >= x.S0 - o.JoinTol && s <= x.S1 + o.JoinTol);
+                if (!inWall && !inGap) continue;
                 hits.Add(wi);
             }
             // at a corner / junction the point is in two walls: not guessed
@@ -851,15 +985,21 @@ namespace ClaudeCAD.Plugin.Core
                 var (s, _) = ToFrame(w, at[0], at[1]);
                 double s0, s1;
                 var gap = res.OpenGaps.FindIndex(g => g.wall == wi && s >= g.s0 - o.JoinTol && s <= g.s1 + o.JoinTol);
+                // no width at an opening already recognised (to change its heights / kind): its own width (KT-19)
+                var known = res.Openings.FirstOrDefault(x => x.Wall == wi && s >= x.S0 - o.JoinTol && s <= x.S1 + o.JoinTol);
+                // the wall's own length, plus a gap at its end the point lies in
+                double lo = w.Start, hi = w.End;
+                foreach (var g in res.EndGaps.Where(g => g.wall == wi && s >= g.s0 - o.JoinTol && s <= g.s1 + o.JoinTol)) { lo = Math.Min(lo, g.s0); hi = Math.Max(hi, g.s1); }
                 if (gap >= 0 && width <= 0) { s0 = res.OpenGaps[gap].s0; s1 = res.OpenGaps[gap].s1; res.OpenGaps.RemoveAt(gap); }
+                else if (known != null && width <= 0) { s0 = known.S0; s1 = known.S1; }
                 else
                 {
                     if (width <= 0) return $"the point [{Fmt(at[0])}, {Fmt(at[1])}] is on a continuous wall: give the opening width";
                     s0 = s - width / 2; s1 = s + width / 2;
                     // never past the wall's ends: that would put a lintel / sill in the air beyond the wall
-                    if (s0 < w.Start - o.JoinTol || s1 > w.End + o.JoinTol)
+                    if (s0 < lo - o.JoinTol || s1 > hi + o.JoinTol)
                         return $"the opening {Fmt(width)} wide at [{Fmt(at[0])}, {Fmt(at[1])}] runs past the end of wall {wi}: move the point or give a smaller width";
-                    s0 = Math.Max(s0, w.Start); s1 = Math.Min(s1, w.End);
+                    s0 = Math.Max(s0, lo); s1 = Math.Min(s1, hi);
                     if (gap >= 0) res.OpenGaps.RemoveAt(gap);
                 }
                 // the given opening replaces the recognised ones it overlaps
@@ -981,6 +1121,86 @@ namespace ClaudeCAD.Plugin.Core
                     }
             }
             return res.Walls.Count == 0 ? ((double[], double[])?)null : (new[] { x0, y0 }, new[] { x1, y1 });
+        }
+
+        /// <summary>xy box of a box of the result (rotated about Z).</summary>
+        public static (double[] min, double[] max) BoxXY(PlanBox b)
+        {
+            double a = b.RotationDeg * Math.PI / 180, c = Math.Abs(Math.Cos(a)), sn = Math.Abs(Math.Sin(a));
+            double hx = c * b.Length / 2 + sn * b.Width / 2, hy = sn * b.Length / 2 + c * b.Width / 2;
+            return (new[] { b.Center[0] - hx, b.Center[1] - hy }, new[] { b.Center[0] + hx, b.Center[1] + hy });
+        }
+
+        /// <summary>Two xy boxes really overlap: by more than tol both ways (boxes that only touch do not, KT-23).</summary>
+        public static bool BoxesOverlapStrict(double[] amin, double[] amax, double[] bmin, double[] bmax, double tol) =>
+            Math.Min(amax[0], bmax[0]) - Math.Max(amin[0], bmin[0]) > tol && Math.Min(amax[1], bmax[1]) - Math.Max(amin[1], bmin[1]) > tol;
+
+        private static double ZOverlap(double a0, double a1, double b0, double b1) => Math.Min(a1, b1) - Math.Max(a0, b0);
+
+        /// <summary>
+        /// Rerun check of build_3d_from_plan (KT-14, KT-23), all in drawing units: an earlier WALL solid that really
+        /// overlaps a new wall box in plan and covers more than half of the new walls' height [baseZ, baseZ + wallH] is
+        /// the same storey built again; an earlier SLAB that overlaps a new slab outline and more than half of its
+        /// thickness likewise. The storey below (touching, or cut into a little by this storey's slab) is not a rerun:
+        /// it is listed in SlabIntoWallsBelow when the new slab sinks into its walls.
+        /// </summary>
+        public static RerunCheck CheckRerun(IEnumerable<Existing3d> existing, IList<PlanBox> boxes, IList<(double[] min, double[] max)> slabs,
+            double baseZ, double wallH, double slabT, double tol)
+        {
+            var r = new RerunCheck();
+            var wallBoxes = boxes.Select(BoxXY).ToList();
+            foreach (var e in existing)
+            {
+                var emin = new[] { e.Min[0], e.Min[1] }; var emax = new[] { e.Max[0], e.Max[1] };
+                double ez0 = e.Min[2], ez1 = e.Max[2];
+                if (e.IsSlab)
+                {
+                    if (slabT <= 0) continue;
+                    var over = slabs.Any(b => BoxesOverlapStrict(emin, emax, b.min, b.max, tol));
+                    if (over && ZOverlap(ez0, ez1, baseZ - slabT, baseZ) > 0.5 * slabT) r.Rerun.Add(e.Handle);
+                    continue;
+                }
+                bool inPlan = wallBoxes.Any(b => BoxesOverlapStrict(emin, emax, b.min, b.max, tol)) ||
+                              (slabT > 0 && slabs.Any(b => BoxesOverlapStrict(emin, emax, b.min, b.max, tol)));
+                if (!inPlan) continue;
+                if (wallBoxes.Count > 0 && ZOverlap(ez0, ez1, baseZ, baseZ + wallH) > 0.5 * wallH) { r.Rerun.Add(e.Handle); continue; }
+                // the storey below: this slab (baseZ − slabT … baseZ) cuts into its walls
+                double into = ZOverlap(ez0, ez1, baseZ - slabT, baseZ);
+                if (slabT > 0 && slabs.Count > 0 && into > tol && ez1 <= baseZ + tol)
+                {
+                    r.SlabIntoWallsBelow.Add(e.Handle);
+                    r.SlabIntoWallsBy = Math.Max(r.SlabIntoWallsBy, into);
+                }
+            }
+            return r;
+        }
+
+        /// <summary>
+        /// Nesting of slab outlines (KT-22): parent = the smallest outline containing it, depth = number of outlines
+        /// around it. Even depth = a slab (the outer outline, an island in a hole...), odd depth = a hole of its parent.
+        /// inside(i, j) says outline i lies inside outline j.
+        /// </summary>
+        public static (int[] depth, int[] parent) SlabNesting(IList<double> areas, Func<int, int, bool> inside)
+        {
+            int n = areas.Count;
+            var parent = Enumerable.Repeat(-1, n).ToArray();
+            for (int i = 0; i < n; i++)
+            {
+                double bestArea = double.MaxValue;
+                for (int j = 0; j < n; j++)
+                {
+                    if (j == i || areas[j] <= areas[i] || areas[j] >= bestArea) continue;
+                    if (inside(i, j)) { parent[i] = j; bestArea = areas[j]; }
+                }
+            }
+            var depth = new int[n];
+            for (int i = 0; i < n; i++)
+            {
+                int d = 0, k = parent[i];
+                while (k >= 0 && d <= n) { d++; k = parent[k]; }
+                depth[i] = d;
+            }
+            return (depth, parent);
         }
 
         /// <summary>Two xy boxes overlap (touching counts).</summary>
