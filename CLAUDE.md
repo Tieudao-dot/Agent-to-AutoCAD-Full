@@ -43,17 +43,31 @@ dự án gốc), `bo-cai/README.md`.
 - Chỉ 1 tác vụ chờ CI một lúc (Bash chạy nền, vòng `until … sleep 30`); không poll tay, không chạy trùng;
   không xem ảnh chụp trừ khi cần.
 
-## Phạm vi và phối hợp giữa các thread
+## Vai trò luồng chính và giao việc cho sub-thread
 
-- Hiện chỉ có luồng chính; mọi việc do luồng chính nhận và báo cáo thẳng cho chủ dự án.
-- Không tự mở thread mới. Khi chủ dự án mở thêm thread, ghi vào danh bạ ở cuối file.
-- Khi đã có nhiều thread:
-  - mỗi thread chỉ làm việc trong phạm vi của mình; việc của thread khác thì báo cậu 1–2 dòng rồi gửi một tin
-    `[Chuyển việc từ thread <tên>] Chủ dự án yêu cầu: …` kèm đủ bối cảnh (nhánh, commit, file, kết quả mong muốn,
-    mức gấp) qua `mcp__claude-code-remote__send_message`, không làm thay và không ngồi chờ;
-  - nhận tin chuyển việc: việc trong phạm vi và đảo ngược được thì làm; việc khó đảo ngược hoặc hướng ra ngoài
-    (merge `main`, phát hành, đổi khóa, xóa dữ liệu, gửi gì ra ngoài) thì hỏi cậu trước;
-  - xong mốc lớn thì báo 3–6 dòng về luồng chính, mở đầu `[Báo cáo từ thread <tên>]`.
+- **Luồng chính chỉ làm 3 việc:**
+  1. nắm tổng quan dự án (giữ `docs/tong-quan-du-an.md` và danh bạ thread đúng);
+  2. trao đổi với chủ dự án: báo trạng thái, hỏi các điểm cần chốt;
+  3. điều phối: giao việc cho sub-thread, theo dõi, tổng hợp báo cáo.
+- Luồng chính **không tự viết code, sửa mẫu Apps Script, bộ cài, CI hay chạy build / test**. Việc nào như vậy thì
+  giao cho sub-thread đúng phạm vi. Chưa có sub-thread nhận thì hỏi cậu mở thread mới, không tự làm thay.
+- **Giao việc:** một tin `[Giao việc từ luồng chính] Chủ dự án yêu cầu: …` qua
+  `mcp__claude-code-remote__send_message`, đủ để sub-thread làm mà không phải hỏi lại:
+  - việc cần làm và kết quả mong muốn ("xong" nghĩa là gì);
+  - các điểm cậu đã chốt (kèm ngày), điểm còn chờ chốt;
+  - nhánh, commit xuất phát, file liên quan, tài liệu bàn giao trong `docs/ban-giao/`;
+  - giới hạn: chi phí, số lượt CI, việc phải hỏi cậu trước;
+  - mức gấp.
+- **Sub-thread:**
+  - chỉ làm đúng tác vụ được giao, trên nhánh riêng của mình;
+  - gặp việc ngoài phạm vi thì báo về luồng chính 1–2 dòng, không làm thay thread khác, không tự mở thread mới;
+  - việc khó đảo ngược hoặc hướng ra ngoài (merge `main`, phát hành, đổi khóa, xóa dữ liệu, gửi gì ra ngoài) thì
+    báo về luồng chính để hỏi cậu trước;
+  - xong mốc lớn hoặc phải dừng chờ quyết: báo 3–6 dòng về luồng chính, mở đầu `[Báo cáo từ thread <tên>]`:
+    việc đã xong, nhánh + commit, test / CI, việc chờ cậu, thời gian. Một lần mỗi mốc.
+- Điểm cần cậu chốt phát sinh ở sub-thread: sub-thread báo về luồng chính, luồng chính hỏi cậu bằng
+  AskUserQuestion rồi chuyển câu trả lời lại.
+- Mở hay đóng sub-thread: chỉ khi cậu đồng ý. Sub-thread mới ghi vào danh bạ ở cuối file.
 
 ## Git và phát hành
 
@@ -82,6 +96,6 @@ dự án gốc), `bo-cai/README.md`.
 
 | Thread | Session id | Phạm vi |
 | --- | --- | --- |
-| Luồng chính | `session_01D56HmFT5bwapmbypmLY5nr` | Điều phối và làm mọi việc của dự án Full: gói dịch vụ, vẽ 3D, bộ cài, tài liệu |
+| Luồng chính | `session_01D56HmFT5bwapmbypmLY5nr` | Tổng quan, trao đổi với chủ dự án, điều phối sub-thread. Không tự làm việc kỹ thuật |
 
 Link mở thread: `https://claude.ai/code/<session id>`.

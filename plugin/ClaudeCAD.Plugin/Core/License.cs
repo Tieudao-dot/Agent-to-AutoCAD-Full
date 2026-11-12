@@ -29,6 +29,16 @@ namespace ClaudeCAD.Plugin.Core
         public string Reason = "";
     }
 
+    /// <summary>Result of checking a signed service plan (CCF1 line) against this machine.</summary>
+    public sealed class PlanCheck
+    {
+        public bool Ok;          // signature valid, for this machine, a plan this build knows
+        public string Plan = ""; // 2d | 3d | 2d3d
+        public string Machine = "";
+        public string Date = ""; // yyyy-MM-dd (UTC) the service signed it
+        public string Reason = "";
+    }
+
     /// <summary>
     /// Per-machine activation (v0.9.4), AutoCAD-free so it is unit-tested on CI.
     ///
@@ -50,6 +60,7 @@ namespace ClaudeCAD.Plugin.Core
         public const string DefaultContact = "Liên hệ Zalo owner: 0344644415";
         public const string Prefix = "CCL1";
         public const string StatusPrefix = "CCS1";
+        public const string PlanPrefix = "CCF1";
         /// <summary>A machine may run on its last signed status for this many days without reaching the service.</summary>
         public const int StatusMaxAgeDays = 7;
         private const string Base32 = "0123456789ABCDEFGHJKMNPQRSTVWXYZ";
@@ -173,6 +184,59 @@ namespace ClaudeCAD.Plugin.Core
             return r;
         }
 
+        /// <summary>A signed plan line (CCF1|...), alone or pasted together with the licence.</summary>
+        public static bool IsPlanText(string s) => (s ?? "").Trim().Contains(PlanPrefix + "|");
+
+        public static PlanCheck VerifyPlan(string line, string machine) => VerifyPlan(line, machine, PublicModulus, PublicExponent);
+
+        /// <summary>
+        /// Checks a signed service plan "CCF1|machine|plan|yyyy-MM-dd|sig" (same key and signature scheme as the
+        /// status line). Ok = signed for this machine and a plan this build knows. Whether the line may still be
+        /// trusted today is decided together with the status line: see EffectivePlan.
+        /// </summary>
+        public static PlanCheck VerifyPlan(string line, string machine, string modulusB64, string exponentB64)
+        {
+            var r = new PlanCheck();
+            line = (line ?? "").Trim();
+            if (line.Length == 0) { r.Reason = "máy chủ chưa gửi gói cho máy này"; return r; }
+            var parts = line.Split('|');
+            if (parts.Length != 5 || parts[0] != PlanPrefix) { r.Reason = "dòng gói không đúng định dạng"; return r; }
+            r.Machine = parts[1];
+            r.Plan = parts[2].Trim().ToLowerInvariant();
+            r.Date = parts[3];
+            if (!string.Equals(parts[1], machine, StringComparison.OrdinalIgnoreCase))
+            {
+                r.Reason = $"dòng gói của máy khác ({parts[1]}), máy này là {machine}";
+                return r;
+            }
+            byte[] sig;
+            try { sig = FromBase64Url(parts[4]); }
+            catch { r.Reason = "chữ ký dòng gói hỏng"; return r; }
+            var data = Encoding.UTF8.GetBytes(line.Substring(0, line.LastIndexOf('|')));
+            if (!VerifyRsa(data, sig, modulusB64, exponentB64)) { r.Reason = "chữ ký dòng gói không hợp lệ"; return r; }
+            DateTime d;
+            if (!DateTime.TryParseExact(r.Date, "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.AssumeUniversal | DateTimeStyles.AdjustToUniversal, out d))
+            { r.Reason = "ngày trong dòng gói hỏng"; return r; }
+            if (!PlanLogic.IsKnown(r.Plan)) { r.Reason = $"gói \"{r.Plan}\" bản plugin này chưa biết (cần cập nhật plugin)"; return r; }
+            r.Ok = true;
+            return r;
+        }
+
+        /// <summary>
+        /// The plan this machine runs on. A signed plan line counts only when it is at least as new as the signed
+        /// status line next to it (both come in one answer of the service): keeping an old "2D + 3D" line while
+        /// the status keeps refreshing — e.g. by making the plan file read-only — falls back to the default plan.
+        /// A machine on the owner's no-network pass ("offline") keeps the plan line it was given.
+        /// </summary>
+        public static string EffectivePlan(PlanCheck plan, StatusCheck status)
+        {
+            if (plan == null || !plan.Ok) return PlanLogic.DefaultPlan;
+            if (status != null && status.Ok && status.Status != "offline"
+                && string.CompareOrdinal(plan.Date, status.Date) < 0)
+                return PlanLogic.DefaultPlan;
+            return PlanLogic.Normalize(plan.Plan);
+        }
+
         private static bool VerifyRsa(byte[] data, byte[] sig, string modulusB64, string exponentB64)
         {
             try
@@ -213,8 +277,8 @@ namespace ClaudeCAD.Plugin.Core
             return sb.ToString();
         }
 
-        /// <summary>{"ok":true,"license":"...","status":"..."} / {"ok":false,"error":"..."} from the activation service.</summary>
-        public static (bool ok, string license, string error, bool sent, string status) ParseResponse(string json)
+        /// <summary>{"ok":true,"license":"...","status":"...","plan":"..."} / {"ok":false,"error":"..."} from the activation service.</summary>
+        public static (bool ok, string license, string error, bool sent, string status, string plan) ParseResponse(string json)
         {
             try
             {
@@ -224,12 +288,13 @@ namespace ClaudeCAD.Plugin.Core
                 string err = d.TryGetValue("error", out var e) ? e as string : null;
                 bool sent = d.TryGetValue("sent", out var s) && s is bool sb && sb;
                 string status = d.TryGetValue("status", out var st) ? st as string : null;
-                return (ok, lic, err, sent, status);
+                string plan = d.TryGetValue("plan", out var pl) ? pl as string : null;
+                return (ok, lic, err, sent, status, plan);
             }
             catch
             {
                 // Google's sign-in / error pages are HTML: the web app is not deployed for "Anyone"
-                return (false, null, "máy chủ kích hoạt trả về nội dung lạ (web app chưa được triển khai cho \"Anyone\"?)", false, null);
+                return (false, null, "máy chủ kích hoạt trả về nội dung lạ (web app chưa được triển khai cho \"Anyone\"?)", false, null, null);
             }
         }
     }

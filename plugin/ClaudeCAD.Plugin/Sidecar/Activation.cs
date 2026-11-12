@@ -25,12 +25,15 @@ namespace ClaudeCAD.Plugin.Sidecar
         private static string _machine;
         private static LicenseCheck _check;
         private static StatusCheck _status;
+        private static PlanCheck _plan;
         private static DateTime _statusDay; // AgeDays/Fresh were computed for this UTC day
         private static (string url, string contact)? _config;
 
         public static string Root => Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "ClaudeCAD");
         public static string LicenseFile => Path.Combine(Root, "license.txt");
         public static string StatusFile => Path.Combine(Root, "status.txt");
+        /// <summary>Signed service plan (CCF1 line) from the last answer of the service.</summary>
+        public static string PlanFile => Path.Combine(Root, "plan.txt");
         private static string RequestStamp => Path.Combine(Root, "activation-request.txt");
 
         public static string MachineCode
@@ -84,6 +87,29 @@ namespace ClaudeCAD.Plugin.Sidecar
                 return _status;
             }
         }
+
+        /// <summary>The last signed plan line (plan.txt), checked against this machine.</summary>
+        public static PlanCheck PlanLine
+        {
+            get
+            {
+                if (_plan != null) return _plan;
+                string text = null;
+                try { if (File.Exists(PlanFile)) text = File.ReadAllText(PlanFile, Encoding.UTF8); }
+                catch (Exception ex) { Logger.Warn("plan unreadable: " + ex.Message); }
+                _plan = LicenseLogic.VerifyPlan(text, MachineCode);
+                if (!_plan.Ok && !string.IsNullOrWhiteSpace(text)) Logger.Warn("plan line not used: " + _plan.Reason);
+                return _plan;
+            }
+        }
+
+        /// <summary>
+        /// Service plan of this machine: "2d", "3d" or "2d3d" (PlanLogic). The dispatcher refuses every tool outside
+        /// it. A build without an activation service has no device list: every tool, like before plans existed.
+        /// </summary>
+        public static string Plan => ServiceUrl == null ? PlanLogic.PlanFull : LicenseLogic.EffectivePlan(PlanLine, DeviceStatus);
+
+        public static string PlanLabel => PlanLogic.Label(Plan);
 
         // ---- clock set back (stretching the 7-day offline window): the latest time seen, kept in two places
 
@@ -156,7 +182,8 @@ namespace ClaudeCAD.Plugin.Sidecar
                 if (!DeviceAllowed) return $"bị tạm khóa (mã máy {MachineCode}) — {BlockedMessage}";
                 var st = DeviceStatus;
                 var device = ServiceUrl == null ? "" : st.Status == "offline" ? " · miễn kiểm tra từ xa" : $" · được phép dùng (kiểm tra {st.Date})";
-                return $"đã kích hoạt (mã máy {MachineCode}, từ {Check.Issued}){device}";
+                var plan = ServiceUrl == null ? "" : $" · gói {PlanLabel}";
+                return $"đã kích hoạt (mã máy {MachineCode}, từ {Check.Issued}){device}{plan}";
             }
         }
 
@@ -269,6 +296,25 @@ namespace ClaudeCAD.Plugin.Sidecar
         }
 
         /// <summary>
+        /// Writes a verified CCF1 line to plan.txt. A line that does not verify is ignored (the old plan stays until
+        /// the status line outdates it, see LicenseLogic.EffectivePlan). Returns true when it was saved.
+        /// </summary>
+        private static bool SavePlan(string line)
+        {
+            if (string.IsNullOrWhiteSpace(line)) return false;
+            var pc = LicenseLogic.VerifyPlan(line, MachineCode);
+            if (!pc.Ok) { Logger.Warn("plan line refused: " + pc.Reason); return false; }
+            try
+            {
+                Directory.CreateDirectory(Root);
+                File.WriteAllText(PlanFile, line.Trim(), new UTF8Encoding(false));
+            }
+            catch (Exception ex) { Logger.Warn("plan unsaved: " + ex.Message); }
+            _plan = pc;
+            return true;
+        }
+
+        /// <summary>
         /// Asks the owner's device list whether this machine is still allowed (signed answer, saved for the
         /// offline window). An Active machine gets its licence with the answer, so approving in the Google Sheet
         /// activates without a key. Returns a sentence for the palette; the caller reads IsAllowed afterwards.
@@ -294,6 +340,7 @@ namespace ClaudeCAD.Plugin.Sidecar
                     // a fresh answer dated by the service: this clock is right again (a clock that was wrong-ahead recovers)
                     if (st.Fresh) RememberSeen(DateTime.UtcNow, reset: true);
                     SaveStatus(r.status, st);
+                    SavePlan(r.plan); // an older service sends no plan line: the default plan applies
                     if (!string.IsNullOrEmpty(r.license))
                     {
                         var lic = LicenseLogic.Verify(r.license, MachineCode);
@@ -324,15 +371,27 @@ namespace ClaudeCAD.Plugin.Sidecar
         {
             input = (input ?? "").Trim();
             string license;
-            if (LicenseLogic.IsLicenseText(input) || LicenseLogic.IsStatusText(input))
+            if (LicenseLogic.IsLicenseText(input) || LicenseLogic.IsStatusText(input) || LicenseLogic.IsPlanText(input))
             {
                 // offline activation: a CCL1| licence line, optionally with the CCS1|...|offline| no-network pass
+                // and the CCF1| plan line of the machine
                 license = null;
-                string statusLine = null;
+                string statusLine = null, planLine = null;
                 foreach (var tok in input.Split(new[] { ' ', '\t', '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries))
                 {
                     if (tok.StartsWith(LicenseLogic.Prefix + "|", StringComparison.Ordinal)) license = tok;
                     else if (tok.StartsWith(LicenseLogic.StatusPrefix + "|", StringComparison.Ordinal)) statusLine = tok;
+                    else if (tok.StartsWith(LicenseLogic.PlanPrefix + "|", StringComparison.Ordinal)) planLine = tok;
+                }
+                if (planLine != null)
+                {
+                    var pc = LicenseLogic.VerifyPlan(planLine, MachineCode);
+                    if (!pc.Ok) return (false, "Dòng CCF1 (gói) không dùng được: " + pc.Reason + ".");
+                    SavePlan(planLine);
+                    if (license == null && statusLine == null)
+                        return IsActivated
+                            ? (true, "Đã lưu gói " + PlanLogic.Label(pc.Plan) + " cho máy này.")
+                            : (false, "Đã lưu dòng gói, còn thiếu dòng giấy phép CCL1| — dán đủ các dòng trong email của chủ plugin.");
                 }
                 if (statusLine != null)
                 {
@@ -368,6 +427,7 @@ namespace ClaudeCAD.Plugin.Sidecar
                             var st = LicenseLogic.VerifyStatus(r.status, MachineCode, DateTime.UtcNow);
                             if (st.Ok) SaveStatus(r.status, st);
                         }
+                        SavePlan(r.plan);
                     }
                 }
                 catch (Exception ex)

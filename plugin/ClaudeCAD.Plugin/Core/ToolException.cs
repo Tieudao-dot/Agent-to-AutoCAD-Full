@@ -15,6 +15,8 @@ namespace ClaudeCAD.Plugin.Core
         public const string TooManyEntities = "TOO_MANY_ENTITIES";
         public const string UnknownTool = "UNKNOWN_TOOL";
         public const string ReadOnly = "READ_ONLY";
+        /// <summary>The tool is outside the service plan of this machine (2D / 3D / 2D + 3D).</summary>
+        public const string NotInPlan = "NOT_IN_PLAN";
     }
 
     /// <summary>
