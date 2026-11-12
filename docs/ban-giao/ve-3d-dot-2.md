@@ -118,7 +118,7 @@ test lõi + trợ lý, build net48 / net8 / net10, tài liệu (checklist phần
 - Lõi `dotnet test plugin/ClaudeCAD.Core.Tests`: **255/255** (236 cũ + 19 mới trong `Solid2Tests.cs`).
 - Trợ lý `npm test`: **169/169** (159 cũ + 10 mới trong `test/solids2.test.ts`).
 - Build Linux (NuGet, .NET SDK 10): net48, net8.0-windows, net10.0-windows: 0 lỗi, 0 cảnh báo.
-- CI Windows: xem mục Tiến độ.
+- CI Windows: run 43208694624 (`build.yml`, workflow_dispatch, `release: false`, commit `2b908a4`) **xanh** (~10 phút, gồm UI test WPF).
 
 ### Chỉ kiểm được trên AutoCAD thật (phần K của `checklist-thu-that.md`)
 
@@ -132,6 +132,6 @@ test lõi + trợ lý, build net48 / net8 / net10, tài liệu (checklist phần
 - [x] Trợ lý: định nghĩa lệnh, system prompt, cổng xác nhận
 - [x] Self-test
 - [x] Test lõi + trợ lý
-- [ ] CI Windows (1 lượt)
+- [x] CI Windows (1 lượt, xanh: run 43208694624)
 - [x] Tài liệu (checklist phần K, kế hoạch, `bo-cai/README.md`, file này)
 - [ ] Mở thread con Test & sửa đợt 2
