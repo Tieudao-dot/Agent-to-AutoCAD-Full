@@ -21,10 +21,8 @@ quy tắc làm việc và danh bạ thread: [`../CLAUDE.md`](../CLAUDE.md).
 
 1. **Dựng máy chủ kích hoạt riêng** theo [`dung-may-chu-kich-hoat-full.md`](dung-may-chu-kich-hoat-full.md), gửi luồng
    chính URL web app + 2 dòng khóa công khai (không gửi khóa riêng / SECRET).
-2. **Bản Full thay thế hay cài song song bản gốc** trên cùng máy (cùng `AppId`, thư mục bundle, lệnh, thư mục
-   `%LocalAppData%\ClaudeCAD`): xem [`cho-tro-ve-repo-goc.md`](cho-tro-ve-repo-goc.md) mục 3.
-3. Sau 1 + 2: luồng chính giao gắn URL / khóa, build **bộ cài thử**; chủ dự án thử theo checklist tổng, gửi lỗi.
-4. Trước khi phát hành: số phiên bản (plugin / trợ lý vẫn ghi 0.9.4), secret CI của repo Full, đồng ý merge `main`,
+2. Sau bước 1: luồng chính giao gắn URL / khóa, build **bộ cài thử**; chủ dự án thử theo checklist tổng, gửi lỗi.
+3. Trước khi phát hành: số phiên bản (plugin / trợ lý vẫn ghi 0.9.4), secret CI của repo Full, đồng ý merge `main`,
    các chỗ còn trỏ về dự án gốc ([`cho-tro-ve-repo-goc.md`](cho-tro-ve-repo-goc.md)).
 
 ## 3. Đã chốt
@@ -38,6 +36,7 @@ quy tắc làm việc và danh bạ thread: [`../CLAUDE.md`](../CLAUDE.md).
 | 12/11 | Thẻ xác nhận 3D | Mọi lệnh làm đổi khối có trước lượt (cộng / trừ, cắt, bo, vát, làm rỗng, phá khối 3D), kể cả khối Claude dựng lượt trước |
 | 12/11 | Skill 2D | `ve-kien-truc`, `ve-mep`, `ve-ha-tang` gắn `plan: 2d`: gói 3D không nạp |
 | 12/11 | Giảm token | Cách an toàn (bỏ thuộc tính lặp ở lệnh dựng khối, rút mô tả), không đổi tên lệnh |
+| 12/11 | Máy đã có ClaudeCAD gốc | Bản Full **thay thế** bản gốc như nâng cấp (giữ dữ liệu, kích hoạt lại ở Sheet mới); bộ cài tự nhận ra bản gốc và hỏi "Tiếp tục / Hủy"; tên hiển thị "Agent to AutoCAD Full" |
 | 12/11 | Cách làm việc | Luồng chính điều phối; mỗi đợt một thread, thread đợt tự mở thread con "Test & sửa" |
 
 ## 4. Đã làm

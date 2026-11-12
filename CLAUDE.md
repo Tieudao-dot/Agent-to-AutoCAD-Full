@@ -32,6 +32,14 @@ dự án gốc), `bo-cai/README.md`.
 - Trả lời tiếng Việt, gọi người dùng là "cậu", xưng "tớ". Ngắn gọn, đi thẳng vào kết quả; nội dung dài
   (báo cáo, hướng dẫn) viết thành file.
 - Việc cần xác nhận: hỏi bằng AskUserQuestion có lựa chọn, tách khỏi phần báo trạng thái, mỗi lần một câu.
+- **Kiểm kỹ câu hỏi trước khi gửi cậu quyết định (chủ dự án yêu cầu 12/11/2026):**
+  - nói bằng ngôn ngữ thông thường, ít thuật ngữ kỹ thuật. Thuật ngữ nào buộc phải dùng thì giải thích ngắn bằng ví dụ
+    thực tế: cậu hoặc khách sẽ thấy gì, phải làm gì;
+  - nêu rõ vì sao phải quyết, và mỗi lựa chọn dẫn tới kết quả gì, tốn gì;
+  - câu hỏi đọc riêng vẫn hiểu; các lựa chọn rõ ràng, không chồng chéo; ghi lựa chọn đề xuất kèm lý do;
+  - đọc lại một lượt như người không biết code trước khi gửi. Cậu còn hỏi lại "là sao" nghĩa là câu hỏi chưa đạt:
+    giải thích lại đơn giản hơn rồi mới hỏi tiếp;
+  - sub-thread nêu điểm cần chốt cũng theo quy tắc này; luồng chính viết lại cho dễ hiểu trước khi hỏi cậu.
 - Hiện mọi tác vụ đang chạy / chạy nền trong task list.
 - Push noti khi xong một việc hoặc phải dừng chờ cậu quyết; không push cho từng bước nhỏ.
 
