@@ -11,7 +11,7 @@ import { toSdkUserMessage } from './content.js';
 import type { ToolBridge } from '../tools/common.js';
 import { MCP_SERVER_NAME, createCadServer } from '../tools/index.js';
 import { InputQueue } from './inputQueue.js';
-import { SKILLS_PLUGIN_NAME, enabledSkills, librarySkills, prepareSkillsPlugin } from './skills.js';
+import { SKILLS_PLUGIN_NAME, enabledSkills, librarySkills, prepareSkillsPlugin, skillsForPlan } from './skills.js';
 import { systemPromptFor } from './systemPrompt.js';
 
 export type QueryFn = typeof sdkQuery;
@@ -162,7 +162,7 @@ export class AgentSession {
     }, this.planTools);
     this.loadedPlanKey = planKey(this.servicePlan, this.planTools);
     if (this.servicePlan) this.cfg.log(`service plan: ${this.servicePlan}${this.planTools ? ` (${this.planTools.length} tools)` : ''}`);
-    const plugin = prepareSkillsPlugin(this.cfg.skillsDir, this.cfg.workDir, this.chatSkills);
+    const plugin = prepareSkillsPlugin(this.cfg.skillsDir, this.cfg.workDir, this.chatSkills, this.servicePlan);
     this.loadedSkillsKey = skillsKey(this.chatSkills);
     if (plugin) this.cfg.log(`skills loaded: ${plugin.skills.join(', ') || '(none)'}`);
 
@@ -320,7 +320,7 @@ export class AgentSession {
   reloadSkills(): void {
     if (this.turnActive) this.reloadPending = true;
     else this.closeQuery(); // sessionId is kept → resumed on the next message
-    const loaded = this.chatSkills ? librarySkills(this.cfg.skillsDir).filter((x) => this.chatSkills!.includes(x)) : enabledSkills(this.cfg.skillsDir);
+    const loaded = skillsForPlan(this.cfg.skillsDir, this.chatSkills ? librarySkills(this.cfg.skillsDir).filter((x) => this.chatSkills!.includes(x)) : enabledSkills(this.cfg.skillsDir), this.servicePlan);
     this.cfg.emit({ type: 'skills_reloaded', skills: loaded });
   }
 

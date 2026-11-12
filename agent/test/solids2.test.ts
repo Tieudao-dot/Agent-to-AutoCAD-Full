@@ -150,8 +150,10 @@ describe('3D phase 2 system prompt', () => {
     assert.ok(!systemPromptFor('2d').includes('topology_id'));
     assert.ok(systemPromptFor('3d').includes('topology_id'));
     for (const needle of ['get_solid_info with edges: true', 'edge_filter', 'never guess indices', 'slice_solid, fillet_edges, chamfer_edges, shell_solid', 'request_confirmation',
-      'stay WCS', 'check_interference', 'capture_view (sw_iso, conceptual)', 'next phase'])
+      'stay WCS', 'check_interference', 'capture_view (sw_iso, conceptual)', 'build_3d_from_plan'])
       assert.ok(THREE_D_RULES.includes(needle), needle);
     assert.ok(!THREE_D_RULES.includes('has no sweep'));
+    // phase 3 (docs/ban-giao/ve-3d-dot-3.md) replaced the "comes in the next phase" sentence
+    assert.ok(!THREE_D_RULES.includes('next phase'));
   });
 });

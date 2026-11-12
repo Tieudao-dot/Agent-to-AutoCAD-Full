@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { angle, cadTool, entityProps, handle, handles, point, points, type AnyTool, type ToolBridge } from './common.js';
+import { PLAN3D_TOOL_NAMES, plan3dTools } from './plan3d.js';
 
 /** The 3D tools: only machines on the 3D or Full plan load them (the plugin labels them ToolGroup.ThreeD). */
 export const SOLID_TOOL_NAMES = [
@@ -8,6 +9,8 @@ export const SOLID_TOOL_NAMES = [
   // phase 2
   'sweep', 'loft', 'slice_solid', 'fillet_edges', 'chamfer_edges', 'shell_solid', 'rotate_3d', 'mirror_3d', 'align',
   'set_ucs', 'reset_ucs', 'check_interference',
+  // phase 3 (plan3d.ts)
+  ...PLAN3D_TOOL_NAMES,
 ] as const;
 
 /** Phase 2 tools that change an existing solid: like the booleans, a solid from before this turn always needs a yes. */
@@ -208,6 +211,7 @@ export function solidTools(b: ToolBridge): AnyTool[] {
       { style: visualStyle }),
 
     ...solidTools2(b),
+    ...plan3dTools(b),
   ];
 }
 

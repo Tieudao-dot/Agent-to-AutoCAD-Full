@@ -38,6 +38,31 @@ export function enabledSkills(skillsDir: string | undefined): string[] {
     .sort();
 }
 
+/**
+ * The service plan a skill needs, from its SKILL.md frontmatter ("plan: 3d" = only useful with the 3D tools).
+ * undefined = every plan (the user's own skills and the 2D samples have no such line).
+ */
+export function skillPlan(skillsDir: string, name: string): '3d' | undefined {
+  try {
+    const md = fs.readFileSync(path.join(skillsDir, name, 'SKILL.md'), 'utf8').replace(/^\uFEFF/, '');
+    const fm = /^---\r?\n([\s\S]*?)\r?\n---/.exec(md);
+    if (!fm) return undefined;
+    const m = /^plan:\s*["']?([A-Za-z0-9]+)["']?\s*$/m.exec(fm[1]!);
+    return m && m[1]!.toLowerCase() === '3d' ? '3d' : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+/**
+ * Skills a machine of this plan can use: a "plan: 3d" skill (3D kiến trúc) is left out on a 2D machine, which has
+ * no 3D tools (it would only cost tokens and invite Claude to try). undefined plan = an older plugin: all skills.
+ */
+export function skillsForPlan(skillsDir: string | undefined, names: string[], plan?: string): string[] {
+  if (!skillsDir || !plan || plan === '3d' || plan === '2d3d') return names;
+  return names.filter((n) => skillPlan(skillsDir, n) !== '3d');
+}
+
 export interface SkillsPlugin {
   /** Directory handed to the SDK as a local plugin. */
   pluginDir: string;
@@ -53,7 +78,7 @@ export interface SkillsPlugin {
  * sidecar's work directory at every session start, so adding or editing a skill
  * only needs a new chat (New button) — no rebuild, no symlink privileges.
  */
-export function prepareSkillsPlugin(skillsDir: string | undefined, workDir: string, only?: string[]): SkillsPlugin | undefined {
+export function prepareSkillsPlugin(skillsDir: string | undefined, workDir: string, only?: string[], plan?: string): SkillsPlugin | undefined {
   if (!skillsDir || !fs.existsSync(skillsDir)) return undefined;
 
   const pluginDir = path.join(workDir, SKILLS_PLUGIN_NAME);
@@ -64,7 +89,8 @@ export function prepareSkillsPlugin(skillsDir: string | undefined, workDir: stri
   fs.mkdirSync(target, { recursive: true });
 
   // the chat's own list when the palette sends one (v0.9.4: skills per chat), else the enabled ones
-  const skills = only ? librarySkills(skillsDir).filter((s) => only.includes(s)) : enabledSkills(skillsDir);
+  // the service plan of the machine: a 3D-only skill is not loaded on a 2D machine
+  const skills = skillsForPlan(skillsDir, only ? librarySkills(skillsDir).filter((s) => only.includes(s)) : enabledSkills(skillsDir), plan);
   for (const name of skills) fs.cpSync(path.join(skillsDir, name), path.join(target, name), { recursive: true });
 
   fs.writeFileSync(

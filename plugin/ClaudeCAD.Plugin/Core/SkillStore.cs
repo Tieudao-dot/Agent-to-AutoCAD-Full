@@ -77,7 +77,7 @@ namespace ClaudeCAD.Plugin.Core
     {
         public const string RegistryFileName = "skills.json";
         public const int MaxDescription = 1024;
-        public static readonly string[] BuiltinNames = { "ve-kien-truc", "ve-mep", "ve-ha-tang" };
+        public static readonly string[] BuiltinNames = { "ve-kien-truc", "ve-mep", "ve-ha-tang", "ve-3d-kien-truc" };
         private static readonly Regex NameRx = new Regex("^[a-z0-9][a-z0-9-]{0,63}$");
         private static readonly string[] CopyExtensions = { ".md", ".txt", ".csv", ".json" };
 

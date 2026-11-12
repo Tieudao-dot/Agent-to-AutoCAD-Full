@@ -32,7 +32,7 @@ Mỗi đoạn chat (mỗi bản vẽ) dùng **bộ skill riêng**, lấy từ **
 - **THƯ VIỆN (chưa dùng trong đoạn chat này):** các skill còn lại, có nút **+** để dùng trong đoạn chat này.
 - **Sửa:** mở `SKILL.md` bằng trình soạn mặc định. Lưu file là plugin tự nạp lại.
 
-**Đoạn chat mới** (bấm Chat mới, hoặc mở bản vẽ chưa có chat) dùng **đúng các skill của đoạn chat gần nhất**. 3 skill mẫu đi kèm plugin có sẵn trong thư viện nhưng **không tự dùng**: bấm **+** khi cần.
+**Đoạn chat mới** (bấm Chat mới, hoặc mở bản vẽ chưa có chat) dùng **đúng các skill của đoạn chat gần nhất**. 4 skill mẫu đi kèm plugin có sẵn trong thư viện nhưng **không tự dùng**: bấm **+** khi cần.
 
 Muốn bỏ hẳn một skill khỏi thư viện: xóa thư mục `<tên skill>` trong thư mục skill (đường dẫn ở bảng dưới).
 
@@ -54,5 +54,10 @@ Chọn một file tên `SKILL.md` thì plugin chép cả các file `.md/.txt/.cs
 | `ve-kien-truc` | mặt bằng kiến trúc: trục, cột, tường 220/110, cửa, kích thước, tên phòng |
 | `ve-mep` | điện (chiếu sáng, ổ cắm, máng cáp) và cấp thoát nước |
 | `ve-ha-tang` | đường, lý trình, cao độ, cống, ranh giới, bảng tọa độ |
+| `ve-3d-kien-truc` | **(gói 3D / Full)** dựng 3D từ mặt bằng: chiều cao tầng, dày sàn, cao cửa, layer khối `A-WALL-3D` / `A-SLAB-3D`, mặt cắt / mặt đứng, tự kiểm tra |
+
+**Skill theo gói (bản Full):** dòng `plan: 3d` trong phần đầu (frontmatter) đánh dấu skill chỉ có ích khi máy có lệnh 3D.
+Máy gói `2D` không nạp skill đó cho Claude, kể cả khi đoạn chat đã bấm **+** (danh sách skill vẫn hiện nó trong thư viện).
+Skill của cậu không có dòng này thì dùng ở mọi gói.
 
 Nên có mục **"Quy trình chuẩn bị"** nhắc Claude gọi `get_drawing_info` + `list_layers` trước, tạo layer/style còn thiếu theo bảng chuẩn, rồi mới vẽ. Xem `ve-kien-truc/SKILL.md` làm mẫu.

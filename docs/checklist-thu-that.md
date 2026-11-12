@@ -194,6 +194,41 @@ Bổ sung sau Test & sửa đợt 2 ([`ban-giao/ve-3d-test-2.md`](ban-giao/ve-3d
 Còn chỉ thấy trên AutoCAD thật: `FilletEdges` với setback 0, căn tiết diện của `sweep` (tâm tiết diện đặt vào đầu
 đường dẫn), U hoàn tác `set_ucs` (K10), quy ước mảng của `Matrix3d(double[])` (plugin tự kiểm, K21).
 
+## L. 3D đợt 3 (bản Full, gói 3D hoặc Full, ~12 phút)
+
+Máy ở gói `Full` (L2 cần vẽ mặt bằng 2D). Bản vẽ mới (acadiso.dwt, đơn vị mm), tab Model. Chi tiết:
+[`ban-giao/ve-3d-dot-3.md`](ban-giao/ve-3d-dot-3.md).
+
+| # | | Làm gì | Kết quả mong đợi | Đạt | Lỗi | Mã gốc |
+| --- | --- | --- | --- | --- | --- | --- |
+| L1 | ★ | Gõ `CLAUDECHATSELFTEST` | Hai dòng mới ✓: "dựng 3D phòng 4×3 m có cửa đi" (≈ 8,022 m³), "cắt ngang tường ở cao 1 m" (có đường bao, 1 hatch, ≈ 2,62 m²) | ☐ | ☐ | 3D3-1 |
+| L2 | ★ | Dùng skill `ve-kien-truc`: "vẽ phòng 4x6m tường 220 cửa đi 900 ở cạnh dài" (ví dụ mục 7 của skill). Lượt sau: "dựng 3D mặt bằng này, tường cao 3,3 m" | Claude chạy thử (`dry_run`) rồi báo 4 tường 220, 1 cửa đi, không có gì bị bỏ qua; dựng khối trên `A-WALL-3D`, thể tích ≈ **14,08 m³**, lỗ cửa cao 2200 có lanh tô phía trên; Claude tự xoay iso Conceptual và chụp. Các nét 2D của mặt bằng không đổi (handle, layer như cũ) | ☐ | ☐ | 3D3-2 |
+| L3 | ★ | Ngay sau L2: "dựng 3D lại mặt bằng này" | Claude báo mặt bằng đã dựng (liệt kê khối cũ) và hỏi xóa khối cũ / dựng thêm; không tự tạo khối trùng | ☐ | ☐ | 3D3-3 |
+| L4 | ★ | Thêm vào mặt bằng một cung tròn và một đường đơn trên `A-WALL`, rồi "dựng 3D lại, xóa khối cũ trước" | Thẻ xác nhận xóa khối cũ; Claude báo 2 đối tượng bị bỏ qua kèm lý do (tường cong; không có nét song song) và link handle; phần còn lại dựng như L2 | ☐ | ☐ | 3D3-4 |
+| L5 | ★ | Mặt bằng có một khe hở 1200 trong tường không có ký hiệu cửa: "dựng 3D" | Claude báo khe hở (vị trí, rộng 1200) và hỏi; trả lời "đó là cửa sổ" → cửa sổ bậu 900, cao 1500 (tường dưới bậu và trên lanh tô) | ☐ | ☐ | 3D3-5 |
+| L6 | ○ | Cửa là block `CUA-DI-900` chèn đè lên tường liền (không có khe) | Lỗ cửa rộng ≈ 900 được khoét đúng chỗ block (báo `from: symbol`) | ☐ | ☐ | 3D3-6 |
+| L7 | ★ | Vẽ polyline kín trên layer `A-SLAB` bao ngoài phòng L2 và một polyline kín nhỏ bên trong (lỗ cầu thang), "dựng 3D có sàn dày 120" | Sàn trên `A-SLAB-3D`, mặt trên ở z = 0, dày 120, có lỗ; `area_m2` = diện tích ngoài − lỗ | ☐ | ☐ | 3D3-7 |
+| L8 | ○ | Bản vẽ đơn vị mét (`INSUNITS` = 6), mặt bằng vẽ bằng mét (tường 0.22): "dựng 3D, tường cao 3,3 m" | Nhận được tường 220 mm; khối cao 3,3 (đơn vị bản vẽ), báo `units: meters` | ☐ | ☐ | 3D3-8 |
+| L9 | ★ | Sau L2: "vẽ mặt cắt đứng qua cửa đi, có nét nhìn thấy phía sau" | Đường bao vết cắt (`A-SECT`) + hatch (`A-SECT-PAT`) nằm **bên phải** mô hình, không đè lên; nét phía sau (`A-SECT-BACK`) là phần tường **phía Claude nói là "nhìn sang"**, không phải phía ngược lại; tường cắt ngang dày 220 cao 3300. Ghi lại nếu kết quả có ghi chú "behind lines could not be made" | ☐ | ☐ | 3D3-9 |
+| L10 | ★ | "vẽ mặt bằng cắt ở cao 1 m của khối tường" | Một vòng tường kín có khe cửa, hatch không tô vào trong phòng; `cut_area_m2` ≈ 4,20 | ☐ | ☐ | 3D3-10 |
+| L11 | ★ | "vẽ mặt đứng phía trước của mô hình" | Hình chiếu 2D trên `A-ELEV` cạnh mô hình; kết quả báo `hidden_lines_removed: true` (nét khuất đã bỏ: cạnh của tường phía sau không vẽ chồng lên mặt tường trước, chỉ thấy qua lỗ cửa). Nếu báo `edges` thì gửi lại câu ghi chú | ☐ | ☐ | 3D3-11 |
+| L12 | ★ | Sau L9–L11: gõ U một lần; rồi `list_entities` (hỏi Claude "trong bản vẽ có đối tượng SECTIONOBJECT nào không?") | U hoàn tác cả lượt cuối; không còn đối tượng Section tạm nào; không có hộp thoại nào hiện ra trong lúc cắt | ☐ | ☐ | 3D3-12 |
+| L13 | ★ | Máy gói `2D`: "dựng 3D mặt bằng này" và xem log (`CLAUDECHATLOG`) | Claude nói máy dùng gói 2D, không thử lệnh khác; dòng "skills loaded:" **không** có `ve-3d-kien-truc` (kể cả khi đã bấm + cho đoạn chat) | ☐ | ☐ | 3D3-13 |
+| L14 | ★ | Bật "Chỉ xem", "dựng 3D mặt bằng này" | Claude báo đang "Chỉ xem", bản vẽ không đổi | ☐ | ☐ | 3D3-14 |
+| L15 | ○ | AutoCAD không phải tiếng Anh (Đức / Pháp…): L2, L9 | Như L2, L9 (tên mẫu hatch ANSI31 giống nhau ở mọi ngôn ngữ) | ☐ | ☐ | 3D3-15 |
+| L16 | ○ | Lưu macro lượt L2 + L9 ("Lưu thành macro"), mở bản vẽ khác có cùng mặt bằng, chạy macro | Dựng + cắt trên mặt bằng mới, không đụng bản vẽ cũ | ☐ | ☐ | 3D3-16 |
+
+Còn chỉ thấy trên AutoCAD thật (đã viết an toàn nhất có thể, chưa kiểm được trên máy cloud):
+
+- `Section.GenerateSectionGeometry` (L9, L11): thứ tự 5 mảng kết quả (tên tham số trong API .NET lệch so với
+  ObjectARX nên plugin chỉ bật phần "background" và lấy mọi mảng như nhau), phía "phía sau" theo `ViewingDirection`,
+  kết quả 2D nằm trên mặt phẳng cắt hay đã trải phẳng (plugin tự chiếu lên mặt phẳng nếu cần), có cho hình chiếu khi mặt
+  phẳng nằm ngoài mô hình không (không thì tự lùi về chiếu mọi cạnh, báo `edges`). Lỗi ở phần này chỉ làm mất nét phía
+  sau, vết cắt vẫn có.
+- `Solid3d.GetSection` + `Region.Explode` (L1, L9, L10): đường bao cung tròn / spline; hatch kiểu Normal để trống phần
+  trong vòng.
+- Cộng hàng trăm hộp tường (L2 với mặt bằng lớn): thời gian; khối nào AutoCAD không cộng được thì để riêng và báo.
+
 ## Gửi lại gì khi lỗi
 
 1. **Mã bước** bị lỗi (ví dụ `D2`) + một dòng: đã làm gì, thấy gì khác với "kết quả mong đợi".

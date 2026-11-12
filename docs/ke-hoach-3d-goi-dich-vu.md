@@ -34,6 +34,13 @@
 > thứ tự và `topology_id`. Chi tiết: [`ban-giao/ve-3d-dot-2.md`](ban-giao/ve-3d-dot-2.md). Thử thật: phần K.
 > **Test & sửa đợt 2: xong (12/11/2026, nhánh `full/ve-3d-test-2`)**, 6 lỗi đã sửa: [`ban-giao/ve-3d-test-2.md`](ban-giao/ve-3d-test-2.md).
 > Thử thật thêm K17–K21.
+>
+> **Đợt 3: đã viết (12/11/2026, nhánh `full/ve-3d-dot-3`, chưa thử trên AutoCAD thật, chờ thread Test & sửa đợt 3).**
+> 3 lệnh nhãn 3D: `build_3d_from_plan` (dựng tường có lỗ cửa đi / cửa sổ và sàn từ mặt bằng 2D theo layer của
+> `ve-kien-truc` hoặc handle chỉ định, báo cáo phần bỏ qua, chạy thử `dry_run`, chặn dựng trùng), `section_view` (mặt
+> cắt: đường bao + hatch, tùy chọn nét phía sau), `projection_view` (hình chiếu / mặt đứng); skill mẫu `ve-3d-kien-truc`
+> (máy gói 2D không nạp). Toàn bộ bằng API .NET (`Solid3d.GetSection`, `Section.GenerateSectionGeometry`), **không gọi
+> lệnh AutoCAD** (FLATSHOT / VIEWBASE). Chi tiết: [`ban-giao/ve-3d-dot-3.md`](ban-giao/ve-3d-dot-3.md). Thử thật: phần L.
 
 ### Hiện trạng
 
@@ -80,8 +87,9 @@ Lệnh này dựa trên đợt 1 nên làm sau cùng.
 - **Cộng / trừ khối làm mất khối gốc.**
   - Khi trừ khối có sẵn của người dùng, lệnh tính là sửa đối tượng có sẵn, nên phải qua thẻ xác nhận.
   - Hoàn tác cả lượt bằng một lần U vẫn giữ như cũ.
-- **Mặt cắt / hình chiếu 2D (đợt 3)** chỉ có qua lệnh AutoCAD (FLATSHOT, VIEWBASE), không có API .NET gọn. Phải gọi lệnh
-  AutoCAD từ plugin, nên cần thử kỹ trên AutoCAD thật.
+- **Mặt cắt / hình chiếu 2D (đợt 3)**: *(đã làm bằng API .NET, xem bàn giao đợt 3)* vết cắt bằng `Solid3d.GetSection`,
+  nét phía sau / hình chiếu bằng `Section.GenerateSectionGeometry` (đối tượng `Section` tạm, xóa trong cùng transaction);
+  không gọi FLATSHOT / VIEWBASE. Phần `GenerateSectionGeometry` vẫn cần thử kỹ trên AutoCAD thật (checklist L9, L11).
 - **Token:**
   - ~25 lệnh 3D thêm khoảng 5–6k token mô tả lệnh vào mỗi yêu cầu. Phần này được cache nên rẻ, nhưng vẫn tốn.
   - Máy gói 2D sẽ không nạp lệnh 3D, nên không tốn thêm.
@@ -179,7 +187,7 @@ thẳng trong lệnh 3D. Đổi lại, gói 3D sẽ khó dùng hơn nhiều.
 | 2 | 3D đợt 1 ✅ *(12/11/2026, nhánh `full/ve-3d`, chờ thử thật)*:<br>• khối cơ bản, extrude / revolve, cộng trừ khối;<br>• góc nhìn, kiểu hiển thị, thông tin khối, chụp ảnh 3D;<br>• system prompt, tự kiểm tra | Thread "Vẽ 3D" |
 | 3 | Bộ cài thử 0.10.0 → cậu thử phần gói + 3D đợt 1 trên AutoCAD → phát hành | Thread gộp nhánh & phát hành |
 | 4 | 3D đợt 2 (sweep, loft, cắt, bo cạnh, UCS, va chạm) | Thread "Vẽ 3D & gói dịch vụ" |
-| 5 | 3D đợt 3 (dựng 3D từ mặt bằng, mặt cắt / hình chiếu, skill 3D kiến trúc) | Thread "Vẽ 3D & gói dịch vụ" |
+| 5 | 3D đợt 3 ✅ *(12/11/2026, nhánh `full/ve-3d-dot-3`, chờ test & sửa)* (dựng 3D từ mặt bằng, mặt cắt / hình chiếu, skill 3D kiến trúc) | Thread "Vẽ 3D đợt 3" |
 
 - **Chi phí:**
   - Bước 1 và bước 2 mỗi bước cỡ một đợt giao diện trước đây, khoảng $5–15 mỗi đợt ở thread mới.

@@ -326,6 +326,76 @@ namespace ClaudeCAD.Plugin
                 return SelfTestRules.CheckVolume("phần chồng 500×1000×1000", overlap, 500.0 * 1000 * 1000);
             });
 
+            // 3D phase 3: the same code paths as build_3d_from_plan and section_view (handlers called directly)
+            string planWalls = null;
+            const double px = 20000; // a 4000 × 3000 room by its axes, wall 200, a 900 door gap in the bottom wall
+            Check("3D đợt 3: dựng 3D phòng 4×3 m có cửa đi, kiểm thể tích tường", () =>
+            {
+                Dictionary<string, object> r;
+                using (doc.LockDocument())
+                using (var tr = doc.TransactionManager.StartTransaction())
+                {
+                    var db = doc.Database;
+                    db.Insunits = UnitsValue.Millimeters; // the test drawing only: the plan is drawn in mm
+                    var ms = (BlockTableRecord)tr.GetObject(SymbolUtilityServices.GetBlockModelSpaceId(db), OpenMode.ForWrite);
+                    string Add(Entity e) { e.SetDatabaseDefaults(db); ms.AppendEntity(e); tr.AddNewlyCreatedDBObject(e, true); return e.Handle.ToString(); }
+                    Polyline Pl(params double[] xy)
+                    {
+                        var pl = new Polyline();
+                        for (int i = 0; i < xy.Length; i += 2) pl.AddVertexAt(i / 2, new Point2d(px + xy[i], xy[i + 1]), 0, 0, 0);
+                        return pl;
+                    }
+                    var walls = new List<object>
+                    {
+                        Add(Pl(2450, -100, 4100, -100, 4100, 3100, -100, 3100, -100, -100, 1550, -100)),
+                        Add(Pl(2450, 100, 3900, 100, 3900, 2900, 100, 2900, 100, 100, 1550, 100)),
+                        Add(new Line(new Point3d(px + 1550, -100, 0), new Point3d(px + 1550, 100, 0))),
+                        Add(new Line(new Point3d(px + 2450, -100, 0), new Point3d(px + 2450, 100, 0))),
+                    };
+                    var door = new List<object>
+                    {
+                        Add(new Line(new Point3d(px + 1550, 100, 0), new Point3d(px + 1550, 1000, 0))),
+                        Add(new Arc(new Point3d(px + 1550, 100, 0), 900, 0, Math.PI / 2)),
+                    };
+                    var ctx = new ToolContext(doc, tr, true, null);
+                    var p = new Params("build_3d_from_plan", new Dictionary<string, object>
+                    {
+                        ["wall_handles"] = walls, ["door_handles"] = door, ["wall_height"] = 3000.0, ["door_height"] = 2100.0,
+                        ["slab"] = "none", ["wall_layer_3d"] = "0", ["on_existing"] = "add",
+                    });
+                    r = (Dictionary<string, object>)DrawingService.Build3dFromPlan(ctx, p);
+                    tr.Commit();
+                }
+                var ws = (Dictionary<string, object>)r["wall_solid"];
+                planWalls = (string)ws["handle"];
+                if (Convert.ToInt32(r["walls_count"]) != 4 || Convert.ToInt32(r["openings_count"]) != 1)
+                    return new SelfTestRules.Verdict(false, $"nhận {r["walls_count"]} tường, {r["openings_count"]} cửa (cần 4 tường, 1 cửa)");
+                // footprint 4200×3200 − 3800×2800 − door 200×900, × 3000, + lintel 200×900×900
+                double expected = (4200.0 * 3200 - 3800.0 * 2800 - 200 * 900) * 3000 + 200.0 * 900 * 900;
+                return SelfTestRules.CheckVolume("tường phòng 4×3 m, 1 cửa đi", Convert.ToDouble(ws["volume_m3"]) * 1e9, expected);
+            });
+
+            Check("3D đợt 3: cắt ngang tường ở cao 1 m, có đường bao vết cắt + hatch", () =>
+            {
+                if (planWalls == null) return new SelfTestRules.Verdict(false, "bước dựng 3D từ mặt bằng chưa chạy được");
+                Dictionary<string, object> r;
+                using (doc.LockDocument())
+                using (var tr = doc.TransactionManager.StartTransaction())
+                {
+                    var ctx = new ToolContext(doc, tr, true, null);
+                    var p = new Params("section_view", new Dictionary<string, object>
+                    {
+                        ["handles"] = new List<object> { planWalls }, ["point"] = new List<object> { px, 0.0, 1000.0 }, ["plane"] = "xy",
+                    });
+                    r = (Dictionary<string, object>)DrawingService.SectionView(ctx, p);
+                    tr.Commit();
+                }
+                int outline = ((System.Collections.ICollection)r["outline_handles"]).Count, hatch = ((System.Collections.ICollection)r["hatch_handles"]).Count;
+                double area = Convert.ToDouble(r["cut_area_m2"]), want = (4200.0 * 3200 - 3800.0 * 2800 - 200 * 900) / 1e6;
+                var detail = string.Format(CultureInfo.InvariantCulture, "{0} đường bao, {1} hatch, diện tích cắt {2:0.####} m² (cần {3:0.####} m²)", outline, hatch, area, want);
+                return new SelfTestRules.Verdict(outline > 0 && hatch == 1 && Math.Abs(area - want) <= 1e-3 * want, detail);
+            });
+
             string versionFile = Path.Combine(dir, "version-copy.dwg");
             Do("Bản sao phiên bản (Wblock + SaveAs)", () =>
             {

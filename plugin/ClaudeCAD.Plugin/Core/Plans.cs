@@ -86,12 +86,14 @@ namespace ClaudeCAD.Plugin.Core
                 "create_layout delete_layout set_current_layout add_viewport set_viewport plot_pdf list_plot_media " +
                 "create_text_style create_dim_style set_current_styles " +
                 "offset_entity fillet_entities chamfer_entities trim_entities extend_entities join_entities explode_entities edit_polyline");
-            // 3D phases 1 and 2 (Drawing/SolidTools.cs, Solid2Tools.cs): only the 3D and Full plans
+            // 3D phases 1, 2 and 3 (Drawing/SolidTools.cs, Solid2Tools.cs, PlanTo3dTools.cs, SectionTools.cs): only the 3D and Full plans
             Add(ToolGroup.ThreeD,
                 "draw_box draw_cylinder draw_sphere draw_wedge draw_torus draw_pyramid extrude revolve " +
                 "solid_union solid_subtract solid_intersect set_view_3d set_visual_style get_solid_info " +
                 // 3D phase 2 (Drawing/Solid2Tools.cs)
-                "sweep loft slice_solid fillet_edges chamfer_edges shell_solid rotate_3d mirror_3d align set_ucs reset_ucs check_interference");
+                "sweep loft slice_solid fillet_edges chamfer_edges shell_solid rotate_3d mirror_3d align set_ucs reset_ucs check_interference " +
+                // 3D phase 3 (Drawing/PlanTo3dTools.cs, SectionTools.cs): their 2D lines / hatch are results of a 3D tool
+                "build_3d_from_plan section_view projection_view");
             return d;
         }
 
