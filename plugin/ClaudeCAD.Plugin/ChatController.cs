@@ -1370,6 +1370,14 @@ namespace ClaudeCAD.Plugin
                 Ui.AddErrorCard(PlanLogic.MacroBlockedText(m.Name, Activation.Plan, blocked, Activation.Contact), false);
                 return;
             }
+            // KT-10: a macro runs without a confirmation card, so it never changes 3D solids it did not build itself
+            // (checked before the point pick too, like the plan check above)
+            var external = MacroLogic.ExternalSolidEdits(m);
+            if (external.Count > 0)
+            {
+                Ui.AddErrorCard(MacroLogic.ExternalSolidEditsMessage(external), false);
+                return;
+            }
             if (atPoint)
             {
                 if (m.BasePoint == null) return;
@@ -1390,9 +1398,6 @@ namespace ClaudeCAD.Plugin
                 if (doc != _transcriptDoc) LoadTranscriptFor(doc);
                 var entry = new ChatEntry { Role = "user", Text = $"▶ Chạy macro \"{m.Name}\"" + (at.HasValue ? " tại " + Interaction.FormatPoints(new[] { at.Value }) : "") };
                 if (RefuseOnVersionTab(doc, null)) return;
-                // KT-10: no confirmation card in a macro: it never changes 3D solids it did not build itself
-                var external = MacroLogic.ExternalSolidEdits(m);
-                if (external.Count > 0) { Ui.ShowToast(MacroLogic.ExternalSolidEditsMessage(external), ChatControl.ToastKind.Warning, 12); return; }
                 _macroRunning = true;
                 _macroCancel = false;
                 StartTurn(doc, null, entry, toAgent: false);

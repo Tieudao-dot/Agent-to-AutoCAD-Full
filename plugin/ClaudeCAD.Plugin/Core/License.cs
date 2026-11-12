@@ -236,12 +236,6 @@ namespace ClaudeCAD.Plugin.Core
         }
 
         /// <summary>
-        /// The plan this machine runs on. A signed plan line counts only when it is at least as new as the signed
-        /// status line next to it (both come in one answer of the service): keeping an old "Full" line while
-        /// the status keeps refreshing — e.g. by making the plan file read-only — falls back to the default plan.
-        /// A machine on the owner's no-network pass ("offline") keeps the plan line it was given.
-        /// </summary>
-        /// <summary>
         /// A verified plan line replaces the saved one only when it is at least as new (decided 12/11/2026, C4): a
         /// machine on the no-network pass cannot paste back an older "Full" line after the owner lowered its plan.
         /// It still keeps its plan when the user pastes nothing new: offline machines cannot be downgraded remotely.
@@ -253,6 +247,12 @@ namespace ClaudeCAD.Plugin.Core
             return string.CompareOrdinal(incoming.Date, current.Date) >= 0;
         }
 
+        /// <summary>
+        /// The plan this machine runs on. A signed plan line counts only when it is at least as new as the signed
+        /// status line next to it (both come in one answer of the service): keeping an old "Full" line while
+        /// the status keeps refreshing — e.g. by making the plan file read-only — falls back to the default plan.
+        /// A machine on the owner's no-network pass ("offline") keeps the plan line it was given.
+        /// </summary>
         public static string EffectivePlan(PlanCheck plan, StatusCheck status)
         {
             if (plan == null || !plan.Ok) return PlanLogic.DefaultPlan;

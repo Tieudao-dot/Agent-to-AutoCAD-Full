@@ -126,7 +126,7 @@ Làm trên máy có AutoCAD 2026 và / hoặc 2027. Phần A–G chỉ cần là
 ## I. Gói dịch vụ 2D / 3D / Full (bản Full, ~15 phút)
 
 > Bản Full: thử theo thứ tự trong [`checklist-tong-the.md`](checklist-tong-the.md) (điều kiện trước, phần I, L9 / L11,
-> J10–J15, K17–K21, L17–L23, rồi mục rà chéo T1–T5, X1–X5 và phần M).
+> J10–J16, K17–K24, L17–L28, rồi mục rà chéo T1–T5, X1–X5 và phần M).
 
 Cần máy chủ kích hoạt riêng của bản Full đã dựng (cột **Gói** trong trang "Thiết bị"). Sau mỗi lần đổi ô Gói, bấm
 **Kiểm tra lại** (⚙ hoặc thẻ 🔒) thay cho chờ ~6 giờ.
@@ -261,7 +261,7 @@ AutoCAD thật", và các lỗi đã sửa cần thử thật. M1–M2 làm cùn
 | M1 | ★ | Máy **rút mạng**, chưa kích hoạt. Chủ plugin chạy `taoKeyThuCong` (email có 3 dòng `CCL1…`, `CCS1…`, `CCF1…`). Chạy bộ cài, dán **cả 3 dòng** vào ô key (ô nhiều dòng), Next | Ô giữ đủ 3 dòng; cài xong mở AutoCAD dùng được ngay, hiện đúng gói ghi trong email, **không** thẻ 🔒. Lỗi: ghi lại ô giữ gì sau khi dán, gửi `%LocalAppData%\ClaudeCAD\status.txt` và `plan.txt` (không gửi `license.txt`) | ☐ | ☐ | KT-01 |
 | M2 | ○ | Máy bản gốc 0.9.x: gõ `CLAUDECHATUPDATE` (tải xong bản cập nhật), **để AutoCAD mở**, chạy bộ cài Full, bấm **Tiếp tục** (bộ cài tự đóng AutoCAD) | Sau cài: khung chat tên "Agent to AutoCAD Full", `Contents\edition.json` còn; mở lại AutoCAD vẫn là bản Full (không quay về bản gốc). Log cài đặt có dòng "removed the updater script…" / "removed the update staged…" | ☐ | ☐ | KT-07 |
 | M3 | ★ | Gói Full, một hộp dựng ở lượt trước. (a) "xóa hộp đó" → khi thẻ hiện, **gõ** "ok" thay vì bấm. (b) Bấm **Đồng ý** trên thẻ. (c) Hộp khác ở lượt trước: "sao chép hộp, khoét một lỗ trên bản sao rồi xóa hộp gốc" | (a) Hộp còn nguyên; Claude hiện lại thẻ, nhắc bấm Đồng ý. (b) Hộp bị xóa. (c) Bản sao khoét được không hỏi (khối mới); xóa hộp gốc thì có thẻ | ☐ | ☐ | KT-09, KT-12 |
-| M4 | ○ | Gói Full: lượt J2 (tường + cửa) → "Lưu thành macro"; lượt sau "khoét thêm cửa sổ vào tường" (đồng ý trên thẻ) → lưu thành macro thứ hai; chạy macro thứ hai | Macro thứ hai **không chạy**: toast "Macro này sửa khối 3D có sẵn trong bản vẽ… không chạy". Macro thứ nhất vẫn chạy bình thường | ☐ | ☐ | KT-10 |
+| M4 | ○ | Gói Full: lượt J2 (tường + cửa) → "Lưu thành macro"; lượt sau "khoét thêm cửa sổ vào tường" (đồng ý trên thẻ) → lưu thành macro thứ hai; chạy macro thứ hai | Macro thứ hai **không chạy** (không hỏi chọn điểm): thẻ lỗi "Macro này sửa khối 3D có sẵn trong bản vẽ… không chạy", bản vẽ không đổi. Macro thứ nhất vẫn chạy bình thường | ☐ | ☐ | KT-10 |
 | M5 | ○ | `draw_pyramid` 4 cạnh, bán kính 500, rotation 0 ("dựng chóp đáy vuông cạnh 1000") | Hộp bao ±500 theo X / Y (đáy vuông theo trục, không xoay 45°), đáy ở z của tâm | ☐ | ☐ | KT (Pyramid) |
 | M6 | ○ | Dựng hộp, "liệt kê cạnh và mặt"; lưu bản vẽ, mở lại (hoặc mở bằng đời AutoCAD khác), "liệt kê cạnh và mặt" của cùng khối | Thứ tự và số cạnh / mặt giữ nguyên (macro bo cạnh theo số dựa vào đây) | ☐ | ☐ | KT (Brep) |
 | M7 | ○ | Bật 🔒 Chỉ xem, "xem góc SW iso", rồi đóng bản vẽ | Ghi lại: AutoCAD có hỏi lưu không (đổi góc nhìn có thể làm bản vẽ "đã sửa") | ☐ | ☐ | KT (Chỉ xem) |
