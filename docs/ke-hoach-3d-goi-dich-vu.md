@@ -32,6 +32,8 @@
 > 12 lệnh nhãn 3D: `sweep`, `loft`, `slice_solid`, `fillet_edges`, `chamfer_edges`, `shell_solid`, `rotate_3d`,
 > `mirror_3d`, `align`, `set_ucs`, `reset_ucs`, `check_interference`; `get_solid_info` thêm danh sách cạnh / mặt có số
 > thứ tự và `topology_id`. Chi tiết: [`ban-giao/ve-3d-dot-2.md`](ban-giao/ve-3d-dot-2.md). Thử thật: phần K.
+> **Test & sửa đợt 2: xong (12/11/2026, nhánh `full/ve-3d-test-2`)**, 6 lỗi đã sửa: [`ban-giao/ve-3d-test-2.md`](ban-giao/ve-3d-test-2.md).
+> Thử thật thêm K17–K21.
 
 ### Hiện trạng
 

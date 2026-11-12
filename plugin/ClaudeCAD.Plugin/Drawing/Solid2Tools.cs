@@ -292,8 +292,9 @@ namespace ClaudeCAD.Plugin.Drawing
             if (byIndex && byFilter) throw ToolException.Invalid($"{p.Tool}: pass either 'faces' (indices) or 'face_filter', not both.");
             if (byIndex)
             {
-                RequireTopology(p, t, handle);
+                // faces: [] = a closed shell: no index, so no topology_id needed
                 if (p.Numbers("faces").Count == 0) return new List<int>();
+                RequireTopology(p, t, handle);
                 return Solid2Logic.CheckIndices(IntList(p, "faces"), t.Faces.Count, "face", p.Tool, Solid2Logic.MaxFaceSelection);
             }
             if (!byFilter) return new List<int>();
@@ -430,34 +431,18 @@ namespace ClaudeCAD.Plugin.Drawing
             double size = Math.Min(t.Max[0] - t.Min[0], Math.Min(t.Max[1] - t.Min[1], t.Max[2] - t.Min[2]));
             // a closed shell has two walls across the smallest size, an open one at least one
             if (th * (open.Count == 0 ? 2 : 1) >= size) throw ToolException.Invalid($"{p.Tool}: thickness {th} is too large for {h} (its smallest size is {Acad.R(size)} mm); nothing would be left inside. Nothing was changed.");
-            // ShellBody's sign is not documented: try inward (−) on a copy first; inward keeps the bounding box and lowers the volume
-            double sign = 0;
-            foreach (var sg in new[] { -1.0, 1.0 })
-            {
-                using (var copy = (Solid3d)s.Clone())
-                {
-                    try
-                    {
-                        var ct = ReadTopology(copy);
-                        if (ct.Id != t.Id) continue;
-                        copy.ShellBody(open.Select(i => ct.FaceIds[i]).ToArray(), sg * th);
-                        double v = VolumeOf(copy);
-                        var e = copy.GeometricExtents;
-                        double tol = Solid2Logic.Tolerance(t.Min, t.Max) * 10 + 1e-6 * th;
-                        bool inside = e.MinPoint.X >= t.Min[0] - tol && e.MinPoint.Y >= t.Min[1] - tol && e.MinPoint.Z >= t.Min[2] - tol &&
-                                      e.MaxPoint.X <= t.Max[0] + tol && e.MaxPoint.Y <= t.Max[1] + tol && e.MaxPoint.Z <= t.Max[2] + tol;
-                        if (v > 1e-9 && v < before && inside) { sign = sg; break; }
-                    }
-                    catch (Autodesk.AutoCAD.Runtime.Exception) { }
-                }
-            }
-            if (sign == 0)
-                throw ToolException.Invalid($"{p.Tool}: AutoCAD could not shell {h} with thickness {th}. Nothing was changed. A wall thicker than a narrow part of the solid, or faces that cannot be opened together, are common causes: use a thinner wall or other faces.");
-            try { s.ShellBody(open.Select(i => t.FaceIds[i]).ToArray(), sign * th); }
+            // AcDbMgd.xml: a negative offset shells inward (the outer size stays). The faces are the solid's own (the ids
+            // get_solid_info listed); a result that grew or kept its volume is refused and the turn's transaction undoes it.
+            try { s.ShellBody(open.Select(i => t.FaceIds[i]).ToArray(), Solid2Logic.ShellOffset(th)); }
             catch (Autodesk.AutoCAD.Runtime.Exception ex)
             {
-                throw ToolException.Invalid($"{p.Tool}: AutoCAD could not shell {h} ({ex.ErrorStatus}). Nothing was changed. Use a thinner wall.");
+                throw ToolException.Invalid($"{p.Tool}: AutoCAD could not shell {h} with thickness {th} ({ex.ErrorStatus}). Nothing was changed. " +
+                    "A wall thicker than a narrow part of the solid, or faces that cannot be opened together, are common causes: use a thinner wall or other faces.");
             }
+            double after = VolumeOf(s);
+            var ext = s.GeometricExtents;
+            if (s.IsNull || !Solid2Logic.ShellLooksInward(before, after, t.Min, t.Max, J(ext.MinPoint), J(ext.MaxPoint), th))
+                throw ToolException.Invalid($"{p.Tool}: AutoCAD did not hollow {h} inward (volume {Acad.R(before)} → {Acad.R(after)} mm³, or the outer size changed). Nothing was changed. Use a thinner wall or other faces.");
             var res = ChangedResult(h, s, before);
             res["faces_opened"] = open.Count;
             return res;
@@ -584,18 +569,24 @@ namespace ClaudeCAD.Plugin.Drawing
             var pts = p.Points("path_points", 2, 5000);
             double z0 = SolidLogic.Z3(pts[0]);
             if (pts.All(q => Math.Abs(SolidLogic.Z3(q) - z0) < 1e-9))
-            {
-                var pl = Acad.MakePolyline(pts, false);
-                temp.Add(pl);
-                return pl;
-            }
+                return AddTemp(ctx, p, Acad.MakePolyline(pts, false), temp);
             var col = new Point3dCollection();
             foreach (var q in pts) col.Add(P(q));
-            var p3 = new Polyline3d(Poly3dType.SimplePoly, col, false);
-            try { Acad.Add(ctx, p3, null); }
-            catch { if (p3.ObjectId.IsNull) p3.Dispose(); throw; }
-            temp.Add(p3);
-            return p3;
+            return AddTemp(ctx, p, new Polyline3d(Poly3dType.SimplePoly, col, false), temp);
+        }
+
+        /// <summary>
+        /// A helper curve (sweep path_points, loft sections_points) appended to the drawing for the API call and erased
+        /// right after (DropTemp): CreateSweptSolid / CreateLoftedSolid then get curves like the user's own (database
+        /// resident; a Polyline3d needs it for its vertices). It goes on the result's layer / space (p), so a locked
+        /// current layer does not block a solid drawn on another layer.
+        /// </summary>
+        private static T AddTemp<T>(ToolContext ctx, Params p, T e, List<Entity> temp) where T : Entity
+        {
+            try { Acad.Add(ctx, e, p); }
+            catch { if (e.ObjectId.IsNull) e.Dispose(); throw; }
+            temp.Add(e);
+            return e;
         }
 
         private static void DropTemp(List<Entity> temp)
@@ -684,9 +675,7 @@ namespace ClaudeCAD.Plugin.Drawing
                 double z0 = SolidLogic.Z3(pts[0]);
                 if (pts.Any(q => Math.Abs(SolidLogic.Z3(q) - z0) > 1e-6))
                     throw ToolException.Invalid($"loft: sections_points[{i}] is not flat: every point of a section needs the same z (sections are horizontal; draw tilted sections first and use section_handles).");
-                var pl = Acad.MakePolyline(pts, true);
-                temp.Add(pl);
-                list.Add(pl);
+                list.Add(AddTemp(ctx, p, Acad.MakePolyline(pts, true), temp));
             }
             return list;
         }
@@ -789,7 +778,33 @@ namespace ClaudeCAD.Plugin.Drawing
             bool scale = p.Bool("scale", false);
             if (scale && src.Count < 2) throw ToolException.Invalid("align: scale needs 2 or 3 point pairs.");
             var m = Solid2Logic.AlignMatrix(src, dst, scale);
-            return Transform(ctx, p, M(m));
+            return Transform(ctx, p, CheckedMatrix(m, src, "align"));
+        }
+
+        /// <summary>
+        /// Matrix3d(double[]) is documented only as "values in an array": check it maps the points as the row-major
+        /// math (Solid2Logic.Apply) says before anything moves; the transposed reading is accepted, anything else refused.
+        /// </summary>
+        private static Matrix3d CheckedMatrix(double[] rowMajor, IList<double[]> pts, string tool)
+        {
+            bool Same(Matrix3d mx)
+            {
+                foreach (var q in pts)
+                {
+                    var want = Solid2Logic.Apply(rowMajor, q);
+                    var got = P(q).TransformBy(mx);
+                    double scale = Math.Max(1, SolidLogic.Len(want));
+                    if (Math.Abs(got.X - want[0]) > 1e-6 * scale || Math.Abs(got.Y - want[1]) > 1e-6 * scale || Math.Abs(got.Z - want[2]) > 1e-6 * scale) return false;
+                }
+                return true;
+            }
+            var m = M(rowMajor);
+            if (Same(m)) return m;
+            var tr = new double[16];
+            for (int i = 0; i < 4; i++) for (int j = 0; j < 4; j++) tr[j * 4 + i] = rowMajor[i * 4 + j];
+            var mt = M(tr);
+            if (Same(mt)) { Logger.Warn($"{tool}: Matrix3d(double[]) reads column-major; transposed"); return mt; }
+            throw ToolException.Invalid($"{tool}: internal check of the transform failed; nothing was moved. Send the plugin log to the developer.");
         }
 
         // ================================================================= interference
@@ -820,9 +835,7 @@ namespace ClaudeCAD.Plugin.Drawing
                 solids[h] = sd;
                 return sd;
             }
-            var pairs = new List<(string, string)>();
-            if (others == null) { for (int i = 0; i < hs.Count; i++) for (int j = i + 1; j < hs.Count; j++) pairs.Add((hs[i], hs[j])); }
-            else foreach (var a in hs) foreach (var b in others) if (!string.Equals(a, b, StringComparison.OrdinalIgnoreCase)) pairs.Add((a, b));
+            var pairs = Solid2Logic.InterferencePairs(hs, others);
             var hits = new List<object>();
             int touching = 0, checkedPairs = 0;
             double total = 0;

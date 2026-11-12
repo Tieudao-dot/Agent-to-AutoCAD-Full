@@ -90,7 +90,12 @@ namespace ClaudeCAD.Plugin.Core
             {
                 if (p == null) { sb.Append("n;"); return; }
                 for (int i = 0; i < 3; i++)
-                    sb.Append(Math.Round((i < p.Length ? p[i] : 0) - (i < o.Length ? o[i] : 0), 2).ToString("0.##", CultureInfo.InvariantCulture)).Append(',');
+                {
+                    double r = Math.Round((i < p.Length ? p[i] : 0) - (i < o.Length ? o[i] : 0), 2);
+                    // -0 prints "-0" on .NET 8 / 10 but "0" on .NET Framework (AutoCAD 2022-2024): one id on every AutoCAD
+                    if (r == 0) r = 0;
+                    sb.Append(r.ToString("0.##", CultureInfo.InvariantCulture)).Append(',');
+                }
                 sb.Append(';');
             }
             foreach (var e in edges) { P(e.Start); P(e.End); P(e.Mid); sb.Append(e.Straight ? 's' : 'c'); }
@@ -508,6 +513,43 @@ namespace ClaudeCAD.Plugin.Core
             if (n.Length == 0 || n.Length > 255 || n.IndexOfAny("<>/\\\":;?*|,=`".ToCharArray()) >= 0)
                 throw ToolException.Invalid($"{tool}: '{name}' is not a valid UCS name (1-255 characters, none of < > / \\ \" : ; ? * | , = `).");
             return n;
+        }
+
+        // ------------------------------------------------------------------ interference / shell
+
+        /// <summary>
+        /// The pairs check_interference compares: every pair of handles, or handles × others. Each unordered pair once
+        /// (a handle in both lists is not compared with itself, and A–B is not checked again as B–A).
+        /// </summary>
+        public static List<(string a, string b)> InterferencePairs(IList<string> handles, IList<string> others)
+        {
+            var pairs = new List<(string, string)>();
+            var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            void Add(string a, string b)
+            {
+                if (string.Equals(a, b, StringComparison.OrdinalIgnoreCase)) return;
+                var key = string.Compare(a, b, StringComparison.OrdinalIgnoreCase) < 0 ? a + "|" + b : b + "|" + a;
+                if (seen.Add(key)) pairs.Add((a, b));
+            }
+            if (others == null) { for (int i = 0; i < handles.Count; i++) for (int j = i + 1; j < handles.Count; j++) Add(handles[i], handles[j]); }
+            else foreach (var a in handles) foreach (var b in others) Add(a, b);
+            return pairs;
+        }
+
+        /// <summary>
+        /// The offset ShellBody gets for an inward wall of thickness t. AcDbMgd.xml (AutoCAD 2022-2027): "faces offset
+        /// to the outside of the solid when given positive offset distances, and to the inside when given negative".
+        /// </summary>
+        public static double ShellOffset(double thickness) => -Math.Abs(thickness);
+
+        /// <summary>True when the shelled solid kept the outer size (bounding box within the old one) and lost volume.</summary>
+        public static bool ShellLooksInward(double before, double after, double[] min0, double[] max0, double[] min1, double[] max1, double thickness)
+        {
+            if (!(after > 1e-9) || !(after < before)) return false;
+            double tol = Tolerance(min0, max0) * 10 + 1e-6 * thickness;
+            for (int i = 0; i < 3; i++)
+                if (min1[i] < min0[i] - tol || max1[i] > max0[i] + tol) return false;
+            return true;
         }
 
         // ------------------------------------------------------------------ checks of the other tools

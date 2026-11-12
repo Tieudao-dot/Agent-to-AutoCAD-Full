@@ -69,7 +69,7 @@ test lõi + trợ lý, build net48 / net8 / net10, tài liệu (checklist phần
     = cạnh nằm trên mặt đó của hộp bao; front = Y nhỏ nhất như hướng nhìn Front).
     - `ChamferEdges` cần một mặt gốc mỗi lần gọi: plugin gom cạnh theo mặt (ít nhóm nhất); nhóm sau tìm lại cạnh / mặt
       bằng hình học (cạnh thẳng cùng đường, cùng hướng) vì AutoCAD đánh số lại; không tìm được thì báo lỗi, lùi cả lệnh.
-    - `ShellBody` không có tài liệu về dấu độ dày: plugin thử trên **bản sao** (−, rồi +), chọn phía làm thể tích giảm
+    - *(Test đợt 2: tài liệu có ghi dấu, âm = vào trong; đã bỏ bước thử trên bản sao, xem `ve-3d-test-2.md`.)* `ShellBody` không có tài liệu về dấu độ dày: plugin thử trên **bản sao** (−, rồi +), chọn phía làm thể tích giảm
       mà hộp bao giữ nguyên, rồi mới làm trên khối thật.
   - `rotate_3d` (trục bất kỳ, `Matrix3d.Rotation`), `mirror_3d` (`Matrix3d.Mirroring(Plane)`, `keep_original` mặc định
     true như `mirror_entities`, giữ luật MIRRTEXT), `align` (1–3 cặp điểm, `scale`; ma trận tính trong

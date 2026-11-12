@@ -367,7 +367,6 @@ namespace ClaudeCAD.Core.Tests
                 Assert.Contains(api, src);
             Assert.True(Regex.Matches(src, "Nothing was changed").Count >= 10);
             // temporary objects are disposed: clones in using, sweep / loft temp lists dropped in finally
-            Assert.Contains("using (var copy = (Solid3d)s.Clone())", src);
             Assert.Contains("using (var ca = (Solid3d)a.Clone())", src);
             Assert.True(Regex.Matches(src, @"DropTemp\(temp\)").Count >= 2);
             Assert.Contains("other?.Dispose();", src);

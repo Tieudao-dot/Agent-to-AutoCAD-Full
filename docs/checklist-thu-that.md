@@ -181,9 +181,18 @@ Máy ở gói `3D` hoặc `Full`. Bản vẽ mới (acadiso.dwt), tab Model. M�
 | K15 | ★ | Máy gói `2D`: "bo cạnh hộp", "quét ống theo đường" | Claude nói máy dùng gói 2D, chưa có 3D | ☐ | ☐ | 3D2-15 |
 | K16 | ○ | AutoCAD 2022–2024 và 2025–2027 (nếu có), và AutoCAD không phải tiếng Anh: chạy K1, K6, K7 | Như trên ở từng đời | ☐ | ☐ | 3D2-16 |
 
-Chỗ chỉ thấy trên AutoCAD thật (đợt 2 viết theo tài liệu API, chưa chạy thật): dấu độ dày của `ShellBody` (plugin
-thử trên bản sao, chọn phía làm thể tích giảm mà hộp bao giữ nguyên), `FilletEdges` với setback 0, căn tiết diện
-của `sweep` (tâm tiết diện đặt vào đầu đường dẫn), thứ tự cạnh Brep giữa bản gốc và bản sao, U hoàn tác `set_ucs`.
+Bổ sung sau Test & sửa đợt 2 ([`ban-giao/ve-3d-test-2.md`](ban-giao/ve-3d-test-2.md)):
+
+| # | | Làm gì | Kết quả mong đợi | Đạt | Lỗi | Mã gốc |
+| --- | --- | --- | --- | --- | --- | --- |
+| K17 | ★ | Như K6 (bể hở miệng), rồi "dựng hộp 600x600x600, làm rỗng kín, thành 20" | K6 đúng như trên; hộp kín rỗng ruột, ngoài vẫn 600×600×600, thể tích ≈ 0,216 − 0,56³ ≈ 0,0404 m³. Nếu Claude báo "did not hollow … inward": gửi câu lỗi (dấu `ShellBody` khác tài liệu) | ☐ | ☐ | 3D2-17 |
+| K18 | ★ | Khóa layer hiện hành (layer 0 khóa), rồi "quét ống D50 theo đường chữ L (0,0,0)→(0,0,1000)→(1000,0,1000) trên layer ONG" và "loft hình vuông 1000 ở z=0 lên hình vuông 400 ở z=2000 trên layer ONG" | Hai khối dựng trên layer ONG; không có đường dẫn / tiết diện thừa nào còn lại trong bản vẽ; U hoàn tác cả lượt | ☐ | ☐ | 3D2-18 |
+| K19 | ○ | Có cả AutoCAD 2022–2024 và 2025–2027 trên một máy: ghi macro "dựng hộp, liệt kê cạnh, bo cạnh số 3 R50" ở đời này, chạy ở đời kia | Macro chạy được, hộp mới bo đúng cạnh số 3 (không báo "solid has changed") | ☐ | ☐ | 3D2-19 |
+| K20 | ★ | 3 hộp A, B, C chồng nhau; "kiểm tra va chạm A, B với A, B, C" | Mỗi cặp nêu một lần (A–B, A–C, B–C), không có A–A, không lặp B–A | ☐ | ☐ | 3D2-20 |
+| K21 | ★ | "căn hộp bằng 3 cặp điểm: góc (0,0,0)→(5000,0,0), (1000,0,0)→(5000,1000,0), (0,800,0)→(4200,0,0)" | Hộp dời và xoay 90° quanh Z về quanh (5000,0,0); không có lỗi "internal check of the transform" | ☐ | ☐ | 3D2-21 |
+
+Còn chỉ thấy trên AutoCAD thật: `FilletEdges` với setback 0, căn tiết diện của `sweep` (tâm tiết diện đặt vào đầu
+đường dẫn), U hoàn tác `set_ucs` (K10), quy ước mảng của `Matrix3d(double[])` (plugin tự kiểm, K21).
 
 ## Gửi lại gì khi lỗi
 

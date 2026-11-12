@@ -303,7 +303,7 @@ function solidTools2(b: ToolBridge): AnyTool[] {
 
     cadTool(b, 'shell_solid',
       'SHELL a 3D solid: hollow it out to walls of thickness (inward, the outer size stays), with the picked faces removed (open), e.g. an open-top tank or box. ' +
-        'Faces: face_filter (["top"]) or face indices + topology_id from get_solid_info (faces: true); no faces = a closed hollow shell. ' +
+        'Faces: face_filter (["top"]) or face indices + topology_id from get_solid_info (faces: true); no faces (or faces: []) = a closed hollow shell, no topology_id needed. ' +
         'Fails clearly (nothing changed) when the wall is too thick.' + CHECK_AFTER + ON_EXISTING_SOLID,
       {
         handle: handle.describe('The solid.'),
@@ -361,7 +361,7 @@ function solidTools2(b: ToolBridge): AnyTool[] {
 
     cadTool(b, 'check_interference',
       'CHECK INTERFERENCE (clashes) between 3D solids: every pair of handles, or each of handles against each of other_handles (e.g. beams against ducts). ' +
-        `Returns interfere, the clashing pairs with their overlap volume, touching_pairs (only touching), at most ${SOLID2_LIMITS.MaxInterferenceSolids} solids per list. Read-only: nothing is changed.`,
+        `Returns interfere, the clashing pairs with their overlap volume, touching_pairs (only touching), at most ${SOLID2_LIMITS.MaxInterferenceSolids} solids per list; each pair is checked once even when the lists overlap. Read-only: nothing is changed.`,
       {
         handles: handles.max(SOLID2_LIMITS.MaxInterferenceSolids),
         other_handles: handles.max(SOLID2_LIMITS.MaxInterferenceSolids).optional(),
