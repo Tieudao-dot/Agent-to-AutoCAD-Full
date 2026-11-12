@@ -40,7 +40,7 @@ Cho mục T5 (cài đè lên bản gốc): một máy đang dùng ClaudeCAD bả
 | 1 | Gói dịch vụ (I1–I6, I5b, I5c + T1–T5 + M1–M2, M10–M12) | ~40 phút | Gói sai thì máy được / bị chặn sai lệnh; khách đang dùng bản gốc chuyển sang bản Full bằng cài đè: quan trọng nhất |
 | 2 | Nét phía sau, hình chiếu (L9, L11) | ~6 phút | `GenerateSectionGeometry` chưa kiểm được ngoài AutoCAD |
 | 3 | 3D đợt 1 sau sửa (J10–J16) | ~10 phút | Hướng nêm, góc vát, macro, AutoCAD không phải tiếng Anh, báo lỗi rõ khi xoay / giao sai |
-| 4 | 3D đợt 2 sau sửa (K17–K24) | ~12 phút | Làm rỗng, đường tạm, macro theo số cạnh, căn khối, va chạm chung mặt, UCS nghiêng, bo cạnh sau khi dời khối |
+| 4 | 3D đợt 2 sau sửa (K17–K25) | ~13 phút | Làm rỗng, đường tạm, macro theo số cạnh, căn khối, va chạm chung mặt, UCS nghiêng, bo cạnh sau khi dời khối |
 | 5 | 3D đợt 3 sau sửa (L17–L28) | ~22 phút | Mặt bằng lộn xộn: khe giữa hai tường, nét bề rộng, cửa sổ trên layer tường; nhà nhiều tầng, cửa sát góc phòng |
 | 6 | Một lượt dùng lệnh của cả 3 đợt (X1–X5) | ~12 phút | Hoàn tác U, thẻ xác nhận (cả khi phá khối 3D), "Chỉ xem" khi trộn đợt |
 | 7 | Phần còn lại: J1–J9, K1–K16, L1–L8, L10, L12–L16 | ~35 phút | Đã có từ lúc viết từng đợt |
@@ -90,12 +90,13 @@ cửa ở bản vẽ mới rồi bản vẽ cũ (tường cũ không bị khoét
 giao hai hộp chạm mặt (báo không giao được, bản vẽ không đổi), J16 xoay biên dạng cắt qua trục / giao khối tách rời /
 góc nhìn với handle đã xóa: mỗi lệnh báo lỗi rõ, bản vẽ không đổi.
 
-### 4. 3D đợt 2 sau sửa (K17–K24, ~12 phút)
+### 4. 3D đợt 2 sau sửa (K17–K25, ~13 phút)
 
 K17 làm rỗng hở miệng + kín (thể tích ≈ 0,1925 và ≈ 0,0404 m³), K18 layer hiện hành khóa vẫn sweep / loft được, K19
 macro bo cạnh số 3 giữa hai đời AutoCAD (nếu có), K20 va chạm mỗi cặp một lần, K21 căn hộp bằng 3 cặp điểm, K22 hai
 hộp chồng nhau chung một mặt phẳng vẫn báo va chạm, K23 UCS nghiêng nhìn thẳng có trục X sang phải, K24 dời / xoay hộp
-bằng tay rồi bo cạnh số 3 theo `topology_id` cũ vẫn đúng cạnh.
+bằng tay rồi bo cạnh số 3 theo `topology_id` cũ vẫn đúng cạnh, K25 nhiều tường chỉ chạm nhau không bị báo va chạm (cặp
+chưa đo là "chưa xác nhận").
 
 ### 5. 3D đợt 3 sau sửa (L17–L28, ~22 phút)
 

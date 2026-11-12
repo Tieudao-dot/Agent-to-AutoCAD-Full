@@ -214,13 +214,13 @@ tra; KT-11 và KT-13 có thêm câu kiểm.
 | KT-22 | nhẹ | Vẽ 3D đợt 3 | `fddffdb` | Đường bao sàn lồng nhau theo độ lồng: đảo trong lỗ là sàn riêng | `KT22_*`; L28 |
 | KT-23 | nhẹ | Vẽ 3D đợt 3 | `fddffdb` | Kiểm dựng lại: chồng thật cả hai chiều, so từng hộp tường mới | `KT23_*` |
 | KT-24 | vừa | Vẽ 3D đợt 2 | `9d301c9` | Va chạm không đo được thể tích vẫn là va chạm (`volume: null`, `unmeasured_clashes`); chỉ thể tích đo được bằng 0 mới là "chạm" | `Solid2Tests`; K22 |
-| KT-25 | vừa | Vẽ 3D đợt 2 | `9d301c9` | Lọc hộp bao trước, tối đa 2000 cặp mỗi lần (`truncated`), chỉ đo thể tích 200 va chạm đầu | `Solid2Tests`, trợ lý so khớp giới hạn |
+| KT-25 | vừa | Vẽ 3D đợt 2 | `9d301c9` | Lọc hộp bao trước, tối đa 2000 cặp mỗi lần (`truncated`), chỉ đo thể tích 200 va chạm đầu | `Solid2Tests`, trợ lý so khớp giới hạn. Lượt 2: phần "chỉ đo 200 cặp" sửa tiếp ở KT-40 |
 | KT-26 | nhẹ | Vẽ 3D đợt 2 | `9d301c9` | `set_ucs` `plan_view`: tính `ViewTwist` để trục X của UCS nằm ngang, chỉ sang phải | `Solid2Tests`; K23 |
 | KT-27 | nhẹ | Vẽ 3D đợt 2 | `9d301c9` | `topology_id` không chứa vị trí tuyệt đối: dời / xoay cả khối không đổi id. Hệ quả đã chấp nhận: macro ghi trước bản sửa báo "solid has changed" ở lệnh theo số cạnh (không bo nhầm), ghi lại macro là xong | `Solid2Tests`; K24 |
 | KT-28 | nhẹ | Vẽ 3D đợt 1 | `bf38ab3` | `solid_intersect`: kiểm rỗng sau mỗi lần giao, báo "do not overlap", bản vẽ không đổi | `SolidReviewFixTests`; J16 |
 | KT-29 | nhẹ | Vẽ 3D đợt 1 | `bf38ab3` | `set_view_3d` với handle không tồn tại → `ENTITY_NOT_FOUND` | `SolidReviewFixTests`; J16 |
 | KT-30 | nhẹ | Vẽ 3D đợt 1 | `bf38ab3` | Giữ cách chọn layer (theo `layer` truyền vào, không có thì layer hiện hành), sửa chú thích; kiểm trục revolve theo điểm dọc đường (cả cung, đường tròn) trên mặt phẳng của biên dạng | `SolidReviewFixTests`, `SolidTests`; J16 |
-| KT-31 | vừa | Test tổng thể | `8e163b3` | `docs/dung-may-chu-kich-hoat-full.md`: viết lại lưu ý (plugin đã đọc `CCF1` và chặn theo gói, phải chọn gói) | tài liệu |
+| KT-31 | vừa | Test tổng thể | `8e163b3` | `docs/dung-may-chu-kich-hoat-full.md`: viết lại lưu ý (plugin đã đọc `CCF1` và chặn theo gói, phải chọn gói). Lượt 2: câu "thẻ 🔒 nhận cả ba dòng" làm cho đúng ở KT-41 | tài liệu |
 | KT-32 | nhẹ | Test tổng thể | `8e163b3` | Thời gian / số mục / số lệnh trong checklist và kế hoạch cho khớp (T5, X4 ở đầu phần; phần L gói Full; 90 lệnh) | tài liệu |
 | KT-33 | nhẹ | Test tổng thể | `8e163b3`, `601b2f9` | I5: `plan.txt` chỉ đọc có dòng Full cũ, đổi ô sang `3D`, đúng là về 2D, không bao giờ Full; sau gộp ghi rõ dòng Full từ hôm trước theo UTC | I5 |
 | KT-34 | nhẹ | Test tổng thể | `8e163b3` | System prompt (mục 6 + luật 3D): sửa / xóa / phá khối 3D có trước lượt cần nút Đồng ý của thẻ, gọi `request_confirmation` ngay | `crossplan.test.ts` |
@@ -231,7 +231,24 @@ tra; KT-11 và KT-13 có thêm câu kiểm.
 | KT-39 | nhẹ | Test tổng thể | `8e163b3` | `.gitignore` chặn `*.gs` (giữ `*.gs.template`); `make-apps-script.mjs` từ chối `--out` trong repo; README đổi ví dụ ra ngoài repo | `crossplan.test.ts` (KT-39) |
 
 **Chưa sửa:** không có. Đã chấp nhận, ghi ở bàn giao thread sửa: KT-05 (cùng ngày UTC, `plan.txt` chỉ đọc giữ Full tới hết
-ngày), KT-27 (macro cũ dùng `topology_id` công thức cũ phải ghi lại), KT-30 (giữ cách chọn layer, chỉ sửa chú thích).
+ngày), KT-27 (macro cũ dùng `topology_id` công thức cũ phải ghi lại), KT-30 (giữ cách chọn layer, chỉ sửa chú thích),
+KT-42 (vòng 2, dưới).
+
+### Vòng 2: kiểm tra độc lập lượt 2
+
+Lượt 2 (`full/kiem-tra-doc-lap` @ `ad3d0a4`, soát trên `efd5792`): 35 / 39 sửa đúng, 3 chấp nhận (KT-05, KT-27, KT-30 phần
+layer), KT-25 sửa chưa đủ (thành KT-40); thêm 2 lỗi mới nhẹ (KT-41, KT-42). Thread này sửa KT-41 rồi gộp 2 nhánh bằng merge
+commit: `full/goi-dich-vu` @ `d6d8110` → `69e7109`, `full/ve-3d-dot-2` @ `2f5aa58` → `21c54d9`. Không xung đột; checklist
+tổng thêm K25.
+
+| Mã | Mức | Thread sửa | Commit | Sửa | Test / thử tay |
+| --- | --- | --- | --- | --- | --- |
+| KT-40 | nhẹ | Vẽ 3D đợt 2 | `2f5aa58` | Cặp `CheckInterference` đánh dấu sau giới hạn đo 200 cặp là **"chưa xác nhận"** (`Solid2Logic.InterferenceKind`; `unconfirmed_count` / `unconfirmed_pairs` / `unconfirmed_note`): không tính vào `clashes` / `interfere`, cũng không coi là an toàn | `Solid2Tests` (KT-40); K25 |
+| KT-41 | nhẹ | Test tổng thể | `2ddbbc1` | Ô key thẻ Kích hoạt nhận nhiều dòng (Enter vẫn là Kích hoạt); thẻ 🔒 có ô **Dùng mã** (dòng CCS1 / CCF1 hoặc cả 3 dòng, đi cùng đường `Activation.ActivateAsync`, dùng được thì mở khóa ngay); ⚙ ▸ Tài khoản AI có **Kiểm tra lại** và **Dán mã của chủ plugin** cho máy đã kích hoạt (máy đang dùng không có thẻ 🔒 nên trước đó không có chỗ dán dòng gói mới, tài liệu lại ghi là có); sửa tài liệu chỗ dán mã | UI test `KT41_code_boxes_take_every_line_of_the_offline_email` (CI Windows; thử dán thật khi máy CI có clipboard), `EditionTests.KT41_*`; M10–M12 |
+| KT-42 | nhẹ | Gói dịch vụ | `074abe1`, `d6d8110` | **Chấp nhận** (luồng chính chốt thay chủ dự án, chủ dự án xem lại): gói 3D chèn block có sẵn vẫn hiện chữ mặc định của block; Claude không đặt / sửa được chữ thuộc tính | `PlanTests.KT42_*`, `plan-fixes.test.ts` |
+
+Test sau gộp vòng 2: lõi 367/367, trợ lý 215/215, build net48 / net8.0-windows / net10.0-windows và project UI test 0 lỗi,
+0 cảnh báo. CI: xem Tiến độ.
 
 **Test sau gộp:** lõi 364/364, trợ lý 214/214, build net48 / net8.0-windows / net10.0-windows (xóa `obj` / `bin` giữa các
 lần) 0 lỗi, 0 cảnh báo. CI run `43259984843` (1 lượt, workflow_dispatch `release: "false"`): **xanh**, mọi bước gồm UI
@@ -276,7 +293,8 @@ Như các bàn giao trước: `GenerateSectionGeometry` (L9, L11), cung / spline
 dấu góc vát (J11), dấu `ShellBody` (K17), thứ tự ma trận `align` (K21), kiểu hiển thị trên AutoCAD không phải tiếng Anh
 (J14). Thêm: lịch sử cuộc chat có lệnh 3D khi máy đổi về gói 2D (T4). Sau kiểm tra độc lập: hộp thoại và ô key nhiều
 dòng của bộ cài (M1, M2, I6; CI chỉ kiểm biên dịch), va chạm chung mặt phẳng (K22), `ViewTwist` (K23), `topology_id`
-sau khi dời khối (K24), nhiều tầng và cửa sát góc trên bản vẽ thật (L24–L28).
+sau khi dời khối (K24), nhiều tầng và cửa sát góc trên bản vẽ thật (L24–L28). Vòng 2: dán thật 3 dòng ở thẻ Kích hoạt,
+thẻ 🔒 và ⚙ (M10–M12; UI test chỉ dán được khi máy CI có clipboard), nhiều tường chỉ chạm nhau (K25).
 
 ## Việc còn lại trước khi phát hành (không làm, chỉ liệt kê)
 
@@ -304,3 +322,5 @@ sau khi dời khối (K24), nhiều tầng và cửa sát góc trên bản vẽ 
 - [x] Sửa 13 lỗi kiểm tra độc lập phần bộ cài / tài liệu / tích hợp, chốt C1, C2 (commit `8e163b3`)
 - [x] Gộp 4 nhánh sửa (`f42fb3f`, `54201f9`, `61cc03d`, `3527374`) + ghép nối (`601b2f9`); lõi 364/364, trợ lý 214/214, build 3 bản
 - [x] Lượt CI chung sau khi gộp (1 lượt, xanh: run 43259984843 trên `a62a7b7`, ~10 phút; bước `Setup.exe` biên dịch được `.iss` mới: `TaskDialogMsgBox` hai nút "Tiếp tục" / "Hủy", ô key nhiều dòng, `PrepareToInstall`, `[InstallDelete]`; bước phát hành bỏ qua)
+- [x] Vòng 2 (kiểm tra độc lập lượt 2): KT-41 (`2ddbbc1`), gộp KT-42 (`69e7109`) và KT-40 (`21c54d9`); lõi 367/367, trợ lý 215/215, build 3 bản
+- [ ] CI chung vòng 2 (cần cho UI test KT-41)
