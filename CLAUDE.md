@@ -63,7 +63,12 @@ dự án gốc), `bo-cai/README.md`.
   - thread của mỗi đợt, khi luồng chính giao, tự mở **sub-thread con "Test & sửa"** của đợt đó (`create_session`
     từ chính thread đợt, nhánh tách từ nhánh của đợt), chuyển đủ context theo mẫu giao việc ở trên;
   - sub-thread con báo về thread đợt (thread cha); thread đợt tổng hợp rồi báo về luồng chính;
-  - đợt sau chỉ bắt đầu khi test & sửa của đợt trước báo xong.
+  - đợt sau chỉ bắt đầu khi test & sửa của đợt trước báo xong, và xuất phát từ commit cuối của bước test đó;
+  - tin giao việc **đầu tiên** của thread đợt (prompt lúc mở thread) ghi sẵn yêu cầu "viết xong thì tự mở thread con
+    Test & sửa" kèm nguyên prompt cho thread con. Yêu cầu gửi sau qua tin nhắn giữa các thread có thể bị chế độ Auto
+    chặn; khi đó chủ dự án gõ 1 dòng trong thread đợt;
+  - "Test tổng thể" do luồng chính mở sau Test & sửa đợt 3: rà toàn bộ gói + 3 đợt, chạy đủ test + 1 lượt CI, sửa
+    lỗi, ra checklist tổng cho chủ dự án thử tay; không mở thread con.
 - **Sub-thread:**
   - chỉ làm đúng tác vụ được giao, trên nhánh riêng của mình;
   - gặp việc ngoài phạm vi thì báo về thread cha 1–2 dòng, không làm thay thread khác; chỉ mở thread con khi được
