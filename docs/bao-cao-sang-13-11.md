@@ -25,7 +25,7 @@
    - quan trọng nhất: phần 1 (gói dịch vụ), L9 / L11 (mặt cắt, hình chiếu), phần M (những chỗ vừa sửa đêm qua).
    - Bản dùng thử AutoCAD hết khoảng **10/12**.
 4. Một việc cũ còn treo: 2 commit đầu (ngày 12/11) có tên model trong dòng ghi công, sai quy tắc. Muốn xóa hẳn thì phải
-   viết lại lịch sử của cả 11 nhánh. **Tớ đề xuất để nguyên**; từ commit thứ ba trở đi đã sạch.
+   viết lại lịch sử của cả 10 nhánh có các commit đó. **Tớ đề xuất để nguyên**; từ commit thứ ba trở đi đã sạch.
 
 ## 3. Quyết định tớ tự đưa ra trong đêm (cậu xem lại)
 
@@ -83,5 +83,5 @@ Chi tiết:
   - lượt kiểm tra độc lập đầu tiên: 4 tác vụ rà song song, thread đó tự ước khoảng 200k token mỗi tác vụ;
   - các lượt chờ CI.
 - **Tớ không thấy tổng số token chính xác.**
-- **Thread:** 11 thread đang mở (danh bạ trong `CLAUDE.md`), tất cả đang nghỉ và không tốn gì khi nghỉ. Muốn đóng bớt
-  thì cậu bảo.
+- **Thread:** ngoài luồng chính còn 9 thread phụ đang mở (danh bạ trong `CLAUDE.md`), tất cả đang nghỉ và không tốn gì
+  khi nghỉ. Muốn đóng bớt thì cậu bảo.
