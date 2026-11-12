@@ -21,6 +21,17 @@ namespace ClaudeCAD.Plugin.Core
             public Verdict(bool ok, string detail) { Ok = ok; Detail = detail ?? ""; }
         }
 
+        // ================================================================= 3D: volume of a built solid
+
+        /// <summary>✓ when the solid's volume is within 0.1 % of the expected one (mm³; shown in m³ and mm³).</summary>
+        public static Verdict CheckVolume(string what, double actual, double expected)
+        {
+            var text = string.Format(CultureInfo.InvariantCulture, "{0}: thể tích {1:0.######} m³ (cần {2:0.######} m³)",
+                what, actual / 1e9, expected / 1e9);
+            if (double.IsNaN(actual) || actual <= 0) return new Verdict(false, what + ": khối rỗng, không đo được thể tích");
+            return SolidLogic.VolumeMatches(actual, expected) ? new Verdict(true, text) : new Verdict(false, text + " — lệch quá 0,1 %");
+        }
+
         // ================================================================= build ↔ AutoCAD series
 
         public const string Net48 = "net48";

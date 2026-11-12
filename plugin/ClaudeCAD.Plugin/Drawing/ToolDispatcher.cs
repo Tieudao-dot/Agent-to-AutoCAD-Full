@@ -65,7 +65,7 @@ namespace ClaudeCAD.Plugin.Drawing
         public const int MaxBatchCalls = 500;
 
         /// <summary>Writes still allowed in "Chỉ xem" mode (they only change the view).</summary>
-        public static readonly HashSet<string> ReadOnlyAllowed = new HashSet<string>(StringComparer.Ordinal) { "zoom_extents", "zoom_window" };
+        public static readonly HashSet<string> ReadOnlyAllowed = new HashSet<string>(StringComparer.Ordinal) { "zoom_extents", "zoom_window", "set_view_3d", "set_visual_style" };
 
         public const string ReadOnlyMessage =
             "The user turned on \"Chỉ xem\" (read-only) for this drawing: you may only read, measure, look at and explain it. " +

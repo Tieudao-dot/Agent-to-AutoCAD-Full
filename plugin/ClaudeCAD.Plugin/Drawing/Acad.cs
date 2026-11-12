@@ -18,6 +18,9 @@ namespace ClaudeCAD.Plugin.Drawing
         public static List<object> J(Point3d p) =>
             Math.Abs(p.Z) > 1e-9 ? new List<object> { R(p.X), R(p.Y), R(p.Z) } : new List<object> { R(p.X), R(p.Y) };
 
+        /// <summary>Always [x, y, z] (3D results: volumes, centroids, bounding boxes).</summary>
+        public static List<object> J3(Point3d p) => new List<object> { R(p.X), R(p.Y), R(p.Z) };
+
         public static List<object> J(Point2d p) => new List<object> { R(p.X), R(p.Y) };
 
         public static List<object> J(Vector3d v) => new List<object> { R(v.X), R(v.Y), R(v.Z) };

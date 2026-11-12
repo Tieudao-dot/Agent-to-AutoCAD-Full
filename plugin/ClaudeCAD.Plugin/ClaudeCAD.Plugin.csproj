@@ -118,6 +118,11 @@
       <HintPath>$(AcadRefDir)\acdbmgd.dll</HintPath>
       <Private>false</Private>
     </Reference>
+    <!-- 3D: get_solid_info counts faces / edges with the Brep API -->
+    <Reference Include="acdbmgdbrep">
+      <HintPath>$(AcadRefDir)\acdbmgdbrep.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
     <Reference Include="acmgd">
       <HintPath>$(AcadRefDir)\acmgd.dll</HintPath>
       <Private>false</Private>

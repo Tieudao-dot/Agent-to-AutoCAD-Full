@@ -97,6 +97,20 @@ namespace ClaudeCAD.Plugin.UI
             ["extend_entities"] = "Extend",
             ["get_dynamic_props"] = "Đọc dynamic block",
             ["reset_dynamic_block"] = "Reset dynamic block",
+            ["draw_box"] = "Dựng khối hộp",
+            ["draw_cylinder"] = "Dựng khối trụ / nón",
+            ["draw_sphere"] = "Dựng khối cầu",
+            ["draw_wedge"] = "Dựng khối nêm",
+            ["draw_torus"] = "Dựng khối xuyến",
+            ["draw_pyramid"] = "Dựng khối chóp",
+            ["extrude"] = "Đùn biên dạng thành khối",
+            ["revolve"] = "Xoay biên dạng thành khối",
+            ["solid_union"] = "Cộng khối",
+            ["solid_subtract"] = "Trừ khối",
+            ["solid_intersect"] = "Giao khối",
+            ["set_view_3d"] = "Đặt góc nhìn 3D",
+            ["set_visual_style"] = "Đổi kiểu hiển thị",
+            ["get_solid_info"] = "Đọc thông tin khối",
         };
 
         public static string Describe(string tool)

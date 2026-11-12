@@ -214,6 +214,48 @@ namespace ClaudeCAD.Plugin
                 return $"{rows.Count} layer, {names.Count} tên";
             });
 
+            // 3D phase 1: the same code paths as draw_box / draw_cylinder / solid_subtract / set_view_3d / capture_view
+            string solidHandle = null;
+            Check("Khối 3D: dựng hộp, trừ trụ, kiểm thể tích", () =>
+            {
+                double l = 1000, w = 800, h = 600, r = 200;
+                double volume;
+                using (doc.LockDocument())
+                using (var tr = doc.TransactionManager.StartTransaction())
+                {
+                    var db = doc.Database;
+                    var ms = (BlockTableRecord)tr.GetObject(SymbolUtilityServices.GetBlockModelSpaceId(db), OpenMode.ForWrite);
+                    var box = DrawingService.MakeBox(l, w, h, new double[] { 6000, 0, 0 }, null, 0);
+                    box.SetDatabaseDefaults(db);
+                    ms.AppendEntity(box);
+                    tr.AddNewlyCreatedDBObject(box, true);
+                    var cyl = DrawingService.MakeFrustum(new double[] { 6500, 400, 0 }, new Vector3d(0, 0, h), r, r);
+                    cyl.SetDatabaseDefaults(db);
+                    ms.AppendEntity(cyl);
+                    tr.AddNewlyCreatedDBObject(cyl, true);
+                    DrawingService.BooleanInto(box, cyl, BooleanOperationType.BoolSubtract);
+                    if (!cyl.IsErased) cyl.Erase();
+                    volume = box.MassProperties.Volume;
+                    solidHandle = box.Handle.ToString();
+                    tr.Commit();
+                }
+                return SelfTestRules.CheckVolume("hộp 1000×800×600 trừ trụ R200", volume,
+                    SolidLogic.BoxVolume(l, w, h) - SolidLogic.FrustumVolume(r, r, h));
+            });
+
+            Do("Góc nhìn 3D (SW iso) + kiểu Conceptual + ảnh 3D", () =>
+            {
+                if (solidHandle == null) throw new InvalidOperationException("bước dựng khối 3D chưa chạy được");
+                var iso = SolidLogic.Preset("sw_iso");
+                var ext = Capture.ModelExtents(doc);
+                DrawingService.ApplyView3d(doc, iso, ext?.MinPoint, ext?.MaxPoint);
+                DrawingService.ApplyVisualStyle(doc, SolidLogic.VisualStyleName("conceptual"), "selftest");
+                var r = Capture.Render(doc, null, null, 800, null, iso, SolidLogic.VisualStyleName("conceptual"));
+                if (r.Png == null || r.Png.Length < 500) throw new InvalidOperationException("ảnh 3D rỗng");
+                File.WriteAllBytes(Path.Combine(dir, "capture-3d.png"), r.Png);
+                return $"{r.Width}×{r.Height}, {r.Png.Length / 1024.0:0.0} KB (capture-3d.png trong thư mục thử)";
+            });
+
             string versionFile = Path.Combine(dir, "version-copy.dwg");
             Do("Bản sao phiên bản (Wblock + SaveAs)", () =>
             {
