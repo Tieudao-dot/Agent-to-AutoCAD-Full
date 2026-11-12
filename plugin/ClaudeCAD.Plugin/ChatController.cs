@@ -185,6 +185,7 @@ namespace ClaudeCAD.Plugin
             ui.ActivationRequestRequested += () => Guard("activation request", RequestActivation);
             ui.ActivationKeySubmitted += k => Guard("activation", () => SubmitActivation(k));
             ui.ActivationCheckRequested += () => Guard("activation check", () => CheckDeviceStatus(manual: true));
+            ui.OfflineCodeSubmitted += k => Guard("offline code", () => SubmitOfflineCode(k));
             ui.ApiKeyMask = () => ApiKeyStore.HasKey ? ApiKeyStore.Mask(ApiKeyStore.Load()) : null;
 
             Interaction.SelectionPicked += OnSelectionPicked;
@@ -1990,6 +1991,42 @@ namespace ClaudeCAD.Plugin
             });
         }
 
+        /// <summary>
+        /// KT-41 (12/11/2026): codes pasted on the 🔒 card or in ⚙ "Dán mã của chủ plugin" by a machine that has a licence
+        /// (the CCS1 / CCF1 lines of the owner's no-network email, or all three lines; a key works too). Same path as the
+        /// activation card (Activation.ActivateAsync); the answer goes to the box used, and the palette unlocks when the
+        /// machine is allowed now.
+        /// </summary>
+        private void SubmitOfflineCode(string input)
+        {
+            if (_activating) return;
+            _activating = true;
+            bool before = Activation.IsAllowed;
+            string planBefore = Activation.Plan;
+            Activation.ActivateAsync(input).ContinueWith(t =>
+            {
+                _activating = false;
+                var (ok, msg) = t.IsFaulted ? (false, "Không dùng được mã: " + t.Exception?.GetBaseException().Message) : t.Result;
+                NotePlanChange(planBefore);
+                bool after = Activation.IsAllowed;
+                if (!ok) { Ui.SetCodeStatus(msg, true); return; }
+                if (after && !before)
+                {
+                    Ui.Enqueue(() =>
+                    {
+                        Ui.RemoveLockedCard();
+                        Ui.SetCodeStatus(msg, false);
+                        Ui.ShowToast("ClaudeCAD đã được mở khóa", ChatControl.ToastKind.Success, 6);
+                        StartDeviceWatch();
+                        _sidecar.EnsureStarted();
+                        ShowWelcome(autoLogin: true);
+                    });
+                    return;
+                }
+                Ui.SetCodeStatus(after ? msg : msg + " Máy vẫn tạm khóa: " + Activation.BlockedMessage, !after);
+            });
+        }
+
         // ================================================================= v0.9.4: device list (Google Sheet of the owner)
 
         private System.Threading.Timer _deviceTimer;
@@ -2073,6 +2110,8 @@ namespace ClaudeCAD.Plugin
         private void ShowGateStatus(string msg, bool error)
         {
             if (!Activation.IsActivated) Ui.SetActivationStatus(msg, error);
+            // ⚙ "Kiểm tra lại" on a machine in use (KT-41): there is no 🔒 card, the answer is a toast
+            else if (Activation.IsAllowed) Ui.ShowToast(msg, error ? ChatControl.ToastKind.Warning : ChatControl.ToastKind.Info, 8);
             else Ui.SetLockedStatus(msg, error);
         }
 

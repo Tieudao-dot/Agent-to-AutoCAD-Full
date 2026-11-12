@@ -194,6 +194,38 @@ namespace ClaudeCAD.Core.Tests
             Assert.Contains("input.Split(new[] { ' ', '\\t', '\\r', '\\n' }, StringSplitOptions.RemoveEmptyEntries)", Src("plugin", "ClaudeCAD.Plugin", "Sidecar", "Activation.cs"));
         }
 
+        /// <summary>
+        /// KT-41 (12/11/2026): in the plugin too every box for the owner's codes takes several lines — the activation card,
+        /// the 🔒 card and ⚙ "Dán mã của chủ plugin" — and the 🔒 / ⚙ boxes go the same way as a key (Activation.ActivateAsync).
+        /// The WPF behaviour itself is checked by the UI test KT41_code_boxes_take_every_line_of_the_offline_email (Windows CI).
+        /// </summary>
+        [Fact]
+        public void KT41_every_box_for_the_owners_codes_in_the_palette_takes_several_lines()
+        {
+            var ui = Src("plugin", "ClaudeCAD.Plugin", "UI", "ChatControl.cs");
+            string Part(string from, string to)
+            {
+                int a = ui.IndexOf(from, StringComparison.Ordinal);
+                Assert.True(a >= 0, from);
+                int b = ui.IndexOf(to, a, StringComparison.Ordinal);
+                Assert.True(b > a, to);
+                return ui.Substring(a, b - a);
+            }
+            var box = Part("private TextBox CodeBox(string tip)", "private static void SubmitOnEnter(");
+            Assert.Contains("AcceptsReturn = true,", box);
+            Assert.Contains("TextWrapping = TextWrapping.Wrap,", box);
+            Assert.Contains("var key = CodeBox(", Part("public void AddActivationCard(", "public void SetActivationStatus("));
+            Assert.Contains("AddCodeRow(stack, st,", Part("public void AddLockedCard(", "public void SetLockedStatus("));
+            Assert.Contains("AddCodeRow(stack, st,", Part("public void AddCodePasteCard()", "// ---------------------------------------------------------------- card: device lock"));
+            Assert.Contains("var box = CodeBox(", Part("private void AddCodeRow(", "public void SetCodeStatus("));
+            Assert.Contains("\"Dán mã của chủ plugin\"", Part("_planButtons = new WrapPanel", "account.Children.Add(_planButtons);"));
+            var c = Src("plugin", "ClaudeCAD.Plugin", "ChatController.cs");
+            Assert.Contains("ui.OfflineCodeSubmitted += k => Guard(\"offline code\", () => SubmitOfflineCode(k));", c);
+            int s0 = c.IndexOf("private void SubmitOfflineCode(string input)", StringComparison.Ordinal);
+            Assert.True(s0 >= 0);
+            Assert.Contains("Activation.ActivateAsync(input)", c.Substring(s0, c.IndexOf("// =================================================================", s0, StringComparison.Ordinal) - s0));
+        }
+
         /// <summary>A Pascal routine from its header to the "end;" that closes it (the next line starting with "end;").</summary>
         private static string Body(string src, string header)
         {

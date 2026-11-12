@@ -91,7 +91,10 @@ Lệnh in ra 2 dòng `PublicModulus = "…"` và `PublicExponent = "…"`. Hai d
 **Lưu ý (sửa 12/11/2026, KT-31):** plugin bản Full **đã đọc** dòng `CCF1` và chặn lệnh theo gói: máy chỉ dùng được
 lệnh của gói ghi trong Sheet. **Chọn ô Gói cho từng máy** (2D / 3D / Full). Ô trống thì máy dùng gói mặc định 2D, tức
 không có lệnh 3D. Đổi ô Gói là đổi gói, không cần cài lại. Máy dùng mã không cần mạng thì gói nằm trong dòng `CCF1` của
-email: dán đủ các dòng (bộ cài và thẻ 🔒 trong khung chat nhận cả ba dòng).
+email: dán đủ các dòng. Ô nào cũng nhận nhiều dòng (sửa 12/11/2026, KT-41): ô key của bộ cài và ô key trên thẻ
+**Kích hoạt** trong khung chat (máy chưa kích hoạt), ô **Dùng mã** trên thẻ 🔒 (máy đã kích hoạt nhưng bị khóa, chờ duyệt
+hoặc quá 7 ngày không kiểm tra), và ⚙ ▸ **Tài khoản AI** ▸ **Dán mã của chủ plugin** (máy đang dùng, ví dụ đổi gói bằng
+dòng `CCF1` mới). Máy có mạng thì bấm **Kiểm tra lại** (cùng chỗ trong ⚙, hoặc trên thẻ 🔒) thay cho chờ ~6 giờ.
 
 ## Sửa script về sau
 

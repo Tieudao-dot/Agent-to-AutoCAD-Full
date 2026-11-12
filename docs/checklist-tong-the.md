@@ -1,7 +1,7 @@
 # Checklist tổng: thử bản Full trên AutoCAD (gói dịch vụ + 3D đợt 1, 2, 3)
 
-*12/11/2026 · thread "Test tổng thể", nhánh `full/test-tong-the`. Một lượt đủ ~150 phút; lượt rút gọn (phần 0–5)
-~90 phút. Chi tiết từng mục (bước, kết quả đúng đầy đủ): [`checklist-thu-that.md`](checklist-thu-that.md) phần I, J, K,
+*12/11/2026 · thread "Test tổng thể", nhánh `full/test-tong-the`. Một lượt đủ ~155 phút; lượt rút gọn (phần 0–5)
+~95 phút. Chi tiết từng mục (bước, kết quả đúng đầy đủ): [`checklist-thu-that.md`](checklist-thu-that.md) phần I, J, K,
 L. File này chỉ xếp thứ tự và ghi phần cần nhìn kỹ.*
 
 Bản dùng thử AutoCAD của cậu hết khoảng **10/12/2026**: làm phần 0–5 trước.
@@ -37,7 +37,7 @@ Cho mục T5 (cài đè lên bản gốc): một máy đang dùng ClaudeCAD bả
 | Phần | Việc | Thời gian | Vì sao làm lúc này |
 | --- | --- | --- | --- |
 | 0 | Tự kiểm tra | ~3 phút | Một lệnh chạy hết 7 bước 3D của 3 đợt nối tiếp: hỏng ở đây thì các phần sau khó đọc |
-| 1 | Gói dịch vụ (I1–I6, I5b, I5c + T1–T5 + M1–M2) | ~34 phút | Gói sai thì máy được / bị chặn sai lệnh; khách đang dùng bản gốc chuyển sang bản Full bằng cài đè: quan trọng nhất |
+| 1 | Gói dịch vụ (I1–I6, I5b, I5c + T1–T5 + M1–M2, M10–M12) | ~40 phút | Gói sai thì máy được / bị chặn sai lệnh; khách đang dùng bản gốc chuyển sang bản Full bằng cài đè: quan trọng nhất |
 | 2 | Nét phía sau, hình chiếu (L9, L11) | ~6 phút | `GenerateSectionGeometry` chưa kiểm được ngoài AutoCAD |
 | 3 | 3D đợt 1 sau sửa (J10–J16) | ~10 phút | Hướng nêm, góc vát, macro, AutoCAD không phải tiếng Anh, báo lỗi rõ khi xoay / giao sai |
 | 4 | 3D đợt 2 sau sửa (K17–K24) | ~12 phút | Làm rỗng, đường tạm, macro theo số cạnh, căn khối, va chạm chung mặt, UCS nghiêng, bo cạnh sau khi dời khối |
@@ -46,7 +46,7 @@ Cho mục T5 (cài đè lên bản gốc): một máy đang dùng ClaudeCAD bả
 | 7 | Phần còn lại: J1–J9, K1–K16, L1–L8, L10, L12–L16 | ~35 phút | Đã có từ lúc viết từng đợt |
 | 8 | Sau kiểm tra độc lập: M3–M9 trong `checklist-thu-that.md` | ~15 phút | Lỗi đã sửa cần thử thật (thẻ xác nhận, macro) và điểm chỉ AutoCAD cho thấy |
 
-Phần 0–5 là lượt rút gọn (~90 phút). Mục ○ trong `checklist-thu-that.md` bỏ được khi ít thời gian.
+Phần 0–5 là lượt rút gọn (~95 phút). Mục ○ trong `checklist-thu-that.md` bỏ được khi ít thời gian.
 
 ### 0. Tự kiểm tra (~3 phút)
 
@@ -57,12 +57,13 @@ Phần 0–5 là lượt rút gọn (~90 phút). Mục ○ trong `checklist-thu-
 
 Lỗi: gửi file `selftest-….txt` + thư mục thử ghi ở cuối báo cáo (chỉ còn giữ khi có dòng ✗).
 
-### 1. Gói dịch vụ (~34 phút)
+### 1. Gói dịch vụ (~40 phút)
 
 Làm **I1–I5** trong `checklist-thu-that.md` phần I (máy mới = Gói 2D; đổi 3D; macro có chữ ở gói 3D không chạy lệnh
 nào; đổi Full giữ cuộc chat; I5b gói 3D không có thuộc tính block; I5c máy offline dán lại dòng gói cũ hơn bị từ chối;
 I5 `plan.txt` chỉ đọc không giữ được Full, cần dòng Full từ **hôm trước** theo giờ UTC), I6 (cài đè lên bản gốc) và
-M1–M2 (mã không cần mạng 3 dòng; bản cập nhật bản gốc đang chờ). Thêm 5 mục rà chéo:
+M1–M2, M10–M12 (mã không cần mạng 3 dòng dán ở bộ cài, thẻ Kích hoạt, thẻ 🔒, ⚙; bản cập nhật bản gốc đang chờ).
+Thêm 5 mục rà chéo:
 
 | # | Làm gì | Kết quả đúng |
 | --- | --- | --- |

@@ -64,12 +64,13 @@ Mở dự án Apps Script (từ bảng tính: Tiện ích mở rộng → Apps S
 
 - **KEY**: dùng cho máy có mạng.
 - **Dòng gói** `CCF1|…` (thêm từ bản Full): gói của máy lấy từ cột Gói. Máy không có mạng dán dòng này cùng hai dòng
-  bên dưới (dán riêng dòng gói cũng được, để đổi gói cho máy đã kích hoạt). Không dán thì máy dùng gói mặc định.
+  bên dưới (dán riêng dòng gói cũng được, để đổi gói cho máy đã kích hoạt: ⚙ ▸ Tài khoản AI ▸ **Dán mã của chủ plugin**,
+  hoặc ô **Dùng mã** trên thẻ 🔒). Không dán thì máy dùng gói mặc định.
   - Plugin chỉ nhận dòng gói **mới hơn hoặc cùng ngày** với dòng đang lưu (chốt C4, 12/11/2026). Dán lại dòng Full cũ
     sau khi cậu đã hạ gói thì bị từ chối.
   - ⚠️ Máy không có mạng **không thu hồi được gói** nếu khách không dán dòng mới: máy giữ gói đang có. Chỉ cấp **Full**
     cho máy offline cậu tin cậy.
-- **Mã cho máy không có mạng**: **hai dòng** — dòng `CCL1|…` (giấy phép) và dòng `CCS1|…|offline|…` (mã miễn kiểm tra trạng thái). Dán **cả hai dòng** vào ô key của khung chat trong AutoCAD. Máy có mã miễn kiểm tra sẽ **không bị khóa từ xa và không bị giới hạn 7 ngày** — chỉ cấp cho máy thật sự không có mạng.
+- **Mã cho máy không có mạng**: dòng `CCL1|…` (giấy phép) và dòng `CCS1|…|offline|…` (mã miễn kiểm tra trạng thái), cùng dòng gói ở trên: email có **ba dòng**. Dán **đủ các dòng** vào một ô (ô nào cũng nhận nhiều dòng, KT-41): ô key của bộ cài, ô key trên thẻ Kích hoạt của khung chat, ô **Dùng mã** trên thẻ 🔒 (máy đã kích hoạt nhưng đang khóa), hoặc ⚙ ▸ Tài khoản AI ▸ **Dán mã của chủ plugin**. Máy có mã miễn kiểm tra sẽ **không bị khóa từ xa và không bị giới hạn 7 ngày** — chỉ cấp cho máy thật sự không có mạng.
 
 ## Cài ngầm cho nhiều máy
 

@@ -558,6 +558,102 @@ namespace ClaudeCAD.UI.Tests
             Assert.True(new FileInfo(Path.Combine(OutDir, "activation-1-request.png")).Length > 5_000);
         }
 
+        private static RoutedEventArgs Click => new RoutedEventArgs(System.Windows.Controls.Primitives.ButtonBase.ClickEvent);
+
+        private static Border CardTagged(DependencyObject root, string tag) => FindAll<Border>(root).Last(b => (b.Tag as string) == tag);
+
+        /// <summary>
+        /// KT-41 (12/11/2026): the owner's no-network email has 3 lines (CCL1 / CCS1 / CCF1). The key box of the activation
+        /// card, the 🔒 card and ⚙ "Dán mã của chủ plugin" each take several lines and hand all of them on.
+        /// </summary>
+        [Fact]
+        public void KT41_code_boxes_take_every_line_of_the_offline_email()
+        {
+            const string Three = "CCL1|CC-3B28-85F3-67B7|2026-11-12|sigL\r\nCCS1|CC-3B28-85F3-67B7|offline|2026-11-12|sigS\r\nCCF1|CC-3B28-85F3-67B7|3d|2026-11-12|sigF";
+            string submitted = null, pasted = null;
+            var codes = new List<string>();
+            bool keyMulti = false, lockMulti = false, pasteMulti = false, lockStatus = false, shownWithPlan = false, hiddenWithoutPlan = false, pasteCard = false;
+            int checks = 0;
+            Sta(() =>
+            {
+                var c = new ChatControl { Width = 400, Height = 760 };
+                c.ApplySettings(new PaletteSettings());
+                c.SetDark(false);
+                c.LoadTranscript(new ChatTranscript(), false);
+                c.ActivationKeySubmitted += k => submitted = k;
+                c.OfflineCodeSubmitted += k => codes.Add(k);
+                c.ActivationCheckRequested += () => checks++;
+
+                // 1. activation card (no licence): the key box keeps the 3 lines
+                c.AddActivationCard("CC-3B28-85F3-67B7", "PC", "Liên hệ Zalo owner: 0344644415", "");
+                var act = CardTagged(c, "activation");
+                var key = FindAll<TextBox>(act).Single(t => !t.IsReadOnly);
+                keyMulti = key.AcceptsReturn && key.TextWrapping == TextWrapping.Wrap;
+                // a real paste where the runner has a clipboard (a one-line WPF box may keep only the first line)
+                bool clip = false;
+                try { Clipboard.SetDataObject(Three, true); clip = Clipboard.GetText() == Three; }
+                catch { clip = false; }
+                if (clip)
+                {
+                    key.Clear();
+                    key.Paste();
+                    pasted = key.Text;
+                }
+                key.Text = Three;
+                FindAll<Button>(act).First(b => (b.Content as string) == "Kích hoạt").RaiseEvent(Click);
+
+                // 2. 🔒 card (licence, but the status is too old and there is no network): a box for the codes
+                c.AddLockedCard("Plugin đã quá 7 ngày không kiểm tra được với chủ plugin (xác nhận trạng thái đã quá 7 ngày). Kết nối mạng rồi bấm \"Kiểm tra lại\".");
+                var locked = CardTagged(c, "device-lock");
+                var box = FindAll<TextBox>(locked).Single(t => !t.IsReadOnly);
+                lockMulti = box.AcceptsReturn && box.TextWrapping == TextWrapping.Wrap;
+                box.Text = "CCS1|CC-3B28-85F3-67B7|offline|2026-11-12|sigS\r\nCCF1|CC-3B28-85F3-67B7|3d|2026-11-12|sigF";
+                FindAll<Button>(locked).First(b => (b.Content as string) == "Dùng mã").RaiseEvent(Click);
+                c.SetCodeStatus("Đã lưu mã miễn kiểm tra cho máy này.", false);
+                lockStatus = FindAll<TextBlock>(locked).Any(t => t.Text == "Đã lưu mã miễn kiểm tra cho máy này.");
+                Shot(c, "kt41-the-khoa-dan-ma");
+                c.RemoveLockedCard();
+                c.SetCodeStatus("Đã lưu gói 3D cho máy này.", false); // no live box: a toast, no error
+
+                // 3. ⚙ of an activated machine: "Kiểm tra lại" and "Dán mã của chủ plugin" next to the plan line
+                var popup = (System.Windows.Controls.Primitives.Popup)typeof(ChatControl)
+                    .GetField("_settingsPopup", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance).GetValue(c);
+                var settings = (FrameworkElement)popup.Child;
+                Button Gear(string text) => FindAll<Button>(settings).First(b => (b.Content as string) == text);
+                c.SetPlan("3D");
+                shownWithPlan = ((FrameworkElement)Gear("Dán mã của chủ plugin").Parent).Visibility == Visibility.Visible;
+                Gear("Kiểm tra lại").RaiseEvent(Click);
+                Gear("Dán mã của chủ plugin").RaiseEvent(Click);
+                var paste = CardTagged(c, "offline-code");
+                pasteCard = paste != null;
+                var pbox = FindAll<TextBox>(paste).Single(t => !t.IsReadOnly);
+                pasteMulti = pbox.AcceptsReturn && pbox.TextWrapping == TextWrapping.Wrap;
+                pbox.Text = "CCF1|CC-3B28-85F3-67B7|2d3d|2026-11-13|sigF";
+                FindAll<Button>(paste).First(b => (b.Content as string) == "Dùng mã").RaiseEvent(Click);
+                Shot(c, "kt41-dan-ma-tu-cai-dat");
+                c.SetPlan(null);
+                hiddenWithoutPlan = ((FrameworkElement)Gear("Dán mã của chủ plugin").Parent).Visibility == Visibility.Collapsed;
+            });
+            Assert.True(keyMulti, "the key box of the activation card takes one line only");
+            Assert.Equal(Three, submitted);
+            if (pasted != null)
+            {
+                Assert.Contains("CCS1|", pasted);
+                Assert.Contains("CCF1|", pasted);
+            }
+            Assert.True(lockMulti, "the 🔒 card has no box for several lines");
+            Assert.True(pasteMulti, "the ⚙ paste card has no box for several lines");
+            Assert.Equal(2, codes.Count);
+            Assert.Contains("CCS1|", codes[0]);
+            Assert.Contains("CCF1|", codes[0]);
+            Assert.StartsWith("CCF1|", codes[1]);
+            Assert.True(lockStatus, "the answer is not shown on the 🔒 card");
+            Assert.True(pasteCard);
+            Assert.True(shownWithPlan, "⚙ hides Kiểm tra lại / Dán mã on an activated machine");
+            Assert.True(hiddenWithoutPlan, "⚙ shows Kiểm tra lại / Dán mã without a plan line");
+            Assert.Equal(1, checks);
+        }
+
         [Fact]
         public void LongTranscriptRendersTheLastMessagesAndOneActivationCard()
         {
