@@ -130,7 +130,7 @@ Cần máy chủ kích hoạt riêng của bản Full đã dựng (cột **Gói*
 
 | # | | Làm gì | Kết quả mong đợi | Đạt | Lỗi | Mã gốc |
 | --- | --- | --- | --- | --- | --- | --- |
-| I1 | ★ | Máy mới kích hoạt, mở khung chat | Thanh trên cùng và ⚙ hiện **Gói: 2D** (mặc định tạm) | ☐ | ☐ | GOI-1 |
+| I1 | ★ | Máy mới kích hoạt, mở khung chat | Thanh trên cùng và ⚙ hiện **Gói: 2D** (gói mặc định) | ☐ | ☐ | GOI-1 |
 | I2 | ★ | Đổi ô Gói thành `3D`, Kiểm tra lại, gõ "vẽ hình chữ nhật 2000x1000 và ghi kích thước" | Toast "Gói đã đổi sang 3D"; vẽ được hình chữ nhật; Claude nói máy dùng gói 3D, chưa có kích thước, liên hệ chủ plugin; không cố vẽ kích thước bằng đường | ☐ | ☐ | GOI-2 |
 | I3 | ★ | (gói 3D) Chạy một macro cũ có ghi chữ hoặc kích thước | Lệnh chữ / kích thước trong macro báo lỗi ngoài gói, bản vẽ không có chữ / kích thước mới | ☐ | ☐ | GOI-3 |
 | I4 | ★ | Đổi ô Gói thành `Full`, Kiểm tra lại, gõ lại câu ở I2 | Toast "Gói đã đổi sang Full"; có kích thước; cuộc chat cũ vẫn còn | ☐ | ☐ | GOI-4 |

@@ -158,9 +158,9 @@ namespace ClaudeCAD.Core.Tests
         }
 
         [Fact]
-        public void Default_plan_is_2d_for_now()
+        public void Default_plan_is_2d()
         {
-            // still waiting for the owner's decision (12/11/2026): change here, in Code.gs.template and the docs together
+            // decided by the owner on 12/11/2026; a change goes here, in Code.gs.template and in the docs together
             Assert.Equal("2d", PlanLogic.DefaultPlan);
         }
 

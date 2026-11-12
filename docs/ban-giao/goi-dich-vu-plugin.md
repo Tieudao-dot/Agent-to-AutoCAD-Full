@@ -12,9 +12,8 @@
 | 12/11 | Máy chủ kích hoạt | Riêng cho bản Full: chủ dự án tự dựng Sheet + Apps Script + cặp khóa mới, gửi URL và khóa công khai |
 | 12/11 | Chia gói | Phương án A: gói 3D có đường cơ bản (line, polyline, circle, arc, spline, ellipse, rectangle, polygon…), không có chữ, kích thước, hatch, layout, in PDF |
 | 12/11 | Phạm vi đợt này | Cả 5 việc bên dưới, kèm **1 lượt** CI Windows để thử giao diện |
-
-**Còn chờ chốt:** gói mặc định cho máy mới. Đang đặt tạm `2D` (hằng `GOI_MAC_DINH` trong mẫu Apps Script,
-`PlanLogic.DefaultPlan` trong plugin), theo đề xuất trong kế hoạch.
+| 12/11 | Tên gói | "2D + 3D" gọi là **Full** (mã ký số vẫn `2d3d`) |
+| 12/11 | Gói mặc định | `2D` cho máy mới, ô Gói trống và ô gõ sai (hằng `GOI_MAC_DINH` trong mẫu Apps Script, `PlanLogic.DefaultPlan` trong plugin) |
 
 ## Đã xong
 

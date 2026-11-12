@@ -120,7 +120,7 @@ Lệnh này dựa trên đợt 1 nên làm sau cùng.
   - giao diện: "Gói: …" trên thanh trên cùng và trong ⚙, toast "Gói đã đổi sang …".
 - **Đổi tên (12/11/2026):** gói "2D + 3D" gọi là **Full**. Mã trong dòng ký số vẫn là `2d3d`; ô Sheet gõ "2D + 3D"
   vẫn được hiểu là Full.
-- **Còn chờ chốt:** gói mặc định cho máy mới, đang **tạm `2D`**.
+- **Gói mặc định:** `2D` cho máy mới, ô Gói trống và ô gõ sai (đã chốt 12/11/2026).
 - Lệnh 3D mới phải thêm nhãn `ToolGroup.ThreeD` trong `Core/Plans.cs`; quên thì test lõi đỏ, và lệnh chỉ mở cho gói
   `Full`.
 - Thử thật: phần I của [`checklist-thu-that.md`](checklist-thu-that.md).

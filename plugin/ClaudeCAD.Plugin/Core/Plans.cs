@@ -27,6 +27,7 @@ namespace ClaudeCAD.Plugin.Core
         public const string Plan3D = "3d";
         public const string PlanFull = "2d3d";
         /// <summary>A machine whose service sent no (valid) plan line: what the plugin did before plans existed.</summary>
+        /// <remarks>2D for new machines, empty and mistyped cells: decided by the owner on 12/11/2026 (GOI_MAC_DINH in the script).</remarks>
         public const string DefaultPlan = Plan2D;
 
         /// <summary>"2d" / "3d" / "2d3d"; anything else (null, typos, a newer plan name) is the default plan.</summary>

@@ -90,7 +90,8 @@ Key vẫn riêng cho từng máy. Cài ngầm mà không có `/KEY=` thì plugin
   - `ToolDispatcher` từ chối lệnh ngoài gói với mã `NOT_IN_PLAN` (lệnh lẻ, từng lệnh trong `batch_execute`, macro).
   - Plugin gửi `context.service_plan` + `context.plan_tools` kèm mỗi tin nhắn; trợ lý chỉ nạp các lệnh đó, system prompt
     nói rõ gói, và khởi động lại phiên Claude (cùng cuộc chat) khi gói đổi.
-  - **Gói mặc định `2D` là tạm**, chờ chủ dự án chốt: đổi cùng lúc `GOI_MAC_DINH` (script) và `PlanLogic.DefaultPlan`.
+  - **Gói mặc định `2D`** (đã chốt 12/11/2026) cho máy mới, ô Gói trống và ô gõ sai. Muốn đổi thì đổi cùng lúc
+    `GOI_MAC_DINH` (script) và `PlanLogic.DefaultPlan`.
 - **Gói:** `?action=status` và `?action=activate` trả thêm `plan` = `CCF1|<mã máy>|<2d|3d|2d3d>|<ngày UTC>|<chữ ký>`, cùng khóa và cùng kiểu chữ ký với dòng trạng thái. Giá trị lấy từ cột Gói (cột 10); mặc định là hằng `GOI_MAC_DINH` trong script. Dòng `CCS1` không đổi. `taoKeyThuCong` gửi thêm dòng này cho máy không có mạng.
 - **Google Sheet:** script phải **gắn với bảng tính** (tạo từ Tiện ích mở rộng → Apps Script) vì dùng `SpreadsheetApp.getActive()`. `request` thêm dòng Chờ duyệt; `activate`/`taoKeyThuCong` đặt Active; `status` cập nhật Lần cuối dùng + Phiên bản (tối đa 30 phút/lần/máy, có LockService); `Disabled` chặn cả `request` (không email) lẫn `activate` (key đúng cũng từ chối). Máy lạ gọi `status` không được thêm dòng.
 - **Tạo lại `ClaudeCAD-Code.gs`** (đổi email, hoặc mất file):
