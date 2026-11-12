@@ -94,6 +94,7 @@ Key vẫn riêng cho từng máy. Cài ngầm mà không có `/KEY=` thì plugin
   - `ToolDispatcher` từ chối lệnh ngoài gói với mã `NOT_IN_PLAN` (lệnh lẻ, từng lệnh trong `batch_execute`, macro).
   - Thuộc tính block là chữ (chốt C3, 12/11/2026): gói không có 2D bị từ chối `attributes` của `define_block` /
     `insert_block` (`PlanLogic.BlockedParam`); `set_block_attributes` thuộc nhóm 2D. Block không thuộc tính vẫn dùng được.
+    Gói 3D: chèn block có sẵn vẫn hiện chữ mặc định của block; Claude không đặt / sửa được chữ thuộc tính (chấp nhận 12/11/2026, KT-42).
   - Macro có lệnh ngoài gói (ví dụ ghi ở Full, chạy ở 3D) không chạy lệnh nào, khung chat báo tiếng Việt.
   - `SavePlan` chỉ nhận dòng gói mới hơn hoặc cùng ngày với dòng đang lưu (`LicenseLogic.AcceptPlan`).
   - Plugin gửi `context.service_plan` + `context.plan_tools` kèm mỗi tin nhắn; trợ lý chỉ nạp các lệnh đó, system prompt

@@ -281,6 +281,19 @@ namespace ClaudeCAD.Core.Tests
         }
 
         [Fact]
+        public void KT42_3D_inserts_a_block_with_its_default_attribute_text_but_cannot_set_values()
+        {
+            // accepted 12/11/2026: inserting an existing block shows its own default attribute text (like a block
+            // with plain text); what plan A keeps is that Claude cannot set or change attribute values without 2D
+            Assert.True(PlanLogic.CallAllowed("3d", "insert_block", P(("name", "NHAN_PHONG"), ("position", new System.Collections.Generic.List<object> { 0.0, 0.0 }))));
+            Assert.False(PlanLogic.CallAllowed("3d", "insert_block", P(("name", "NHAN_PHONG"), ("attributes", P(("TEN", "Phòng ngủ"))))));
+            Assert.False(PlanLogic.CallAllowed("3d", "set_block_attributes", P(("handle", "2F4A"), ("attributes", P(("TEN", "Phòng ngủ"))))));
+            Assert.False(PlanLogic.CallAllowed("3d", "set_block_attributes", P(("handle", "2F4A"))));
+            Assert.DoesNotContain("set_block_attributes", PlanLogic.AllowedTools("3d"));
+            Assert.True(PlanLogic.CallAllowed("2d", "set_block_attributes", P(("handle", "2F4A"))));
+        }
+
+        [Fact]
         public void KT04_a_macro_outside_the_plan_is_refused_whole_with_a_Vietnamese_message()
         {
             var m = new Macro { Name = "Phòng mẫu" };
