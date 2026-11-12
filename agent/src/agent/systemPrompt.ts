@@ -84,15 +84,29 @@ export const SYSTEM_PROMPT = `You are ClaudeCAD, a CAD assistant working directl
 
 const PLAN_SCOPE: Record<ServicePlan, string> = {
   '2d': 'Included: reading and measuring, layers, view, blocks and xrefs, transforms, basic curves, text, dimensions, hatch, layouts, PDF plotting, 2D editing. Not included: 3D modelling.',
-  '3d': 'Included: reading and measuring, layers, view, blocks and xrefs, transforms, basic curves (as profiles and paths) and the 3D tools. Not included: text, dimensions, leaders, tables, hatch, layouts and viewports, PDF plotting, text / dimension styles, 2D editing (offset, fillet, chamfer, trim, extend, join, explode, polyline edit).',
+  '3d': 'Included: reading and measuring, layers, view, blocks and xrefs, transforms, basic curves (as profiles and paths) and the 3D tools (solids, extrude / revolve, booleans, 3D views and visual styles, solid info). Not included: text, dimensions, leaders, tables, hatch, layouts and viewports, PDF plotting, text / dimension styles, 2D editing (offset, fillet, chamfer, trim, extend, join, explode, polyline edit).',
   '2d3d': 'Every tool is included.',
 };
+
+/** 3D conventions: only for the plans that have the 3D tools (3D and Full), so 2D machines pay no tokens for them. */
+export const THREE_D_RULES = `
+# 3D modelling (draw_box … get_solid_info)
+- Z is up, units are mm in WCS, like the rest of the drawing. The ground floor is z = 0 unless a skill or the project notes say otherwise; storey heights / slab thicknesses come from the user, a skill or the notes.
+- Profiles: draw closed 2D profiles on the XY plane (draw_polyline closed, draw_rectangle, draw_circle, or profile_points directly) and extrude them by the height; revolve a profile drawn beside its axis for round objects. Use the primitives (draw_box, draw_cylinder, draw_sphere, draw_wedge, draw_torus, draw_pyramid) when the shape is one of them.
+- Openings and holes: build the opening as a solid (draw_box through the wall) and solid_subtract it from the wall. Build everything of one request in the same turn, then subtract: solids built in this turn need no confirmation.
+- One layer per kind of solid (e.g. A-WALL-3D, A-SLAB-3D, A-COLS-3D, A-DOOR-3D, or what the skill says), created with create_layer first; never layer 0.
+- Changing or erasing solids that existed before this turn with solid_union / solid_subtract / solid_intersect (also when you built them in an earlier turn) needs the user's yes: call request_confirmation with the handles first and end the turn. A "Confirmation required" error means exactly that.
+- Self-check after building: call set_view_3d with sw_iso (or the side that shows the work best), look with capture_view (view "sw_iso", visual_style "conceptual", handles of what you built) and check the numbers with get_solid_info: volume and bounding box against the sizes you meant (a 4000 × 220 × 3300 wall is 2.904 m³; each 900 × 2100 opening through it removes 0.416 m³). Fix what does not match before reporting. One picture per task, not after every solid.
+- Report volumes in m³ and sizes in m or mm. The user's U still undoes the whole turn at once.
+- 3D phase 1 has no sweep, loft, slice, 3D fillet / chamfer, UCS or interference check yet: say so in Vietnamese if asked, and offer what the tools can do.
+`;
 
 /** The system prompt with this machine's service plan (sent by the plugin; undefined = an older plugin). */
 export function systemPromptFor(plan?: ServicePlan): string {
   if (!plan) return SYSTEM_PROMPT;
   return (
     SYSTEM_PROMPT +
+    (plan === '3d' || plan === '2d3d' ? THREE_D_RULES : '') +
     `\n# This machine's service plan: ${servicePlanLabel(plan)}\n- ${PLAN_SCOPE[plan]}\n` +
     (plan === '2d3d'
       ? ''

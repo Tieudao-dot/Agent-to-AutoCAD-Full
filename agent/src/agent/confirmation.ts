@@ -30,7 +30,33 @@ const DESTRUCTIVE: Record<string, (p: Record<string, unknown>) => number> = {
   trim_entities: (p) => len(p.handles),
   extend_entities: (p) => len(p.handles),
   reset_dynamic_block: (p) => len(p.handles),
+  // 3D: a boolean changes its first / target solid and erases the others (unless keep_tools)
+  solid_union: (p) => len(p.handles),
+  solid_intersect: (p) => len(p.handles),
+  solid_subtract: (p) => (typeof p.target === 'string' ? 1 : 0) + (p.keep_tools === true ? 0 : len(p.subtract)),
+  // extrude / revolve only change existing objects when they erase the profile
+  extrude: (p) => (p.erase_profile === true ? len(p.profile_handles) : 0),
+  revolve: (p) => (p.erase_profile === true ? len(p.profile_handles) : 0),
 };
+
+/**
+ * 3D booleans: changing or erasing a solid that existed before this turn always needs the user's yes, whatever the
+ * count (a union / subtract silently replaces the user's solid). Solids built in this turn need none.
+ */
+export const ALWAYS_CONFIRM = new Set(['solid_union', 'solid_subtract', 'solid_intersect']);
+
+/** Tools that create new objects even when they also change existing ones (extrude / revolve with erase_profile). */
+const CREATES_TOO = new Set(['extrude', 'revolve']);
+
+/** The handles a destructive call names, for the tools whose handles are not in 'handles' / 'handle'. */
+function namedHandles(tool: string, params: Record<string, unknown>): string[] | undefined {
+  const strs = (v: unknown) => (Array.isArray(v) ? v.filter((h): h is string => typeof h === 'string') : []);
+  if (tool === 'solid_subtract') {
+    return [...(typeof params.target === 'string' ? [params.target] : []), ...(params.keep_tools === true ? [] : strs(params.subtract))];
+  }
+  if (tool === 'extrude' || tool === 'revolve') return params.erase_profile === true ? strs(params.profile_handles) : [];
+  return undefined;
+}
 
 function len(v: unknown): number {
   return Array.isArray(v) ? v.length : 0;
@@ -65,6 +91,8 @@ export function affectedHandles(tool: string, params: Record<string, unknown>): 
   }
   const n = affectedCount(tool, params);
   if (n === 0) return [];
+  const named = namedHandles(tool, params);
+  if (named && named.length > 0) return named.map((h) => h.toUpperCase());
   const hs = Array.isArray(params.handles) ? (params.handles as unknown[]).filter((h): h is string => typeof h === 'string') : [];
   if (hs.length > 0) return hs.map((h) => h.toUpperCase());
   if (typeof params.handle === 'string') return [params.handle.toUpperCase()];
@@ -85,11 +113,11 @@ export function createdHandles(tool: string, params: Record<string, unknown>, re
     if (!Array.isArray(results)) return out;
     (params.calls as Array<{ tool?: unknown; params?: unknown }>).forEach((c, i) => {
       const r = results[i] as { ok?: unknown; result?: unknown } | undefined;
-      if (c && typeof c.tool === 'string' && r?.ok === true && affectedCount(c.tool, (c.params as Record<string, unknown>) ?? {}) === 0) take(r.result);
+      if (c && typeof c.tool === 'string' && r?.ok === true && (CREATES_TOO.has(c.tool) || affectedCount(c.tool, (c.params as Record<string, unknown>) ?? {}) === 0)) take(r.result);
     });
     return out;
   }
-  if (affectedCount(tool, params) === 0) take(result);
+  if (CREATES_TOO.has(tool) || affectedCount(tool, params) === 0) take(result);
   return out;
 }
 
@@ -163,7 +191,29 @@ export function newlyAffected(tool: string, params: Record<string, unknown>, g: 
  * Returns an error message if the call must be confirmed first, otherwise undefined.
  * The count is cumulative over the turn: distinct existing objects (g.touched) + those this call adds.
  */
+/** Solids that existed before this turn and that a 3D boolean of this call (or of a batch) would change or erase. */
+export function existingSolidsChanged(tool: string, params: Record<string, unknown>, g: GateState): string[] {
+  if (tool === 'batch_execute' && Array.isArray(params.calls)) {
+    const out: string[] = [];
+    for (const c of params.calls as Array<{ tool?: unknown; params?: unknown }>) {
+      if (c && typeof c.tool === 'string' && c.tool !== 'batch_execute') out.push(...existingSolidsChanged(c.tool, (c.params as Record<string, unknown>) ?? {}, g));
+    }
+    return [...new Set(out)];
+  }
+  if (!ALWAYS_CONFIRM.has(tool)) return [];
+  return [...new Set(affectedHandles(tool, params).filter((h) => !h.startsWith('#') && !g.created?.has(h)))];
+}
+
 export function confirmationError(tool: string, params: Record<string, unknown>, g: GateState): string | undefined {
+  const solids = existingSolidsChanged(tool, params, g);
+  if (solids.length > 0 && !userConfirmed(g)) {
+    return (
+      `Confirmation required: this ${tool} call would change or erase ${solids.length} 3D solid(s) that were already in the drawing before this turn ` +
+      `(${solids.slice(0, 20).join(', ')}${solids.length > 20 ? ', …' : ''}). Do not retry now and do not work around it. ` +
+      'Call request_confirmation with these handles and one Vietnamese sentence saying what will change (e.g. "Trừ 2 lỗ cửa khỏi tường 2F4A?"), ' +
+      'write "Cậu có đồng ý không?" and end your turn. Run the operation only after the user confirms.'
+    );
+  }
   const add = newlyAffected(tool, params, g).length;
   if (add === 0) return undefined;
   const before = g.touched ? g.touched.size : g.alreadyAffected ?? 0;

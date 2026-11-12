@@ -144,5 +144,7 @@ export function summarizeResult(tool: string, result: unknown): { summary?: stri
   if (typeof r.area_m2 === 'number') parts.push(`${r.area_m2} m²`);
   if (typeof r.width === 'number' && typeof r.height === 'number' && tool === 'capture_view') parts.push(`ảnh ${r.width}×${r.height}`);
   if (typeof r.distance === 'number') parts.push(`${r.distance} mm`);
+  if (typeof r.volume_m3 === 'number') parts.push(`${r.volume_m3} m³`);
+  else if (typeof r.total_volume_m3 === 'number') parts.push(`${r.total_volume_m3} m³`);
   return { ...(parts.length ? { summary: parts.join(', ') } : {}), ...(handles?.length ? { handles } : {}) };
 }

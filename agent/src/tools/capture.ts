@@ -2,6 +2,7 @@ import { tool } from '@anthropic-ai/claude-agent-sdk';
 import { z } from 'zod';
 import type { ToolResponse } from '../ipc/protocol.js';
 import { clean, handles, point, toCallToolResult, type AnyTool, type ToolBridge } from './common.js';
+import { viewDirection, viewPreset, visualStyle } from './solids.js';
 
 /**
  * MCP result of capture_view: the PNG as an image block Claude can look at, plus the
@@ -37,13 +38,18 @@ export function captureTools(b: ToolBridge): AnyTool[] {
         'Default: the current view. handles: frame those objects (e.g. what you just drew); p1/p2: a WCS window; extents: true for the whole drawing. ' +
         'Use it after a big drawing task to check your work visually (overlaps, texts on top of each other, doors in the wrong wall, gaps), ' +
         'or when the user asks what is in an area. Each picture costs about 1-1.6k input tokens: use one or two per task, not after every small change. ' +
-        'Read exact coordinates with the query tools, not from the picture.',
+        'Read exact coordinates with the query tools, not from the picture. ' +
+        '3D: view (e.g. sw_iso, front) or direction looks at the model from that side (default framing: the whole model in 3D) and visual_style ' +
+        '(conceptual is best to check solids) renders in that style; both leave the user\'s view unchanged.',
       {
         handles: handles.max(5000).optional(),
         p1: point.optional(),
         p2: point.optional(),
         extents: z.boolean().optional(),
         size: z.number().int().min(384).max(1568).optional().describe('Long side of the picture in pixels (default 1024).'),
+        view: viewPreset.optional().describe('3D picture from this named view instead of the plan (top) view.'),
+        direction: viewDirection.optional(),
+        visual_style: visualStyle.optional().describe('Render in this visual style (default: the style of the current viewport).'),
       },
       async (args) => {
         b.status('capture_view', 'running');

@@ -21,7 +21,7 @@ function pluginToolNames(): Set<string> {
   for (const f of fs.readdirSync(pluginDir)) {
     if (!f.endsWith('.cs')) continue;
     const src = fs.readFileSync(path.join(pluginDir, f), 'utf8');
-    for (const m of src.matchAll(/(?:\.Register\(|new ToolDef\()\s*"([a-z_]+)"/g)) names.add(m[1]!);
+    for (const m of src.matchAll(/(?:\.Register\(|new ToolDef\()\s*"([a-z0-9_]+)"/g)) names.add(m[1]!);
   }
   return names;
 }

@@ -12,6 +12,7 @@ import { layerTools } from './layers.js';
 import { layoutTools } from './layouts.js';
 import { modifyTools } from './modify.js';
 import { queryTools } from './query.js';
+import { solidTools } from './solids.js';
 import { styleTools } from './styles.js';
 import { systemTools } from './system.js';
 import { viewTools } from './view.js';
@@ -34,6 +35,7 @@ export function buildTools(bridge: ToolBridge, allowed?: readonly string[]): Any
     ...styleTools(bridge),
     ...viewTools(bridge),
     ...captureTools(bridge),
+    ...solidTools(bridge),
     ...layoutTools(bridge),
     ...advancedTools(bridge),
     ...systemTools(bridge),
