@@ -46,7 +46,7 @@ AutoCAD thật: viết code an toàn nhất có thể và đưa vào checklist p
   Dispose và lỗi boolean).
 - Trợ lý `npm test`: **159/159** (157 + 2: khối công cụ có sẵn vẫn cần xác nhận khi đích mới dựng; mô tả `extrude`).
 - Build Linux (NuGet, .NET SDK 10): net48, net8.0-windows, net10.0-windows: 0 lỗi, 0 cảnh báo.
-- CI Windows: xem mục "Tiến độ".
+- CI Windows: run 43203265912 (`build.yml`, workflow_dispatch, `release: false`, commit `87b8c3a`) **xanh** (~9 phút, gồm UI test WPF).
 
 ## Cần chủ dự án thử tay trên AutoCAD (checklist phần J)
 
@@ -69,4 +69,4 @@ J1–J9 của đợt 1 vẫn cần thử như cũ (J1 self-test, J4 thẻ xác n
 
 - [x] Rà soát + sửa lỗi + test (commit `16de01c`)
 - [x] Tài liệu: file này, checklist J10–J15, `bo-cai/README.md`
-- [ ] CI Windows (1 lượt)
+- [x] CI Windows (1 lượt, xanh)
