@@ -3,7 +3,7 @@
 ## Dự án
 
 Repo `Tieudao-dot/Agent-to-AutoCAD-Full`: bản sao đầy đủ của plugin ClaudeCAD (chép 12/11/2026) để giữ bản 2D và
-phát triển tiếp **vẽ 3D** cùng **gói dịch vụ theo máy (2D / 3D / 2D + 3D)**.
+phát triển tiếp **vẽ 3D** cùng **gói dịch vụ theo máy (2D / 3D / Full)**.
 
 Plugin AutoCAD 2022–2027: khung chat WPF (C#, `plugin/`) + trợ lý Node/TS chạy Claude Agent SDK (`agent/`),
 bộ cài Inno Setup (`installer/`), skill (`skills/`). Đọc trước: `docs/ke-hoach-3d-goi-dich-vu.md` (kế hoạch 3D và
@@ -58,16 +58,37 @@ dự án gốc), `bo-cai/README.md`.
   - nhánh, commit xuất phát, file liên quan, tài liệu bàn giao trong `docs/ban-giao/`;
   - giới hạn: chi phí, số lượt CI, việc phải hỏi cậu trước;
   - mức gấp.
+- **Cây thread (chốt 12/11/2026):**
+  - luồng chính mở thread cho từng đợt / phần việc (gói dịch vụ, Vẽ 3D đợt 1, đợt 2, đợt 3, test tổng thể);
+  - thread của mỗi đợt, khi luồng chính giao, tự mở **sub-thread con "Test & sửa"** của đợt đó (`create_session`
+    từ chính thread đợt, nhánh tách từ nhánh của đợt), chuyển đủ context theo mẫu giao việc ở trên;
+  - sub-thread con báo về thread đợt (thread cha); thread đợt tổng hợp rồi báo về luồng chính;
+  - đợt sau chỉ bắt đầu khi test & sửa của đợt trước báo xong, và xuất phát từ commit cuối của bước test đó;
+  - tin giao việc **đầu tiên** của thread đợt (prompt lúc mở thread) ghi sẵn yêu cầu "viết xong thì tự mở thread con
+    Test & sửa" kèm nguyên prompt cho thread con. Yêu cầu gửi sau qua tin nhắn giữa các thread có thể bị chế độ Auto
+    chặn; khi đó chủ dự án gõ 1 dòng trong thread đợt;
+  - "Test tổng thể" do luồng chính mở sau Test & sửa đợt 3: rà toàn bộ gói + 3 đợt, chạy đủ test + 1 lượt CI, sửa
+    lỗi, ra checklist tổng cho chủ dự án thử tay; không mở thread con.
 - **Sub-thread:**
   - chỉ làm đúng tác vụ được giao, trên nhánh riêng của mình;
-  - gặp việc ngoài phạm vi thì báo về luồng chính 1–2 dòng, không làm thay thread khác, không tự mở thread mới;
+  - gặp việc ngoài phạm vi thì báo về thread cha 1–2 dòng, không làm thay thread khác; chỉ mở thread con khi được
+    giao như trong "Cây thread";
   - việc khó đảo ngược hoặc hướng ra ngoài (merge `main`, phát hành, đổi khóa, xóa dữ liệu, gửi gì ra ngoài) thì
-    báo về luồng chính để hỏi cậu trước;
-  - xong mốc lớn hoặc phải dừng chờ quyết: báo 3–6 dòng về luồng chính, mở đầu `[Báo cáo từ thread <tên>]`:
+    báo về thread cha để chuyển lên luồng chính hỏi cậu trước;
+  - xong mốc lớn hoặc phải dừng chờ quyết: báo 3–6 dòng về thread cha, mở đầu `[Báo cáo từ thread <tên>]`:
     việc đã xong, nhánh + commit, test / CI, việc chờ cậu, thời gian. Một lần mỗi mốc.
-- Điểm cần cậu chốt phát sinh ở sub-thread: sub-thread báo về luồng chính, luồng chính hỏi cậu bằng
-  AskUserQuestion rồi chuyển câu trả lời lại.
-- Mở hay đóng sub-thread: chỉ khi cậu đồng ý. Sub-thread mới ghi vào danh bạ ở cuối file.
+- Điểm cần cậu chốt phát sinh ở sub-thread: báo ngược lên tới luồng chính, luồng chính hỏi cậu bằng
+  AskUserQuestion rồi chuyển câu trả lời xuống lại.
+- Mở hay đóng sub-thread: chỉ khi cậu đồng ý (chuỗi 3D: cậu đã đồng ý 12/11/2026). Sub-thread mới ghi vào danh
+  bạ ở cuối file; thread con ghi kèm thread cha.
+- **Được tự mở thread (chủ dự án cho phép 12/11/2026):** luồng chính và thread mỗi đợt được tự gọi
+  `mcp__claude-code-remote__create_session` để mở thread / thread con làm đúng tác vụ chủ dự án đã yêu cầu (theo
+  "Cây thread"), không phải hỏi lại.
+  - Chỉ mở thread cho việc đã được giao; không mở thread cho việc tự nghĩ ra, không mở trùng.
+  - Mỗi thread mới: báo ngay session id về thread cha; thread cha báo lên luồng chính để ghi danh bạ.
+  - Giới hạn chi phí, số lượt CI vẫn theo tin giao việc. Đóng / lưu trữ thread vẫn phải hỏi cậu.
+  - Quyền chạy lệnh này nằm trong `.claude/settings.json` (`permissions.allow`), do **chủ dự án tự thêm**: thread
+    không được tự sửa file quyền. Nhánh mới phải tách từ nhánh đã có file đó thì thread con mới dùng được quyền.
 
 ## Git và phát hành
 
@@ -97,5 +118,12 @@ dự án gốc), `bo-cai/README.md`.
 | Thread | Session id | Phạm vi |
 | --- | --- | --- |
 | Luồng chính | `session_01D56HmFT5bwapmbypmLY5nr` | Tổng quan, trao đổi với chủ dự án, điều phối sub-thread. Không tự làm việc kỹ thuật |
+| Gói dịch vụ | `session_01D56HmJEU9szFU3rjc38bwT` | Nhánh `full/goi-dich-vu`: gói 2D / 3D / Full trong plugin (đọc gói, nhãn lệnh, chặn lệnh, trợ lý, giao diện), mẫu Apps Script phần gói. Bàn giao: `docs/ban-giao/goi-dich-vu-plugin.md` |
+| Vẽ 3D đợt 1 | `session_01D56HmEKLjGrgQjCYBHyRFV` | Nhánh `full/ve-3d` (tách từ `full/goi-dich-vu`): 3D đợt 1 (khối cơ bản, extrude / revolve, cộng trừ khối, góc nhìn, kiểu hiển thị, thông tin khối, chụp ảnh 3D), nhãn gói 3D. Bàn giao: `docs/ban-giao/ve-3d-dot-1.md` |
+| ↳ Test & sửa đợt 1 (con của Vẽ 3D đợt 1) | `session_01D56HmF7xQDkumeCZ4v5kMJ` | Nhánh `full/ve-3d-test-1` (tách từ `full/ve-3d`): rà soát, thêm test tự động, sửa lỗi đợt 1; 1 lượt CI. Báo về thread đợt 1. Bàn giao: `docs/ban-giao/ve-3d-test-1.md` |
+| Vẽ 3D đợt 2 | `session_01D56HmFnBJGpH2Jp3Gz2Rps` | Nhánh `full/ve-3d-dot-2` (tách từ `full/ve-3d-test-1` @ `9332985`): sweep, loft, cắt / bo / vát / làm rỗng khối, xoay / đối xứng / căn 3D, UCS, va chạm, danh sách cạnh / mặt. Viết xong tự mở thread con Test & sửa đợt 2. Bàn giao: `docs/ban-giao/ve-3d-dot-2.md` |
+| ↳ Test & sửa đợt 2 (con của Vẽ 3D đợt 2) | `session_01D56HmFawNpHoQo4t7E9eQq` | Nhánh `full/ve-3d-test-2` (tách từ `full/ve-3d-dot-2` @ `695909e`): rà soát, thêm test tự động, sửa lỗi đợt 2; 1 lượt CI. Báo về thread đợt 2. Bàn giao: `docs/ban-giao/ve-3d-test-2.md` |
+| Vẽ 3D đợt 3 | `session_01D56HmJn6B9q2BakrVAExkg` | Nhánh `full/ve-3d-dot-3` (tách từ `full/ve-3d-test-2` @ `a51cd63`): `build_3d_from_plan` (dựng 3D từ mặt bằng 2D), mặt cắt / hình chiếu 2D từ khối 3D, skill mẫu "3D kiến trúc". Viết xong tự mở thread con Test & sửa đợt 3. Bàn giao: `docs/ban-giao/ve-3d-dot-3.md` |
+| ↳ Test & sửa đợt 3 (con của Vẽ 3D đợt 3) | `session_01D56HmJf7EpVVyCj13r68fL` | Nhánh `full/ve-3d-test-3` (tách từ `full/ve-3d-dot-3` @ `e464662`): rà soát, thêm test tự động, sửa lỗi đợt 3; 1 lượt CI. Báo về thread đợt 3. Bàn giao: `docs/ban-giao/ve-3d-test-3.md` |
 
 Link mở thread: `https://claude.ai/code/<session id>`.
