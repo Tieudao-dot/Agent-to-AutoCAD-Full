@@ -1,7 +1,7 @@
 # Tổng quan dự án Agent to AutoCAD Full
 
 *Cập nhật: 12/11/2026 (giờ Việt Nam). Luồng chính giữ file này. Bản tổng quan chép từ dự án gốc ClaudeCAD nằm trong
-lịch sử git (commit `d8b1b58` trở về trước) và ở nhánh `luu-tru/2d-base`.*
+lịch sử git của file này (bản ngay trước commit `ed0753a`) và ở nhánh `luu-tru/2d-base`.*
 
 Bản Full = plugin ClaudeCAD (2D) + **gói dịch vụ theo máy (2D / 3D / Full)** + **vẽ 3D**. Độc lập với dự án gốc;
 quy tắc làm việc và danh bạ thread: [`../CLAUDE.md`](../CLAUDE.md).
