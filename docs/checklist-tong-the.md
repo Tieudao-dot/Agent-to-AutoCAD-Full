@@ -40,7 +40,7 @@ Cần thêm: máy Windows có AutoCAD bản đầy đủ (không phải LT), tà
 | 3 | 3D đợt 1 sau sửa (J10–J15) | ~8 phút | Hướng nêm, góc vát, macro, AutoCAD không phải tiếng Anh |
 | 4 | 3D đợt 2 sau sửa (K17–K21) | ~8 phút | Làm rỗng, đường tạm, macro theo số cạnh, căn khối |
 | 5 | 3D đợt 3 sau sửa (L17–L23) | ~12 phút | Mặt bằng lộn xộn: khe giữa hai tường, nét bề rộng, cửa sổ trên layer tường |
-| 6 | Một lượt dùng lệnh của cả 3 đợt (X1–X3) | ~8 phút | Hoàn tác U, thẻ xác nhận, "Chỉ xem" khi trộn đợt |
+| 6 | Một lượt dùng lệnh của cả 3 đợt (X1–X4) | ~10 phút | Hoàn tác U, thẻ xác nhận (cả khi phá khối 3D), "Chỉ xem" khi trộn đợt |
 | 7 | Phần còn lại: J1–J9, K1–K16, L1–L8, L10, L12–L16 | ~35 phút | Đã có từ lúc viết từng đợt |
 
 Phần 0–5 là lượt rút gọn (~50 phút). Mục ○ trong `checklist-thu-that.md` bỏ được khi ít thời gian.
@@ -63,7 +63,7 @@ cuộc chat; `plan.txt` chỉ đọc). Thêm 3 mục rà chéo:
 | --- | --- | --- |
 | T1 | Gói `3D`: "vẽ mặt bằng phòng 4x6 m tường 220 có ghi kích thước" | Claude vẽ được tường bằng đường cơ bản hoặc nói dựng 3D được; **không** gọi offset / kích thước / chữ; nói rõ máy dùng gói 3D, chưa có kích thước, liên hệ chủ plugin |
 | T2 | Ở gói Full lưu macro lượt J2 (tường + cửa, trừ khối); đổi máy về `2D`, Kiểm tra lại, chạy macro đó | Lệnh 3D trong macro báo lỗi ngoài gói (NOT_IN_PLAN), bản vẽ không có khối mới, AutoCAD không treo |
-| T3 | Gói `2D`: ⚙ ▸ Skill, xem log (`CLAUDECHATLOG`) dòng "skills loaded" | `ve-3d-kien-truc` có trong thư viện nhưng **không** nạp; đổi sang `3D` / `Full`, gửi một tin: skill nạp, cuộc chat cũ vẫn còn |
+| T3 | Một đoạn chat dùng cả 4 skill mẫu (bấm **+**). Gói `2D`: gửi một tin, xem log (`CLAUDECHATLOG`) dòng "skills loaded"; đổi sang `3D`, gửi tiếp; đổi sang `Full`, gửi tiếp | 2D: `ve-kien-truc`, `ve-mep`, `ve-ha-tang`, **không** có `ve-3d-kien-truc`. 3D: **chỉ** `ve-3d-kien-truc` (3 skill 2D không nạp; cả 4 vẫn hiện trong thư viện). Full: cả 4. Cuộc chat cũ vẫn còn sau mỗi lần đổi. Máy từng cài bản cũ mà 3D vẫn nạp skill 2D: xem `skills/README.md` (skill cũ chưa có dòng `plan: 2d`) |
 | T4 | Gói `Full`: một cuộc chat có dựng 3D (vd. J2); đổi máy về `2D`, Kiểm tra lại, gửi tiếp trong **cùng** cuộc chat "đếm số khối 3D trong bản vẽ" | Claude trả lời bình thường trong cuộc chat cũ (không lỗi kết nối, không mất lịch sử); không dựng / sửa khối |
 
 ### 2. Nét phía sau và hình chiếu (L9, L11, ~6 phút)
@@ -99,17 +99,18 @@ layer tường được báo, L21 sàn trùng chỉ một, L22 chạy thử báo
 | X1 | Sau L2 (phòng đã dựng 3D), **một tin**: "đặt UCS mặt trước, dựng thêm hộp 500x500x500 tại gốc, bo 4 cạnh đứng R50, rồi vẽ mặt cắt ngang ở cao 1 m". Sau đó gõ U **một lần** | Một lượt, không thẻ xác nhận (hộp mới dựng trong lượt); U một lần bỏ cả hộp, mặt cắt, và UCS về như trước lượt; khối tường của L2 còn nguyên |
 | X2 | Lượt sau: "bo 4 cạnh đứng của khối tường R20" rồi một tin khác "cắt khối tường bằng mặt phẳng x = 2000" | Mỗi lần đều có **thẻ xác nhận** trước khi đổi (khối có từ lượt trước); Hủy → bản vẽ không đổi |
 | X3 | Bật 🔒 Chỉ xem: "xem góc SW iso kiểu Conceptual", "kiểm tra va chạm các khối", "liệt kê cạnh khối tường", "dựng 3D lại mặt bằng (chạy thử)", "đặt UCS mặt trên" | Ba lệnh đầu chạy (đổi hiển thị / chỉ đọc); chạy thử dựng 3D và UCS bị từ chối "Chỉ xem"; bản vẽ không đổi |
+| X4 | Gói `Full`. (a) Một tin: "dựng hộp 1000x1000x1000 rồi phá khối đó ra". (b) Lượt sau: "dựng hộp 500x500x500" rồi tin khác "phá khối hộp vừa dựng ra" → bấm **Hủy** trên thẻ; gõ lại, lần này bấm **Đồng ý**. (c) "vẽ 3 hình chữ nhật, gộp thành block rồi phá block đó ra" | (a) Không hỏi (khối dựng trong lượt), hộp thành các mặt. (b) Lần đầu: **thẻ xác nhận** trước khi phá (khối từ lượt trước); Hủy → hộp còn nguyên; Đồng ý → hộp thành các mặt. Log không có lỗi lạ. (c) Không hỏi (block là đối tượng 2D, luật cũ: chỉ hỏi khi > 20 đối tượng). Gõ U sau mỗi lượt hoàn tác đúng lượt đó |
 
 ### 7. Phần còn lại (~35 phút)
 
 J1–J9, K1–K16, L1–L8, L10, L12–L16 trong `checklist-thu-that.md` (mục ★ trước). J8, K15, L13 (máy gói 2D) đã phủ một
 phần ở phần 1: vẫn làm nhanh để thấy câu Claude nói.
 
-## Điểm cần cậu để ý khi thử (chưa sửa, chờ cậu chốt)
+## Đã đổi theo chốt 12/11/2026 (cậu thử ở trên)
 
-- **Phá khối bằng `explode_entities`** (lệnh 2D, có ở gói 2D và Full): Claude nổ một khối 3D có sẵn thành mặt / vùng mà
-  **không** hỏi xác nhận (chỉ hỏi khi > 20 đối tượng), khác với luật "đổi hình khối có trước luôn qua thẻ". Không có
-  trong danh sách lệnh đã chốt (cộng / trừ, cắt, bo, vát, làm rỗng) nên tớ chưa đổi. Thử: dựng hộp, lượt sau "phá khối
-  hộp đó ra". Nếu cậu muốn hỏi xác nhận cả việc này thì báo luồng chính.
-- **Skill 2D `ve-kien-truc` vẫn nạp ở gói 3D** (skill ghi kích thước, chữ mà gói 3D không có). Claude sẽ báo ngoài gói khi
-  tới bước đó; tốn token của skill. Có thể thêm `plan: 2d` cho skill này nếu cậu muốn.
+- **Phá khối 3D** có trước lượt (kể cả khối Claude dựng ở lượt trước) luôn qua thẻ xác nhận; khối dựng trong lượt và
+  đối tượng 2D giữ luật cũ: X4.
+- **Skill 2D không nạp ở gói 3D**; skill 3D giữ quy ước mặt bằng mà lệnh dựng 3D đọc: T3, và L2 ở gói 3D (Claude vẽ
+  mặt bằng bằng đường cơ bản theo mục 0 của skill `ve-3d-kien-truc`, không ghi kích thước).
+- **Lệnh dựng khối không còn tham số màu / nét / layout** (đỡ token): khối lấy màu theo layer; "dựng hộp màu đỏ" thì
+  Claude dựng rồi đổi màu bằng lệnh đổi thuộc tính. Thử nhanh khi làm J2: tường đúng layer, màu theo layer.

@@ -94,8 +94,11 @@ Lệnh này dựa trên đợt 1 nên làm sau cùng.
   không gọi FLATSHOT / VIEWBASE. Phần `GenerateSectionGeometry` vẫn cần thử kỹ trên AutoCAD thật (checklist L9, L11).
 - **Token:**
   - ~25 lệnh 3D thêm khoảng 5–6k token mô tả lệnh vào mỗi yêu cầu. Phần này được cache nên rẻ, nhưng vẫn tốn.
-  - **Đo lại sau 3 đợt (test tổng thể, 12/11/2026):** 29 lệnh 3D + luật 3D ≈ 18k token (gấp ~3 ước tính); cả gói: 2D
-    ~36k, 3D ~40k, Full ~54k. Đề xuất giảm: [`ban-giao/test-tong-the.md`](ban-giao/test-tong-the.md).
+  - **Đo lại sau 3 đợt (test tổng thể, 12/11/2026):** 29 lệnh 3D + luật 3D ≈ 18,2k token (gấp ~3 ước tính); cả gói:
+    2D ~36,1k, 3D ~40,0k, Full ~54,2k.
+  - **Sau khi giảm theo chốt 12/11/2026** (bỏ màu / nét / layout ở 10 lệnh dựng khối, rút mô tả lệnh, chuyển ví dụ sang
+    skill `ve-3d-kien-truc`; không đổi tên lệnh): phần 3D ≈ 15,4k (−16 %); 2D ~36,1k (không đổi), 3D ~37,1k (−7 %),
+    Full ~51,4k (−5 %). Chi tiết: [`ban-giao/test-tong-the.md`](ban-giao/test-tong-the.md).
   - Máy gói 2D sẽ không nạp lệnh 3D, nên không tốn thêm.
 - **Kiểm thử:**
   - CI không có AutoCAD. Phần tính toán (hướng nhìn, trục quay, kiểm tham số) được test tự động.

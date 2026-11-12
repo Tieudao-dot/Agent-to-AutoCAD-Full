@@ -44,44 +44,93 @@ Logic gói: **không sửa**. Không đổi `activation/activation.json`, `Licen
 
 ## Test và build
 
-- Lõi `dotnet test plugin/ClaudeCAD.Core.Tests`: **309/309** (304 + 5).
-- Trợ lý `npm test`: **191/191** (185 + 6).
+- Lõi `dotnet test plugin/ClaudeCAD.Core.Tests`: **309/309** (304 + 5) ở lượt đầu; **322/322** sau 3 điểm đã chốt (+13).
+- Trợ lý `npm test`: **191/191** (185 + 6) ở lượt đầu; **199/199** (+8) sau 3 điểm đã chốt.
 - Build Linux (.NET SDK 10, xóa `obj` / `bin` giữa các lần): net48, net8.0-windows, net10.0-windows: 0 lỗi, 0 cảnh báo.
-- CI Windows: run 43230375890 (`build.yml`, workflow_dispatch, `release: false`, commit `fa68791`) **xanh** (~10 phút, gồm UI test WPF, build 3 bản, Setup.exe).
+- CI Windows lượt đầu: run 43230375890 (`build.yml`, workflow_dispatch, `release: false`, commit `fa68791`) **xanh** (~10 phút, gồm UI test WPF, build 3 bản, Setup.exe).
+- CI Windows sau 3 điểm đã chốt: CI2.
+
+## Chủ dự án đã chốt (12/11/2026) và đã làm
+
+Sau báo cáo đầu, chủ dự án chốt 3 điểm; làm trên cùng nhánh, tiếp từ `f4e81b0` (commit sửa: `41e4b37`).
+
+### 1. `explode_entities` trên khối 3D luôn qua thẻ xác nhận
+
+- **Luật:** phá khối 3D có trước lượt (kể cả khối Claude dựng ở lượt trước) luôn cần cậu đồng ý, như cộng / trừ, cắt,
+  bo, vát, làm rỗng. Khối 3D = `Solid3d`, `Body`, mọi loại `Surface` (`PlaneSurface`, `NurbSurface`, `ExtrudedSurface`…),
+  `SubDMesh`, `PolyFaceMesh`, `PolygonMesh`. Khối dựng trong lượt này: không hỏi. Đối tượng 2D (block, polyline, region,
+  hatch, kích thước…): **giữ luật cũ** (chỉ hỏi khi > 20 đối tượng).
+- **Cách làm (chắc nhất: plugin kiểm loại):**
+  - plugin (`ModifyTools.cs`, `ExplodeEntities`): trước khi phá bất cứ gì, mở từng đối tượng để đọc, xét loại theo kiểu
+    .NET và các kiểu cha trong `Autodesk.AutoCAD.DatabaseServices` (`SolidLogic.ExplodeConfirmTypes`). Khối 3D không
+    dựng trong lượt và lệnh không có cờ `user_confirmed` → từ chối cả lệnh (`INVALID_PARAMS`, câu mở đầu
+    "Confirmation required", liệt kê handle, bảo Claude gọi `request_confirmation` rồi dừng lượt). Không phá gì;
+  - "dựng trong lượt": bộ theo dõi "Thêm · Sửa · Xóa" của lượt có sẵn (`ChangeTracker`, sự kiện `ObjectAppended` của
+    bản vẽ). Chạy macro cũng là một lượt, nên khối macro vừa dựng phá được. Quá 100 000 đối tượng thì bộ theo dõi ngừng
+    ghi: đối tượng mới bị coi là có sẵn, tức hỏi thêm một lần (phía an toàn);
+  - trợ lý (`confirmation.ts`, `applyUserConfirmation`): khi cậu đã đồng ý trong lượt (nút Đồng ý trên thẻ, hoặc câu
+    "đồng ý" trả lời câu hỏi của lượt trước), thêm `user_confirmed: true` vào `explode_entities`, cả trong
+    `batch_execute`. Claude không tự thêm được: cờ không có trong schema lệnh, và trợ lý xóa cờ ở mọi lệnh không được
+    phép. Plugin từ chối thì trợ lý ghi nhận lượt đó đã hỏi (giống cổng của trợ lý), nên "đồng ý" ở tin sau có hiệu lực;
+  - mô tả `explode_entities` nói rõ luật này cho Claude.
+- **Test:** `ExplodeConfirmTests.cs` (13: loại khối, mọi `Surface`, đối tượng 2D giữ luật cũ, chỉ khối có sẵn chưa đồng ý
+  bị từ chối, câu báo, bộ theo dõi, kiểm nguồn: kiểm trước khi phá / xóa, đọc cờ, dùng `CreatedThisTurn`); trợ lý: cờ chỉ
+  có sau khi đồng ý, Claude không tự thêm được (lệnh lẻ và trong batch), nhận ra lời từ chối của plugin (lẻ và trong
+  batch), lượt sau "đồng ý" có cờ.
+- **Thử tay:** X4 trong `docs/checklist-tong-the.md`.
+
+### 2. Skill 2D không nạp ở gói 3D
+
+- `ve-kien-truc`, `ve-mep`, `ve-ha-tang` đều chỉ là chuẩn vẽ 2D (offset, kích thước, mleader, chữ, bảng, hatch): gắn
+  `plan: 2d`. `skillPlan` đọc thêm `2d`; `skillsForPlan`: gói 2D bỏ skill `3d`, gói 3D bỏ skill `2d`, Full / plugin cũ
+  nạp tất cả; skill không có dòng `plan` (của người dùng) nạp ở mọi gói; giá trị lạ coi như không có.
+- `build_3d_from_plan` đọc mặt bằng theo quy ước layer của `ve-kien-truc`. Mặc định trong plugin đã đúng quy ước
+  (`A-WALL`, `A-DOOR`, `A-WIND`, `A-SLAB` / `A-FLOR`, block `CUA-DI-*` / `CUA-SO-*`). Skill `ve-3d-kien-truc` thêm **mục 0**:
+  bảng layer mặt bằng, cách vẽ tường 220 / 110 (hai nét, đối xứng trục, đóng mép lỗ), ký hiệu cửa đi / cửa sổ, đường bao
+  sàn và lỗ sàn, polyline có bề rộng, đường trục + `thickness`, cột không được đọc, ví dụ phòng 4 × 6 m chỉ bằng đường cơ
+  bản. Không chép phần chữ / kích thước / dim style (có test).
+- **Lưu ý:** bộ cài không ghi đè skill đã có trên máy (`onlyifdoesntexist`). Máy đã cài bản cũ giữ 3 skill 2D cũ không
+  có `plan: 2d`, nên vẫn nạp ở gói 3D: thêm tay dòng đó hoặc xóa thư mục skill rồi cài lại (`skills/README.md`).
+- Test cũ đổi kỳ vọng (`plan3d.test.ts`): `skillPlan('ve-kien-truc')` từ `undefined` thành `'2d'`; gói 3D từ "nạp mọi
+  skill" thành "chỉ `ve-3d-kien-truc`". Lý do: quyết định 12/11/2026 ở trên.
+
+### 3. Giảm token (đề xuất 1 + 3, không đổi tên lệnh nào)
+
+- **Đề xuất 1:** 10 lệnh dựng khối (`draw_box`, `draw_cylinder`, `draw_sphere`, `draw_wedge`, `draw_torus`,
+  `draw_pyramid`, `extrude`, `revolve`, `sweep`, `loft`) chỉ còn `layer` trong 4 thuộc tính chung; plugin vẫn nhận
+  `color` / `linetype` / `lineweight` / `layout` (macro cũ không vỡ). Luật 3D thêm 1 dòng: màu / nét của khối lấy theo
+  layer, hoặc `set_entity_props` sau khi dựng.
+- **Đề xuất 3:** bỏ khỏi mô tả lệnh phần trùng với luật 3D trong system prompt hoặc chỉ là ví dụ: quy trình chạy thử rồi
+  hỏi của `build_3d_from_plan` (luật 3D vẫn giữ), câu ví dụ tiếng Việt, "Typical use" của `extrude` / `revolve`, ví dụ
+  công dụng của `sweep` / `loft`, gợi ý kiểm `cut_area_m2` (đã có trong luật 3D), câu "so kết quả với kích thước định
+  dựng" lặp ở 10 lệnh (rút còn danh sách trường trả về). Ý nghĩa và ràng buộc tham số giữ nguyên; câu "bề rộng dưới
+  `min_thickness` là nét in" chuyển vào mô tả tham số `min_thickness`. Công dụng từng lệnh, ví dụ, `area_min` cho mặt
+  bằng lớn, `openings` cho khe hở chuyển sang skill `ve-3d-kien-truc` (mục 0, 3, 4, 5, 6).
+- Không làm đề xuất 2 (gộp 6 lệnh khối) và 4 (câu mô tả điểm dùng chung).
 
 ## Số token theo gói
 
 Đo bằng script: dựng danh sách lệnh của từng gói đúng như plugin gửi (`plan_tools`), đổi schema sang JSON như SDK gửi
 cho Claude, cộng system prompt. Không có bộ đếm token chính xác trên máy cloud; ước theo ~3,5 ký tự / token (khoảng
-3–4).
+3–4). "Trước" = `f4e81b0`, "sau" = commit sửa ở trên.
 
-| Gói | Số lệnh (kể cả 5 lệnh thẻ) | Mô tả lệnh (ký tự) | System prompt (ký tự) | Tổng (ký tự) | ≈ token |
-| --- | --- | --- | --- | --- | --- |
-| 2D | 95 | 116 214 | 10 086 | 126 300 | ~36k |
-| 3D | 90 | 124 486 | 15 415 | 139 901 | ~40k |
-| Full | 124 | 174 504 | 15 213 | 189 717 | ~54k |
-| Riêng phần 3D (29 lệnh + luật 3D) | 29 | 58 290 | 5 452 | 63 742 | **~18k** (16–21k) |
+| Gói | Số lệnh (kể cả 5 lệnh thẻ) | Tổng trước (ký tự) | ≈ token trước | Tổng sau (ký tự) | ≈ token sau | Giảm |
+| --- | --- | --- | --- | --- | --- | --- |
+| 2D | 95 | 126 300 | ~36,1k | 126 463 | ~36,1k | +0,05k (câu luật phá khối 3D trong mô tả `explode_entities`) |
+| 3D | 90 | 139 901 | ~40,0k | 129 911 | ~37,1k | −2,9k (−7 %) |
+| Full | 124 | 189 717 | ~54,2k | 179 890 | ~51,4k | −2,8k (−5 %) |
+| Riêng phần 3D (29 lệnh + luật 3D) | 29 | 63 742 | ~18,2k | 53 752 | ~15,4k | −2,9k (−16 %) |
 
-- Kế hoạch ước **~5–6k token** cho phần 3D: thực tế gấp ~3 lần. Phần này nằm trong prefix được cache, nên từ lượt thứ
-  hai trong 5 phút trả giá đọc cache (~10%); lượt đầu mỗi phiên trả đủ.
-- Nặng nhất: `build_3d_from_plan` 7,3k ký tự, `sweep` 3,6k, `section_view` 3,3k, `loft` 3,2k, `revolve` / `extrude`
-  ~3k. Bộ thuộc tính chung (`color`, `linetype`, `lineweight`, `layout`) lặp ở 10 lệnh dựng khối: 8,4k ký tự.
-- **Đề xuất giảm (chưa làm, chờ chủ dự án chốt; không cắt lệnh):**
-  1. Bỏ `color` / `linetype` / `lineweight` / `layout` khỏi 10 lệnh dựng khối (đổi sau bằng `set_entity_props`; khối 3D
-     trên layout gần như không dùng): ≈ −2,4k token ở gói 3D / Full.
-  2. Gộp 6 lệnh khối cơ bản (`draw_box` … `draw_pyramid`) thành một lệnh có `kind`: ≈ −2k token. Đổi tên lệnh nên đụng
-     macro đã ghi, nhãn gói, test.
-  3. Rút mô tả `build_3d_from_plan` / `sweep` / `loft` / `section_view`, chuyển ví dụ và quy trình sang skill
-     `ve-3d-kien-truc` (chỉ nạp khi cần): ≈ −2–3k token.
-  4. Rút câu mô tả điểm dùng chung (`point`, lặp ở mọi tham số tọa độ): ít lợi hơn, đụng cả gói 2D.
+- Chi tiết phần 3D: mô tả lệnh 58 290 → 48 128 ký tự; luật 3D 5 452 → 5 624 (thêm dòng `set_entity_props`).
+  Đề xuất 1 bớt 8 410 ký tự (≈ 2,4k token, đúng ước tính); đề xuất 3 chỉ bớt ~1 750 ký tự (≈ 0,5k token, ước tính trước
+  2–3k): phần lớn mô tả còn lại là ý nghĩa và ràng buộc tham số, phải giữ; quy trình dài vốn đã nằm trong luật 3D.
+- Vẫn gấp ~2,5 lần ước tính 5–6k của kế hoạch. Phần này nằm trong prefix được cache: từ lượt thứ hai trong 5 phút trả giá
+  đọc cache (~10 %); lượt đầu mỗi phiên trả đủ. Muốn giảm thêm thì còn đề xuất 2 và 4 (chưa làm).
+- Nặng nhất sau khi rút: `build_3d_from_plan` 6,6k ký tự (24 tham số), `section_view` 3,2k, `sweep` 2,7k, `loft` 2,2k,
+  `revolve` 2,2k, `chamfer_edges` 2,1k.
 
-## Điểm cần chủ dự án chốt (chưa sửa)
+## Còn lưu ý (không phải lỗi)
 
-- **`explode_entities` trên khối 3D** (lệnh nhóm 2D, có ở gói 2D / Full): phá khối có sẵn thành mặt / vùng mà chỉ hỏi
-  khi > 20 đối tượng, không theo luật "đổi hình khối có trước luôn qua thẻ". Không thuộc danh sách đã chốt (cộng / trừ,
-  cắt, bo, vát, làm rỗng) và sửa thì đổi hành vi một lệnh 2D, nên tớ để nguyên và đưa vào checklist.
-- **Skill 2D `ve-kien-truc` vẫn nạp ở gói 3D**: hướng dẫn kích thước / chữ mà gói 3D không có (Claude sẽ báo ngoài gói;
-  tốn token skill). Có thể thêm `plan: 2d` cho skill này (cần mở rộng `skillPlan`, việc nhỏ).
 - Mô tả `capture_view` ở gói 2D vẫn kể tùy chọn góc nhìn / kiểu hiển thị 3D (lệnh chung, chỉ đọc): vô hại, tốn ít token.
 
 ## Còn chỉ thấy trên AutoCAD thật
@@ -100,7 +149,7 @@ dấu góc vát (J11), dấu `ShellBody` (K17), thứ tự ma trận `align` (K2
 5. **Merge `main`**: cần chủ dự án đồng ý rõ ràng (merge `main` có phiên bản mới là CI tự phát hành).
 6. **Các chỗ trỏ về dự án gốc** trong `docs/cho-tro-ve-repo-goc.md`: nguồn cập nhật / Releases, `AppId` và thư mục bộ
    cài (thay thế hay cài song song bản gốc), số Zalo liên hệ, link tải trong `README.md` / `bo-cai/README.md`.
-7. Các đề xuất giảm token và 2 điểm chốt ở trên (tùy chọn).
+7. Đề xuất giảm token 2 và 4 (tùy chọn, chưa chốt).
 
 ## Tiến độ
 
@@ -108,3 +157,5 @@ dấu góc vát (J11), dấu `ShellBody` (K17), thứ tự ma trận `align` (K2
 - [x] Rà soát + sửa lỗi + test
 - [x] Tài liệu: file này, `docs/checklist-tong-the.md`, checklist thử thật, kế hoạch, `bo-cai/README.md`
 - [x] CI Windows (1 lượt, xanh: run 43230375890)
+- [x] 3 điểm chủ dự án chốt 12/11/2026: phá khối 3D qua thẻ, skill 2D không nạp ở gói 3D, giảm token (commit `41e4b37`)
+- [ ] CI Windows sau 3 điểm (1 lượt)

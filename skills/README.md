@@ -51,13 +51,21 @@ Chọn một file tên `SKILL.md` thì plugin chép cả các file `.md/.txt/.cs
 
 | Skill | Dùng cho |
 | --- | --- |
-| `ve-kien-truc` | mặt bằng kiến trúc: trục, cột, tường 220/110, cửa, kích thước, tên phòng |
-| `ve-mep` | điện (chiếu sáng, ổ cắm, máng cáp) và cấp thoát nước |
-| `ve-ha-tang` | đường, lý trình, cao độ, cống, ranh giới, bảng tọa độ |
-| `ve-3d-kien-truc` | **(gói 3D / Full)** dựng 3D từ mặt bằng: chiều cao tầng, dày sàn, cao cửa, layer khối `A-WALL-3D` / `A-SLAB-3D`, mặt cắt / mặt đứng, tự kiểm tra |
+| `ve-kien-truc` | **(gói 2D / Full)** mặt bằng kiến trúc: trục, cột, tường 220/110, cửa, kích thước, tên phòng |
+| `ve-mep` | **(gói 2D / Full)** điện (chiếu sáng, ổ cắm, máng cáp) và cấp thoát nước |
+| `ve-ha-tang` | **(gói 2D / Full)** đường, lý trình, cao độ, cống, ranh giới, bảng tọa độ |
+| `ve-3d-kien-truc` | **(gói 3D / Full)** dựng 3D từ mặt bằng: quy ước mặt bằng 2D mà lệnh dựng đọc (layer, nét tường, ký hiệu cửa; chép từ `ve-kien-truc`, không có phần chữ / kích thước), chiều cao tầng, dày sàn, cao cửa, layer khối `A-WALL-3D` / `A-SLAB-3D`, chọn lệnh theo cấu kiện, mặt cắt / mặt đứng, tự kiểm tra |
 
-**Skill theo gói (bản Full):** dòng `plan: 3d` trong phần đầu (frontmatter) đánh dấu skill chỉ có ích khi máy có lệnh 3D.
-Máy gói `2D` không nạp skill đó cho Claude, kể cả khi đoạn chat đã bấm **+** (danh sách skill vẫn hiện nó trong thư viện).
-Skill của cậu không có dòng này thì dùng ở mọi gói.
+**Skill theo gói (bản Full):** một dòng trong phần đầu (frontmatter) đánh dấu skill chỉ có ích với một nhóm lệnh:
+
+- `plan: 3d`: chỉ có ích khi máy có lệnh 3D. Máy gói `2D` không nạp.
+- `plan: 2d`: chuẩn vẽ 2D (chữ, kích thước, hatch, offset…). Máy gói `3D` không nạp (chủ dự án chốt 12/11/2026). Ba skill
+  mẫu 2D có dòng này.
+- Gói `Full` nạp mọi skill. Skill của cậu không có dòng này thì dùng ở mọi gói.
+
+Skill không nạp vẫn hiện trong thư viện, kể cả khi đoạn chat đã bấm **+**; Claude chỉ không thấy nó. Bộ cài không ghi
+đè skill đã có trên máy: máy đã cài bản cũ giữ `ve-kien-truc` / `ve-mep` / `ve-ha-tang` cũ **không có** dòng `plan: 2d`,
+nên các skill đó vẫn nạp ở gói 3D. Thêm tay dòng `plan: 2d` vào phần đầu file, hoặc xóa thư mục skill đó rồi cài lại để
+bộ cài chép bản mới.
 
 Nên có mục **"Quy trình chuẩn bị"** nhắc Claude gọi `get_drawing_info` + `list_layers` trước, tạo layer/style còn thiếu theo bảng chuẩn, rồi mới vẽ. Xem `ve-kien-truc/SKILL.md` làm mẫu.
