@@ -234,7 +234,8 @@ tra; KT-11 và KT-13 có thêm câu kiểm.
 ngày), KT-27 (macro cũ dùng `topology_id` công thức cũ phải ghi lại), KT-30 (giữ cách chọn layer, chỉ sửa chú thích).
 
 **Test sau gộp:** lõi 364/364, trợ lý 214/214, build net48 / net8.0-windows / net10.0-windows (xóa `obj` / `bin` giữa các
-lần) 0 lỗi, 0 cảnh báo. CI: xem Tiến độ.
+lần) 0 lỗi, 0 cảnh báo. CI run `43259984843` (1 lượt, workflow_dispatch `release: "false"`): **xanh**, mọi bước gồm UI
+test WPF và `Setup.exe`; bước phát hành bỏ qua.
 
 ## Số token theo gói
 
@@ -302,4 +303,4 @@ sau khi dời khối (K24), nhiều tầng và cửa sát góc trên bản vẽ 
 - [x] Hộp thoại cảnh báo bản gốc: hai nút "Tiếp tục" / "Hủy" (`TaskDialogMsgBox`, chốt 12/11/2026)
 - [x] Sửa 13 lỗi kiểm tra độc lập phần bộ cài / tài liệu / tích hợp, chốt C1, C2 (commit `8e163b3`)
 - [x] Gộp 4 nhánh sửa (`f42fb3f`, `54201f9`, `61cc03d`, `3527374`) + ghép nối (`601b2f9`); lõi 364/364, trợ lý 214/214, build 3 bản
-- [ ] Lượt CI chung sau khi gộp (kiểm luôn biên dịch `.iss`: `TaskDialogMsgBox`, ô key nhiều dòng, `PrepareToInstall`, `[InstallDelete]`)
+- [x] Lượt CI chung sau khi gộp (1 lượt, xanh: run 43259984843 trên `a62a7b7`, ~10 phút; bước `Setup.exe` biên dịch được `.iss` mới: `TaskDialogMsgBox` hai nút "Tiếp tục" / "Hủy", ô key nhiều dòng, `PrepareToInstall`, `[InstallDelete]`; bước phát hành bỏ qua)
