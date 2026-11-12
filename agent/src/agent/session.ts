@@ -71,6 +71,13 @@ export class AgentSession {
   private initInfo = '';
   private lastUser = '';
   private lastConfirm?: 'yes' | 'no';
+  /**
+   * Confirmation cards shown in this session (id → handles, upper case; the last 50) and the handles of the card
+   * whose Đồng ý button started this turn (C2, 12/11/2026: the only way to unlock changes of older 3D solids).
+   */
+  private readonly cards = new Map<string, string[]>();
+  private lastCardId?: string;
+  private cardConfirmed?: Set<string>;
   /** Message of the running turn, re-sent once if resuming an old session fails. */
   private pending?: UserMessage;
   private resuming = false;
@@ -146,9 +153,17 @@ export class AgentSession {
       userText: this.lastUser,
       answersQuestion: this.answersQuestion,
       confirmedByButton: this.lastConfirm === 'yes' || this.lastPlan === 'approved',
+      cardConfirmed: this.cardConfirmed,
       touched: this.touchedThisTurn,
       created: this.createdThisTurn,
     };
+  }
+
+  /** A card shown by request_confirmation (called from the tool's palette message): its handles, for its Đồng ý button. */
+  cardShown(id: string, handles?: readonly string[]): void {
+    this.cards.set(id, (handles ?? []).filter((h) => typeof h === 'string').map((h) => h.toUpperCase()));
+    this.lastCardId = id;
+    while (this.cards.size > 50) this.cards.delete(this.cards.keys().next().value as string);
   }
 
   /**
@@ -172,6 +187,7 @@ export class AgentSession {
     const server = createCadServer(this.cfg.bridge, this.cfg.version, (req) => {
       if (req.type === 'suggestions') this.toolSuggested = true;
       if (req.type === 'confirm_request' || req.type === 'plan_request') this.turnAsked = true; // a card asks too
+      if (req.type === 'confirm_request') this.cardShown(req.id, req.handles);
       this.cfg.emit(req);
     }, this.planTools);
     this.loadedPlanKey = planKey(this.servicePlan, this.planTools);
@@ -297,6 +313,9 @@ export class AgentSession {
     this.suggestionsOn = msg.context?.suggestions !== false;
     this.lastUser = msg.text;
     this.lastConfirm = msg.confirm;
+    // the Đồng ý button of a card: exactly its handles are approved (an older plugin sends no id: the last card shown)
+    const cardId = msg.confirm === 'yes' ? (msg.confirm_id ?? this.lastCardId) : undefined;
+    this.cardConfirmed = cardId && this.cards.has(cardId) ? new Set(this.cards.get(cardId)) : undefined;
     this.turnId = msg.turn_id;
     this.pending = msg;
     this.input!.push(toSdkUserMessage({

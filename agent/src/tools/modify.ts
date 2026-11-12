@@ -67,8 +67,8 @@ export function modifyTools(b: ToolBridge): AnyTool[] {
 
     cadTool(b, 'explode_entities',
       'Explode polylines, blocks, dimensions, hatches... into their components. The originals are erased; returns the new handles. ' +
-        '3D solids, surfaces and meshes that existed before this turn are refused ("Confirmation required") until the user says yes: ' +
-        'ask with request_confirmation first.' + CONFIRM,
+        '3D solids, surfaces and meshes that existed before this turn are refused ("Confirmation required") until the user presses Đồng ý ' +
+        'on a request_confirmation card listing their handles.' + CONFIRM,
       { handles }),
 
     cadTool(b, 'join_entities',
@@ -79,7 +79,9 @@ export function modifyTools(b: ToolBridge): AnyTool[] {
     cadTool(b, 'erase_entities',
       'Erase entities by handle (max 1000 per call; the plugin refuses more with TOO_MANY_ENTITIES). ' +
         'Erasing objects chosen by a filter/condition (e.g. "everything on layer A-TEMP") or more than 20 objects REQUIRES confirmation: ' +
-        'call count_entities/list_entities, tell the user the number, ask, and erase only after they explicitly agree.',
+        'call count_entities/list_entities, tell the user the number, ask, and erase only after they explicitly agree. ' +
+        '3D solids, surfaces and meshes that existed before this turn are refused ("Confirmation required") until the user presses Đồng ý ' +
+        'on a request_confirmation card listing their handles.',
       { handles: handles.max(1000) },
       { destructive: true }),
 

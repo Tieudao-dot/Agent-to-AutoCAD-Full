@@ -305,16 +305,7 @@ namespace ClaudeCAD.Plugin.Drawing
         private static object ExplodeEntities(ToolContext ctx, Params p)
         {
             var hs = p.Handles("handles", MaxModifyHandles);
-            // 3D solids, surfaces and meshes that were in the drawing before this turn (also those Claude built in an
-            // earlier turn) are broken up only after the user's yes, like the 3D booleans / slice / fillet (decided
-            // 12/11/2026). The assistant's gate only sees handles, so the check is here: the assistant adds
-            // user_confirmed when the user said yes. Nothing is exploded when one of them is refused. 2D objects: unchanged.
-            if (!p.Bool(SolidLogic.UserConfirmedParam, false))
-            {
-                var items = hs.Select(h => (h, IsExplodeConfirmEntity(Acad.GetEntity(ctx, h, false)), ctx.CreatedThisTurn(h))).ToList();
-                var need = SolidLogic.ExplodeNeedsYes(items, false);
-                if (need.Count > 0) throw new ToolException(ErrorCodes.InvalidParams, SolidLogic.ExplodeConfirmMessage(need));
-            }
+            RequireCardForOlderSolids(ctx, p, "explode_entities", hs);
             var created = new List<ObjectId>();
             var skipped = new List<object>();
             foreach (var h in hs)
@@ -341,6 +332,21 @@ namespace ClaudeCAD.Plugin.Drawing
             var r = Acad.Handles(created);
             if (skipped.Count > 0) r["skipped"] = skipped;
             return r;
+        }
+
+        /// <summary>
+        /// 3D solids, surfaces and meshes that were in the drawing before this turn (also those Claude built in an earlier
+        /// turn) are exploded or erased only with the Đồng ý button of a confirmation card that listed them (decided
+        /// 12/11/2026: C1, C2), like the 3D booleans / slice / fillet. The assistant's gate only sees handles, so the check is
+        /// here; the assistant passes the approved handles in user_confirmed. Throws before anything changes. 2D objects:
+        /// the usual rule only (the assistant asks above 20 objects).
+        /// </summary>
+        private static void RequireCardForOlderSolids(ToolContext ctx, Params p, string tool, List<string> hs)
+        {
+            var confirmed = SolidLogic.ConfirmedHandles(p.Get(SolidLogic.UserConfirmedParam));
+            var items = hs.Select(h => (h, IsExplodeConfirmEntity(Acad.GetEntity(ctx, h, false)), ctx.CreatedThisTurn(h))).ToList();
+            var need = SolidLogic.SolidsNeedingCard(items, confirmed);
+            if (need.Count > 0) throw new ToolException(ErrorCodes.InvalidParams, SolidLogic.CardConfirmMessage(tool, need));
         }
 
         /// <summary>3D solid, ACIS body, surface or mesh: the entity's DatabaseServices type or one of its base types (SolidLogic.ExplodeConfirmTypes).</summary>
@@ -431,6 +437,7 @@ namespace ClaudeCAD.Plugin.Drawing
         private static object EraseEntities(ToolContext ctx, Params p)
         {
             var hs = p.Handles("handles", MaxEraseHandles);
+            RequireCardForOlderSolids(ctx, p, "erase_entities", hs); // C1 (KT-12): no copy → subtract on the copy → erase the original either
             var ents = OpenForWrite(ctx, hs);
             foreach (var e in ents) e.Erase();
             return new Dictionary<string, object> { ["erased"] = ents.Count, ["handles"] = hs.Cast<object>().ToList() };

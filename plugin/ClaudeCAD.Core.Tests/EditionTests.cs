@@ -154,12 +154,44 @@ namespace ClaudeCAD.Core.Tests
                 "the check must run before the bundled-Node exit");
             // the original's licence is not this edition's: the key page asks the owner again
             Assert.Contains("if ReplacesOriginal() then exit;", Body(iss, "function HasLicense(): Boolean;"));
-            // the original's staged self-update cannot come back over the Full edition when AutoCAD closes
-            Assert.Contains("if (CurStep = ssInstall) and ReplacesOriginal() then DropOriginalStagedUpdate();", Body(iss, "procedure CurStepChanged(CurStep: TSetupStep);"));
-            Assert.Contains(@"ExpandConstant('{localappdata}\ClaudeCAD\updates\stage')", Body(iss, "procedure DropOriginalStagedUpdate();"));
+            // the original's staged self-update cannot come back over the Full edition when AutoCAD closes (KT-07: removed in
+            // PrepareToInstall, before Setup closes AutoCAD; the updater script too)
+            Assert.Contains("if ReplacesOriginal() then DropOriginalStagedUpdate();", Body(iss, "function PrepareToInstall(var NeedsRestart: Boolean): String;"));
+            Assert.DoesNotContain("DropOriginalStagedUpdate", Body(iss, "procedure CurStepChanged(CurStep: TSetupStep);"));
+            var drop = Body(iss, "procedure DropOriginalStagedUpdate();");
+            Assert.Contains(@"ExpandConstant('{localappdata}\ClaudeCAD\updates\stage')", drop);
+            Assert.Contains(@"ExpandConstant('{localappdata}\ClaudeCAD\updates\apply-update.cmd')", drop);
+            Assert.Contains("DeleteFile(Script)", drop);
+            // KT-38: the original's update link does not stay in the Full bundle
+            Assert.Contains("[InstallDelete]\r\n", iss.Replace("\r\n", "\n").Replace("\n", "\r\n"));
+            Assert.Contains(@"Type: files; Name: ""{app}\Contents\update-config.json""; Check: ReplacesOriginal", iss);
             // the folder the stage lives in is the one UpdateService uses
             Assert.Contains("\"ClaudeCAD\", \"updates\"", Src("plugin", "ClaudeCAD.Plugin", "Sidecar", "UpdateService.cs"));
             Assert.Contains("Path.Combine(StateDir, \"stage\")", Src("plugin", "ClaudeCAD.Plugin", "Sidecar", "UpdateService.cs"));
+        }
+
+        [Fact]
+        public void KT01_the_installer_splits_a_three_line_offline_paste_like_the_plugin()
+        {
+            var act = Body(Iss, "function Activate(const Input: String; var Err: String): Boolean;");
+            // line breaks / tabs become spaces, then word by word, like Activation.ActivateAsync (split on ' ', '\t', '\r', '\n')
+            foreach (var x in new[] { "StringChangeEx(K, #13, ' ', True);", "StringChangeEx(K, #10, ' ', True);", "StringChangeEx(K, #9, ' ', True);", "Tok := TakeToken(Rest);" })
+                Assert.Contains(x, act);
+            Assert.Contains("if Pos('CCL1|', Tok) = 1 then Lic := Tok", act);
+            Assert.Contains("else if Pos('CCS1|', Tok) = 1 then St := Tok", act);
+            Assert.Contains("else if Pos('CCF1|', Tok) = 1 then Pl := Tok;", act);
+            // each line in its own file, only the lines of this machine
+            Assert.Contains("if Pos('CCS1|' + MachineCode() + '|', St) = 1 then SaveStatusLine(St)", act);
+            Assert.Contains("if Pos('CCF1|' + MachineCode() + '|', Pl) = 1 then SavePlanLine(Pl)", act);
+            Assert.Contains("Result := SaveLicense(Lic);", act);
+            Assert.Contains(@"'{localappdata}\ClaudeCAD\plan.txt'", Body(Iss, "function SavePlanLine(const Line: String): Boolean;"));
+            // KT-08: an online activation keeps the plan line too
+            Assert.Contains("Pl := JsonValue(Body, 'plan');", act);
+            // the paste box keeps several lines (a one-line box keeps only the first line of a paste)
+            Assert.Contains("KeyEdit: TNewMemo;", Iss);
+            Assert.Contains("KeyEdit := TNewMemo.Create(KeyPage);", Iss);
+            // the plugin side has the same split
+            Assert.Contains("input.Split(new[] { ' ', '\\t', '\\r', '\\n' }, StringSplitOptions.RemoveEmptyEntries)", Src("plugin", "ClaudeCAD.Plugin", "Sidecar", "Activation.cs"));
         }
 
         /// <summary>A Pascal routine from its header to the "end;" that closes it (the next line starting with "end;").</summary>

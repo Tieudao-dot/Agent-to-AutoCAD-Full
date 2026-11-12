@@ -31,6 +31,36 @@ namespace ClaudeCAD.Core.Tests
 
         private static PlanCheck Verify(string line, string machine = Machine) => LicenseLogic.VerifyPlan(line, machine, Modulus, Exponent);
 
+        /// <summary>"prefix|…|sig" signed with the test key (CCS1 status lines, CCF1 plan lines).</summary>
+        private static string SignBody(string body)
+        {
+            var sig = Key.SignData(Encoding.UTF8.GetBytes(body), HashAlgorithmName.SHA256, RSASignaturePadding.Pkcs1);
+            return body + "|" + B64Url(sig);
+        }
+
+        /// <summary>
+        /// KT-01 (Kiểm tra độc lập, 12/11/2026; test copied from full/kiem-tra-doc-lap): the installer before the fix saved
+        /// everything from "CCS1|" to the end of a 3-line offline paste (CCL1 / CCS1 / CCF1) as status.txt. The plugin must
+        /// still read the CCS1 line, and the CCF1 line from the same text, so an offline machine is not stuck at 🔒.
+        /// </summary>
+        [Fact]
+        public void KT01_status_file_written_by_installer_from_three_line_offline_paste_is_accepted()
+        {
+            var status = SignBody($"CCS1|{Machine}|offline|2026-11-12");
+            var plan = SignBody($"CCF1|{Machine}|3d|2026-11-12");
+            var statusTxt = status + "\r\n" + plan; // what the installer saved for a 3-line paste
+            var r = LicenseLogic.VerifyStatus(statusTxt, Machine, new DateTime(2026, 11, 13, 0, 0, 0, DateTimeKind.Utc), Modulus, Exponent);
+            Assert.True(r.Ok, "status.txt from a 3-line offline paste is rejected: " + r.Reason);
+            Assert.True(r.Fresh);
+            // the plan line is read from the same text too (and from a plan.txt that got the status line first)
+            Assert.Equal("3d", LicenseLogic.VerifyPlan(statusTxt, Machine, Modulus, Exponent).Plan);
+            Assert.True(LicenseLogic.VerifyPlan(" \n" + status + " " + plan + "\n", Machine, Modulus, Exponent).Ok);
+            // a text without the prefix is still refused, as before
+            Assert.False(LicenseLogic.VerifyStatus(plan, Machine, DateTime.UtcNow, Modulus, Exponent).Ok);
+            Assert.Equal("x", LicenseLogic.PickLine("x", "CCS1"));
+            Assert.Equal("CCS1|a", LicenseLogic.PickLine("CCL1|b\tCCS1|a\r\nCCS1|c", "CCS1"));
+        }
+
         // ------------------------------------------------------------ VerifyPlan
 
         [Theory]

@@ -96,8 +96,10 @@ Key vẫn riêng cho từng máy. Cài ngầm mà không có `/KEY=` thì plugin
 - **Google Sheet:** script phải **gắn với bảng tính** (tạo từ Tiện ích mở rộng → Apps Script) vì dùng `SpreadsheetApp.getActive()`. `request` thêm dòng Chờ duyệt; `activate`/`taoKeyThuCong` đặt Active; `status` cập nhật Lần cuối dùng + Phiên bản (tối đa 30 phút/lần/máy, có LockService); `Disabled` chặn cả `request` (không email) lẫn `activate` (key đúng cũng từ chối). Máy lạ gọi `status` không được thêm dòng.
 - **Tạo lại `ClaudeCAD-Code.gs`** (đổi email, hoặc mất file):
   ```bash
-  node activation/make-apps-script.mjs --private-key license-private.pem --email <gmail> --secret <secret cũ> --out ClaudeCAD-Code.gs
+  node activation/make-apps-script.mjs --private-key D:/claudecad-khoa/license-private.pem --email <gmail> --secret <secret cũ> --out D:/claudecad-khoa/ClaudeCAD-Code.gs
   ```
+  `--out` phải là thư mục **ngoài repo** (script từ chối ghi vào trong repo): file có SECRET và khóa riêng. `.gitignore`
+  cũng chặn mọi file `*.gs` (mẫu `*.gs.template` vẫn được theo dõi) và `*.pem`.
   Bỏ `--secret` thì script tạo SECRET mới, và mọi key đã gửi trước đó đều không còn dùng được để kích hoạt máy mới. Giấy phép đã kích hoạt vẫn dùng được.
 - **Đổi cặp khóa** (lộ khóa riêng): tạo khóa mới bằng `openssl genrsa -out license-private.pem 2048`, chạy `--print-public` để lấy khóa công khai, cập nhật `LicenseLogic.PublicModulus`, rồi phát hành bản mới. Lưu ý: giấy phép cũ sẽ hết hiệu lực trên bản mới, nên mọi máy phải kích hoạt lại.
 - **Giới hạn:** mã nguồn đang công khai. Người biết lập trình có thể sửa mã để bỏ bước kiểm tra rồi tự build lại. Key + trạng thái chặn được người dùng thông thường; muốn chặn cả trường hợp này thì phải để repo ở chế độ riêng tư.

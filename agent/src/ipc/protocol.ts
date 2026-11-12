@@ -278,6 +278,8 @@ export interface UserMessage {
   edited?: boolean;
   /** Sent by a confirmation card button. */
   confirm?: 'yes' | 'no';
+  /** The id of the card whose button sent this message (confirm_request.id): its handles are the ones approved. */
+  confirm_id?: string;
   /** Sent by the "Làm" button of a plan card. */
   plan?: 'approved';
   /** Echoed in turn_end. */
@@ -448,6 +450,7 @@ export function parsePluginMessage(value: unknown): PluginToSidecar {
         ...(context ? { context } : {}),
         ...(m.edited === true ? { edited: true } : {}),
         ...(m.confirm === 'yes' || m.confirm === 'no' ? { confirm: m.confirm } : {}),
+        ...(typeof m.confirm_id === 'string' && m.confirm_id && m.confirm_id.length <= 64 ? { confirm_id: m.confirm_id } : {}),
         ...(m.plan === 'approved' ? { plan: 'approved' as const } : {}),
         ...(typeof m.turn_id === 'string' && m.turn_id ? { turn_id: m.turn_id.slice(0, 64) } : {}),
         ...(Array.isArray(m.skills)

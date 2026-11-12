@@ -103,10 +103,23 @@ namespace ClaudeCAD.Plugin.Core
 
         public static LicenseCheck Verify(string license, string machine) => Verify(license, machine, PublicModulus, PublicExponent);
 
+        /// <summary>
+        /// The token of a file or a paste that starts with "prefix|" (split on spaces, tabs and line breaks, like the offline
+        /// paste in Activation.ActivateAsync); the text itself when none does. KT-01 (12/11/2026): an installer before the fix
+        /// saved "CCS1…\r\nCCF1…" as status.txt from a 3-line offline paste, and such files must still be read.
+        /// </summary>
+        public static string PickLine(string text, string prefix)
+        {
+            if (string.IsNullOrEmpty(text)) return text;
+            foreach (var tok in text.Split(new[] { ' ', '\t', '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries))
+                if (tok.StartsWith(prefix + "|", StringComparison.Ordinal)) return tok;
+            return text;
+        }
+
         public static LicenseCheck Verify(string license, string machine, string modulusB64, string exponentB64)
         {
             var r = new LicenseCheck();
-            license = (license ?? "").Trim();
+            license = PickLine((license ?? "").Trim(), Prefix);
             if (license.Length == 0) { r.Reason = "máy này chưa được kích hoạt"; return r; }
             var parts = license.Split('|');
             if (parts.Length != 4 || parts[0] != Prefix) { r.Reason = "giấy phép không đúng định dạng"; return r; }
@@ -148,7 +161,7 @@ namespace ClaudeCAD.Plugin.Core
         public static StatusCheck VerifyStatus(string line, string machine, DateTime utcNow, string modulusB64, string exponentB64, DateTime? latestSeenUtc = null)
         {
             var r = new StatusCheck();
-            line = (line ?? "").Trim();
+            line = PickLine((line ?? "").Trim(), StatusPrefix);
             if (line.Length == 0) { r.Reason = "chưa kiểm tra được trạng thái máy với máy chủ lần nào"; return r; }
             var parts = line.Split('|');
             if (parts.Length != 5 || parts[0] != StatusPrefix) { r.Reason = "xác nhận trạng thái không đúng định dạng"; return r; }
@@ -197,7 +210,7 @@ namespace ClaudeCAD.Plugin.Core
         public static PlanCheck VerifyPlan(string line, string machine, string modulusB64, string exponentB64)
         {
             var r = new PlanCheck();
-            line = (line ?? "").Trim();
+            line = PickLine((line ?? "").Trim(), PlanPrefix);
             if (line.Length == 0) { r.Reason = "máy chủ chưa gửi gói cho máy này"; return r; }
             var parts = line.Split('|');
             if (parts.Length != 5 || parts[0] != PlanPrefix) { r.Reason = "dòng gói không đúng định dạng"; return r; }

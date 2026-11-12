@@ -3,7 +3,8 @@
  * Fills activation/apps-script/Code.gs.template with the owner's email, the key secret and the RSA private key,
  * producing the Code.gs the owner pastes into script.google.com. The output is SECRET: never commit it.
  *
- *   node activation/make-apps-script.mjs --private-key license-private.pem --email me@gmail.com --out Code.gs
+ *   node activation/make-apps-script.mjs --private-key D:/khoa/private.pem --email me@gmail.com --out D:/khoa/Code.gs
+ *   (--out must be outside the repository: the file holds the secret and the private key; KT-39, 12/11/2026)
  *        [--secret <base64url>]     (default: a new random secret — keys made with an old secret stop working)
  *
  * The matching public key must be in plugin/ClaudeCAD.Plugin/Core/License.cs (LicenseLogic.PublicModulus):
@@ -56,5 +57,10 @@ const out = template
   .replace('{{SECRET}}', js(secret))
   .replace('{{PRIVATE_KEY}}', js(pkcs8 + '\n'));
 if (out.includes('{{')) fail('template placeholder left unfilled');
+// KT-39 (12/11/2026): never inside the repository, where a "git add ." would take the secret and the private key along
+const repoRoot = path.resolve(here, '..');
+const rel = path.relative(repoRoot, path.resolve(values.out));
+if (rel === '' || (!rel.startsWith('..') && !path.isAbsolute(rel)))
+  fail(`--out must be outside the repository (${repoRoot}): the file holds the secret and the private key. Example: --out D:/claudecad-full-khoa/Code.gs`);
 fs.writeFileSync(values.out, out, 'utf8');
 console.log(`make-apps-script: wrote ${values.out} (secret ${values.secret ? 'given' : 'new'}). Keep it private.`);

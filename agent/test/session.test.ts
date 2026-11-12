@@ -356,7 +356,9 @@ describe('v0.9.4 review fixes', () => {
     assert.match(s.gate('erase_entities', h(30)) ?? '', /Confirmation required/);
   });
 
-  it('explode of existing 3D solids: the plugin refuses, the turn asks, a yes adds user_confirmed (alone and in a batch)', async () => {
+  it('explode / erase of existing 3D solids: the plugin refuses, the card is shown, its Đồng ý approves exactly its handles (C1 / C2)', async () => {
+    // expectation changed 12/11/2026 (C1 / C2, decided for the owner): the flag is the card's handles, set only by the
+    // card's Đồng ý button (with its id), never by a typed yes; erase_entities is checked like explode_entities
     const { fn } = fakeQuery(async (input, push) => {
       for await (const _m of input) {
         push(init);
@@ -367,24 +369,37 @@ describe('v0.9.4 review fixes', () => {
     const { s } = makeSession(fn);
     const ex = { handles: ['2F4A'] };
     s.sendMessage({ type: 'user_message', text: 'phá khối hộp đó ra' });
-    assert.deepEqual(s.paramsToSend('explode_entities', ex), ex); // no yes yet: no flag
+    assert.deepEqual(s.paramsToSend('explode_entities', ex), ex); // no card yet: no flag
     // Claude cannot earn the flag itself, alone or inside a batch
-    assert.deepEqual(s.paramsToSend('explode_entities', { ...ex, user_confirmed: true }), ex);
+    assert.deepEqual(s.paramsToSend('explode_entities', { ...ex, user_confirmed: ['2F4A'] }), ex);
     assert.deepEqual(
-      s.paramsToSend('batch_execute', { calls: [{ tool: 'explode_entities', params: { ...ex, user_confirmed: 'true' } }] }),
-      { calls: [{ tool: 'explode_entities', params: ex }] },
+      s.paramsToSend('batch_execute', { calls: [{ tool: 'erase_entities', params: { ...ex, user_confirmed: 'true' } }] }),
+      { calls: [{ tool: 'erase_entities', params: ex }] },
     );
     s.noteResult('explode_entities', ex, { ok: false, error: { message: 'Confirmation required: explode_entities would break up 1 3D solid(s)…' } });
+    s.cardShown('confirm-7', ['2f4a']); // request_confirmation with the handle
+    s.cardShown('confirm-8', ['2F4C']); // another card later
     await tick();
-    s.sendMessage({ type: 'user_message', text: 'đồng ý' });
-    assert.deepEqual(s.paramsToSend('explode_entities', ex), { ...ex, user_confirmed: true });
+    // the Đồng ý button of card 7
+    s.sendMessage({ type: 'user_message', text: 'Đồng ý', confirm: 'yes', confirm_id: 'confirm-7' });
+    assert.deepEqual(s.paramsToSend('explode_entities', ex), { ...ex, user_confirmed: ['2F4A'] });
+    assert.deepEqual(s.paramsToSend('erase_entities', { handles: ['2F4A', '1B'] }), { handles: ['2F4A', '1B'], user_confirmed: ['2F4A'] });
     assert.deepEqual(
       s.paramsToSend('batch_execute', { calls: [{ tool: 'draw_line', params: {} }, { tool: 'explode_entities', params: ex }] }),
-      { calls: [{ tool: 'draw_line', params: {} }, { tool: 'explode_entities', params: { ...ex, user_confirmed: true } }] },
+      { calls: [{ tool: 'draw_line', params: {} }, { tool: 'explode_entities', params: { ...ex, user_confirmed: ['2F4A'] } }] },
     );
-    assert.deepEqual(s.paramsToSend('erase_entities', ex), ex); // other tools never carry it
+    assert.deepEqual(s.paramsToSend('explode_entities', { handles: ['2F4C'] }), { handles: ['2F4C'] }); // card 8 was not answered
+    assert.equal(s.gate('solid_union', { handles: ['2F4A', '2F4C'] })?.includes('2F4C'), true); // only card 7's solid is unlocked
     await tick();
-    // the yes is used up: a later "ok" after a turn that asked nothing is not one
+    // a typed yes, even answering a question, is not the card
+    s.sendMessage({ type: 'user_message', text: 'đồng ý' });
+    assert.deepEqual(s.paramsToSend('explode_entities', { handles: ['2F4C'] }), { handles: ['2F4C'] });
+    await tick();
+    // an older plugin (no card id): the last card shown
+    s.sendMessage({ type: 'user_message', text: 'Đồng ý', confirm: 'yes' });
+    assert.deepEqual(s.paramsToSend('explode_entities', { handles: ['2F4C'] }), { handles: ['2F4C'], user_confirmed: ['2F4C'] });
+    await tick();
+    // the yes is used up
     s.sendMessage({ type: 'user_message', text: 'ok phá tiếp khối 2F4C' });
     assert.deepEqual(s.paramsToSend('explode_entities', { handles: ['2F4C'] }), { handles: ['2F4C'] });
   });
@@ -405,7 +420,9 @@ describe('v0.9.4 review fixes', () => {
     });
     await tick();
     s.sendMessage({ type: 'user_message', text: 'ok' });
-    assert.deepEqual(s.paramsToSend('explode_entities', { handles: ['2F4A'] }), { handles: ['2F4A'], user_confirmed: true });
+    // the "ok" answers the question for the 2D rule (> 20 objects), but approves no 3D solid (C2)
+    assert.equal(s.gate('erase_entities', { handles: Array.from({ length: 25 }, (_, i) => `E${i}`) }), undefined);
+    assert.deepEqual(s.paramsToSend('explode_entities', { handles: ['2F4A'] }), { handles: ['2F4A'] });
   });
 
   it('no SDK next-step prediction when Claude made its own buttons or the user turned them off', async () => {

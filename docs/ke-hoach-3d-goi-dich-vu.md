@@ -7,7 +7,7 @@
 - **Vẽ 3D làm được.** AutoCAD bản đầy đủ có sẵn bộ lệnh 3D trong .NET API: khối đặc `Solid3d`, extrude, revolve, sweep,
   loft, cộng / trừ / giao khối, cắt khối, tính thể tích. Các lệnh này có ở mọi bản 2022–2027 và ở cả 3 bản build
   .NET 4.8 / 8 / 10, nên không phải đổi gì ở bộ cài.
-- Hiện plugin có 89 lệnh, gần như toàn bộ là 2D. Điểm đã nhận tọa độ z nhưng **chưa có lệnh 3D nào**. Phải thêm ~25 lệnh
+- Hiện plugin có 90 lệnh (không kể 3D), gần như toàn bộ là 2D. Điểm đã nhận tọa độ z nhưng **chưa có lệnh 3D nào**. Phải thêm ~25 lệnh
   mới, chia 3 đợt.
 - **Gói dịch vụ làm được, và dựa trên cơ chế có sẵn.**
   - Thêm cột **"Gói"** vào trang "Thiết bị" trong Google Sheet, chọn `2D` / `3D` / `Full`.

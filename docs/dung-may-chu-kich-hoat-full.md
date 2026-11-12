@@ -88,8 +88,10 @@ Lệnh in ra 2 dòng `PublicModulus = "…"` và `PublicExponent = "…"`. Hai d
 - Máy không có mạng: chọn gói trong Sheet trước, rồi chạy `taoKeyThuCong`; email có thêm dòng `CCF1|…`. Đổi gói cho
   máy đó thì chạy lại hàm và gửi dòng mới.
 
-**Lưu ý:** hiện mới có phía máy chủ. Plugin **chưa đọc** dòng `CCF1`, nên trước khi làm xong phần gói trong plugin
-thì mọi máy vẫn dùng được toàn bộ lệnh như bản 2D.
+**Lưu ý (sửa 12/11/2026, KT-31):** plugin bản Full **đã đọc** dòng `CCF1` và chặn lệnh theo gói: máy chỉ dùng được
+lệnh của gói ghi trong Sheet. **Chọn ô Gói cho từng máy** (2D / 3D / Full). Ô trống thì máy dùng gói mặc định 2D, tức
+không có lệnh 3D. Đổi ô Gói là đổi gói, không cần cài lại. Máy dùng mã không cần mạng thì gói nằm trong dòng `CCF1` của
+email: dán đủ các dòng (bộ cài và thẻ 🔒 trong khung chat nhận cả ba dòng).
 
 ## Sửa script về sau
 

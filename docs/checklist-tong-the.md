@@ -1,7 +1,7 @@
 # Checklist tổng: thử bản Full trên AutoCAD (gói dịch vụ + 3D đợt 1, 2, 3)
 
-*12/11/2026 · thread "Test tổng thể", nhánh `full/test-tong-the`. Một lượt đủ ~100 phút; lượt rút gọn (phần 0–5)
-~60 phút. Chi tiết từng mục (bước, kết quả đúng đầy đủ): [`checklist-thu-that.md`](checklist-thu-that.md) phần I, J, K,
+*12/11/2026 · thread "Test tổng thể", nhánh `full/test-tong-the`. Một lượt đủ ~125 phút; lượt rút gọn (phần 0–5)
+~70 phút. Chi tiết từng mục (bước, kết quả đúng đầy đủ): [`checklist-thu-that.md`](checklist-thu-that.md) phần I, J, K,
 L. File này chỉ xếp thứ tự và ghi phần cần nhìn kỹ.*
 
 Bản dùng thử AutoCAD của cậu hết khoảng **10/12/2026**: làm phần 0–5 trước.
@@ -37,15 +37,16 @@ Cho mục T5 (cài đè lên bản gốc): một máy đang dùng ClaudeCAD bả
 | Phần | Việc | Thời gian | Vì sao làm lúc này |
 | --- | --- | --- | --- |
 | 0 | Tự kiểm tra | ~3 phút | Một lệnh chạy hết 7 bước 3D của 3 đợt nối tiếp: hỏng ở đây thì các phần sau khó đọc |
-| 1 | Gói dịch vụ (I1–I6 + T1–T5) | ~20 phút | Gói sai thì máy được / bị chặn sai lệnh; khách đang dùng bản gốc chuyển sang bản Full bằng cài đè: quan trọng nhất |
+| 1 | Gói dịch vụ (I1–I6 + T1–T5 + M1–M2) | ~30 phút | Gói sai thì máy được / bị chặn sai lệnh; khách đang dùng bản gốc chuyển sang bản Full bằng cài đè: quan trọng nhất |
 | 2 | Nét phía sau, hình chiếu (L9, L11) | ~6 phút | `GenerateSectionGeometry` chưa kiểm được ngoài AutoCAD |
 | 3 | 3D đợt 1 sau sửa (J10–J15) | ~8 phút | Hướng nêm, góc vát, macro, AutoCAD không phải tiếng Anh |
 | 4 | 3D đợt 2 sau sửa (K17–K21) | ~8 phút | Làm rỗng, đường tạm, macro theo số cạnh, căn khối |
 | 5 | 3D đợt 3 sau sửa (L17–L23) | ~12 phút | Mặt bằng lộn xộn: khe giữa hai tường, nét bề rộng, cửa sổ trên layer tường |
-| 6 | Một lượt dùng lệnh của cả 3 đợt (X1–X4) | ~10 phút | Hoàn tác U, thẻ xác nhận (cả khi phá khối 3D), "Chỉ xem" khi trộn đợt |
+| 6 | Một lượt dùng lệnh của cả 3 đợt (X1–X5) | ~12 phút | Hoàn tác U, thẻ xác nhận (cả khi phá khối 3D), "Chỉ xem" khi trộn đợt |
 | 7 | Phần còn lại: J1–J9, K1–K16, L1–L8, L10, L12–L16 | ~35 phút | Đã có từ lúc viết từng đợt |
+| 8 | Sau kiểm tra độc lập: M3–M9 trong `checklist-thu-that.md` | ~15 phút | Lỗi đã sửa cần thử thật (thẻ xác nhận, macro) và điểm chỉ AutoCAD cho thấy |
 
-Phần 0–5 là lượt rút gọn (~60 phút). Mục ○ trong `checklist-thu-that.md` bỏ được khi ít thời gian.
+Phần 0–5 là lượt rút gọn (~70 phút). Mục ○ trong `checklist-thu-that.md` bỏ được khi ít thời gian.
 
 ### 0. Tự kiểm tra (~3 phút)
 
@@ -56,10 +57,11 @@ Phần 0–5 là lượt rút gọn (~60 phút). Mục ○ trong `checklist-thu-
 
 Lỗi: gửi file `selftest-….txt` + thư mục thử ghi ở cuối báo cáo (chỉ còn giữ khi có dòng ✗).
 
-### 1. Gói dịch vụ (~10 phút)
+### 1. Gói dịch vụ (~30 phút)
 
 Làm **I1–I5** trong `checklist-thu-that.md` phần I (máy mới = Gói 2D; đổi 3D; macro có chữ ở gói 3D; đổi Full giữ
-cuộc chat; `plan.txt` chỉ đọc). Thêm 3 mục rà chéo:
+cuộc chat; `plan.txt` chỉ đọc giữ được Full không), I6 (cài đè lên bản gốc) và M1–M2 (mã không cần mạng 3 dòng; bản
+cập nhật bản gốc đang chờ). Thêm 5 mục rà chéo:
 
 | # | Làm gì | Kết quả đúng |
 | --- | --- | --- |
@@ -95,7 +97,7 @@ macro bo cạnh số 3 giữa hai đời AutoCAD (nếu có), K20 va chạm mỗ
 L17 khe 400 giữa hai tường không bị lấp, L18 tường đổi dày / góc L không lồi, L19 nét in bề rộng 25, L20 cửa sổ vẽ trên
 layer tường được báo, L21 sàn trùng chỉ một, L22 chạy thử báo `existing_solids`, L23 cửa sổ ở góc phòng bị hỏi lại.
 
-### 6. Một lượt dùng lệnh của cả 3 đợt (~8 phút)
+### 6. Một lượt dùng lệnh của cả 3 đợt (~12 phút)
 
 | # | Làm gì | Kết quả đúng |
 | --- | --- | --- |
@@ -103,16 +105,24 @@ layer tường được báo, L21 sàn trùng chỉ một, L22 chạy thử báo
 | X2 | Lượt sau: "bo 4 cạnh đứng của khối tường R20" rồi một tin khác "cắt khối tường bằng mặt phẳng x = 2000" | Mỗi lần đều có **thẻ xác nhận** trước khi đổi (khối có từ lượt trước); Hủy → bản vẽ không đổi |
 | X3 | Bật 🔒 Chỉ xem: "xem góc SW iso kiểu Conceptual", "kiểm tra va chạm các khối", "liệt kê cạnh khối tường", "dựng 3D lại mặt bằng (chạy thử)", "đặt UCS mặt trên" | Ba lệnh đầu chạy (đổi hiển thị / chỉ đọc); chạy thử dựng 3D và UCS bị từ chối "Chỉ xem"; bản vẽ không đổi |
 | X4 | Gói `Full`. (a) Một tin: "dựng hộp 1000x1000x1000 rồi phá khối đó ra". (b) Lượt sau: "dựng hộp 500x500x500" rồi tin khác "phá khối hộp vừa dựng ra" → bấm **Hủy** trên thẻ; gõ lại, lần này bấm **Đồng ý**. (c) "vẽ 3 hình chữ nhật, gộp thành block rồi phá block đó ra" | (a) Không hỏi (khối dựng trong lượt), hộp thành các mặt. (b) Lần đầu: **thẻ xác nhận** trước khi phá (khối từ lượt trước); Hủy → hộp còn nguyên; Đồng ý → hộp thành các mặt. Log không có lỗi lạ. (c) Không hỏi (block là đối tượng 2D, luật cũ: chỉ hỏi khi > 20 đối tượng). Gõ U sau mỗi lượt hoàn tác đúng lượt đó |
+| X5 | Gói `Full`, một hộp dựng ở lượt trước: "xóa hộp đó". Khi thẻ hiện, **gõ** "ok"; lượt sau bấm **Đồng ý** trên thẻ | Gõ "ok": hộp còn nguyên, Claude hiện lại thẻ (chỉ nút Đồng ý mở khóa, chốt 12/11/2026). Bấm Đồng ý: hộp bị xóa. Xóa đường 2D (dưới 20 đối tượng) thì không hỏi như cũ |
 
 ### 7. Phần còn lại (~35 phút)
 
 J1–J9, K1–K16, L1–L8, L10, L12–L16 trong `checklist-thu-that.md` (mục ★ trước). J8, K15, L13 (máy gói 2D) đã phủ một
 phần ở phần 1: vẫn làm nhanh để thấy câu Claude nói.
 
+### 8. Sau kiểm tra độc lập (~15 phút)
+
+M3–M9 trong `checklist-thu-that.md` phần M: thẻ xác nhận khi xóa / sửa khối có trước lượt (gõ "ok" không thay được nút
+Đồng ý), macro sửa khối có sẵn không chạy, chóp đáy vuông, thứ tự cạnh / mặt sau khi mở lại bản vẽ, "Chỉ xem" + đổi góc
+nhìn, khối trên layer khóa, `PURGE` sau mặt cắt.
+
 ## Đã đổi theo chốt 12/11/2026 (cậu thử ở trên)
 
-- **Phá khối 3D** có trước lượt (kể cả khối Claude dựng ở lượt trước) luôn qua thẻ xác nhận; khối dựng trong lượt và
-  đối tượng 2D giữ luật cũ: X4.
+- **Phá và xóa khối 3D** có trước lượt (kể cả khối Claude dựng ở lượt trước) luôn qua thẻ xác nhận, và **chỉ nút Đồng
+  ý trên thẻ** mở khóa, đúng các khối thẻ đã liệt kê (gõ "ok" hay nút "Làm" của thẻ kế hoạch không tính); khối dựng
+  trong lượt và đối tượng 2D giữ luật cũ: X4, X5, M3. Macro không có thẻ nên không sửa khối có sẵn: M4.
 - **Skill 2D không nạp ở gói 3D**; skill 3D giữ quy ước mặt bằng mà lệnh dựng 3D đọc: T3, và L2 ở gói 3D (Claude vẽ
   mặt bằng bằng đường cơ bản theo mục 0 của skill `ve-3d-kien-truc`, không ghi kích thước).
 - **Lệnh dựng khối không còn tham số màu / nét / layout** (đỡ token): khối lấy màu theo layer; "dựng hộp màu đỏ" thì

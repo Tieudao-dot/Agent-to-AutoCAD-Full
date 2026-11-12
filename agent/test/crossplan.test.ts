@@ -10,7 +10,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { describe, it } from 'node:test';
 import { fileURLToPath } from 'node:url';
-import { ALWAYS_CONFIRM, PLUGIN_CONFIRMED, USER_CONFIRMED_PARAM, affectedCount, applyUserConfirmation, existingSolidsChanged, refusedForConfirmation } from '../src/agent/confirmation.js';
+import { ALWAYS_CONFIRM, PLUGIN_CONFIRMED, USER_CONFIRMED_PARAM, affectedCount, applyUserConfirmation, confirmationError, existingSolidsChanged, refusedForConfirmation, type GateState } from '../src/agent/confirmation.js';
 import { SAMPLE_2D_SKILLS, librarySkills, skillPlan, skillsForPlan } from '../src/agent/skills.js';
 import os from 'node:os';
 import { BASE_PROMPT, SYSTEM_PROMPT, TWO_D_HINTS, THREE_D_RULES, systemPromptFor } from '../src/agent/systemPrompt.js';
@@ -130,22 +130,60 @@ describe('explode_entities × 3D solids (decided 12/11/2026)', () => {
   const yes = { userText: 'đồng ý', answersQuestion: true };
   const no = { userText: 'phá khối đó ra', answersQuestion: false };
 
-  it('the flag the plugin reads is set only after a yes and never left from Claude', () => {
-    assert.deepEqual([...PLUGIN_CONFIRMED], ['explode_entities']);
+  it('the plugin reads the handles approved on the card; a typed yes, the plan button or Claude never set them (C1 / C2)', () => {
+    // expectation changed 12/11/2026 (C1 / C2, decided for the owner): erase_entities is checked too, and user_confirmed
+    // carries the call's handles that were on the card whose Đồng ý started the turn (it was a plain true after any yes)
+    assert.deepEqual([...PLUGIN_CONFIRMED], ['explode_entities', 'erase_entities']);
     const plans = fs.readFileSync(path.join(repo, 'plugin', 'ClaudeCAD.Plugin', 'Core', 'Solids.cs'), 'utf8');
     assert.ok(plans.includes(`UserConfirmedParam = "${USER_CONFIRMED_PARAM}"`), 'same name as SolidLogic.UserConfirmedParam');
-    assert.deepEqual(applyUserConfirmation('explode_entities', { handles: ['A'] }, yes), { handles: ['A'], user_confirmed: true });
-    assert.deepEqual(applyUserConfirmation('explode_entities', { handles: ['A'], user_confirmed: true }, no), { handles: ['A'] });
-    assert.deepEqual(applyUserConfirmation('explode_entities', { handles: ['A'] }, { ...no, confirmedByButton: true }), { handles: ['A'], user_confirmed: true });
-    const batch = { calls: [{ tool: 'explode_entities', params: { handles: ['A'], user_confirmed: true } }, { tool: 'move_entities', params: { handles: ['B'], user_confirmed: true } }] };
+    assert.ok(plans.includes('CardConfirmTools = new[] { "explode_entities", "erase_entities" }'), 'same tools as SolidLogic.CardConfirmTools');
+    const card = { ...no, confirmedByButton: true, cardConfirmed: new Set(['A', 'C']) };
+    assert.deepEqual(applyUserConfirmation('explode_entities', { handles: ['a', 'B'] }, card), { handles: ['a', 'B'], user_confirmed: ['A'] });
+    assert.deepEqual(applyUserConfirmation('erase_entities', { handles: ['C'] }, card), { handles: ['C'], user_confirmed: ['C'] });
+    assert.deepEqual(applyUserConfirmation('explode_entities', { handles: ['B'] }, card), { handles: ['B'] }); // not on the card
+    // a typed yes or the plan card's "Làm" approve nothing here
+    assert.deepEqual(applyUserConfirmation('explode_entities', { handles: ['A'] }, yes), { handles: ['A'] });
+    assert.deepEqual(applyUserConfirmation('explode_entities', { handles: ['A'] }, { ...no, confirmedByButton: true }), { handles: ['A'] });
+    // whatever Claude puts there is replaced
+    assert.deepEqual(applyUserConfirmation('explode_entities', { handles: ['A'], user_confirmed: ['A'] }, no), { handles: ['A'] });
+    const batch = { calls: [{ tool: 'erase_entities', params: { handles: ['A'], user_confirmed: true } }, { tool: 'move_entities', params: { handles: ['B'], user_confirmed: true } }] };
     assert.deepEqual(applyUserConfirmation('batch_execute', batch, no).calls, [
-      { tool: 'explode_entities', params: { handles: ['A'] } },
+      { tool: 'erase_entities', params: { handles: ['A'] } },
       { tool: 'move_entities', params: { handles: ['B'], user_confirmed: true } }, // the plugin ignores it on other tools
     ]);
+    assert.deepEqual(applyUserConfirmation('batch_execute', { calls: [{ tool: 'explode_entities', params: { handles: ['C'] } }] }, card).calls,
+      [{ tool: 'explode_entities', params: { handles: ['C'], user_confirmed: ['C'] } }]);
     const plain = { handles: ['A'] };
-    assert.equal(applyUserConfirmation('erase_entities', plain, yes), plain);
+    assert.equal(applyUserConfirmation('set_entity_props', plain, card), plain);
     const b = { calls: [{ tool: 'erase_entities', params: plain }] };
     assert.equal(applyUserConfirmation('batch_execute', b, yes), b); // nothing to flag: sent as is
+  });
+
+  it('KT-09 (Kiểm tra độc lập; test copied from full/kiem-tra-doc-lap): a plain "ok" in chat is not the confirmation card', () => {
+    // Claude asked something unrelated in the previous turn ("Tường cao 3 m nhé?" sets answersQuestion via the "?"),
+    // the user answered "ok": changing solids that existed before the turn still needs the card (C2, 12/11/2026)
+    const g: GateState = { userText: 'ok', answersQuestion: true, touched: new Set(), created: new Set() };
+    const err = confirmationError('solid_union', { handles: ['2F4A', '2F4B'] }, g);
+    assert.ok(err, 'solid_union on two older solids ran without the confirmation card after a text "ok"');
+    // the plan card's "Làm" is not the card either
+    assert.ok(confirmationError('slice_solid', { handle: '2F4A' }, { ...g, confirmedByButton: true }));
+    // the card's Đồng ý with these handles is
+    assert.equal(confirmationError('solid_union', { handles: ['2f4a', '2F4B'] }, { ...g, confirmedByButton: true, cardConfirmed: new Set(['2F4A', '2F4B']) }), undefined);
+    // the 2D rule (> 20 objects) is unchanged: a typed yes still answers it
+    const many = { handles: Array.from({ length: 25 }, (_, i) => `H${i}`) };
+    assert.ok(confirmationError('erase_entities', many, { ...g, answersQuestion: false }));
+    assert.equal(confirmationError('erase_entities', many, g), undefined);
+  });
+
+  it('KT-37: 2D tools that change or remove existing objects count for the > 20 rule (a small change of the 2D rule)', () => {
+    assert.equal(affectedCount('fillet_entities', { handle1: 'A', handle2: 'B', radius: 5 }), 2);
+    assert.equal(affectedCount('chamfer_entities', { handle1: 'A', handle2: 'B', dist1: 5 }), 2);
+    assert.equal(affectedCount('define_block', { name: 'X', entity_handles: ['A', 'B', 'C'] }), 3);
+    assert.equal(affectedCount('define_block', { name: 'X', entity_handles: ['A'], replace_with_insert: false }), 0);
+    assert.equal(affectedCount('delete_layout', { name: 'A1' }), 1);
+    // 11 fillets of 2 lines each = 22 existing objects in one batch: asks
+    const calls = Array.from({ length: 11 }, (_, i) => ({ tool: 'fillet_entities', params: { handle1: `L${2 * i}`, handle2: `L${2 * i + 1}`, radius: 0 } }));
+    assert.match(confirmationError('batch_execute', { calls }, { userText: 'bo góc', answersQuestion: false }) ?? '', /Confirmation required/);
   });
 
   it('the plugin refusal is recognised alone and inside a batch', () => {
@@ -234,5 +272,47 @@ describe('upgrade from the original ClaudeCAD (decided 12/11/2026): old 2D sampl
     const store = fs.readFileSync(path.join(repo, 'plugin', 'ClaudeCAD.Plugin', 'Core', 'SkillStore.cs'), 'utf8');
     const builtin = /BuiltinNames\s*=\s*\{([^}]*)\}/.exec(store)![1]!.match(/"([^"]+)"/g)!.map((x) => x.slice(1, -1));
     for (const n of SAMPLE_2D_SKILLS) assert.ok(builtin.includes(n), n);
+  });
+});
+
+describe('Kiểm tra độc lập fixes in the bộ cài / tích hợp part (12/11/2026)', () => {
+  it('the card button sends its id, and the sidecar keeps it (C2)', async () => {
+    const { parsePluginMessage } = await import('../src/ipc/protocol.js');
+    const m = parsePluginMessage({ type: 'user_message', text: 'Đồng ý', confirm: 'yes', confirm_id: 'confirm-7' }) as { confirm_id?: string };
+    assert.equal(m.confirm_id, 'confirm-7');
+    const long = parsePluginMessage({ type: 'user_message', text: 'x', confirm: 'yes', confirm_id: 'c'.repeat(65) }) as { confirm_id?: string };
+    assert.equal(long.confirm_id, undefined);
+    const ctl = fs.readFileSync(path.join(repo, 'plugin', 'ClaudeCAD.Plugin', 'ChatController.cs'), 'utf8');
+    assert.ok(ctl.includes('payload["confirm_id"] = confirmId;'));
+  });
+
+  it('KT-39: make-apps-script refuses to write the filled Code.gs inside the repository', async () => {
+    const { execFileSync } = await import('node:child_process');
+    const crypto = await import('node:crypto');
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'cc-gs-'));
+    try {
+      const { privateKey } = crypto.generateKeyPairSync('rsa', { modulusLength: 2048 });
+      const pem = path.join(dir, 'k.pem');
+      fs.writeFileSync(pem, privateKey.export({ type: 'pkcs8', format: 'pem' }).toString());
+      const script = path.join(repo, 'activation', 'make-apps-script.mjs');
+      const inRepo = path.join(repo, 'Code-test-should-not-exist.gs');
+      assert.throws(() => execFileSync(process.execPath, [script, '--private-key', pem, '--email', 'a@b.c', '--out', inRepo], { stdio: 'pipe' }), /outside the repository/);
+      assert.ok(!fs.existsSync(inRepo));
+      const outside = path.join(dir, 'Code.gs');
+      execFileSync(process.execPath, [script, '--private-key', pem, '--email', 'a@b.c', '--out', outside], { stdio: 'pipe' });
+      assert.ok(!fs.readFileSync(outside, 'utf8').includes('{{'));
+      // and git ignores every filled *.gs, while the template stays tracked
+      const gi = fs.readFileSync(path.join(repo, '.gitignore'), 'utf8');
+      assert.match(gi, /^\*\.gs$/m);
+      assert.match(gi, /^\*\.pem$/m);
+    } finally {
+      fs.rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it('KT-34: the 3D rules tell Claude to show the card at once for older solids (erase, break up, shape changes)', () => {
+    assert.match(THREE_D_RULES, /erasing them with erase_entities or breaking them up/);
+    assert.match(THREE_D_RULES, /Đồng ý button of a card/);
+    assert.match(systemPromptFor('2d'), /A typed "ok" \/ "đồng ý" or the plan card's "Làm" does not count/);
   });
 });

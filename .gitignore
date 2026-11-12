@@ -17,5 +17,7 @@ tmp-log-*/
 skills/skills.json
 
 # v0.9.4 activation secrets: the filled-in Apps Script and the RSA private key never go into the repo
+# (KT-39, 12/11/2026: every *.gs anywhere, e.g. Code.gs / ClaudeCAD-Code.gs at the repo root; the *.gs.template stays)
 activation/*.gs
+*.gs
 *.pem
