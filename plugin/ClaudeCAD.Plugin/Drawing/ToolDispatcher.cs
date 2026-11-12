@@ -25,9 +25,15 @@ namespace ClaudeCAD.Plugin.Drawing
         public bool BatchForbidden { get; }
         /// <summary>Runs without a document or turn (diagnostics); the handler receives ctx = null.</summary>
         public bool NoDocument { get; }
+        /// <summary>A write tool that only reads with these params (build_3d_from_plan dry_run): no version copy, no undo group, not recorded.</summary>
+        public Func<Params, bool> ReadsWhen { get; }
 
-        public ToolDef(string name, bool writes, ToolHandler handler, bool noTransaction = false, bool batchForbidden = false, bool noDocument = false)
+        /// <summary>Whether this call changes the drawing (Writes, unless ReadsWhen says this call only reads).</summary>
+        public bool WritesFor(Params p) => Writes && !(ReadsWhen != null && p != null && ReadsWhen(p));
+
+        public ToolDef(string name, bool writes, ToolHandler handler, bool noTransaction = false, bool batchForbidden = false, bool noDocument = false, Func<Params, bool> readsWhen = null)
         {
+            ReadsWhen = readsWhen;
             Name = name;
             Writes = writes;
             Handler = handler;
@@ -219,7 +225,7 @@ namespace ClaudeCAD.Plugin.Drawing
         {
             if (def.NoDocument) return def.Handler(null, p);
             var doc = _host.ResolveDocument();
-            bool writes = def.Writes || (def.Name == "batch_execute" && BatchWrites(p));
+            bool writes = def.WritesFor(p) || (def.Name == "batch_execute" && BatchWrites(p));
             // undo_last_turn is registered as a read (it only queues U) but it changes the drawing
             // save_drawing writes the DWG on disk (with a path it also renames the drawing): a change too, even
             // without a path — it would store the user's unsaved manual edits while "Chỉ xem" is on
@@ -294,7 +300,7 @@ namespace ClaudeCAD.Plugin.Drawing
             foreach (var c in calls)
             {
                 if (c is Dictionary<string, object> d && d.TryGetValue("tool", out var t) && t is string name
-                    && _tools.TryGetValue(name, out var def) && def.Writes)
+                    && _tools.TryGetValue(name, out var def) && def.WritesFor(new Params(name, d.TryGetValue("params", out var cp) ? cp as Dictionary<string, object> : null)))
                     return true;
             }
             return false;
@@ -327,11 +333,10 @@ namespace ClaudeCAD.Plugin.Drawing
                         RequireInPlan(tool);
                         if (def.BatchForbidden)
                             throw ToolException.Invalid($"batch_execute: '{tool}' cannot run inside a batch; call it on its own.");
-                        if (def.Writes && !ctx.Writable) ctx.RequireWritable(tool);
-
                         var pobj = call.TryGetValue("params", out var pv) ? pv as Dictionary<string, object> : null;
                         RequireParamsInPlan(tool, pobj);
                         var p = new Params(tool, pobj);
+                        if (def.WritesFor(p) && !ctx.Writable) ctx.RequireWritable(tool);
 
                         using (var nested = ctx.Doc.TransactionManager.StartTransaction())
                         {
@@ -348,7 +353,7 @@ namespace ClaudeCAD.Plugin.Drawing
                                 ctx.ResetCache();
                             }
                             nested.Commit();
-                            if (MacroLogic.ShouldRecord(tool, def.Writes)) _pendingRecords.Add((tool, p.Raw, r));
+                            if (MacroLogic.ShouldRecord(tool, def.WritesFor(p))) _pendingRecords.Add((tool, p.Raw, r));
                             results.Add(new Dictionary<string, object> { ["index"] = i, ["tool"] = tool, ["ok"] = true, ["result"] = r });
                         }
                     }

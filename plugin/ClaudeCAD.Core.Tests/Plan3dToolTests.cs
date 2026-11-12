@@ -101,7 +101,7 @@ namespace ClaudeCAD.Core.Tests
             Assert.Contains("s.Dispose(); // emptied by the union", s);
             Assert.Contains("catch { if (s.ObjectId.IsNull) s.Dispose(); throw; }", s);
             Assert.Contains("finally { foreach (var x in regions) x.r.Dispose(); }", s);
-            Assert.Contains("using (var cut = (Region)regions[j].r.Clone())", s);
+            Assert.Contains("using (var cut = (Region)regions[live[b]].r.Clone())", s);
             var sec = SectionTools;
             Assert.Contains("DisposeAll(cut);", sec);
             Assert.Contains("DisposeAll(behindCurves);", sec);
@@ -136,6 +136,49 @@ namespace ClaudeCAD.Core.Tests
             Assert.Equal("ve-3d-kien-truc", name);
             Assert.InRange(description.Length, 20, 1024);
             Assert.Contains("plan: 3d", md);
+        }
+
+        [Fact]
+        public void KT15_dry_run_is_dispatched_as_a_read()
+        {
+            Assert.Contains("readsWhen: p => p.Bool(\"dry_run\", false)", PlanTools);
+            var d = Src("plugin", "ClaudeCAD.Plugin", "Drawing", "ToolDispatcher.cs");
+            // the per-call decision drives the version copy, the undo group, "Chỉ xem" and the macro record
+            Assert.Contains("bool writes = def.WritesFor(p) ||", d);
+            Assert.Contains("MacroLogic.ShouldRecord(tool, def.WritesFor(p))", d);
+            Assert.Contains("if (def.WritesFor(p) && !ctx.Writable)", d);
+            Assert.DoesNotContain("def.Writes ||", d);
+            // nothing is created before the dry run returns
+            int dry = PlanTools.IndexOf("if (dryRun)", StringComparison.Ordinal), layer = PlanTools.IndexOf("EnsureLayer(ctx, wall3d", StringComparison.Ordinal);
+            Assert.True(dry > 0 && layer > dry);
+        }
+
+        [Fact]
+        public void KT16_base_z_is_mm_scaled_like_the_heights()
+        {
+            Assert.Contains("double baseZmm = p.Num(\"base_z\", 0), baseZ = baseZmm / f;", PlanTools);
+            Assert.Contains("Report(res, input, f, unitName, hmm, baseZmm)", PlanTools);
+        }
+
+        [Fact]
+        public void KT20_door_blocks_are_read_by_name_before_the_wall_layer()
+        {
+            var s = PlanTools;
+            int byName = s.IndexOf("string byName = e is BlockReference", StringComparison.Ordinal);
+            int wall = s.IndexOf("FloorPlanLogic.LayerMatches(layer, wallLayers)) kind = \"wall\"", StringComparison.Ordinal);
+            Assert.True(byName > 0 && wall > byName);
+        }
+
+        [Fact]
+        public void KT14_rerun_message_never_suggests_erasing_another_storey()
+        {
+            var s = PlanTools;
+            Assert.Contains("FloorPlanLogic.CheckRerun(", s);
+            Assert.Contains("Never erase other storeys", s);
+            Assert.Contains("Never erase the storey below", s);
+            var skill = Src("skills", "ve-3d-kien-truc", "SKILL.md");
+            Assert.Contains("Không bao giờ** gợi ý xóa tầng dưới", skill);
+            Assert.Contains("3300 − 120 = 3180", skill);
         }
     }
 }

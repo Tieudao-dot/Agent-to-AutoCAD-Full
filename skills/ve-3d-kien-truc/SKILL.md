@@ -19,7 +19,7 @@ Quy ước: đơn vị mm, WCS, Z hướng lên. Cốt ±0.000 (sàn tầng 1) �
 | `A-WALL` | tường (nét cắt) | **Hai nét mặt tường** song song, cách nhau đúng chiều dày: tường **220** (tường bao) và **110** (tường ngăn), đối xứng qua trục tường (mỗi bên 110 / 55). Nét đi liên tục quanh phòng bằng polyline; chừa khoảng hở đúng bề rộng lỗ cửa và đóng hai mép lỗ bằng đoạn ngắn cùng layer |
 | `A-DOOR` | cửa đi | Cánh cửa: đoạn thẳng dài W (mặc định 900) vẽ ở vị trí mở 90°, gốc tại bản lề (mép một bên lỗ); cung mở 90° tâm bản lề, bán kính W |
 | `A-WIND` | cửa sổ | 3 nét song song trong bề dày tường (hai nét mép + một nét giữa), hoặc 4 nét chia đều với tường 220, đặt trong lỗ tường |
-| `A-SLAB` / `A-FLOR` | đường bao sàn | Polyline **kín**; polyline kín nằm trong polyline khác là lỗ sàn (cầu thang, giếng trời) |
+| `A-SLAB` (hoặc `A-FLOR`) | đường bao sàn (có trong bảng layer của `ve-kien-truc`) | Polyline **kín**; polyline kín nằm trong polyline khác là lỗ sàn (cầu thang, giếng trời) |
 | `A-COL` | cột | Không được đọc: dựng cột riêng bằng `draw_box` / `extrude` trên `A-COLS-3D` |
 
 - Block cửa: tên `CUA-DI-<W>` / `CUA-SO-<W>` (ví dụ `CUA-DI-900`) được nhận là cửa đi / cửa sổ dù chèn trên layer nào.
@@ -44,13 +44,15 @@ Máy gói 3D cần vẽ mặt bằng để dựng (chỉ có đường cơ bản
 
 ## 1. Kích thước mặc định
 
-Dùng khi người dùng và ghi chú dự án không nói khác. Báo lại giá trị đã dùng trong câu trả lời.
+Dùng khi người dùng và ghi chú dự án không nói khác. Báo lại giá trị đã dùng trong câu trả lời. Sàn của mỗi tầng
+nằm từ `base_z − slab_thickness` tới `base_z`, tức là **ngay trên đỉnh tường tầng dưới**: vì vậy tường cao = cao tầng −
+dày sàn, sàn tầng trên không chồng vào tường tầng dưới. Người dùng nói rõ "tường cao 3,3 m" thì dùng đúng số đó.
 
 | Thông số | Giá trị | Tham số `build_3d_from_plan` |
 | --- | --- | --- |
-| Chiều cao tầng (sàn đến sàn) | 3300 | `base_z` tầng n = (n − 1) × 3300 |
-| Chiều cao tường (tính từ mặt sàn tầng đó) | 3300 | `wall_height` |
+| Chiều cao tầng (sàn đến sàn) | 3300 | `base_z` (mm) tầng n = (n − 1) × 3300 |
 | Dày sàn | 120 (nhà ở), 150 (khung BTCT nhịp lớn) | `slab_thickness` |
+| Chiều cao tường (từ mặt sàn tầng đó tới đáy sàn tầng trên) | **cao tầng − dày sàn**: 3300 − 120 = 3180 | `wall_height` |
 | Cao cửa đi (thông thủy) | 2200 (cửa chính 2400) | `door_height` |
 | Cao bậu cửa sổ | 900 (WC: 1500) | `window_sill` |
 | Cao cửa sổ | 1500 (WC: 600) | `window_height` |
@@ -88,17 +90,23 @@ layer bằng `create_layer` (đúng màu ở bảng) trước khi dựng. Không
 4. **Dựng:** gọi lại không có `dry_run`, thêm `openings` cho cửa người dùng vừa xác nhận
    (`{"kind": "door", "at": [x, y]}`; cửa sổ thêm `sill`, `height` nếu khác mặc định). Sàn: có đường bao kín trên
    `A-SLAB` / `A-FLOR` thì tự đổ; không có thì hỏi, hoặc dùng `slab: "bbox"` nếu người dùng đồng ý sàn phủ hộp bao tường.
-5. Tầng trên: cùng mặt bằng (hoặc mặt bằng tầng đó) với `base_z` = cao độ sàn tầng. Báo lỗi "already built" nghĩa là
-   tầng này đã dựng: hỏi người dùng xóa khối cũ (cần xác nhận) hay dựng thêm (`on_existing: "add"`).
+5. Tầng trên: cùng mặt bằng (hoặc mặt bằng tầng đó) với `base_z` = cao độ sàn tầng (mm, ví dụ tầng 2: 3300) và cùng
+   `wall_height` = cao tầng − dày sàn. Tầng dưới chỉ chạm tầng mới thì không bị coi là dựng trùng. Báo lỗi "already
+   built" nghĩa là **đúng tầng này** (cùng cao độ) đã dựng trước đó: hỏi người dùng muốn dựng tầng khác (`base_z` khác)
+   hay dựng thêm (`on_existing: "add"`). **Không bao giờ** gợi ý xóa tầng dưới hay khối của tầng khác; chỉ xóa đúng các
+   khối lỗi liệt kê khi người dùng tự yêu cầu (có thẻ xác nhận). Kết quả có ghi chú "slab … cuts … into … the storey
+   below": tường tầng dưới cao quá, báo người dùng, không xóa gì.
 6. Tường cong, tường trong block: dựng riêng bằng `extrude` (biên dạng kín) hoặc `sweep`, layer `A-WALL-3D`.
 7. Cửa người dùng nói thêm cho một khe hở (`open_gaps`): `openings` với `at` ở giữa khe; cửa chỉ định ở góc / chỗ
    hai tường gặp nhau bị từ chối: dời điểm vào giữa đoạn tường.
 
-Ví dụ phòng 4 × 6 m ở mục 0 (tường 220, cửa đi 900), tường cao 3,3 m:
+Ví dụ phòng 4 × 6 m ở mục 0 (tường 220, cửa đi 900), tầng cao 3,3 m, sàn 120 (tường 3300 − 120 = 3180):
 
 ```json
-{"tool": "build_3d_from_plan", "params": {"wall_height": 3300, "door_height": 2200, "slab_thickness": 120, "slab": "bbox"}}
+{"tool": "build_3d_from_plan", "params": {"wall_height": 3180, "door_height": 2200, "slab_thickness": 120, "slab": "bbox"}}
 ```
+
+Tầng 2 cùng mặt bằng: thêm `"base_z": 3300`.
 
 ## 4. Tự kiểm tra trước khi báo xong
 
@@ -107,7 +115,7 @@ Ví dụ phòng 4 × 6 m ở mục 0 (tường 220, cửa đi 900), tường cao
 
 - **Bằng số** (`wall_solid` của kết quả):
   - `volume_m3` ≈ Σ (dài tường theo trục × dày × cao) − lỗ cửa; ví dụ trên: (4220 × 6220 − 3780 × 5780 − 220 × 900) ×
-    3300 + 220 × 900 × 1100 ≈ **14,08 m³**;
+    3180 + 220 × 900 × 980 ≈ **13,56 m³** (tường 3300: 14,08 m³);
   - `pieces_volume_m3` lớn hơn một chút (phần chồng ở góc tường): bình thường;
   - `min` / `max` khớp `plan_min` / `plan_max` và z từ `base_z` tới `base_z + wall_height`;
   - sàn: `area_m2` × dày = `volume_m3`.

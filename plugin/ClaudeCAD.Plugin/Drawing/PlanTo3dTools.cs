@@ -17,7 +17,8 @@ namespace ClaudeCAD.Plugin.Drawing
     {
         private static void RegisterPlanTo3d(ToolDispatcher d)
         {
-            d.Register("build_3d_from_plan", true, Build3dFromPlan);
+            // dry_run only reads: no version copy, no undo group, not recorded, allowed in "Chỉ xem" (KT-15)
+            d.Register(new ToolDef("build_3d_from_plan", true, Build3dFromPlan, readsWhen: p => p.Bool("dry_run", false)));
         }
 
         private sealed class PlanInput
@@ -32,7 +33,7 @@ namespace ClaudeCAD.Plugin.Drawing
             public int ThinWidePolylines;
             public PlanOptions Options = new PlanOptions();
             /// <summary>Existing solids on the result layers (rerun check).</summary>
-            public List<(string handle, Extents3d ext)> Existing = new List<(string, Extents3d)>();
+            public List<Existing3d> Existing = new List<Existing3d>();
         }
 
         private static List<string> LayerList(Params p, string name, string[] def) =>
@@ -224,22 +225,27 @@ namespace ClaudeCAD.Plugin.Drawing
                 if (e is Solid3d && (string.Equals(layer, wall3d, StringComparison.OrdinalIgnoreCase) || string.Equals(layer, slab3d, StringComparison.OrdinalIgnoreCase)))
                 {
                     var x = EntityInfo.Extents(e);
-                    if (x.HasValue) input.Existing.Add((Acad.H(id), x.Value));
+                    if (x.HasValue)
+                        input.Existing.Add(new Existing3d
+                        {
+                            Handle = Acad.H(id), IsSlab = string.Equals(layer, slab3d, StringComparison.OrdinalIgnoreCase),
+                            Min = new[] { x.Value.MinPoint.X, x.Value.MinPoint.Y, x.Value.MinPoint.Z },
+                            Max = new[] { x.Value.MaxPoint.X, x.Value.MaxPoint.Y, x.Value.MaxPoint.Z },
+                        });
                     continue;
                 }
                 if (e is Solid3d || e is Autodesk.AutoCAD.DatabaseServices.Surface) continue;
                 string kind = null;
-                if (!explicitWalls && FloorPlanLogic.LayerMatches(layer, wallLayers)) kind = "wall";
+                // the skill's door / window blocks (CUA-DI-900, CUA-SO-1200) by name first, on any layer — also on
+                // the wall layer, where a block would otherwise be skipped as "a block on a wall layer" (KT-20)
+                string byName = e is BlockReference brn ? FloorPlanLogic.KindOfBlockName(EntityInfo.BlockName(ctx, brn)) : null;
+                if (byName == "door" && !explicitDoors) kind = "door";
+                else if (byName == "window" && !explicitWindows) kind = "window";
+                else if (byName != null) continue; // named in door_handles / window_handles instead
+                else if (!explicitWalls && FloorPlanLogic.LayerMatches(layer, wallLayers)) kind = "wall";
                 else if (!explicitDoors && FloorPlanLogic.LayerMatches(layer, doorLayers)) kind = "door";
                 else if (!explicitWindows && FloorPlanLogic.LayerMatches(layer, windowLayers)) kind = "window";
                 else if (!explicitSlabs && FloorPlanLogic.LayerMatches(layer, slabLayers)) kind = "slab";
-                else if (e is BlockReference br0)
-                {
-                    // the skill's door / window blocks (CUA-DI-900, CUA-SO-1200) on any layer
-                    var bk = FloorPlanLogic.KindOfBlockName(EntityInfo.BlockName(ctx, br0));
-                    if (bk == "door" && !explicitDoors) kind = "door";
-                    if (bk == "window" && !explicitWindows) kind = "window";
-                }
                 if (kind == null) continue;
                 if (!InArea(EntityInfo.Extents(e), amin, amax)) continue;
                 Count();
@@ -297,7 +303,8 @@ namespace ClaudeCAD.Plugin.Drawing
             if (minT <= 0 || maxT < minT || maxT > FloorPlanLogic.MaxThicknessLimit)
                 throw ToolException.Invalid($"{tool}: need 0 < min_thickness ≤ max_thickness ≤ {FloorPlanLogic.MaxThicknessLimit} mm.");
             var hu = new FloorPlanLogic.Heights { Wall = hmm.Wall / f, Door = hmm.Door / f, Sill = hmm.Sill / f, Window = hmm.Window / f, Slab = hmm.Slab / f };
-            double baseZ = p.Num("base_z", 0);
+            // base_z is mm like the heights (the skill gives storey levels in mm), scaled by INSUNITS (KT-16)
+            double baseZmm = p.Num("base_z", 0), baseZ = baseZmm / f;
             string slabMode = (p.Str("slab", "auto") ?? "auto").Trim().ToLowerInvariant();
             if (slabMode != "auto" && slabMode != "none" && slabMode != "bbox") throw ToolException.Invalid($"{tool}: slab must be \"auto\" (slab layers / slab_handles), \"bbox\" (one slab under the walls' bounding box) or \"none\".");
             string onExisting = (p.Str("on_existing", "stop") ?? "stop").Trim().ToLowerInvariant();
@@ -345,7 +352,7 @@ namespace ClaudeCAD.Plugin.Drawing
             }
             FloorPlanLogic.ResolveHeights(res, hu);
 
-            var report = Report(res, input, f, unitName, hmm, baseZ);
+            var report = Report(res, input, f, unitName, hmm, baseZmm);
             var notes = new List<string>();
             if (input.ThinWidePolylines > 0)
                 notes.Add($"{input.ThinWidePolylines} polyline(s) with a width below min_thickness were read as plain wall face lines (the width taken as a print line weight, not a wall thickness).");
@@ -364,7 +371,11 @@ namespace ClaudeCAD.Plugin.Drawing
 
             // rerun check: solids already on the result layers over this plan (walls and slab outlines)
             var fp = FloorPlanLogic.Footprint(res);
-            var dup = ExistingOver(ctx, input, fp, baseZ - hu.Slab, baseZ + hu.Wall);
+            var rerun = ExistingOver(ctx, input, boxes, fp, slabMode, baseZ, hu);
+            var dup = rerun.Rerun;
+            if (rerun.SlabIntoWallsBelow.Count > 0)
+                notes.Add($"This storey's slab ({Acad.R(hmm.Slab)} mm under base_z) cuts {Acad.R(rerun.SlabIntoWallsBy * f)} mm into {rerun.SlabIntoWallsBelow.Count} wall solid(s) of the storey below " +
+                    $"({string.Join(", ", rerun.SlabIntoWallsBelow.Take(10))}): that is not a rerun, but the walls below should be storey height − slab thickness high. Never erase the storey below for this.");
             if (dryRun)
             {
                 report["dry_run"] = true;
@@ -372,14 +383,14 @@ namespace ClaudeCAD.Plugin.Drawing
                 if (dup.Count > 0)
                 {
                     report["existing_solids"] = dup.Take(FloorPlanLogic.MaxReportItems).Cast<object>().ToList();
-                    notes.Add($"{dup.Count} solid(s) from an earlier run are already on {wall3d} / {slab3d} over this plan: building again stops unless the user chooses (erase them first, another storey with base_z, or on_existing \"add\").");
+                    notes.Add($"{dup.Count} solid(s) of an earlier run are already on {wall3d} / {slab3d} at this level (base_z {Acad.R(baseZmm)} mm) over this plan: building again stops unless the user chooses (a different base_z for another storey, on_existing \"add\", or erasing exactly those solids).");
                 }
                 if (notes.Count > 0) report["notes"] = notes;
                 return report;
             }
             if (dup.Count > 0 && onExisting == "stop")
-                throw ToolException.Invalid($"{tool}: this plan was already built: {dup.Count} solid(s) on {wall3d} / {slab3d} over it ({string.Join(", ", dup.Take(20))}{(dup.Count > 20 ? ", …" : "")}). " +
-                    "Nothing was built. Ask the user: erase the old solids first (erase_entities, needs their yes), build another storey (base_z), or build again anyway with on_existing \"add\".");
+                throw ToolException.Invalid($"{tool}: this plan was already built at this level (base_z {Acad.R(baseZmm)} mm): {dup.Count} solid(s) on {wall3d} / {slab3d} over it at the same height ({string.Join(", ", dup.Take(20))}{(dup.Count > 20 ? ", …" : "")}). " +
+                    "A storey below or beside only touching this one does not count. Nothing was built. Ask the user: another storey (a different base_z), build again anyway with on_existing \"add\", or erase exactly these solids first (erase_entities, needs their yes). Never erase other storeys.");
 
             var created = new List<string>();
             var layersCreated = new List<string>();
@@ -475,15 +486,17 @@ namespace ClaudeCAD.Plugin.Drawing
                                 holes.Add(j);
                                 res.Skipped.Add(new PlanSkip(regions[j].src, "SLAB", $"the same outline as {regions[i].src}: one slab built"));
                             }
-                    for (int i = 0; i < regions.Count; i++)
+                    // nesting (KT-22): even depth = a slab, odd = a hole in its parent; an island inside a hole is a slab again
+                    var live = Enumerable.Range(0, regions.Count).Where(i => !holes.Contains(i)).ToList();
+                    var (depth, parent) = FloorPlanLogic.SlabNesting(live.Select(i => SafeArea(regions[i].r)).ToList(),
+                        (a, b) => Inside(regions[live[a]].r, regions[live[b]].r));
+                    for (int a = 0; a < live.Count; a++)
                     {
-                        if (holes.Contains(i)) continue;
-                        for (int j = i + 1; j < regions.Count; j++)
+                        if (depth[a] % 2 == 1) { holes.Add(live[a]); continue; }
+                        for (int b = 0; b < live.Count; b++)
                         {
-                            if (holes.Contains(j)) continue;
-                            if (!Inside(regions[j].r, regions[i].r)) continue;
-                            using (var cut = (Region)regions[j].r.Clone()) regions[i].r.BooleanOperation(BooleanOperationType.BoolSubtract, cut);
-                            holes.Add(j);
+                            if (parent[b] != a) continue;
+                            using (var cut = (Region)regions[live[b]].r.Clone()) regions[live[a]].r.BooleanOperation(BooleanOperationType.BoolSubtract, cut);
                         }
                     }
                     if (regions.Count > holes.Count && EnsureLayer(ctx, slab3d, 8)) layersCreated.Add(slab3d);
@@ -534,19 +547,19 @@ namespace ClaudeCAD.Plugin.Drawing
             return report;
         }
 
-        /// <summary>Rerun check: solids on the result layers over the walls' footprint or a slab outline, overlapping z0–z1.</summary>
-        private static List<string> ExistingOver(ToolContext ctx, PlanInput input, (double[] min, double[] max)? fp, double z0, double z1)
+        /// <summary>Rerun check (FloorPlanLogic.CheckRerun): solids of an earlier run at this level over the new walls / slab outlines.</summary>
+        private static RerunCheck ExistingOver(ToolContext ctx, PlanInput input, List<PlanBox> boxes, (double[] min, double[] max)? fp, string slabMode, double baseZ, FloorPlanLogic.Heights hu)
         {
-            var boxes = new List<(double[] min, double[] max)>();
-            if (fp.HasValue) boxes.Add(fp.Value);
-            foreach (var (id, _) in input.Slabs)
-            {
-                var x = EntityInfo.Extents((Entity)ctx.Tr.GetObject(id, OpenMode.ForRead));
-                if (x.HasValue) boxes.Add((new[] { x.Value.MinPoint.X, x.Value.MinPoint.Y }, new[] { x.Value.MaxPoint.X, x.Value.MaxPoint.Y }));
-            }
-            return input.Existing.Where(x => x.ext.MinPoint.Z < z1 && x.ext.MaxPoint.Z > z0 && boxes.Any(b =>
-                    FloorPlanLogic.BoxesOverlap(new[] { x.ext.MinPoint.X, x.ext.MinPoint.Y }, new[] { x.ext.MaxPoint.X, x.ext.MaxPoint.Y }, b.min, b.max)))
-                .Select(x => x.handle).ToList();
+            var slabBoxes = new List<(double[] min, double[] max)>();
+            if (slabMode == "bbox" && fp.HasValue) slabBoxes.Add(fp.Value);
+            else if (slabMode == "auto")
+                foreach (var (id, _) in input.Slabs)
+                {
+                    var x = EntityInfo.Extents((Entity)ctx.Tr.GetObject(id, OpenMode.ForRead));
+                    if (x.HasValue) slabBoxes.Add((new[] { x.Value.MinPoint.X, x.Value.MinPoint.Y }, new[] { x.Value.MaxPoint.X, x.Value.MaxPoint.Y }));
+                }
+            double slabT = slabMode == "none" ? 0 : hu.Slab;
+            return FloorPlanLogic.CheckRerun(input.Existing, boxes, slabBoxes, baseZ, hu.Wall, slabT, input.Options.JoinTol);
         }
 
         /// <summary>Two regions with the same area and box (the same slab outline drawn twice).</summary>

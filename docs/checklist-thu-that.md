@@ -234,6 +234,11 @@ Máy ở gói `Full` (L2 vẽ mặt bằng 2D bằng skill `ve-kien-truc`; ở g
 | L21 | ○ | Đường bao sàn L7 copy tại chỗ sang layer `A-FLOR`, "dựng 3D có sàn" | Một sàn; báo 1 mục "the same outline" | ☐ | ☐ | 3D3T-5 |
 | L22 | ★ | Sau L2: "chạy thử dựng 3D lại mặt bằng này" | Báo cáo chạy thử có `existing_solids`; Claude hỏi trước khi dựng | ☐ | ☐ | 3D3T-6 |
 | L23 | ○ | "thêm cửa sổ rộng 1200 tại góc phòng" (điểm đúng góc trong của 2 tường) | Claude báo điểm nằm ở chỗ hai tường gặp nhau và hỏi lại; không dựng gì | ☐ | ☐ | 3D3T-7 |
+| L24 | ★ | **(KT-14)** Phòng L2, chưa dựng: "dựng 3D tầng 1, tầng cao 3,3 m, sàn 120, có sàn" rồi lượt sau "dựng tầng 2 cùng mặt bằng này" | Tầng 2 dựng được ngay (không báo "already built", **không hỏi xóa tầng 1**); tường tầng 1 cao 3180 (3300 − 120), sàn tầng 2 từ z 3180 tới 3300 nằm trên đỉnh tường tầng 1, không chồng vào tường; tường tầng 2 từ 3300 tới 6480. Chạy lại đúng lệnh tầng 2 lần nữa → Claude báo tầng 2 đã dựng và hỏi, vẫn không gợi ý xóa tầng 1 | ☐ | ☐ | KT-14 |
+| L25 | ★ | **(KT-11)** Phòng có cửa đi đặt sát góc (khe từ mặt trong tường bên cạnh, bản lề ở góc), "dựng 3D" | Lỗ cửa và lanh tô nằm ở **tường có khe**; tường bên cạnh liền, không bị khoét | ☐ | ☐ | KT-11 |
+| L26 | ○ | **(KT-15)** "chạy thử dựng 3D mặt bằng này" (chỉ chạy thử) | Không có thông báo "Đã lưu phiên bản", không có nút "Hoàn tác lượt này"; chạy được cả khi bật "Chỉ xem" | ☐ | ☐ | KT-15 |
+| L27 | ○ | **(KT-16)** Bản vẽ đơn vị mét (L8): "dựng tầng 2" | Tầng 2 đặt ở cao 3,3 (đơn vị bản vẽ), không phải 3300 | ☐ | ☐ | KT-16 |
+| L28 | ○ | **(KT-22, KT-20)** Đường bao sàn có lỗ cầu thang và một đảo bên trong lỗ; block `CUA-DI-900` chèn trên layer `A-WALL` | Đảo là sàn riêng (không bị trừ); block được nhận là cửa đi | ☐ | ☐ | KT-22 |
 
 Còn chỉ thấy trên AutoCAD thật (đã viết an toàn nhất có thể, chưa kiểm được trên máy cloud):
 

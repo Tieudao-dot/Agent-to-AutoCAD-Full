@@ -268,7 +268,7 @@ namespace ClaudeCAD.Core.Tests
             Assert.True(report > 0);
             Assert.Contains("[\"skipped\"] = SkipList(res.Skipped)", s.Substring(report));
             // the rerun check runs before the dry run returns, and the dry run reports what it found
-            int dup = s.IndexOf("var dup = ExistingOver(", StringComparison.Ordinal), dry = s.IndexOf("if (dryRun)", StringComparison.Ordinal);
+            int dup = s.IndexOf("var rerun = ExistingOver(", StringComparison.Ordinal), dry = s.IndexOf("if (dryRun)", StringComparison.Ordinal);
             Assert.True(dup > 0 && dup < dry);
             Assert.Contains("report[\"existing_solids\"]", s);
         }
