@@ -332,7 +332,7 @@ namespace ClaudeCAD.Plugin.Core
         /// of an opening never become a wall. A line between the two lines blocks the pair (only nearest neighbours).
         /// The longer line's overhang (up to the thickness) is added at each end: that fills L corners and T joints.
         /// </summary>
-        private static List<Rect> PairRects(List<PlanSeg> segs, PlanOptions o, bool[] usedOut)
+        private static List<Rect> PairRects(List<PlanSeg> segs, PlanOptions o, bool[] usedOut, List<PlanSkip> skips = null)
         {
             double tolRad = o.AngleTolDeg * Math.PI / 180;
             var cands = new List<(int i, int j, Rect r, List<int> caps)>();
@@ -388,6 +388,10 @@ namespace ClaudeCAD.Plugin.Core
                     }
                     if (blocked) continue;
                     double e0 = Math.Min(o0 - Math.Min(0, ja), d), e1 = Math.Min(Math.Max(li, jb) - o1, d);
+                    // the overhang fills an L corner / T joint; where a line closes the shorter line's end towards the
+                    // longer one (a thickness step, a jamb) the wall stops there: no bump outside the drawn faces
+                    if (e0 > o.JoinTol && EndClosed(segs, i, j, si, u, off, o0, ja > 0 ? off : 0, ja > 0 ? 0 : off, o)) e0 = 0;
+                    if (e1 > o.JoinTol && EndClosed(segs, i, j, si, u, off, o1, jb < li ? off : 0, jb < li ? 0 : off, o)) e1 = 0;
                     double c = off / 2;
                     var nx = -u[1]; var ny = u[0];
                     cands.Add((i, j, new Rect
@@ -402,15 +406,81 @@ namespace ClaudeCAD.Plugin.Core
             }
             // the jambs that close a short pier are its caps, not a wall across it
             var capOf = new HashSet<int>(cands.SelectMany(c => c.caps));
-            var rects = new List<Rect>();
-            foreach (var c in cands)
+            cands = cands.Where(c => !(capOf.Contains(c.i) && capOf.Contains(c.j))).ToList();
+            // the space between two walls side by side (a shaft, a joint 50–600 wide) is no wall: a pair whose two lines
+            // both have a wall on their other side too is dropped and reported (a face line has wall on one side only)
+            var middle = new HashSet<int>();
+            for (int a = 0; a < cands.Count; a++)
             {
-                if (capOf.Contains(c.i) && capOf.Contains(c.j)) continue;
+                var c = cands[a];
+                bool OtherSide(int line)
+                {
+                    var s = segs[line];
+                    var n = Unit(s);
+                    double Side(Rect r) => -((r.C0[0] + r.C1[0]) / 2 - s.X1) * n[1] + ((r.C0[1] + r.C1[1]) / 2 - s.Y1) * n[0];
+                    double mine = Side(c.r);
+                    for (int b = 0; b < cands.Count; b++)
+                    {
+                        if (b == a || (cands[b].i != line && cands[b].j != line)) continue;
+                        if (Math.Sign(Side(cands[b].r)) == Math.Sign(mine)) continue;
+                        if (OverlapAlong(c.r, cands[b].r) > 0.5 * Math.Min(RectLength(c.r), RectLength(cands[b].r))) return true;
+                    }
+                    return false;
+                }
+                if (OtherSide(c.i) && OtherSide(c.j)) middle.Add(a);
+            }
+            var rects = new List<Rect>();
+            for (int a = 0; a < cands.Count; a++)
+            {
+                var c = cands[a];
+                if (middle.Contains(a))
+                {
+                    skips?.Add(new PlanSkip(string.Join(", ", c.r.Src.Take(4)), "LINE PAIR",
+                        $"the {Fmt(c.r.T)} space between two walls side by side (both lines are faces of other walls): not built as a wall; pass the lines in wall_handles if it is one"));
+                    continue;
+                }
                 rects.Add(c.r);
                 usedOut[c.i] = true;
                 usedOut[c.j] = true;
             }
             return rects;
+        }
+
+        private static double RectLength(Rect r) => Dist(r.C0[0], r.C0[1], r.C1[0], r.C1[1]);
+
+        /// <summary>Length along a's axis where the parallel rectangle b lies beside a.</summary>
+        private static double OverlapAlong(Rect a, Rect b)
+        {
+            double l = RectLength(a);
+            if (l < 1e-12) return 0;
+            double ux = (a.C1[0] - a.C0[0]) / l, uy = (a.C1[1] - a.C0[1]) / l;
+            double t0 = (b.C0[0] - a.C0[0]) * ux + (b.C0[1] - a.C0[1]) * uy;
+            double t1 = (b.C1[0] - a.C0[0]) * ux + (b.C1[1] - a.C0[1]) * uy;
+            return Math.Min(l, Math.Max(t0, t1)) - Math.Max(0, Math.Min(t0, t1));
+        }
+
+        /// <summary>
+        /// A line other than i / j starts at the shorter face line's end (at t along si, across pShort) and goes
+        /// towards the longer line (pLong) — a thickness step or a jamb: that end of the wall is closed.
+        /// </summary>
+        private static bool EndClosed(List<PlanSeg> segs, int i, int j, PlanSeg si, double[] u, double off, double t, double pShort, double pLong, PlanOptions o)
+        {
+            double ex = si.X1 + u[0] * t - u[1] * pShort, ey = si.Y1 + u[1] * t + u[0] * pShort;
+            double d = Math.Abs(off), dir = Math.Sign(pLong - pShort);
+            for (int k = 0; k < segs.Count; k++)
+            {
+                if (k == i || k == j) continue;
+                var sk = segs[k];
+                foreach (var (ax, ay, bx, by) in new[] { (sk.X1, sk.Y1, sk.X2, sk.Y2), (sk.X2, sk.Y2, sk.X1, sk.Y1) })
+                {
+                    if (Dist(ax, ay, ex, ey) > 2 * o.JoinTol) continue;
+                    double bt = (bx - si.X1) * u[0] + (by - si.Y1) * u[1];
+                    double bp = -(bx - si.X1) * u[1] + (by - si.Y1) * u[0];
+                    double q = (bp - pShort) * dir;
+                    if (Math.Abs(bt - t) <= 2 * o.JoinTol && q > o.LineTol && q <= d + o.LineTol) return true;
+                }
+            }
+            return false;
         }
 
         /// <summary>
@@ -424,9 +494,13 @@ namespace ClaudeCAD.Plugin.Core
             {
                 var s = segs[i];
                 var u = Unit(s);
-                double h = s.Thickness / 2;
-                bool Meets(double x, double y) => segs.Where((k, j) => j != i).Any(k => Dist(k.X1, k.Y1, x, y) <= o.JoinTol || Dist(k.X2, k.Y2, x, y) <= o.JoinTol);
-                double e0 = Meets(s.X1, s.Y1) ? h : 0, e1 = Meets(s.X2, s.Y2) ? h : 0;
+                // extended by half the thickness of the wall it meets (its outer face), not its own: an L of a 100
+                // and a 300 wall closes without the thin wall sticking out of the thick one
+                // (a straight continuation with another thickness is a step: not extended)
+                double Meets(double x, double y) => segs.Where((k, j) => j != i && !Parallel(Angle(k), Angle(s), o.AngleTolDeg * Math.PI / 180) &&
+                        (Dist(k.X1, k.Y1, x, y) <= o.JoinTol || Dist(k.X2, k.Y2, x, y) <= o.JoinTol))
+                    .Select(k => k.Thickness / 2).DefaultIfEmpty(0).Max();
+                double e0 = Meets(s.X1, s.Y1), e1 = Meets(s.X2, s.Y2);
                 rects.Add(new Rect
                 {
                     C0 = new[] { s.X1 - u[0] * e0, s.Y1 - u[1] * e0 },
@@ -495,9 +569,10 @@ namespace ClaudeCAD.Plugin.Core
             var faces = MergeCollinear(faceLines ?? new List<PlanSeg>(), o);
             var centers = MergeCollinear(centerLines ?? new List<PlanSeg>(), o);
             var usedFace = new bool[faces.Count];
-            var rects = PairRects(faces, o, usedFace);
+            var rects = PairRects(faces, o, usedFace, res.Skipped);
             rects.AddRange(CenterRects(centers, o));
             res.Walls = MergeRects(rects, o);
+            DropWallsInsideWalls(res, o);
 
             // face lines without a partner: a short end line between paired lines is a cap (door jamb / wall end)
             var pairedEnds = new List<double[]>();
@@ -519,6 +594,57 @@ namespace ClaudeCAD.Plugin.Core
         }
 
         private static string Fmt(double v) => Math.Round(v, 2).ToString(CultureInfo.InvariantCulture);
+
+        /// <summary>
+        /// A "wall" lying wholly inside a thicker parallel wall is made of lines drawn inside that wall (window panes,
+        /// hatch-like lines on the wall layer): not built, reported, so a window drawn that way is not lost silently.
+        /// </summary>
+        private static void DropWallsInsideWalls(PlanResult res, PlanOptions o)
+        {
+            double tolRad = o.AngleTolDeg * Math.PI / 180;
+            var drop = new List<int>();
+            var reported = new HashSet<string>();
+            for (int i = 0; i < res.Walls.Count; i++)
+            {
+                var w = res.Walls[i];
+                for (int k = 0; k < res.Walls.Count; k++)
+                {
+                    if (k == i || drop.Contains(k)) continue;
+                    var x = res.Walls[k];
+                    if (x.Thickness <= w.Thickness + o.LineTol) continue;
+                    double cross = Math.Abs(x.Dir[0] * w.Dir[1] - x.Dir[1] * w.Dir[0]);
+                    if (cross > Math.Sin(tolRad)) continue;
+                    bool inside = w.Solid.All(iv =>
+                    {
+                        var a = w.At(iv[0]); var b = w.At(iv[1]);
+                        var (sa, pa) = ToFrame(x, a[0], a[1]);
+                        var (sb, pb) = ToFrame(x, b[0], b[1]);
+                        double half = x.Thickness / 2 + o.LineTol;
+                        return Math.Abs(pa) + w.Thickness / 2 <= half && Math.Abs(pb) + w.Thickness / 2 <= half &&
+                               x.Solid.Any(xv => Math.Min(sa, sb) >= xv[0] - o.JoinTol && Math.Max(sa, sb) <= xv[1] + o.JoinTol);
+                    });
+                    if (!inside) continue;
+                    drop.Add(i);
+                    var own = w.Sources.Except(x.Sources).ToList();
+                    foreach (var h in own.Count > 0 ? own : w.Sources)
+                        if (reported.Add(h)) res.Skipped.Add(new PlanSkip(h, "LINE", $"lines {Fmt(w.Thickness)} apart lying inside wall {k} ({Fmt(x.Thickness)} thick): not a wall of its own — a window or other symbol drawn on the wall layer? Put it on the window / door layer, or pass it in 'openings'"));
+                    break;
+                }
+            }
+            if (drop.Count == 0) return;
+            res.Walls = res.Walls.Where((w, i) => !drop.Contains(i)).ToList();
+        }
+
+        /// <summary>
+        /// What a polyline with a constant width on a wall layer is: "wall" (a wall drawn by its centreline, width =
+        /// thickness), "line" (a width below min_thickness is a print line weight: an ordinary face line) or "skip".
+        /// </summary>
+        public static string WidePolylineRole(double width, PlanOptions o)
+        {
+            if (width <= 0 || width < o.MinThickness - o.LineTol) return "line";
+            if (width > o.MaxThickness + o.LineTol) return "skip";
+            return "wall";
+        }
 
         private static bool InsideWall(PlanWall w, double x, double y, double tol)
         {
@@ -707,12 +833,22 @@ namespace ClaudeCAD.Plugin.Core
         /// </summary>
         public static string AddGivenOpening(PlanResult res, string kind, double[] at, double width, double? bottom, double? top, PlanOptions o)
         {
+            var hits = new List<int>();
             for (int wi = 0; wi < res.Walls.Count; wi++)
             {
                 var w = res.Walls[wi];
                 var (s, p) = ToFrame(w, at[0], at[1]);
                 if (Math.Abs(p) > w.Thickness / 2 + o.JoinTol) continue;
                 if (s < w.Start - o.JoinTol || s > w.End + o.JoinTol) continue;
+                hits.Add(wi);
+            }
+            // at a corner / junction the point is in two walls: not guessed
+            if (hits.Count > 1)
+                return $"the point [{Fmt(at[0])}, {Fmt(at[1])}] is where walls {string.Join(" and ", hits)} meet: move it to the middle of the opening in one wall";
+            foreach (var wi in hits)
+            {
+                var w = res.Walls[wi];
+                var (s, _) = ToFrame(w, at[0], at[1]);
                 double s0, s1;
                 var gap = res.OpenGaps.FindIndex(g => g.wall == wi && s >= g.s0 - o.JoinTol && s <= g.s1 + o.JoinTol);
                 if (gap >= 0 && width <= 0) { s0 = res.OpenGaps[gap].s0; s1 = res.OpenGaps[gap].s1; res.OpenGaps.RemoveAt(gap); }
@@ -720,10 +856,14 @@ namespace ClaudeCAD.Plugin.Core
                 {
                     if (width <= 0) return $"the point [{Fmt(at[0])}, {Fmt(at[1])}] is on a continuous wall: give the opening width";
                     s0 = s - width / 2; s1 = s + width / 2;
+                    // never past the wall's ends: that would put a lintel / sill in the air beyond the wall
+                    if (s0 < w.Start - o.JoinTol || s1 > w.End + o.JoinTol)
+                        return $"the opening {Fmt(width)} wide at [{Fmt(at[0])}, {Fmt(at[1])}] runs past the end of wall {wi}: move the point or give a smaller width";
+                    s0 = Math.Max(s0, w.Start); s1 = Math.Min(s1, w.End);
                     if (gap >= 0) res.OpenGaps.RemoveAt(gap);
                 }
-                var existing = res.Openings.FirstOrDefault(x => x.Wall == wi && x.S0 < s1 - o.JoinTol && x.S1 > s0 + o.JoinTol);
-                if (existing != null) res.Openings.Remove(existing); // the given opening replaces a recognised one
+                // the given opening replaces the recognised ones it overlaps
+                res.Openings.RemoveAll(x => x.Wall == wi && x.S0 < s1 - o.JoinTol && x.S1 > s0 + o.JoinTol);
                 res.Openings.Add(new PlanOpening { Wall = wi, S0 = s0, S1 = s1, Kind = kind, From = "given", Bottom = bottom ?? double.NaN, Top = top ?? double.NaN });
                 return null;
             }

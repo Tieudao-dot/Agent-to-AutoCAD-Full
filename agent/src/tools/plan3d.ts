@@ -47,7 +47,7 @@ const layerList = (what: string, def: readonly string[]) =>
 const opening = z.object({
   kind: z.enum(['door', 'window']),
   at: point.describe('A point in the wall (in plan) where the opening is, e.g. the middle of a gap or of a door symbol.'),
-  width: z.number().positive().optional().describe('Opening width along the wall (mm). Leave out for a gap: the gap width is used.'),
+  width: z.number().positive().optional().describe('Opening width along the wall (mm). Leave out for a gap: the gap width is used. Must stay within the wall; a point where two walls meet is refused.'),
   height: z.number().positive().optional().describe('Door height, or window height (mm).'),
   sill: z.number().min(0).optional().describe('Window sill height above the floor (mm).'),
 });
@@ -67,10 +67,10 @@ export function plan3dTools(b: ToolBridge): AnyTool[] {
       'BUILD 3D FROM A 2D FLOOR PLAN ("dựng 3D mặt bằng này, tường cao 3,3 m"): reads walls, doors / windows and slabs of the plan (by layer like the ve-kien-truc skill: ' +
         'walls A-WALL drawn as two face lines t apart, doors A-DOOR, windows A-WIND or CUA-DI-* / CUA-SO-* blocks, slab outlines A-SLAB / A-FLOR) and builds wall solids ' +
         '(openings left: lintel above doors, sill and lintel at windows) on A-WALL-3D and slabs (top at base_z, slab_thickness down) on A-SLAB-3D. ' +
-        'Or name the objects: wall_handles (face lines), centerline_handles + thickness (walls drawn by their axis), wide polylines (width = thickness) are read too, ' +
+        'Or name the objects: wall_handles (face lines), centerline_handles + thickness (walls drawn by their axis), wide polylines (width = thickness; a width below min_thickness is only a print line weight: read as a face line) are read too, ' +
         'door_handles / window_handles, slab_handles. Only straight walls; curved walls, walls inside blocks / xrefs and unclear pieces are SKIPPED and listed ' +
         'with handle and reason (nothing is guessed). The plan objects are only read, never changed. ' +
-        'Use dry_run: true first on a plan you do not know: it returns walls, openings, open_gaps (gaps with no symbol, left open) and skipped without building. ' +
+        'Use dry_run: true first on a plan you do not know: it returns walls, openings, open_gaps (gaps with no symbol, left open), skipped and existing_solids (solids of an earlier run over this plan) without building. ' +
         'Read that report, tell the user what was skipped and ask about open gaps / missing doors, then build (add "openings" for doors / windows the plan does not show). ' +
         'Refuses (nothing built) when solids from an earlier run are already on the result layers over this plan, unless on_existing "add". ' +
         'Returns handles, wall_solid {volume_m3, pieces_volume_m3, min, max}, slabs, walls / openings / skipped lists, thickness_summary.',

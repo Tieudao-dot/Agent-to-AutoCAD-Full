@@ -137,3 +137,17 @@ describe('3D kiến trúc skill', () => {
     }
   });
 });
+
+describe('3D phase 3 test & fix (docs/ban-giao/ve-3d-test-3.md)', () => {
+  it('build_3d_from_plan tells Claude what the plugin now does with print-width polylines, earlier solids and given openings', () => {
+    const d = byName('build_3d_from_plan').description;
+    assert.match(d, /below min_thickness is only a print line weight/);
+    assert.match(d, /existing_solids/);
+    const plugin = src('plugin', 'ClaudeCAD.Plugin', 'Drawing', 'PlanTo3dTools.cs');
+    assert.match(plugin, /report\["existing_solids"\]/);
+    assert.match(plugin, /WidePolylineRole/);
+    const core = src('plugin', 'ClaudeCAD.Plugin', 'Core', 'FloorPlan.cs');
+    assert.match(core, /runs past the end of wall/);
+    assert.match(core, /meet: move it to the middle of the opening in one wall/);
+  });
+});

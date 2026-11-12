@@ -153,6 +153,11 @@ namespace ClaudeCAD.Plugin.Drawing
             return result;
         }
 
+        /// <summary>An AutoCAD refusal of the geometry (not a locked layer / erased object, which keep their own error).</summary>
+        private static bool RefusedGeometry(Autodesk.AutoCAD.Runtime.Exception ex) =>
+            ex.ErrorStatus != Autodesk.AutoCAD.Runtime.ErrorStatus.OnLockedLayer && ex.ErrorStatus != Autodesk.AutoCAD.Runtime.ErrorStatus.WasErased &&
+            ex.ErrorStatus != Autodesk.AutoCAD.Runtime.ErrorStatus.LockViolation;
+
         private static double SolidsSize(IEnumerable<(string handle, Solid3d solid)> solids)
         {
             double size = 0;
@@ -301,6 +306,7 @@ namespace ClaudeCAD.Plugin.Drawing
             var cutBy = new List<object>();
             double cutArea = 0;
             var layersCreated = new List<string>();
+            var refused = new List<string>();
             try
             {
                 using (var plane = AcPlane(pl))
@@ -309,7 +315,7 @@ namespace ClaudeCAD.Plugin.Drawing
                     {
                         Region reg;
                         try { reg = s.GetSection(plane); }
-                        catch (Autodesk.AutoCAD.Runtime.Exception) { reg = null; }
+                        catch (Autodesk.AutoCAD.Runtime.Exception ex) { reg = null; refused.Add($"{h} ({ex.ErrorStatus})"); }
                         if (reg == null) continue;
                         using (reg)
                         {
@@ -327,8 +333,11 @@ namespace ClaudeCAD.Plugin.Drawing
                     if (EnsureLayer(ctx, outlineLayer, 7)) layersCreated.Add(outlineLayer);
                     behindCurves = SectionBackground(ctx, solids, pl, u, v, m, LayerParams(tool, outlineLayer), notes);
                 }
+                if (refused.Count > 0) notes.Add($"AutoCAD could not cut {refused.Count} solid(s): {string.Join(", ", refused.Take(10))}; they are not in the section.");
                 if (cut.Count == 0 && behindCurves.Count == 0)
-                    throw ToolException.Invalid($"{tool}: the plane does not cut any of the {solids.Count} solid(s). Nothing was drawn. Check the plane against get_solid_info min / max (a vertical cut at z between the floor and the wall top, or a section line across the walls).");
+                    throw ToolException.Invalid(refused.Count > 0
+                        ? $"{tool}: AutoCAD could not cut {string.Join(", ", refused.Take(10))} and the plane cuts none of the other solids. Nothing was drawn."
+                        : $"{tool}: the plane does not cut any of the {solids.Count} solid(s). Nothing was drawn. Check the plane against get_solid_info min / max (a vertical cut at z between the floor and the wall top, or a section line across the walls).");
                 var box = CurvesBox(cut.Concat(behindCurves)).Value;
                 var (move, at, warning) = Placement(ctx, p, box, f);
                 if (warning != null) notes.Add(warning);
@@ -426,6 +435,12 @@ namespace ClaudeCAD.Plugin.Drawing
                 if (notes.Count > 0) r["notes"] = notes;
                 return r;
             }
+            catch (Autodesk.AutoCAD.Runtime.Exception ex) when (RefusedGeometry(ex))
+            {
+                DisposeAll(cut);
+                DisposeAll(behindCurves);
+                throw ToolException.Invalid($"{tool}: AutoCAD could not make the section ({ex.ErrorStatus}). Nothing was drawn.");
+            }
             catch
             {
                 DisposeAll(cut);
@@ -511,6 +526,11 @@ namespace ClaudeCAD.Plugin.Drawing
                 if (layersCreated.Count > 0) r["layers_created"] = layersCreated;
                 if (notes.Count > 0) r["notes"] = notes;
                 return r;
+            }
+            catch (Autodesk.AutoCAD.Runtime.Exception ex) when (RefusedGeometry(ex))
+            {
+                if (curves != null) DisposeAll(curves);
+                throw ToolException.Invalid($"{tool}: AutoCAD could not make the view ({ex.ErrorStatus}). Nothing was drawn.");
             }
             catch
             {
