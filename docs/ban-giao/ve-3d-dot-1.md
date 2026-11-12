@@ -12,6 +12,7 @@
 - Chia gói phương án A: gói 3D có đường cơ bản, không có chữ / kích thước / hatch / in 2D.
 - Mọi lệnh 3D mới gắn nhãn `ToolGroup.ThreeD` trong `PlanLogic`: chỉ máy gói 3D và Full dùng được; máy gói 2D không
   nạp các lệnh này.
+- Cộng / trừ / giao vào mọi khối có trước lượt đó, kể cả khối Claude dựng ở lượt trước, luôn qua thẻ xác nhận.
 
 ## Việc cần làm
 
@@ -82,7 +83,8 @@ workflow_dispatch, `release: "false"`, nhánh `full/ve-3d`); docs cập nhật; 
   biên dạng trên XY rồi extrude; mỗi loại khối một layer; lỗ cửa = dựng khối rồi trừ; dựng xong `set_view_3d` sw_iso,
   `capture_view` conceptual, đối chiếu `get_solid_info`.
 - `src/agent/confirmation.ts`: cộng / trừ / giao vào khối **có trước lượt này** (kể cả khối Claude dựng ở lượt trước)
-  luôn cần xác nhận, dù chỉ 1 khối; khối dựng trong cùng lượt thì không. Kiểm cả trong `batch_execute`.
+  luôn cần xác nhận, dù chỉ 1 khối; khối dựng trong cùng lượt thì không. **Đã chốt 12/11/2026:** giữ thẻ xác nhận
+  cả với khối Claude dựng ở lượt trước. Kiểm cả trong `batch_execute`.
   `extrude` / `revolve` có `erase_profile` tính như xóa đối tượng có sẵn.
 - Test: `test/solids.test.ts`. `test/tools.test.ts`: regex tên lệnh nhận cả chữ số (`set_view_3d`), giống test C#.
 
