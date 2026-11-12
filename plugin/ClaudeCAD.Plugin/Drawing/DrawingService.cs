@@ -66,6 +66,8 @@ namespace ClaudeCAD.Plugin.Drawing
             RegisterCapture(d);
             // 3D phase 1 (ToolGroup.ThreeD)
             RegisterSolids(d);
+            // 3D phase 2 (ToolGroup.ThreeD)
+            RegisterSolids2(d);
         }
 
         private static void RegisterSystem(ToolDispatcher d, ITurnHost host)

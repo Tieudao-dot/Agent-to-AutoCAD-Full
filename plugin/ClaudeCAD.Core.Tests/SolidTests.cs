@@ -30,7 +30,8 @@ namespace ClaudeCAD.Core.Tests
                 // a machine without a valid plan line gets the default plan (2D): no 3D
                 Assert.False(PlanLogic.Allowed(null, t), t);
             }
-            Assert.Equal(Tools3d.Length, PlanLogic.Groups.Count(kv => kv.Value == ToolGroup.ThreeD));
+            // phase 1 + phase 2 (Solid2Tests.Phase2)
+            Assert.Equal(Tools3d.Length + Solid2Tests.Phase2.Length, PlanLogic.Groups.Count(kv => kv.Value == ToolGroup.ThreeD));
             // the self-check picture stays in every plan
             Assert.Equal(ToolGroup.Common, PlanLogic.GroupOf("capture_view"));
         }

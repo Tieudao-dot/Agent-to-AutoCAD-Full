@@ -27,6 +27,11 @@
 > `solid_union`, `solid_subtract`, `solid_intersect`, `set_view_3d`, `set_visual_style`, `get_solid_info`;
 > `capture_view` thêm `view` / `direction` / `visual_style` (vẫn nhóm Chung). Chi tiết và việc còn lại:
 > [`ban-giao/ve-3d-dot-1.md`](ban-giao/ve-3d-dot-1.md). Thử thật: phần J của `checklist-thu-that.md`.
+>
+> **Đợt 2: đã viết (12/11/2026, nhánh `full/ve-3d-dot-2`, chưa thử trên AutoCAD thật, chờ thread Test & sửa đợt 2).**
+> 12 lệnh nhãn 3D: `sweep`, `loft`, `slice_solid`, `fillet_edges`, `chamfer_edges`, `shell_solid`, `rotate_3d`,
+> `mirror_3d`, `align`, `set_ucs`, `reset_ucs`, `check_interference`; `get_solid_info` thêm danh sách cạnh / mặt có số
+> thứ tự và `topology_id`. Chi tiết: [`ban-giao/ve-3d-dot-2.md`](ban-giao/ve-3d-dot-2.md). Thử thật: phần K.
 
 ### Hiện trạng
 

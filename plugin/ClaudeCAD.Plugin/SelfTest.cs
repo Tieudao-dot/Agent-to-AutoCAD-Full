@@ -256,6 +256,76 @@ namespace ClaudeCAD.Plugin
                 return $"{r.Width}×{r.Height}, {r.Png.Length / 1024.0:0.0} KB (capture-3d.png trong thư mục thử)";
             });
 
+            // 3D phase 2: the same code paths as get_solid_info (edges), fillet_edges, slice_solid, check_interference
+            Solid3d AddBox(Transaction tr, double l, double w, double h, double[] corner)
+            {
+                var db = doc.Database;
+                var ms = (BlockTableRecord)tr.GetObject(SymbolUtilityServices.GetBlockModelSpaceId(db), OpenMode.ForWrite);
+                var box = DrawingService.MakeBox(l, w, h, corner, null, 0);
+                box.SetDatabaseDefaults(db);
+                ms.AppendEntity(box);
+                tr.AddNewlyCreatedDBObject(box, true);
+                return box;
+            }
+            Check("Khối 3D đợt 2: bo 4 cạnh đứng R100, kiểm thể tích", () =>
+            {
+                double l = 1000, w = 800, h = 600, r = 100;
+                double volume;
+                int picked;
+                using (doc.LockDocument())
+                using (var tr = doc.TransactionManager.StartTransaction())
+                {
+                    var box = AddBox(tr, l, w, h, new double[] { 9000, 0, 0 });
+                    var t = DrawingService.ReadTopology(box);
+                    var edges = Solid2Logic.FilterEdges(t.Edges, new[] { "parallel_z" }, t.Min, t.Max, "selftest");
+                    picked = edges.Count;
+                    if (picked != 4) throw new InvalidOperationException($"bộ lọc parallel_z chọn {picked} cạnh, cần 4 (hộp có {t.Edges.Count} cạnh)");
+                    DrawingService.FilletSolid(box, edges.Select(i => t.EdgeIds[i]).ToList(), r, "selftest");
+                    volume = box.MassProperties.Volume;
+                    tr.Commit();
+                }
+                return SelfTestRules.CheckVolume($"hộp 1000×800×600 bo {picked} cạnh đứng R100", volume, Solid2Logic.FilletedBoxVolume(l, w, h, r, 4));
+            });
+
+            Check("Khối 3D đợt 2: cắt đôi bằng mặt phẳng, mỗi nửa ~½", () =>
+            {
+                double l = 1000, w = 800, h = 600;
+                double v1, v2;
+                using (doc.LockDocument())
+                using (var tr = doc.TransactionManager.StartTransaction())
+                {
+                    var box = AddBox(tr, l, w, h, new double[] { 12000, 0, 0 });
+                    var plane = new PlaneDef { Point = new double[] { 12000 + l / 2, 0, 0 }, Normal = new double[] { 1, 0, 0 } };
+                    using (var other = DrawingService.SliceSolid(box, plane, "both", "selftest"))
+                    {
+                        v1 = box.MassProperties.Volume;
+                        v2 = other?.MassProperties.Volume ?? 0;
+                    }
+                    tr.Commit();
+                }
+                var half = SolidLogic.BoxVolume(l, w, h) / 2;
+                var verdict = SelfTestRules.CheckVolume("nửa dương", v1, half);
+                if (!SolidLogic.VolumeMatches(v2, half)) return new SelfTestRules.Verdict(false, verdict.Detail + $"; nửa âm {v2 / 1e9:0.######} m³, cần {half / 1e9:0.######} m³");
+                return verdict;
+            });
+
+            Check("Khối 3D đợt 2: hai hộp chồng nhau, check_interference thấy va chạm", () =>
+            {
+                double overlap;
+                bool hit;
+                using (doc.LockDocument())
+                using (var tr = doc.TransactionManager.StartTransaction())
+                {
+                    var a = AddBox(tr, 1000, 1000, 1000, new double[] { 15000, 0, 0 });
+                    var b = AddBox(tr, 1000, 1000, 1000, new double[] { 15500, 0, 0 });
+                    hit = a.CheckInterference(b);
+                    overlap = DrawingService.OverlapVolume(a, b);
+                    tr.Commit();
+                }
+                if (!hit) return new SelfTestRules.Verdict(false, "CheckInterference báo không va chạm");
+                return SelfTestRules.CheckVolume("phần chồng 500×1000×1000", overlap, 500.0 * 1000 * 1000);
+            });
+
             string versionFile = Path.Combine(dir, "version-copy.dwg");
             Do("Bản sao phiên bản (Wblock + SaveAs)", () =>
             {

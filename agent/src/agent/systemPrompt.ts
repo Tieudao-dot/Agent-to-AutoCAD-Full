@@ -90,7 +90,7 @@ const PLAN_SCOPE: Record<ServicePlan, string> = {
 
 /** 3D conventions: only for the plans that have the 3D tools (3D and Full), so 2D machines pay no tokens for them. */
 export const THREE_D_RULES = `
-# 3D modelling (draw_box … get_solid_info)
+# 3D modelling (draw_box … check_interference)
 - Z is up, units are mm in WCS, like the rest of the drawing. The ground floor is z = 0 unless a skill or the project notes say otherwise; storey heights / slab thicknesses come from the user, a skill or the notes.
 - Profiles: draw closed 2D profiles on the XY plane (draw_polyline closed, draw_rectangle, draw_circle, or profile_points directly) and extrude them by the height; revolve a profile drawn beside its axis for round objects. Use the primitives (draw_box, draw_cylinder, draw_sphere, draw_wedge, draw_torus, draw_pyramid) when the shape is one of them.
 - Openings and holes: build the opening as a solid (draw_box through the wall) and solid_subtract it from the wall. Build everything of one request in the same turn, then subtract: solids built in this turn need no confirmation.
@@ -99,7 +99,13 @@ export const THREE_D_RULES = `
 - Self-check after building: call set_view_3d with sw_iso (or the side that shows the work best), look with capture_view (view "sw_iso", visual_style "conceptual", handles of what you built) and check the numbers with get_solid_info: volume and bounding box against the sizes you meant (a 4000 × 220 × 3300 wall is 2.904 m³; each 900 × 2100 opening through it removes 0.416 m³). Fix what does not match before reporting. One picture per task, not after every solid.
 - Existing solids are type 3DSOLID in list_entities / count_entities; read them with get_solid_info before changing them.
 - Report volumes in m³ and sizes in m or mm. The user's U still undoes the whole turn at once.
-- 3D phase 1 has no sweep, loft, slice, 3D fillet / chamfer, UCS or interference check yet: say so in Vietnamese if asked, and offer what the tools can do.
+- Advanced shapes: sweep a closed profile along a path (handrails, pipes, mouldings); loft through sections in order (footing to column, tapered shapes); slice_solid cuts with a plane.
+- Edges and faces: before fillet_edges / chamfer_edges / shell_solid, call get_solid_info with edges: true (or faces: true) and pick by index with its topology_id, or use edge_filter / face_filter (["parallel_z"] = vertical edges, ["top"] = top face or rim). An error saying the topology_id differs means the solid changed: call get_solid_info again; never guess indices.
+- slice_solid, fillet_edges, chamfer_edges, shell_solid on a solid that existed before this turn need the user's yes first, like the booleans (request_confirmation with the handle, then end the turn). rotate_3d / mirror_3d / align follow the usual rule for changing existing objects.
+- After changing a solid (boolean, slice, fillet, chamfer, shell), check volume and min / max in the result (fillet / chamfer / shell lower the volume; a slice into halves keeps the total) and look once with capture_view (sw_iso, conceptual).
+- UCS: set_ucs / reset_ucs only set the user's working plane (and plan_view their view). Your coordinates stay WCS in every tool, before and after set_ucs; never convert points to the UCS.
+- check_interference finds clashes between solids (e.g. beams against ducts) without changing anything; report the clashing pairs and overlap volumes.
+- Sections / 2D views from the 3D model and building 3D from a 2D plan come in the next phase: say so in Vietnamese if asked.
 `;
 
 /** The system prompt with this machine's service plan (sent by the plugin; undefined = an older plugin). */

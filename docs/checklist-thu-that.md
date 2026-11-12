@@ -158,6 +158,33 @@ Máy phải ở gói `3D` hoặc `Full` (phần I). Mở một bản vẽ mới 
 | J14 | ○ | AutoCAD bản ngôn ngữ khác tiếng Anh (nếu có), hoặc bản vẽ từ mẫu tiếng nước ngoài: "chuyển kiểu Conceptual", "chụp ảnh góc iso kiểu Conceptual" | Kiểu đổi được, ảnh có màu; nếu lỗi thì Claude nêu tên các kiểu có trong bản vẽ — ghi lại danh sách đó | ☐ | ☐ | 3D-14 |
 | J15 | ○ | Dựng hộp 1000×1000×1000 và hộp thứ hai chạm đúng mặt (cạnh nhau, không chồng), gõ "giao hai hộp" | Claude báo hai khối không giao nhau / AutoCAD không ghép được, **bản vẽ không đổi**, AutoCAD không treo | ☐ | ☐ | 3D-15 |
 
+## K. 3D đợt 2 (bản Full, gói 3D hoặc Full, ~10 phút)
+
+Máy ở gói `3D` hoặc `Full`. Bản vẽ mới (acadiso.dwt), tab Model. Mỗi bước xong thì nhìn góc SW iso kiểu Conceptual.
+
+| # | | Làm gì | Kết quả mong đợi | Đạt | Lỗi | Mã gốc |
+| --- | --- | --- | --- | --- | --- | --- |
+| K1 | ★ | Gõ `CLAUDECHATSELFTEST` | Ba dòng mới ✓: "bo 4 cạnh đứng R100" (≈ 0,474850 m³), "cắt đôi … mỗi nửa ~½" (0,24 m³ mỗi nửa), "hai hộp chồng nhau … va chạm" (0,5 m³) | ☐ | ☐ | 3D2-1 |
+| K2 | ★ | "dựng hộp 1000x800x600 rồi bo tròn 4 cạnh đứng bán kính 100" | Một lượt, không hỏi xác nhận; 4 cạnh đứng tròn, cạnh trên / dưới vẫn vuông; thể tích ≈ 0,4749 m³ | ☐ | ☐ | 3D2-2 |
+| K3 | ★ | Lượt sau: "vát 4 cạnh trên của hộp đó 30 mm" | **Thẻ xác nhận** trước khi vát (khối có từ lượt trước); Đồng ý → 4 cạnh trên vát, thể tích giảm | ☐ | ☐ | 3D2-3 |
+| K4 | ★ | "bo cạnh hộp bán kính 2000" | Claude báo bán kính quá lớn, bản vẽ không đổi, AutoCAD không treo | ☐ | ☐ | 3D2-4 |
+| K5 | ★ | "dựng hộp 2000x1000x1000, cắt đôi bằng mặt phẳng đứng ở giữa theo chiều dài, giữ cả hai nửa" | Hai khối, mỗi khối 1 m³; tổng không đổi | ☐ | ☐ | 3D2-5 |
+| K6 | ★ | "dựng hộp 1000x1000x800, làm rỗng thành bể hở miệng, thành dày 50" | Bể mở mặt trên, kích thước ngoài giữ nguyên 1000×1000×800, thành 50 (đáy dày 50); thể tích ≈ 0,8 − 0,9×0,9×0,75 = 0,1925 m³ | ☐ | ☐ | 3D2-6 |
+| K7 | ★ | "vẽ đường dẫn chữ L từ (0,0,0) lên (0,0,1000) rồi sang (1000,0,1000), quét ống tròn D50 theo đường đó" | Ống tròn D50 bám đường dẫn, tiết diện vuông góc đường dẫn ở đầu ống; thể tích ≈ π·25²·2000 ≈ 0,0039 m³ | ☐ | ☐ | 3D2-7 |
+| K8 | ★ | "loft từ hình vuông 1000x1000 ở z=0 lên hình tròn D400 ở z=2000" | Khối chuyển dần từ vuông sang tròn, không xoắn | ☐ | ☐ | 3D2-8 |
+| K9 | ★ | "xoay hộp 90 độ quanh trục X qua gốc", "đối xứng hộp qua mặt phẳng YZ, giữ bản gốc", "căn hộp bằng 2 cặp điểm…" | Xoay / đối xứng / căn đúng; một U hoàn tác cả lượt | ☐ | ☐ | 3D2-9 |
+| K10 | ★ | "đặt UCS mặt trước", rồi "vẽ hộp 500x500x500 tại gốc"; sau đó "trả UCS về World"; gõ U | Biểu tượng UCS đổi sang mặt trước; hộp vẫn nằm ở gốc WCS, đứng thẳng theo Z (không theo UCS); về World được; **U** hoàn tác cả hộp và UCS của lượt | ☐ | ☐ | 3D2-10 |
+| K11 | ★ | Dựng 2 dầm chồng vào 1 ống, "kiểm tra va chạm" | Claude liệt kê cặp va chạm và thể tích phần chồng, bản vẽ không đổi | ☐ | ☐ | 3D2-11 |
+| K12 | ★ | Dựng hộp, "liệt kê cạnh và mặt của hộp" rồi "bo cạnh số 3" | `get_solid_info` có danh sách cạnh / mặt và `topology_id`; bo đúng cạnh số 3. Sửa khối bằng tay (vd. tay kéo hộp) rồi "bo cạnh số 5" → Claude đọc lại danh sách cạnh trước khi bo, không bo nhầm | ☐ | ☐ | 3D2-12 |
+| K13 | ★ | Lượt K2 → Lưu thành macro → chạy ở bản vẽ mới, rồi 📍 Tại điểm | Mỗi lần có hộp mới bo 4 cạnh đứng; hộp cũ không bị bo thêm | ☐ | ☐ | 3D2-13 |
+| K14 | ○ | Bật 🔒 Chỉ xem: "bo cạnh hộp", "đặt UCS mặt trước", "kiểm tra va chạm" | Bo cạnh và UCS bị từ chối (chỉ xem); kiểm tra va chạm vẫn chạy (chỉ đọc) | ☐ | ☐ | 3D2-14 |
+| K15 | ★ | Máy gói `2D`: "bo cạnh hộp", "quét ống theo đường" | Claude nói máy dùng gói 2D, chưa có 3D | ☐ | ☐ | 3D2-15 |
+| K16 | ○ | AutoCAD 2022–2024 và 2025–2027 (nếu có), và AutoCAD không phải tiếng Anh: chạy K1, K6, K7 | Như trên ở từng đời | ☐ | ☐ | 3D2-16 |
+
+Chỗ chỉ thấy trên AutoCAD thật (đợt 2 viết theo tài liệu API, chưa chạy thật): dấu độ dày của `ShellBody` (plugin
+thử trên bản sao, chọn phía làm thể tích giảm mà hộp bao giữ nguyên), `FilletEdges` với setback 0, căn tiết diện
+của `sweep` (tâm tiết diện đặt vào đầu đường dẫn), thứ tự cạnh Brep giữa bản gốc và bản sao, U hoàn tác `set_ucs`.
+
 ## Gửi lại gì khi lỗi
 
 1. **Mã bước** bị lỗi (ví dụ `D2`) + một dòng: đã làm gì, thấy gì khác với "kết quả mong đợi".

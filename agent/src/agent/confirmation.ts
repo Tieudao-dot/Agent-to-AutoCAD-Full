@@ -37,16 +37,35 @@ const DESTRUCTIVE: Record<string, (p: Record<string, unknown>) => number> = {
   // extrude / revolve only change existing objects when they erase the profile
   extrude: (p) => (p.erase_profile === true ? len(p.profile_handles) : 0),
   revolve: (p) => (p.erase_profile === true ? len(p.profile_handles) : 0),
+  // 3D phase 2: sweep / loft only change existing objects when they erase the profile / sections
+  sweep: (p) => (p.erase_profile === true ? len(p.profile_handles) : 0),
+  loft: (p) => (p.erase_profile === true ? len(p.section_handles) : 0),
+  // editing an existing solid (always confirmed when it is older than the turn, see ALWAYS_CONFIRM)
+  slice_solid: (p) => (typeof p.handle === 'string' ? 1 : 0),
+  fillet_edges: (p) => (typeof p.handle === 'string' ? 1 : 0),
+  chamfer_edges: (p) => (typeof p.handle === 'string' ? 1 : 0),
+  shell_solid: (p) => (typeof p.handle === 'string' ? 1 : 0),
+  // 3D transforms: the same rule as move / rotate / mirror (more than 20 existing objects)
+  rotate_3d: (p) => len(p.handles),
+  align: (p) => len(p.handles),
+  mirror_3d: (p) => (p.keep_original === false ? len(p.handles) : 0),
 };
 
 /**
  * 3D booleans: changing or erasing a solid that existed before this turn always needs the user's yes, whatever the
  * count (a union / subtract silently replaces the user's solid). Solids built in this turn need none.
  */
-export const ALWAYS_CONFIRM = new Set(['solid_union', 'solid_subtract', 'solid_intersect']);
+export const ALWAYS_CONFIRM = new Set([
+  'solid_union', 'solid_subtract', 'solid_intersect',
+  // 3D phase 2: slicing, filleting, chamfering or shelling an existing solid (decided 12/11/2026)
+  'slice_solid', 'fillet_edges', 'chamfer_edges', 'shell_solid',
+]);
 
-/** Tools that create new objects even when they also change existing ones (extrude / revolve with erase_profile). */
-const CREATES_TOO = new Set(['extrude', 'revolve']);
+/**
+ * Tools that create new objects even when they also change existing ones (extrude / revolve / sweep / loft with
+ * erase_profile; slice_solid keeping both halves). Their result handles minus the handles they change are "created".
+ */
+const CREATES_TOO = new Set(['extrude', 'revolve', 'sweep', 'loft', 'slice_solid']);
 
 /** The handles a destructive call names, for the tools whose handles are not in 'handles' / 'handle'. */
 function namedHandles(tool: string, params: Record<string, unknown>): string[] | undefined {
@@ -54,7 +73,8 @@ function namedHandles(tool: string, params: Record<string, unknown>): string[] |
   if (tool === 'solid_subtract') {
     return [...(typeof params.target === 'string' ? [params.target] : []), ...(params.keep_tools === true ? [] : strs(params.subtract))];
   }
-  if (tool === 'extrude' || tool === 'revolve') return params.erase_profile === true ? strs(params.profile_handles) : [];
+  if (tool === 'extrude' || tool === 'revolve' || tool === 'sweep') return params.erase_profile === true ? strs(params.profile_handles) : [];
+  if (tool === 'loft') return params.erase_profile === true ? strs(params.section_handles) : [];
   return undefined;
 }
 
@@ -102,23 +122,30 @@ export function affectedHandles(tool: string, params: Record<string, unknown>): 
 /** Handles a successful call created (draw_*, insert_block, copy / array / offset, a batch's creating calls). */
 export function createdHandles(tool: string, params: Record<string, unknown>, result: unknown): string[] {
   const out: string[] = [];
-  const take = (r: unknown) => {
+  const take = (r: unknown, t: string, p: Record<string, unknown>) => {
     if (!r || typeof r !== 'object') return;
     const o = r as Record<string, unknown>;
-    if (Array.isArray(o.handles)) for (const h of o.handles) if (typeof h === 'string') out.push(h.toUpperCase());
-    if (typeof o.handle === 'string') out.push(o.handle.toUpperCase());
+    // a tool that changes some objects and creates others (slice_solid): the changed ones are not new
+    const changed = new Set(CREATES_TOO.has(t) ? affectedHandles(t, p) : []);
+    const add = (h: string) => {
+      const u = h.toUpperCase();
+      if (!changed.has(u)) out.push(u);
+    };
+    if (Array.isArray(o.handles)) for (const h of o.handles) if (typeof h === 'string') add(h);
+    if (typeof o.handle === 'string') add(o.handle);
   };
   if (tool === 'batch_execute' && Array.isArray(params.calls)) {
     const results = (result as { results?: unknown[] } | undefined)?.results;
     if (!Array.isArray(results)) return out;
     (params.calls as Array<{ tool?: unknown; params?: unknown }>).forEach((c, i) => {
       const r = results[i] as { ok?: unknown; result?: unknown } | undefined;
-      if (c && typeof c.tool === 'string' && r?.ok === true && (CREATES_TOO.has(c.tool) || affectedCount(c.tool, (c.params as Record<string, unknown>) ?? {}) === 0)) take(r.result);
+      const cp = (c?.params as Record<string, unknown>) ?? {};
+      if (c && typeof c.tool === 'string' && r?.ok === true && (CREATES_TOO.has(c.tool) || affectedCount(c.tool, cp) === 0)) take(r.result, c.tool, cp);
     });
     return out;
   }
-  if (CREATES_TOO.has(tool) || affectedCount(tool, params) === 0) take(result);
-  return out;
+  if (CREATES_TOO.has(tool) || affectedCount(tool, params) === 0) take(result, tool, params);
+  return [...new Set(out)];
 }
 
 const PHRASES = [
@@ -191,7 +218,7 @@ export function newlyAffected(tool: string, params: Record<string, unknown>, g: 
  * Returns an error message if the call must be confirmed first, otherwise undefined.
  * The count is cumulative over the turn: distinct existing objects (g.touched) + those this call adds.
  */
-/** Solids that existed before this turn and that a 3D boolean of this call (or of a batch) would change or erase. */
+/** Solids that existed before this turn and that a 3D boolean / solid edit of this call (or of a batch) would change or erase. */
 export function existingSolidsChanged(tool: string, params: Record<string, unknown>, g: GateState): string[] {
   if (tool === 'batch_execute' && Array.isArray(params.calls)) {
     const out: string[] = [];

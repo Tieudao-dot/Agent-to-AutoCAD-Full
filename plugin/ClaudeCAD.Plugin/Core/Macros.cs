@@ -77,10 +77,10 @@ namespace ClaudeCAD.Plugin.Core
     /// <summary>Recording and replay rules, independent of AutoCAD (unit-tested).</summary>
     public static class MacroLogic
     {
-        /// <summary>Tools never recorded: view changes, file operations, undo, purge.</summary>
+        /// <summary>Tools never recorded: view changes, the UCS (a working plane; every tool takes WCS), file operations, undo, purge.</summary>
         public static readonly HashSet<string> NotRecorded = new HashSet<string>(StringComparer.Ordinal)
         {
-            "zoom_extents", "zoom_window", "set_view_3d", "set_visual_style", "regen", "save_drawing", "purge_unused", "undo_last_turn", "batch_execute",
+            "zoom_extents", "zoom_window", "set_view_3d", "set_visual_style", "set_ucs", "reset_ucs", "regen", "save_drawing", "purge_unused", "undo_last_turn", "batch_execute",
         };
 
         public const int MaxCalls = 2000;

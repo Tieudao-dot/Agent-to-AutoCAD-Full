@@ -11,7 +11,7 @@ using AcApp = Autodesk.AutoCAD.ApplicationServices.Application;
 namespace ClaudeCAD.Plugin.Drawing
 {
     /// <summary>
-    /// 3D phase 1: solid primitives, extrude / revolve of 2D profiles, booleans, 3D views, visual styles and the
+    /// 3D phase 1 (phase 2 is Solid2Tools.cs): solid primitives, extrude / revolve of 2D profiles, booleans, 3D views, visual styles and the
     /// solid query. Every tool here is labelled ToolGroup.ThreeD (Core/Plans.cs). Z is up, units are mm (WCS).
     /// The AutoCAD-free math (presets, checks, expected volumes) is SolidLogic in Core/Solids.cs.
     /// </summary>
@@ -521,7 +521,13 @@ namespace ClaudeCAD.Plugin.Drawing
         {
             var list = new List<object>();
             double total = 0;
-            foreach (var h in p.Handles("handles", 200))
+            // 3D phase 2: the edge / face lists with indices for fillet_edges, chamfer_edges, shell_solid
+            bool listEdges = p.Bool("edges", false), listFaces = p.Bool("faces", false);
+            int maxItems = p.Int("max_items", Solid2Logic.DefaultListItems, 1, Solid2Logic.MaxListItems);
+            var handles = p.Handles("handles", 200);
+            if ((listEdges || listFaces) && handles.Count > 10)
+                throw ToolException.Invalid("get_solid_info: list edges / faces of at most 10 solids per call (the lists are long).");
+            foreach (var h in handles)
             {
                 var e = Acad.GetEntity(ctx, h, false);
                 var row = new Dictionary<string, object> { ["handle"] = h.ToUpperInvariant(), ["type"] = Acad.TypeName(e), ["layer"] = Acad.LayerName(ctx, e.LayerId) };
@@ -554,6 +560,11 @@ namespace ClaudeCAD.Plugin.Drawing
                         }
                     }
                     catch (Exception ex) { row["topology_error"] = ex.Message; }
+                    if (listEdges || listFaces)
+                    {
+                        try { AddTopologyLists(row, ReadTopology(s), listEdges, listFaces, maxItems); }
+                        catch (Exception ex) when (!(ex is ToolException)) { row["topology_error"] = ex.Message; }
+                    }
                 }
                 else
                 {
