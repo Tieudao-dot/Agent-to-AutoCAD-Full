@@ -12,7 +12,7 @@ các điểm đã chốt / đang làm / chưa làm theo chủ ý.*
 | `cd agent && npm ci && npm test` (trước khi thêm test) | 201/201 xanh |
 | Build plugin net48 / net8.0-windows / net10.0-windows (Linux, `-p:EnableWindowsTargeting=true`, SDK 8 + 10) | cả 3 xanh, 0 cảnh báo |
 | Test mới chứng minh lỗi | lõi **5 đỏ** (`KiemTraDocLapTests.cs`: KT-01, KT-10, KT-11, KT-13 ×2), trợ lý **1 đỏ** (`kiemtradoclap.test.ts`: KT-09). Đỏ có chủ ý |
-| CI run `43249502517` (workflow_dispatch, `release: "false"`) | xem cuối file |
+| CI run `43249502517` (workflow_dispatch, `release: "false"`) | **xanh** (~11 phút): trợ lý, lõi, UI test WPF, build 3 bản, bundle, Setup.exe; bước phát hành bỏ qua. 6 test chứng minh lỗi ở trạng thái skipped / todo trên CI (xem dưới) |
 
 **Về test đỏ trên CI:** workflow dừng ở bước đỏ đầu tiên (`npm test` đứng trước test lõi và UI test). Để lượt CI duy nhất
 vẫn chạy UI test và build Windows, 6 test mới là *skipped* (xunit, `[KtRedFact]`) / *todo* (node) **chỉ khi**
@@ -221,7 +221,7 @@ Ví dụ: "đùn biên dạng chữ L từ 2 đường đã có" cần nối đ�
 
 ## CI
 
-Run `43249502517` trên `full/kiem-tra-doc-lap` @ `219a7bf`: *(điền khi xong)*.
+Run `43249502517` trên `full/kiem-tra-doc-lap` @ `219a7bf`: **xanh**. Mọi bước chạy: trợ lý (named pipe Windows), lõi, UI test WPF, build net48 / net8 / net10, bundle, `Setup.exe`; bước phát hành bỏ qua (không `release`, không secret). 5 test xunit mới là skipped, 1 test node là todo (chỉ trên GitHub Actions); chạy ngoài CI thì đỏ: lõi 331 xanh + 5 đỏ, trợ lý 201 xanh + 1 đỏ.
 
 ## Thời gian
 
