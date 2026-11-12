@@ -335,6 +335,50 @@ describe('activation service (Apps Script)', () => {
     assert.match(keyA, /^[0-9A-HJKMNP-TV-Z]{4}(-[0-9A-HJKMNP-TV-Z]{4}){3}$/);
   });
 
+  it('every machine has a plan: new rows get the default, the owner changes the cell, the line is signed', () => {
+    const s = loadService();
+    s.get({ action: 'request', machine, device: 'PC', user: 'u' });
+    const row = s.row(machine)!;
+    assert.equal(row[9], '2D', 'a new machine starts with the default plan');
+    let r = s.get({ action: 'status', machine });
+    assert.match(r.plan, /^CCF1\|CC-1A2B-3C4D-5E6F\|2d\|\d{4}-\d{2}-\d{2}\|/);
+    assert.ok(verify(r.plan, s.publicKey));
+    // the owner picks another plan (letter case and spaces do not matter)
+    for (const [cell, code] of [['3D', '3d'], ['2D + 3D', '2d3d'], [' 2d+3d ', '2d3d'], ['3d', '3d'], ['2D', '2d']] as const) {
+      row[9] = cell;
+      r = s.get({ action: 'status', machine });
+      assert.equal(r.plan.split('|')[2], code, cell);
+      assert.ok(verify(r.plan, s.publicKey));
+    }
+    // empty or mistyped: never more than the default plan
+    for (const cell of ['', '4D', 'full', '2D, 3D']) {
+      row[9] = cell;
+      assert.equal(s.get({ action: 'status', machine }).plan.split('|')[2], '2d', cell);
+    }
+    // a plan line of one machine is not valid for another, and the plan cannot be edited
+    row[9] = '2D + 3D';
+    r = s.get({ action: 'status', machine });
+    const forged = r.plan.replace('|2d3d|', '|3d|');
+    assert.equal(verify(forged, s.publicKey), false);
+    // the key path returns the plan too
+    const key = /KEY: (\S+)/.exec(s.mails[0].body)![1];
+    const act = s.get({ action: 'activate', machine, key });
+    assert.equal(act.plan.split('|')[2], '2d3d');
+    assert.ok(verify(act.plan, s.publicKey));
+    // unknown machine: default plan, still no row
+    const other = s.get({ action: 'status', machine: 'CC-0000-1111-2222' });
+    assert.equal(other.plan.split('|')[2], '2d');
+    assert.equal(s.row('CC-0000-1111-2222'), undefined);
+    // the status line is unchanged, so plugins that do not know plans keep working
+    assert.match(r.status, /^CCS1\|/);
+  });
+
+  it('the request email reminds the owner to pick the plan', () => {
+    const s = loadService();
+    s.get({ action: 'request', machine, device: 'PC', user: 'u' });
+    assert.match(s.mails[0].body, /cột "Gói" đang là 2D/);
+  });
+
   it('the manual function emails the key, the offline code and the no-network pass', () => {
     const s = loadService();
     vm.runInContext("MAY_THU_CONG = 'CC-1A2B-3C4D-5E6F';", s.sandbox);
@@ -346,6 +390,9 @@ describe('activation service (Apps Script)', () => {
     const pass = /\n(CCS1\|\S+)\n/.exec(s.mails[0].body)![1];
     assert.ok(verify(pass, s.publicKey));
     assert.ok(pass.startsWith('CCS1|CC-1A2B-3C4D-5E6F|offline|'));
+    const plan = /\n(CCF1\|\S+)\n/.exec(s.mails[0].body)![1];
+    assert.ok(verify(plan, s.publicKey));
+    assert.ok(plan.startsWith('CCF1|CC-1A2B-3C4D-5E6F|2d|'));
     assert.equal(s.row(machine)![5], 'Active'); // the owner sees the hand-made machine in the sheet too
   });
 
@@ -353,6 +400,7 @@ describe('activation service (Apps Script)', () => {
     const s = loadService();
     (s.sandbox.kiemTra as () => void)();
     assert.equal(s.sheet()!.rows[0][0], 'Mã máy'); // headers in place
+    assert.equal(s.sheet()!.rows[0][9], 'Gói');
     assert.equal(s.row('CC-1234-5678-9ABC')![5], 'Active');
     assert.equal(s.mails.length, 1);
     assert.match(s.mails[0].subject, /hoạt động/);

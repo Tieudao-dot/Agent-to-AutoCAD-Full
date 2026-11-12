@@ -57,6 +57,7 @@ Dòng "Liên hệ Zalo owner: …" nằm ở: `activation/activation.json`, `act
 
 ## 6. Việc cần chủ dự án quyết
 
-1. Máy chủ kích hoạt riêng: Apps Script + Sheet mới, cặp khóa mới.
+1. Máy chủ kích hoạt riêng: Apps Script + Sheet mới, cặp khóa mới. **Đã chốt 12/11/2026:** chủ dự án tự dựng theo
+   [`dung-may-chu-kich-hoat-full.md`](dung-may-chu-kich-hoat-full.md); URL và khóa công khai trong repo đổi sau khi dựng xong.
 2. Bản Full phát hành ở Releases của repo Full hay nơi khác.
 3. Bản Full thay thế bản gốc trên máy người dùng (giữ `AppId`, thư mục) hay cài song song (đổi tên, `AppId`, lệnh).
