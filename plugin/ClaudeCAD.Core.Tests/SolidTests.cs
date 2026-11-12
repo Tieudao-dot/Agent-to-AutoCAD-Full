@@ -205,8 +205,8 @@ namespace ClaudeCAD.Core.Tests
             Assert.Null(SolidLogic.ProfileCrossesAxis(rect, new double[] { 0, 0 }, new double[] { 0, 1 }));
             // the axis through the middle of the profile
             Assert.NotNull(SolidLogic.ProfileCrossesAxis(rect, new double[] { 150, 0 }, new double[] { 150, 1 }));
-            // an axis along Z is not checked here
-            Assert.Null(SolidLogic.ProfileCrossesAxis(rect, new double[] { 150, 0, 0 }, new double[] { 150, 0, 1 }));
+            // an axis along Z cannot revolve an XY profile: a clear error now (KT-30), not AutoCAD's generic one
+            Assert.Contains("plane", SolidLogic.ProfileCrossesAxis(rect, new double[] { 150, 0, 0 }, new double[] { 150, 0, 1 }));
         }
 
         [Fact]

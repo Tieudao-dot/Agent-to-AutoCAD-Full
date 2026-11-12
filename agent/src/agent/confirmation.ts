@@ -30,6 +30,11 @@ const DESTRUCTIVE: Record<string, (p: Record<string, unknown>) => number> = {
   trim_entities: (p) => len(p.handles),
   extend_entities: (p) => len(p.handles),
   reset_dynamic_block: (p) => len(p.handles),
+  // KT-37 (12/11/2026, a small change of the 2D rule): these also change or remove existing objects
+  fillet_entities: (p) => (typeof p.handle1 === 'string' ? 1 : 0) + (typeof p.handle2 === 'string' ? 1 : 0),
+  chamfer_entities: (p) => (typeof p.handle1 === 'string' ? 1 : 0) + (typeof p.handle2 === 'string' ? 1 : 0),
+  define_block: (p) => (p.replace_with_insert === false ? 0 : len(p.entity_handles)),
+  delete_layout: () => 1,
   // 3D: a boolean changes its first / target solid and erases the others (unless keep_tools)
   solid_union: (p) => len(p.handles),
   solid_intersect: (p) => len(p.handles),
@@ -65,7 +70,7 @@ export const ALWAYS_CONFIRM = new Set([
  * Tools that create new objects even when they also change existing ones (extrude / revolve / sweep / loft with
  * erase_profile; slice_solid keeping both halves). Their result handles minus the handles they change are "created".
  */
-const CREATES_TOO = new Set(['extrude', 'revolve', 'sweep', 'loft', 'slice_solid']);
+const CREATES_TOO = new Set(['extrude', 'revolve', 'sweep', 'loft', 'slice_solid', 'fillet_entities', 'chamfer_entities', 'define_block']);
 
 /** The handles a destructive call names, for the tools whose handles are not in 'handles' / 'handle'. */
 function namedHandles(tool: string, params: Record<string, unknown>): string[] | undefined {
@@ -75,6 +80,8 @@ function namedHandles(tool: string, params: Record<string, unknown>): string[] |
   }
   if (tool === 'extrude' || tool === 'revolve' || tool === 'sweep') return params.erase_profile === true ? strs(params.profile_handles) : [];
   if (tool === 'loft') return params.erase_profile === true ? strs(params.section_handles) : [];
+  if (tool === 'fillet_entities' || tool === 'chamfer_entities') return [params.handle1, params.handle2].filter((h): h is string => typeof h === 'string');
+  if (tool === 'define_block') return params.replace_with_insert === false ? [] : strs(params.entity_handles);
   return undefined;
 }
 
@@ -191,6 +198,12 @@ export interface GateState {
   answersQuestion: boolean;
   /** The turn was started by the "Đồng ý" button of a confirmation card or the "Làm" button of a plan card. */
   confirmedByButton?: boolean;
+  /**
+   * The handles of the confirmation card whose "Đồng ý" button started this turn (upper case). Decided 12/11/2026 (C2):
+   * changing, erasing or exploding 3D solids that existed before the turn is unlocked only by that button, and only
+   * for these handles; a typed "ok" / "đồng ý" or the plan card's "Làm" does not unlock it (the 2D rule is unchanged).
+   */
+  cardConfirmed?: ReadonlySet<string>;
   /** Existing objects already changed or removed by earlier calls of this turn (distinct handles). */
   touched?: ReadonlySet<string>;
   /** Objects created in this turn: changing them never needs a confirmation. */
@@ -232,36 +245,40 @@ export function existingSolidsChanged(tool: string, params: Record<string, unkno
 }
 
 /**
- * explode_entities breaks up 3D solids / surfaces / meshes only after the user's yes when they existed before the turn
- * (decided 12/11/2026). Only the plugin knows an object's type, so the plugin refuses them ("Confirmation required")
- * unless the call carries this flag, which the assistant sets when the user said yes in this turn. Claude cannot set it:
- * it is not in the tool's schema and applyUserConfirmation removes it from every call it did not earn.
+ * explode_entities / erase_entities on 3D solids, surfaces or meshes that existed before the turn need the Đồng ý button
+ * of a confirmation card listing them (decided 12/11/2026: C1 for erase, C2 for "only the card"). Only the plugin knows an
+ * object's type, so the plugin refuses them ("Confirmation required") unless the call carries this parameter: the handles
+ * the user approved on the card, which the assistant adds. Claude cannot set it: it is not in the tools' schemas and
+ * applyUserConfirmation replaces whatever a call carries.
  */
 export const USER_CONFIRMED_PARAM = 'user_confirmed';
-/** Tools whose confirmation the plugin checks itself (by object type), with USER_CONFIRMED_PARAM. */
-export const PLUGIN_CONFIRMED = new Set(['explode_entities']);
+/** Tools whose 3D-solid confirmation the plugin checks itself (by object type), with USER_CONFIRMED_PARAM. */
+export const PLUGIN_CONFIRMED = new Set(['explode_entities', 'erase_entities']);
 
-function flagged(params: Record<string, unknown>, yes: boolean): Record<string, unknown> {
+/** The params with user_confirmed = the call's handles that are on the approved card (no parameter when none are). */
+function flagged(params: Record<string, unknown>, g: GateState): Record<string, unknown> {
   const { [USER_CONFIRMED_PARAM]: _ignored, ...rest } = params;
-  return yes ? { ...rest, [USER_CONFIRMED_PARAM]: true } : rest;
+  const hs = Array.isArray(params.handles) ? (params.handles as unknown[]).filter((h): h is string => typeof h === 'string') : [];
+  const ok = [...new Set(hs.map((h) => h.toUpperCase()))].filter((h) => g.cardConfirmed?.has(h));
+  return ok.length > 0 ? { ...rest, [USER_CONFIRMED_PARAM]: ok } : rest;
 }
 
 /**
- * The params actually sent to the plugin: explode_entities (alone or inside batch_execute) carries
- * user_confirmed: true when the user confirmed in this turn, and never otherwise.
+ * The params actually sent to the plugin: explode_entities / erase_entities (alone or inside batch_execute) carry
+ * user_confirmed = their handles that the user approved on the confirmation card of this turn, and nothing otherwise.
  */
 export function applyUserConfirmation(tool: string, params: Record<string, unknown>, g: GateState): Record<string, unknown> {
-  const yes = userConfirmed(g);
-  if (PLUGIN_CONFIRMED.has(tool)) return flagged(params, yes);
+  if (PLUGIN_CONFIRMED.has(tool)) return flagged(params, g);
   if (tool === 'batch_execute' && Array.isArray(params.calls)) {
     let changed = false;
     const calls = (params.calls as unknown[]).map((c) => {
       const call = c as { tool?: unknown; params?: unknown } | null;
       if (!call || typeof call !== 'object' || typeof call.tool !== 'string' || !PLUGIN_CONFIRMED.has(call.tool)) return c;
       const p = call.params && typeof call.params === 'object' ? (call.params as Record<string, unknown>) : {};
-      if (!yes && !(USER_CONFIRMED_PARAM in p)) return c;
+      const next = flagged(p, g);
+      if (!(USER_CONFIRMED_PARAM in p) && !(USER_CONFIRMED_PARAM in next)) return c;
       changed = true;
-      return { ...call, params: flagged(p, yes) };
+      return { ...call, params: next };
     });
     return changed ? { ...params, calls } : params;
   }
@@ -280,13 +297,15 @@ export function refusedForConfirmation(resp: { ok: boolean; error?: { message?: 
 }
 
 export function confirmationError(tool: string, params: Record<string, unknown>, g: GateState): string | undefined {
-  const solids = existingSolidsChanged(tool, params, g);
-  if (solids.length > 0 && !userConfirmed(g)) {
+  // C2 (12/11/2026): only the Đồng ý button of a card that listed these solids unlocks them, not a typed yes
+  const solids = existingSolidsChanged(tool, params, g).filter((h) => !g.cardConfirmed?.has(h));
+  if (solids.length > 0) {
     return (
       `Confirmation required: this ${tool} call would change or erase ${solids.length} 3D solid(s) that were already in the drawing before this turn ` +
-      `(${solids.slice(0, 20).join(', ')}${solids.length > 20 ? ', …' : ''}). Do not retry now and do not work around it. ` +
-      'Call request_confirmation with these handles and one Vietnamese sentence saying what will change (e.g. "Trừ 2 lỗ cửa khỏi tường 2F4A?"), ' +
-      'write "Cậu có đồng ý không?" and end your turn. Run the operation only after the user confirms.'
+      `(${solids.slice(0, 20).join(', ')}${solids.length > 20 ? ', …' : ''}). Only the Đồng ý button of a confirmation card that lists these handles ` +
+      'allows it; a typed "ok" / "đồng ý" or the plan card\'s "Làm" does not. Do not retry now and do not work around it. ' +
+      'Call request_confirmation now with exactly these handles and one Vietnamese sentence saying what will change (e.g. "Trừ 2 lỗ cửa khỏi tường 2F4A?"), ' +
+      'and end your turn. Run the operation only after the user presses Đồng ý.'
     );
   }
   const add = newlyAffected(tool, params, g).length;

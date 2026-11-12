@@ -123,10 +123,10 @@ Làm trên máy có AutoCAD 2026 và / hoặc 2027. Phần A–G chỉ cần là
 | H4 | ★ | Lặp lại F2 (đổi `COLORTHEME`) và nhìn icon thanh trạng thái | Khung chat đổi theo; icon **C** hiện, có chấm xanh khi Claude làm | ☐ | ☐ | 2026, 2027 (dòng theme) |
 | H5 | ○ | (2027) Kéo một file ảnh vào ô chat; bấm icon **Chụp** | Ảnh đính kèm được, không báo lỗi; ảnh chụp bản vẽ rõ nét | ☐ | ☐ | 2027 (dòng vẽ thử) |
 
-## I. Gói dịch vụ 2D / 3D / Full (bản Full, ~5 phút)
+## I. Gói dịch vụ 2D / 3D / Full (bản Full, ~15 phút)
 
 > Bản Full: thử theo thứ tự trong [`checklist-tong-the.md`](checklist-tong-the.md) (điều kiện trước, phần I, L9 / L11,
-> J10–J15, K17–K21, L17–L23, rồi mục rà chéo T1–T4, X1–X3).
+> J10–J16, K17–K24, L17–L28, rồi mục rà chéo T1–T5, X1–X5 và phần M).
 
 Cần máy chủ kích hoạt riêng của bản Full đã dựng (cột **Gói** trong trang "Thiết bị"). Sau mỗi lần đổi ô Gói, bấm
 **Kiểm tra lại** (⚙ hoặc thẻ 🔒) thay cho chờ ~6 giờ.
@@ -135,10 +135,12 @@ Cần máy chủ kích hoạt riêng của bản Full đã dựng (cột **Gói*
 | --- | --- | --- | --- | --- | --- | --- |
 | I1 | ★ | Máy mới kích hoạt, mở khung chat | Thanh trên cùng và ⚙ hiện **Gói: 2D** (gói mặc định) | ☐ | ☐ | GOI-1 |
 | I2 | ★ | Đổi ô Gói thành `3D`, Kiểm tra lại, gõ "vẽ hình chữ nhật 2000x1000 và ghi kích thước" | Toast "Gói đã đổi sang 3D"; vẽ được hình chữ nhật; Claude nói máy dùng gói 3D, chưa có kích thước, liên hệ chủ plugin; không cố vẽ kích thước bằng đường | ☐ | ☐ | GOI-2 |
-| I3 | ★ | (gói 3D) Chạy một macro cũ có ghi chữ hoặc kích thước | Lệnh chữ / kích thước trong macro báo lỗi ngoài gói, bản vẽ không có chữ / kích thước mới | ☐ | ☐ | GOI-3 |
+| I3 | ★ | (gói 3D) Chạy một macro cũ có ghi chữ hoặc kích thước | Macro không chạy lệnh nào; thẻ lỗi tiếng Việt "Không chạy macro …: máy này dùng gói 3D, mà macro có lệnh ngoài gói (…). Bản vẽ không bị thay đổi." | ☐ | ☐ | GOI-3 |
 | I4 | ★ | Đổi ô Gói thành `Full`, Kiểm tra lại, gõ lại câu ở I2 | Toast "Gói đã đổi sang Full"; có kích thước; cuộc chat cũ vẫn còn | ☐ | ☐ | GOI-4 |
-| I5 | ○ | Đặt `%LocalAppData%\ClaudeCAD\plan.txt` chỉ đọc, đổi ô Gói về `2D`, Kiểm tra lại | Máy không giữ được gói cũ: về gói mặc định | ☐ | ☐ | GOI-5 |
-| I6 | ★ | Máy đang có **ClaudeCAD bản gốc** (v0.9.3, đã kích hoạt, có vài cuộc chat): đóng AutoCAD, chạy bộ cài bản Full | Hộp thoại "Máy này đang có ClaudeCAD (bản gốc, chỉ 2D), phiên bản 0.9.3 … Lịch sử chat và cài đặt được giữ; key cũ không dùng được…" → **OK** → trang **Kích hoạt** hiện lại, mã máy như cũ → cài xong. Mở AutoCAD: khung chat tên **Agent to AutoCAD Full**, ⚙ ghi "Agent to AutoCAD Full 0.9.x", cuộc chat cũ còn, không phải đăng nhập Claude lại; thẻ 🔒 Kích hoạt tới khi chủ plugin duyệt ở bảng thiết bị mới và chọn gói → **Kiểm tra lại** → "Gói: …". Windows ▸ Apps chỉ có một mục "Agent to AutoCAD Full". (Bấm **Cancel** ở hộp thoại thì bản gốc giữ nguyên) | ☐ | ☐ | GOI-6 |
+| I5b | ★ | (gói 3D) Gõ "tạo block nhãn phòng có thuộc tính TEN = Phòng khách cao 300 rồi chèn vào" | Không có thuộc tính / chữ: Claude nói gói 3D không có thuộc tính block (chữ), đề nghị block không thuộc tính hoặc liên hệ chủ plugin | ☐ | ☐ | GOI-7 |
+| I5c | ○ | (máy offline, gói đang 2D dán ngày mới) Dán lại dòng `CCF1` Full cũ hơn | Báo "Dòng gói này ngày …, cũ hơn dòng gói máy đang có", gói vẫn 2D | ☐ | ☐ | GOI-8 |
+| I5 | ○ | Máy đang ở gói **Full** với dòng Full ghi từ **hôm trước** (ngày tính theo UTC: làm I4 rồi I5 sau 7h sáng hôm sau, giờ Việt Nam): đặt `%LocalAppData%\ClaudeCAD\plan.txt` chỉ đọc, đổi ô Gói sang `3D`, Kiểm tra lại. Rồi bỏ chỉ đọc, Kiểm tra lại | Lúc `plan.txt` chỉ đọc: **Gói: 2D** (dòng gói mới không lưu được, dòng Full cũ không còn được dùng), **không bao giờ còn Full**. Bỏ chỉ đọc: **Gói: 3D**. (Dòng Full ghi **cùng ngày** UTC thì máy giữ Full tới hết ngày đó: sót nhỏ đã chấp nhận, xem bàn giao gói dịch vụ. Đổi ô sang `2D` như trước không phân biệt được đúng / sai, vì 2D cũng là mặc định) | ☐ | ☐ | GOI-5 |
+| I6 | ★ | Máy đang có **ClaudeCAD bản gốc** (v0.9.3, đã kích hoạt, có vài cuộc chat): đóng AutoCAD, chạy bộ cài bản Full | Hộp thoại "Máy này đang có ClaudeCAD (bản gốc, chỉ 2D), phiên bản 0.9.3 … Lịch sử chat và cài đặt được giữ; key cũ không dùng được…", hai nút **Tiếp tục** / **Hủy** → **Tiếp tục** → trang **Kích hoạt** hiện lại, mã máy như cũ → cài xong. Mở AutoCAD: khung chat tên **Agent to AutoCAD Full**, ⚙ ghi "Agent to AutoCAD Full 0.9.x", cuộc chat cũ còn, không phải đăng nhập Claude lại; thẻ 🔒 Kích hoạt tới khi chủ plugin duyệt ở bảng thiết bị mới và chọn gói → **Kiểm tra lại** → "Gói: …". Windows ▸ Apps chỉ có một mục "Agent to AutoCAD Full". (Bấm **Hủy** ở hộp thoại thì bộ cài thoát, bản gốc giữ nguyên) | ☐ | ☐ | GOI-6 |
 
 ## J. 3D đợt 1 (bản Full, gói 3D hoặc Full, ~8 phút)
 
@@ -161,6 +163,7 @@ Máy phải ở gói `3D` hoặc `Full` (phần I). Mở một bản vẽ mới 
 | J13 | ★ | Lượt J2 (tường + cửa, trừ trong cùng lượt) → ⋯ ▸ Lưu thành macro → mở bản vẽ mới, chạy macro; rồi chạy macro lần nữa trong **chính bản vẽ cũ** | Mỗi lần chạy có một tường mới có lỗ cửa; tường cũ trong bản vẽ cũ **không** bị khoét thêm | ☐ | ☐ | 3D-13 |
 | J14 | ○ | AutoCAD bản ngôn ngữ khác tiếng Anh (nếu có), hoặc bản vẽ từ mẫu tiếng nước ngoài: "chuyển kiểu Conceptual", "chụp ảnh góc iso kiểu Conceptual" | Kiểu đổi được, ảnh có màu; nếu lỗi thì Claude nêu tên các kiểu có trong bản vẽ — ghi lại danh sách đó | ☐ | ☐ | 3D-14 |
 | J15 | ○ | Dựng hộp 1000×1000×1000 và hộp thứ hai chạm đúng mặt (cạnh nhau, không chồng), gõ "giao hai hộp" | Claude báo hai khối không giao nhau / AutoCAD không ghép được, **bản vẽ không đổi**, AutoCAD không treo | ☐ | ☐ | 3D-15 |
+| J16 | ○ | "xoay biên dạng nửa hình tròn quanh trục cắt qua nó"; rồi "giao 3 khối" với 2 khối đầu tách rời; rồi `set_view_3d` với handle đã xóa | Revolve báo biên dạng cắt trục; giao báo các khối không giao nhau, bản vẽ không đổi; góc nhìn báo không tìm thấy handle | ☐ | ☐ | KT-28/29/30 |
 
 ## K. 3D đợt 2 (bản Full, gói 3D hoặc Full, ~10 phút)
 
@@ -194,13 +197,16 @@ Bổ sung sau Test & sửa đợt 2 ([`ban-giao/ve-3d-test-2.md`](ban-giao/ve-3d
 | K19 | ○ | Có cả AutoCAD 2022–2024 và 2025–2027 trên một máy: ghi macro "dựng hộp, liệt kê cạnh, bo cạnh số 3 R50" ở đời này, chạy ở đời kia | Macro chạy được, hộp mới bo đúng cạnh số 3 (không báo "solid has changed") | ☐ | ☐ | 3D2-19 |
 | K20 | ★ | 3 hộp A, B, C chồng nhau; "kiểm tra va chạm A, B với A, B, C" | Mỗi cặp nêu một lần (A–B, A–C, B–C), không có A–A, không lặp B–A | ☐ | ☐ | 3D2-20 |
 | K21 | ★ | "căn hộp bằng 3 cặp điểm: góc (0,0,0)→(5000,0,0), (1000,0,0)→(5000,1000,0), (0,800,0)→(4200,0,0)" | Hộp dời và xoay 90° quanh Z về quanh (5000,0,0); không có lỗi "internal check of the transform" | ☐ | ☐ | 3D2-21 |
+| K22 | ★ | Hai hộp 1000×1000×1000 chồng một phần và **chung một mặt phẳng**: hộp A tại (0,0,0), hộp B tại (500,0,0) (cùng đáy z = 0, cùng mặt y = 0); "kiểm tra va chạm A và B" | `interfere: true`, cặp A–B có trong danh sách (thể tích ≈ 0,5 m³, hoặc `volume: null` kèm ghi chú nếu AutoCAD không đo được); **không** báo "chỉ chạm" / không va chạm | ☐ | ☐ | 3D2-22 |
+| K23 | ○ | "đặt UCS có trục X theo hướng (1,1,0), trục Y theo (0,0,1), xem thẳng vào mặt phẳng đó (plan_view)" | Biểu tượng UCS: trục X nằm ngang chỉ sang phải màn hình, Y chỉ lên | ☐ | ☐ | 3D2-23 |
+| K24 | ○ | Dựng hộp, "liệt kê cạnh của hộp"; tay dời hộp một đoạn lẻ (vd. 12,345 mm) hoặc xoay 37° quanh Z; rồi "bo cạnh số 3 R50" (Claude dùng `topology_id` cũ) | Bo được ngay, đúng cạnh số 3, không báo "solid has changed" | ☐ | ☐ | 3D2-24 |
 
 Còn chỉ thấy trên AutoCAD thật: `FilletEdges` với setback 0, căn tiết diện của `sweep` (tâm tiết diện đặt vào đầu
 đường dẫn), U hoàn tác `set_ucs` (K10), quy ước mảng của `Matrix3d(double[])` (plugin tự kiểm, K21).
 
-## L. 3D đợt 3 (bản Full, gói 3D hoặc Full, ~18 phút)
+## L. 3D đợt 3 (bản Full, gói Full, ~18 phút)
 
-Máy ở gói `Full` (L2 cần vẽ mặt bằng 2D). Bản vẽ mới (acadiso.dwt, đơn vị mm), tab Model. Chi tiết:
+Máy ở gói `Full` (L2 vẽ mặt bằng 2D bằng skill `ve-kien-truc`; ở gói 3D skill này không nạp, xem T1 trong `checklist-tong-the.md`). Bản vẽ mới (acadiso.dwt, đơn vị mm), tab Model. Chi tiết:
 [`ban-giao/ve-3d-dot-3.md`](ban-giao/ve-3d-dot-3.md); L17–L23 từ test & sửa: [`ban-giao/ve-3d-test-3.md`](ban-giao/ve-3d-test-3.md).
 
 | # | | Làm gì | Kết quả mong đợi | Đạt | Lỗi | Mã gốc |
@@ -208,7 +214,7 @@ Máy ở gói `Full` (L2 cần vẽ mặt bằng 2D). Bản vẽ mới (acadiso.
 | L1 | ★ | Gõ `CLAUDECHATSELFTEST` | Hai dòng mới ✓: "dựng 3D phòng 4×3 m có cửa đi" (≈ 8,022 m³), "cắt ngang tường ở cao 1 m" (có đường bao, 1 hatch, ≈ 2,62 m²) | ☐ | ☐ | 3D3-1 |
 | L2 | ★ | Dùng skill `ve-kien-truc` (gói Full; ở gói 3D skill này không nạp, Claude vẽ theo mục 0 của `ve-3d-kien-truc`, không có kích thước): "vẽ phòng 4x6m tường 220 cửa đi 900 ở cạnh dài" (ví dụ mục 7 của skill). Lượt sau: "dựng 3D mặt bằng này, tường cao 3,3 m" | Claude chạy thử (`dry_run`) rồi báo 4 tường 220, 1 cửa đi, không có gì bị bỏ qua; dựng khối trên `A-WALL-3D`, thể tích ≈ **14,08 m³**, lỗ cửa cao 2200 có lanh tô phía trên; Claude tự xoay iso Conceptual và chụp. Các nét 2D của mặt bằng không đổi (handle, layer như cũ) | ☐ | ☐ | 3D3-2 |
 | L3 | ★ | Ngay sau L2: "dựng 3D lại mặt bằng này" | Claude báo mặt bằng đã dựng (liệt kê khối cũ) và hỏi xóa khối cũ / dựng thêm; không tự tạo khối trùng | ☐ | ☐ | 3D3-3 |
-| L4 | ★ | Thêm vào mặt bằng một cung tròn và một đường đơn trên `A-WALL`, rồi "dựng 3D lại, xóa khối cũ trước" | Thẻ xác nhận xóa khối cũ; Claude báo 2 đối tượng bị bỏ qua kèm lý do (tường cong; không có nét song song) và link handle; phần còn lại dựng như L2 | ☐ | ☐ | 3D3-4 |
+| L4 | ★ | Thêm vào mặt bằng một cung tròn và một đường đơn trên `A-WALL`, rồi "dựng 3D lại, xóa khối cũ trước" | **Thẻ xác nhận** liệt kê các khối cũ (handle) **trước** khi xóa (khối 3D có trước lượt luôn qua thẻ, chốt 12/11/2026); bấm **Đồng ý** mới xóa, gõ "ok" thay vì bấm thì Claude hiện lại thẻ. Sau đó Claude báo 2 đối tượng bị bỏ qua kèm lý do (tường cong; không có nét song song) và link handle; phần còn lại dựng như L2 | ☐ | ☐ | 3D3-4 |
 | L5 | ★ | Mặt bằng có một khe hở 1200 trong tường không có ký hiệu cửa: "dựng 3D" | Claude báo khe hở (vị trí, rộng 1200) và hỏi; trả lời "đó là cửa sổ" → cửa sổ bậu 900, cao 1500 (tường dưới bậu và trên lanh tô) | ☐ | ☐ | 3D3-5 |
 | L6 | ○ | Cửa là block `CUA-DI-900` chèn đè lên tường liền (không có khe) | Lỗ cửa rộng ≈ 900 được khoét đúng chỗ block (báo `from: symbol`) | ☐ | ☐ | 3D3-6 |
 | L7 | ★ | Vẽ polyline kín trên layer `A-SLAB` bao ngoài phòng L2 và một polyline kín nhỏ bên trong (lỗ cầu thang), "dựng 3D có sàn dày 120" | Sàn trên `A-SLAB-3D`, mặt trên ở z = 0, dày 120, có lỗ; `area_m2` = diện tích ngoài − lỗ | ☐ | ☐ | 3D3-7 |
@@ -228,6 +234,11 @@ Máy ở gói `Full` (L2 cần vẽ mặt bằng 2D). Bản vẽ mới (acadiso.
 | L21 | ○ | Đường bao sàn L7 copy tại chỗ sang layer `A-FLOR`, "dựng 3D có sàn" | Một sàn; báo 1 mục "the same outline" | ☐ | ☐ | 3D3T-5 |
 | L22 | ★ | Sau L2: "chạy thử dựng 3D lại mặt bằng này" | Báo cáo chạy thử có `existing_solids`; Claude hỏi trước khi dựng | ☐ | ☐ | 3D3T-6 |
 | L23 | ○ | "thêm cửa sổ rộng 1200 tại góc phòng" (điểm đúng góc trong của 2 tường) | Claude báo điểm nằm ở chỗ hai tường gặp nhau và hỏi lại; không dựng gì | ☐ | ☐ | 3D3T-7 |
+| L24 | ★ | **(KT-14)** Phòng L2, chưa dựng: "dựng 3D tầng 1, tầng cao 3,3 m, sàn 120, có sàn" rồi lượt sau "dựng tầng 2 cùng mặt bằng này" | Tầng 2 dựng được ngay (không báo "already built", **không hỏi xóa tầng 1**); tường tầng 1 cao 3180 (3300 − 120), sàn tầng 2 từ z 3180 tới 3300 nằm trên đỉnh tường tầng 1, không chồng vào tường; tường tầng 2 từ 3300 tới 6480. Chạy lại đúng lệnh tầng 2 lần nữa → Claude báo tầng 2 đã dựng và hỏi, vẫn không gợi ý xóa tầng 1 | ☐ | ☐ | KT-14 |
+| L25 | ★ | **(KT-11)** Phòng có cửa đi đặt sát góc (khe từ mặt trong tường bên cạnh, bản lề ở góc), "dựng 3D" | Lỗ cửa và lanh tô nằm ở **tường có khe**; tường bên cạnh liền, không bị khoét | ☐ | ☐ | KT-11 |
+| L26 | ○ | **(KT-15)** "chạy thử dựng 3D mặt bằng này" (chỉ chạy thử) | Không có thông báo "Đã lưu phiên bản", không có nút "Hoàn tác lượt này"; chạy được cả khi bật "Chỉ xem" | ☐ | ☐ | KT-15 |
+| L27 | ○ | **(KT-16)** Bản vẽ đơn vị mét (L8): "dựng tầng 2" | Tầng 2 đặt ở cao 3,3 (đơn vị bản vẽ), không phải 3300 | ☐ | ☐ | KT-16 |
+| L28 | ○ | **(KT-22, KT-20)** Đường bao sàn có lỗ cầu thang và một đảo bên trong lỗ; block `CUA-DI-900` chèn trên layer `A-WALL` | Đảo là sàn riêng (không bị trừ); block được nhận là cửa đi | ☐ | ☐ | KT-22 |
 
 Còn chỉ thấy trên AutoCAD thật (đã viết an toàn nhất có thể, chưa kiểm được trên máy cloud):
 
@@ -239,6 +250,23 @@ Còn chỉ thấy trên AutoCAD thật (đã viết an toàn nhất có thể, c
 - `Solid3d.GetSection` + `Region.Explode` (L1, L9, L10): đường bao cung tròn / spline; hatch kiểu Normal để trống phần
   trong vòng.
 - Cộng hàng trăm hộp tường (L2 với mặt bằng lớn): thời gian; khối nào AutoCAD không cộng được thì để riêng và báo.
+
+## M. Sau kiểm tra độc lập (bản Full, ~25 phút)
+
+*12/11/2026 · từ báo cáo [`ban-giao/kiem-tra-doc-lap.md`](ban-giao/kiem-tra-doc-lap.md), mục "Điểm chỉ kiểm được trên
+AutoCAD thật", và các lỗi đã sửa cần thử thật. M1–M2 làm cùng phần I.*
+
+| # | | Làm gì | Kết quả mong đợi | Đạt | Lỗi | Mã gốc |
+| --- | --- | --- | --- | --- | --- | --- |
+| M1 | ★ | Máy **rút mạng**, chưa kích hoạt. Chủ plugin chạy `taoKeyThuCong` (email có 3 dòng `CCL1…`, `CCS1…`, `CCF1…`). Chạy bộ cài, dán **cả 3 dòng** vào ô key (ô nhiều dòng), Next | Ô giữ đủ 3 dòng; cài xong mở AutoCAD dùng được ngay, hiện đúng gói ghi trong email, **không** thẻ 🔒. Lỗi: ghi lại ô giữ gì sau khi dán, gửi `%LocalAppData%\ClaudeCAD\status.txt` và `plan.txt` (không gửi `license.txt`) | ☐ | ☐ | KT-01 |
+| M2 | ○ | Máy bản gốc 0.9.x: gõ `CLAUDECHATUPDATE` (tải xong bản cập nhật), **để AutoCAD mở**, chạy bộ cài Full, bấm **Tiếp tục** (bộ cài tự đóng AutoCAD) | Sau cài: khung chat tên "Agent to AutoCAD Full", `Contents\edition.json` còn; mở lại AutoCAD vẫn là bản Full (không quay về bản gốc). Log cài đặt có dòng "removed the updater script…" / "removed the update staged…" | ☐ | ☐ | KT-07 |
+| M3 | ★ | Gói Full, một hộp dựng ở lượt trước. (a) "xóa hộp đó" → khi thẻ hiện, **gõ** "ok" thay vì bấm. (b) Bấm **Đồng ý** trên thẻ. (c) Hộp khác ở lượt trước: "sao chép hộp, khoét một lỗ trên bản sao rồi xóa hộp gốc" | (a) Hộp còn nguyên; Claude hiện lại thẻ, nhắc bấm Đồng ý. (b) Hộp bị xóa. (c) Bản sao khoét được không hỏi (khối mới); xóa hộp gốc thì có thẻ | ☐ | ☐ | KT-09, KT-12 |
+| M4 | ○ | Gói Full: lượt J2 (tường + cửa) → "Lưu thành macro"; lượt sau "khoét thêm cửa sổ vào tường" (đồng ý trên thẻ) → lưu thành macro thứ hai; chạy macro thứ hai | Macro thứ hai **không chạy** (không hỏi chọn điểm): thẻ lỗi "Macro này sửa khối 3D có sẵn trong bản vẽ… không chạy", bản vẽ không đổi. Macro thứ nhất vẫn chạy bình thường | ☐ | ☐ | KT-10 |
+| M5 | ○ | `draw_pyramid` 4 cạnh, bán kính 500, rotation 0 ("dựng chóp đáy vuông cạnh 1000") | Hộp bao ±500 theo X / Y (đáy vuông theo trục, không xoay 45°), đáy ở z của tâm | ☐ | ☐ | KT (Pyramid) |
+| M6 | ○ | Dựng hộp, "liệt kê cạnh và mặt"; lưu bản vẽ, mở lại (hoặc mở bằng đời AutoCAD khác), "liệt kê cạnh và mặt" của cùng khối | Thứ tự và số cạnh / mặt giữ nguyên (macro bo cạnh theo số dựa vào đây) | ☐ | ☐ | KT (Brep) |
+| M7 | ○ | Bật 🔒 Chỉ xem, "xem góc SW iso", rồi đóng bản vẽ | Ghi lại: AutoCAD có hỏi lưu không (đổi góc nhìn có thể làm bản vẽ "đã sửa") | ☐ | ☐ | KT (Chỉ xem) |
+| M8 | ○ | Khóa layer của một khối, "xoay khối 90 độ quanh trục X" và "đối xứng khối qua mặt YZ" | Câu báo dễ hiểu (layer bị khóa, hỏi mở khóa); ghi lại câu Claude nói | ☐ | ☐ | KT (khóa layer) |
+| M9 | ○ | Sau L9 / L11: gõ `PURGE` | Không có đối tượng lạ (không còn `SectionSettings` / đối tượng tạm của mặt cắt) | ☐ | ☐ | KT (Section) |
 
 ## Gửi lại gì khi lỗi
 

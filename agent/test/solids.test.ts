@@ -126,11 +126,15 @@ describe('3D confirmation gate', () => {
     assert.deepEqual(existingSolidsChanged('solid_union', { handles: ['3A', '1C'] }, g), ['1C']);
   });
 
-  it('passes after the user confirms (answer or the Đồng ý button)', () => {
+  it('passes only after the Đồng ý button of a card listing the solids (C2, 12/11/2026)', () => {
+    // expectation changed 12/11/2026 (C2, decided for the owner): a typed "đồng ý" or a button without the card's
+    // handles no longer unlocks changing older solids; only the card's Đồng ý, and only for the handles it listed
     const p = { target: '2F4A', subtract: ['2F4B'] };
-    assert.equal(confirmationError('solid_subtract', p, first({ userText: 'đồng ý', answersQuestion: true })), undefined);
-    assert.equal(confirmationError('solid_subtract', p, first({ confirmedByButton: true })), undefined);
-    assert.match(confirmationError('solid_subtract', p, first({ userText: 'đồng ý', answersQuestion: false })) ?? '', /Confirmation required/);
+    assert.match(confirmationError('solid_subtract', p, first({ userText: 'đồng ý', answersQuestion: true })) ?? '', /Confirmation required/);
+    assert.match(confirmationError('solid_subtract', p, first({ confirmedByButton: true })) ?? '', /Confirmation required/);
+    assert.match(confirmationError('solid_subtract', p, first({ confirmedByButton: true, cardConfirmed: new Set(['2F4A']) })) ?? '', /1 3D solid.*2F4B/);
+    assert.equal(confirmationError('solid_subtract', p, first({ confirmedByButton: true, cardConfirmed: new Set(['2F4A', '2F4B']) })), undefined);
+    assert.match(confirmationError('solid_subtract', p, first({ userText: 'đồng ý', answersQuestion: false })) ?? '', /Only the Đồng ý button/);
   });
 
   it('is enforced inside batch_execute', () => {

@@ -25,6 +25,7 @@ export const SOLID2_LIMITS = {
   MinLoftSections: 2,
   MaxLoftSections: 50,
   MaxInterferenceSolids: 100,
+  MaxInterferenceCandidates: 2000,
   MaxTwist: 3600,
   MinSweepScale: 0.01,
   MaxSweepScale: 100,
@@ -371,7 +372,7 @@ function solidTools2(b: ToolBridge): AnyTool[] {
 
     cadTool(b, 'check_interference',
       'CHECK INTERFERENCE (clashes) between 3D solids: every pair of handles, or each of handles against each of other_handles (e.g. beams against ducts). ' +
-        `Returns interfere, the clashing pairs with their overlap volume, touching_pairs (only touching), at most ${SOLID2_LIMITS.MaxInterferenceSolids} solids per list; each pair is checked once even when the lists overlap. Read-only: nothing is changed.`,
+        `Returns interfere, the clashing pairs with their overlap volume (volume null = AutoCAD saw a clash but could not measure it: still a clash), touching_pairs (only touching), truncated + truncated_note when more than ${SOLID2_LIMITS.MaxInterferenceCandidates} pairs with touching bounding boxes had to be cut (tell the user; check smaller groups), at most ${SOLID2_LIMITS.MaxInterferenceSolids} solids per list; each pair is checked once even when the lists overlap. Read-only: nothing is changed.`,
       {
         handles: handles.max(SOLID2_LIMITS.MaxInterferenceSolids),
         other_handles: handles.max(SOLID2_LIMITS.MaxInterferenceSolids).optional(),

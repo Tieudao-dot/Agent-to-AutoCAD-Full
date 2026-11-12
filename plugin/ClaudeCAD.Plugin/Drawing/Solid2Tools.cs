@@ -809,15 +809,20 @@ namespace ClaudeCAD.Plugin.Drawing
 
         // ================================================================= interference
 
-        /// <summary>Overlap volume of two solids (0 = they only touch); the solids are not changed. Also used by the self-test.</summary>
-        internal static double OverlapVolume(Solid3d a, Solid3d b)
+        /// <summary>
+        /// Overlap volume of two solids (0 = they only touch); null when AutoCAD could not compute the common volume
+        /// (KT-24: that is no proof of "no clash"). The solids are not changed. Also used by the self-test.
+        /// </summary>
+        internal static double? OverlapVolume(Solid3d a, Solid3d b)
         {
             using (var ca = (Solid3d)a.Clone())
             using (var cb = (Solid3d)b.Clone())
             {
                 try { ca.BooleanOperation(BooleanOperationType.BoolIntersect, cb); }
-                catch (Autodesk.AutoCAD.Runtime.Exception) { return 0; }
-                return VolumeOf(ca);
+                catch (Autodesk.AutoCAD.Runtime.Exception) { return null; }
+                if (ca.IsNull) return 0;
+                try { return ca.MassProperties.Volume; }
+                catch (Autodesk.AutoCAD.Runtime.Exception) { return null; }
             }
         }
 
@@ -827,44 +832,77 @@ namespace ClaudeCAD.Plugin.Drawing
             var others = p.Has("other_handles") ? p.Handles("other_handles", Solid2Logic.MaxInterferenceSolids).Select(x => x.ToUpperInvariant()).Distinct().ToList() : null;
             if (others == null && hs.Count < 2) throw ToolException.Invalid("check_interference: needs at least 2 solids in 'handles' (or 'other_handles' to check against).");
             var solids = new Dictionary<string, Solid3d>(StringComparer.OrdinalIgnoreCase);
+            var boxes = new Dictionary<string, Extents3d?>(StringComparer.OrdinalIgnoreCase);
             Solid3d Get(string h)
             {
                 if (solids.TryGetValue(h, out var s)) return s;
                 var e = Acad.GetEntity(ctx, h, false);
                 if (!(e is Solid3d sd)) throw ToolException.Invalid($"check_interference: {h} is a {Acad.TypeName(e)}, not a 3D solid.");
                 solids[h] = sd;
+                boxes[h] = EntityInfo.Extents(sd);
                 return sd;
             }
             var pairs = Solid2Logic.InterferencePairs(hs, others);
-            var hits = new List<object>();
-            int touching = 0, checkedPairs = 0;
-            double total = 0;
+            // KT-25: the bounding-box test is cheap; only the pairs that pass it cost AutoCAD real work, and they are capped
+            var candidates = new List<(string a, string b)>();
             foreach (var (a, b) in pairs)
             {
-                var sa = Get(a); var sb = Get(b);
-                var ea = EntityInfo.Extents(sa); var eb = EntityInfo.Extents(sb);
-                checkedPairs++;
+                Get(a); Get(b);
+                var ea = boxes[a]; var eb = boxes[b];
                 if (ea.HasValue && eb.HasValue && Disjoint(ea.Value, eb.Value)) continue;
+                candidates.Add((a, b));
+            }
+            var hits = new List<object>();
+            int touching = 0, clashes = 0, measured = 0, unmeasured = 0;
+            double total = 0;
+            int compared = Math.Min(candidates.Count, Solid2Logic.MaxInterferenceCandidates);
+            for (int i = 0; i < compared; i++)
+            {
+                var (a, b) = candidates[i];
+                var sa = solids[a]; var sb = solids[b];
                 bool hit;
                 try { hit = sa.CheckInterference(sb); }
                 catch (Autodesk.AutoCAD.Runtime.Exception ex) { throw ToolException.Invalid($"check_interference: AutoCAD could not compare {a} and {b} ({ex.ErrorStatus})."); }
                 if (!hit) continue;
-                double v = OverlapVolume(sa, sb);
-                if (v <= 1e-6) { touching++; continue; }
-                total += v;
+                // the overlap volume is measured for the first MaxInterferencePairs clashes only (two copies and a boolean each)
+                double? v = measured < Solid2Logic.MaxInterferencePairs ? OverlapVolume(sa, sb) : (double?)null;
+                bool tried = measured < Solid2Logic.MaxInterferencePairs;
+                if (tried) measured++;
+                var kind = Solid2Logic.ClassifyInterference(v);
+                if (tried && kind == "touching") { touching++; continue; }
+                clashes++;
+                if (v.HasValue && kind == "clash") total += v.Value;
+                else unmeasured++;
                 if (hits.Count < Solid2Logic.MaxInterferencePairs)
-                    hits.Add(new Dictionary<string, object> { ["a"] = a, ["b"] = b, ["volume"] = Acad.R(v), ["volume_m3"] = Math.Round(SolidLogic.ToCubicMetres(v), 6) });
+                {
+                    var row = new Dictionary<string, object> { ["a"] = a, ["b"] = b };
+                    if (v.HasValue && kind == "clash") { row["volume"] = Acad.R(v.Value); row["volume_m3"] = Math.Round(SolidLogic.ToCubicMetres(v.Value), 6); }
+                    else
+                    {
+                        row["volume"] = null;
+                        row["note"] = tried
+                            ? "AutoCAD reports a clash but could not measure the common volume (often faces that coincide): treat it as a clash."
+                            : $"not measured (only the first {Solid2Logic.MaxInterferencePairs} clashes are measured)";
+                    }
+                    hits.Add(row);
+                }
             }
             var r = new Dictionary<string, object>
             {
-                ["interfere"] = hits.Count > 0,
-                ["pairs_checked"] = checkedPairs,
+                ["interfere"] = clashes > 0,
+                ["pairs_checked"] = pairs.Count - candidates.Count + compared,
                 ["clashes"] = hits,
-                ["clash_count"] = hits.Count,
+                ["clash_count"] = clashes,
                 ["total_overlap_m3"] = Math.Round(SolidLogic.ToCubicMetres(total), 6),
             };
             if (touching > 0) r["touching_pairs"] = touching;
-            if (hits.Count >= Solid2Logic.MaxInterferencePairs) r["note"] = $"only the first {Solid2Logic.MaxInterferencePairs} clashes are listed";
+            if (unmeasured > 0) r["unmeasured_clashes"] = unmeasured;
+            if (clashes > hits.Count) r["note"] = $"only the first {Solid2Logic.MaxInterferencePairs} clashes are listed";
+            if (candidates.Count > compared)
+            {
+                r["truncated"] = true;
+                r["truncated_note"] = Solid2Logic.InterferenceTruncatedNote(candidates.Count, compared);
+            }
             return r;
         }
 
@@ -958,7 +996,15 @@ namespace ClaudeCAD.Plugin.Drawing
                 if (p.Bool("plan_view", false) && InModelSpace())
                 {
                     var ext = Capture.ModelExtents(doc);
-                    ApplyView3d(doc, SolidLogic.Custom(new[] { z.X, z.Y, z.Z }, "set_ucs"), ext?.MinPoint, ext?.MaxPoint);
+                    var view = SolidLogic.Custom(new[] { z.X, z.Y, z.Z }, "set_ucs");
+                    // KT-26: turn the view so the UCS x axis points right on screen. The presets keep twist 0 (already right).
+                    double twist = 0;
+                    if (!p.Has("preset"))
+                    {
+                        var (right, up) = SolidLogic.ScreenAxes(view);
+                        twist = Solid2Logic.PlanTwist(new[] { x.X, x.Y, x.Z }, right, up);
+                    }
+                    ApplyView3d(doc, view, ext?.MinPoint, ext?.MaxPoint, twist);
                 }
                 var r = UcsResult(m);
                 if (saved != null) r["saved_as"] = saved;

@@ -109,3 +109,22 @@ workflow_dispatch, `release: "false"`, nhánh `full/ve-3d`); docs cập nhật; 
 - [x] Test lõi + trợ lý
 - [x] CI Windows (1 lượt, xanh)
 - [x] Tài liệu (checklist phần J, kế hoạch, `bo-cai/README.md`, file này)
+
+## Sửa sau kiểm tra độc lập (12/11/2026)
+
+Nguồn: bảng "Nhẹ" của `docs/ban-giao/kiem-tra-doc-lap.md` (nhánh `full/kiem-tra-doc-lap`). Nhánh `full/ve-3d` đã
+fast-forward lên `full/test-tong-the` @ `3f05da7` trước khi sửa. Code: commit `bf38ab3`.
+
+| Mã | Lỗi | Cách sửa |
+| --- | --- | --- |
+| KT-28 | `solid_intersect` từ 3 khối: hai khối đầu không giao thì bước sau lỗi với câu báo sai ("mặt chỉ chạm…") | Kiểm kết quả rỗng sau **mỗi** lần giao; rỗng thì báo "the solids do not overlap: <handle…> have no common volume", transaction lùi, bản vẽ không đổi (`SolidLogic.EmptyIntersectionMessage`) |
+| KT-29 | `set_view_3d` với `handles` không handle nào tồn tại vẫn trả ok, không phóng | Không handle nào tồn tại → `ENTITY_NOT_FOUND` (cùng câu với `capture_view`); có handle nhưng không có hộp bao → `INVALID_PARAMS` |
+| KT-30 | Chú thích nói khối đùn lấy layer / màu của biên dạng, code đặt layer hiện hành | **Giữ hành vi, sửa chú thích:** khối mới theo `layer` / `color` truyền vào, không có thì layer hiện hành, như mọi đối tượng mới. Lý do giữ: biên dạng thường là đường dựng trên layer khác; quy ước 3D dặn Claude luôn truyền layer riêng cho từng loại khối. Revolve cùng quy tắc. Sweep thuộc đợt 2, không sửa ở đây |
+| KT-30 (trục revolve) | Kiểm trục chỉ xét đỉnh trên mặt XY: cung bulge, đường tròn, biên dạng mặt đứng cắt trục không bắt được | Lấy điểm dọc theo từng đường (96 điểm / đường, cả cung bulge, đường tròn, spline) và xét phía của điểm trên **mặt phẳng của region** (pháp tuyến của region). Trục không nằm trên mặt phẳng biên dạng (vd. trục Z với biên dạng XY) → lỗi rõ thay cho lỗi chung của AutoCAD. Biên dạng là region có sẵn: không lấy được điểm, AutoCAD tự kiểm như trước |
+
+Test: lõi 337/337 (thêm `SolidReviewFixTests.cs`, 6 test; test cũ "trục Z không kiểm" đổi thành "trục Z báo lỗi mặt
+phẳng"), trợ lý 201/201, build net48 / net8.0-windows / net10.0-windows 0 lỗi 0 cảnh báo. Không chạy CI (CI chung chạy
+sau khi thread Test tổng thể gộp).
+
+Thử tay thêm (phần J): `revolve` với biên dạng có cung bulge vắt qua trục → báo "crosses the axis"; biên dạng vẽ trên
+mặt đứng quanh trục Z → dựng được; `solid_intersect` 3 khối mà 2 khối đầu tách rời → báo "do not overlap", không đổi gì.

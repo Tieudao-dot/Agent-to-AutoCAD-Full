@@ -21,19 +21,24 @@ namespace ClaudeCAD.Plugin.Core
     {
         public const double Eps = 1e-9;
 
-        // ================================================================= explode (decided 12/11/2026)
+        // ================================================================= explode / erase of older 3D solids (decided 12/11/2026)
 
         /// <summary>
-        /// Set on explode_entities by the assistant (never by Claude: it is not in the tool's schema and is stripped from
-        /// batch calls) when the user said yes in this turn: then 3D solids that existed before the turn are broken up too.
+        /// Set on explode_entities / erase_entities by the assistant (never by Claude: not in the tools' schemas, replaced in
+        /// batch calls): the handles the user approved with the Đồng ý button of a confirmation card in this turn. Decided
+        /// 12/11/2026: C1, erasing 3D solids from before the turn always goes through the card like exploding them; C2, only
+        /// the card's button unlocks it and only for the handles on the card. A macro never records it (KT-10).
         /// </summary>
         public const string UserConfirmedParam = "user_confirmed";
 
+        /// <summary>The tools the plugin itself checks for 3D solids from before the turn (by object type).</summary>
+        public static readonly IReadOnlyList<string> CardConfirmTools = new[] { "explode_entities", "erase_entities" };
+
         /// <summary>
-        /// AutoCAD .NET types (Autodesk.AutoCAD.DatabaseServices, base types included) that explode_entities breaks up only
-        /// after the user's yes when they existed before the turn: 3D solids, ACIS bodies, surfaces (PlaneSurface,
-        /// NurbSurface, ExtrudedSurface… all derive from Surface) and meshes. 2D objects (blocks, polylines, regions…)
-        /// keep the usual rule (a question only above 20 objects).
+        /// AutoCAD .NET types (Autodesk.AutoCAD.DatabaseServices, base types included) that explode_entities / erase_entities
+        /// break up or erase only through the card when they existed before the turn: 3D solids, ACIS bodies, surfaces
+        /// (PlaneSurface, NurbSurface, ExtrudedSurface… all derive from Surface) and meshes. 2D objects (blocks, polylines,
+        /// regions…) keep the usual rule (a question only above 20 objects).
         /// </summary>
         public static readonly IReadOnlyList<string> ExplodeConfirmTypes = new[] { "Solid3d", "Body", "Surface", "SubDMesh", "PolyFaceMesh", "PolygonMesh" };
 
@@ -41,26 +46,37 @@ namespace ClaudeCAD.Plugin.Core
         public static bool IsExplodeConfirmType(IEnumerable<string> typeNames) =>
             typeNames != null && typeNames.Any(n => ExplodeConfirmTypes.Contains(n, StringComparer.Ordinal));
 
-        /// <summary>
-        /// The handles explode_entities must not break up yet: 3D solids / surfaces / meshes not created in this turn,
-        /// unless the user confirmed. Empty = go ahead.
-        /// </summary>
-        public static List<string> ExplodeNeedsYes(IEnumerable<(string handle, bool solidLike, bool createdThisTurn)> items, bool userConfirmed)
+        /// <summary>The approved handles user_confirmed carries (upper case); empty for anything but a list of handles.</summary>
+        public static HashSet<string> ConfirmedHandles(object value)
         {
-            if (userConfirmed || items == null) return new List<string>();
-            return items.Where(i => i.solidLike && !i.createdThisTurn)
+            var set = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            if (value is System.Collections.IEnumerable list && !(value is string))
+                foreach (var x in list)
+                    if (x is string h && h.Trim().Length > 0) set.Add(h.Trim().ToUpperInvariant());
+            return set;
+        }
+
+        /// <summary>
+        /// The handles that must not be exploded / erased yet: 3D solids / surfaces / meshes not created in this turn and not
+        /// on the card the user approved. Empty = go ahead.
+        /// </summary>
+        public static List<string> SolidsNeedingCard(IEnumerable<(string handle, bool solidLike, bool createdThisTurn)> items, ICollection<string> confirmed)
+        {
+            if (items == null) return new List<string>();
+            return items.Where(i => i.solidLike && !i.createdThisTurn && !(confirmed != null && confirmed.Any(c => string.Equals(c, i.handle, StringComparison.OrdinalIgnoreCase))))
                 .Select(i => (i.handle ?? "").ToUpperInvariant()).Distinct(StringComparer.Ordinal).ToList();
         }
 
         /// <summary>The refusal Claude gets: starts with "Confirmation required" like the assistant's own gate.</summary>
-        public static string ExplodeConfirmMessage(IReadOnlyList<string> handles)
+        public static string CardConfirmMessage(string tool, IReadOnlyList<string> handles)
         {
+            bool erase = tool == "erase_entities";
             var list = string.Join(", ", handles.Take(20)) + (handles.Count > 20 ? ", …" : "");
-            return $"Confirmation required: explode_entities would break up {handles.Count} 3D solid(s) / surface(s) / mesh(es) that were " +
-                   $"already in the drawing before this turn ({list}). Nothing was exploded. Do not retry now and do not work around it " +
-                   "(no copy-then-explode, no erase and redraw). Call request_confirmation with these handles and one Vietnamese sentence " +
-                   "saying what will change (e.g. \"Phá khối 2F4A thành các mặt?\"), write \"Cậu có đồng ý không?\" and end your turn. " +
-                   "Run it only after the user confirms.";
+            return $"Confirmation required: {tool} would {(erase ? "erase" : "break up")} {handles.Count} 3D solid(s) / surface(s) / mesh(es) that were " +
+                   $"already in the drawing before this turn ({list}). Nothing was {(erase ? "erased" : "exploded")}. Only the Đồng ý button of a confirmation " +
+                   "card that lists these handles allows it; a typed \"ok\" / \"đồng ý\" or the plan card's \"Làm\" does not. Do not retry now and do not " +
+                   "work around it (no copy-then-explode, no erase and redraw). Call request_confirmation now with exactly these handles and one " +
+                   $"Vietnamese sentence saying what will change (e.g. \"{(erase ? "Xóa khối 2F4A?" : "Phá khối 2F4A thành các mặt?")}\"), and end your turn.";
         }
 
         // ================================================================= views
@@ -292,19 +308,25 @@ namespace ClaudeCAD.Plugin.Core
 
         /// <summary>
         /// A revolve profile must stay on one side of its axis (crossing it gives a self-intersecting solid that
-        /// AutoCAD refuses). Checks the profile points against the axis in the XY plane (profiles are planar, Z
-        /// ignored): null when fine, else an error text. Points on the axis are allowed.
+        /// AutoCAD refuses) and the axis must lie in the profile's plane. The side of each point is measured in the
+        /// plane with the given normal (default +Z, the XY plane), so profiles on vertical planes are checked too.
+        /// The caller passes points sampled along the curves (bulges, arcs, circles), not only the vertices.
+        /// null when fine, else an error text. Points on the axis are allowed.
         /// </summary>
-        public static string ProfileCrossesAxis(IList<double[]> profile, double[] axisStart, double[] axisEnd, string tool = "revolve")
+        public static string ProfileCrossesAxis(IList<double[]> profile, double[] axisStart, double[] axisEnd, double[] normal = null, string tool = "revolve")
         {
             if (profile == null || profile.Count == 0) return null;
-            double ax = axisEnd[0] - axisStart[0], ay = axisEnd[1] - axisStart[1];
-            double l = Math.Sqrt(ax * ax + ay * ay);
-            if (l < Eps) return null; // axis along Z: a profile in the XY plane is not checked here
+            var n = Unit(normal ?? Z, $"{tool}: the profile normal is zero");
+            var axis = Sub(axisEnd, axisStart);
+            double l = Len(axis);
+            if (l < Eps) return null; // RevolveAxis already refuses this
+            var d = Scale(axis, 1 / l);
+            if (Math.Abs(Dot(d, n)) > 1e-6)
+                return $"{tool}: the axis does not lie in the profile's plane (it points out of it). Put axis_start and axis_end in the plane of the profile, e.g. both with the profile's z for a profile drawn on XY.";
             int pos = 0, neg = 0;
             foreach (var p in profile)
             {
-                double side = (ax * (p[1] - axisStart[1]) - ay * (p[0] - axisStart[0])) / l;
+                double side = Dot(Cross(d, Sub(p, axisStart)), n);
                 if (side > 1e-6) pos++;
                 else if (side < -1e-6) neg++;
             }
@@ -312,6 +334,11 @@ namespace ClaudeCAD.Plugin.Core
                 ? $"{tool}: the profile crosses the axis (points on both sides). Move the axis to one edge of the profile or split the profile."
                 : null;
         }
+
+        /// <summary>solid_intersect: the solids up to 'handles' (in order) have no common volume (KT-28).</summary>
+        public static string EmptyIntersectionMessage(string tool, IList<string> handles) =>
+            $"{tool}: the solids do not overlap: {string.Join(", ", handles)} have no common volume, so the intersection is empty. Nothing was changed. " +
+            "Check their positions with get_solid_info (min / max).";
 
         /// <summary>Box placement: the corner (min X, min Y, min Z before rotation) or the centre of the box.</summary>
         public static double[] BoxCenter(double[] corner, double length, double width, double height, double rotationDeg)

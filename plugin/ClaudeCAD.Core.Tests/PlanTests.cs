@@ -31,6 +31,36 @@ namespace ClaudeCAD.Core.Tests
 
         private static PlanCheck Verify(string line, string machine = Machine) => LicenseLogic.VerifyPlan(line, machine, Modulus, Exponent);
 
+        /// <summary>"prefix|…|sig" signed with the test key (CCS1 status lines, CCF1 plan lines).</summary>
+        private static string SignBody(string body)
+        {
+            var sig = Key.SignData(Encoding.UTF8.GetBytes(body), HashAlgorithmName.SHA256, RSASignaturePadding.Pkcs1);
+            return body + "|" + B64Url(sig);
+        }
+
+        /// <summary>
+        /// KT-01 (Kiểm tra độc lập, 12/11/2026; test copied from full/kiem-tra-doc-lap): the installer before the fix saved
+        /// everything from "CCS1|" to the end of a 3-line offline paste (CCL1 / CCS1 / CCF1) as status.txt. The plugin must
+        /// still read the CCS1 line, and the CCF1 line from the same text, so an offline machine is not stuck at 🔒.
+        /// </summary>
+        [Fact]
+        public void KT01_status_file_written_by_installer_from_three_line_offline_paste_is_accepted()
+        {
+            var status = SignBody($"CCS1|{Machine}|offline|2026-11-12");
+            var plan = SignBody($"CCF1|{Machine}|3d|2026-11-12");
+            var statusTxt = status + "\r\n" + plan; // what the installer saved for a 3-line paste
+            var r = LicenseLogic.VerifyStatus(statusTxt, Machine, new DateTime(2026, 11, 13, 0, 0, 0, DateTimeKind.Utc), Modulus, Exponent);
+            Assert.True(r.Ok, "status.txt from a 3-line offline paste is rejected: " + r.Reason);
+            Assert.True(r.Fresh);
+            // the plan line is read from the same text too (and from a plan.txt that got the status line first)
+            Assert.Equal("3d", LicenseLogic.VerifyPlan(statusTxt, Machine, Modulus, Exponent).Plan);
+            Assert.True(LicenseLogic.VerifyPlan(" \n" + status + " " + plan + "\n", Machine, Modulus, Exponent).Ok);
+            // a text without the prefix is still refused, as before
+            Assert.False(LicenseLogic.VerifyStatus(plan, Machine, DateTime.UtcNow, Modulus, Exponent).Ok);
+            Assert.Equal("x", LicenseLogic.PickLine("x", "CCS1"));
+            Assert.Equal("CCS1|a", LicenseLogic.PickLine("CCL1|b\tCCS1|a\r\nCCS1|c", "CCS1"));
+        }
+
         // ------------------------------------------------------------ VerifyPlan
 
         [Theory]
@@ -217,6 +247,70 @@ namespace ClaudeCAD.Core.Tests
             Assert.Contains("2D group", msg);
             Assert.Contains("(Zalo 0)", msg);
             Assert.EndsWith(".", PlanLogic.BlockedMessage("add_text", "3d", ""));
+        }
+
+        // ------------------------------------------------------------ fixes after the independent review (12/11/2026)
+
+        private static System.Collections.Generic.Dictionary<string, object> P(params (string k, object v)[] kv)
+        {
+            var d = new System.Collections.Generic.Dictionary<string, object>();
+            foreach (var (k, v) in kv) d[k] = v;
+            return d;
+        }
+
+        [Fact]
+        public void KT02_block_attributes_need_2D()
+        {
+            var atts = P(("name", "NHAN"), ("attributes", new System.Collections.Generic.List<object> { P(("tag", "TEN")) }));
+            var values = P(("name", "NHAN"), ("attributes", P(("TEN", "Phòng khách"))));
+            Assert.Equal("attributes", PlanLogic.BlockedParam("3d", "define_block", atts));
+            Assert.Equal("attributes", PlanLogic.BlockedParam("3d", "insert_block", values));
+            Assert.False(PlanLogic.CallAllowed("3d", "define_block", atts));
+            // a block without attributes stays Common
+            Assert.Null(PlanLogic.BlockedParam("3d", "define_block", P(("name", "B"))));
+            Assert.Null(PlanLogic.BlockedParam("3d", "define_block", P(("attributes", new System.Collections.Generic.List<object>()))));
+            Assert.Null(PlanLogic.BlockedParam("3d", "insert_block", P(("attributes", null))));
+            Assert.True(PlanLogic.CallAllowed("3d", "insert_block", P(("name", "B"))));
+            // plans with 2D keep them
+            Assert.Null(PlanLogic.BlockedParam("2d", "define_block", atts));
+            Assert.Null(PlanLogic.BlockedParam("2d3d", "insert_block", values));
+            // setting attribute values is 2D
+            Assert.Equal(ToolGroup.TwoD, PlanLogic.GroupOf("set_block_attributes"));
+            Assert.False(PlanLogic.Allowed("3d", "set_block_attributes"));
+            Assert.Contains("block attributes", PlanLogic.BlockedParamMessage("define_block", "attributes", "3d", ""));
+        }
+
+        [Fact]
+        public void KT04_a_macro_outside_the_plan_is_refused_whole_with_a_Vietnamese_message()
+        {
+            var m = new Macro { Name = "Phòng mẫu" };
+            m.Calls.Add(new MacroCall { Tool = "draw_rectangle" });
+            m.Calls.Add(new MacroCall { Tool = "add_dim_linear" });
+            m.Calls.Add(new MacroCall { Tool = "add_dim_linear" });
+            m.Calls.Add(new MacroCall { Tool = "insert_block", Params = P(("attributes", P(("TEN", "A")))) });
+            m.Calls.Add(new MacroCall { Tool = "draw_box" });
+            Assert.Equal(new[] { "add_dim_linear", "insert_block (thuộc tính block)" }, MacroLogic.BlockedCalls(m, "3d"));
+            Assert.Equal(new[] { "draw_box" }, MacroLogic.BlockedCalls(m, "2d"));
+            Assert.Empty(MacroLogic.BlockedCalls(m, "2d3d"));
+            var text = PlanLogic.MacroBlockedText(m.Name, "3d", MacroLogic.BlockedCalls(m, "3d"), "Zalo 0");
+            Assert.StartsWith("Không chạy macro \"Phòng mẫu\": máy này dùng gói 3D", text);
+            Assert.Contains("Bản vẽ không bị thay đổi", text);
+            Assert.DoesNotContain("Tell the user", text);
+            Assert.Empty(MacroLogic.BlockedCalls(null, "3d"));
+        }
+
+        [Fact]
+        public void KT05_an_older_plan_line_does_not_replace_the_saved_one()
+        {
+            var full = Verify(Sign(Machine, "2d3d", "2026-11-01"));
+            var lowered = Verify(Sign(Machine, "2d", "2026-11-12"));
+            Assert.True(LicenseLogic.AcceptPlan(lowered, full));   // the owner lowered the plan: newer line wins
+            Assert.False(LicenseLogic.AcceptPlan(full, lowered));  // pasting the old Full line back is refused
+            Assert.True(LicenseLogic.AcceptPlan(Verify(Sign(Machine, "3d", "2026-11-12")), lowered)); // same day: accepted
+            Assert.True(LicenseLogic.AcceptPlan(full, null));
+            Assert.True(LicenseLogic.AcceptPlan(full, new PlanCheck()));
+            Assert.False(LicenseLogic.AcceptPlan(new PlanCheck(), null));
+            Assert.False(LicenseLogic.AcceptPlan(null, lowered));
         }
 
         // ------------------------------------------------------------ every registered tool has a label

@@ -219,7 +219,8 @@ namespace ClaudeCAD.Core.Tests
             };
             var r = FloorPlanLogic.Recognize(s, null, sym, O);
             Assert.Contains(r.Skipped, x => x.Handle == "FAR" && x.Reason.Contains("not on or next to"));
-            Assert.Contains(r.Skipped, x => x.Handle == "CORNER" && x.Reason.Contains("two walls"));
+            // KT-11: a symbol that only touches wall faces is never cut into one of them
+            Assert.Contains(r.Skipped, x => x.Handle == "CORNER" && x.Reason.Contains("not guessed"));
             Assert.Empty(r.Openings);
         }
 
@@ -377,6 +378,160 @@ namespace ClaudeCAD.Core.Tests
             Assert.Equal(new[] { 5 }, open.ToArray());
             Assert.Equal(Math.Tan(Math.PI / 8), SectionLogic.Bulge(0, Math.PI / 2, false), 12);
             Assert.Equal(-Math.Tan(Math.PI / 8), SectionLogic.Bulge(0, Math.PI / 2, true), 12);
+        }
+
+        // ------------------------------------------------------------------ fixes after the independent check (KT-11 … KT-23)
+
+        /// <summary>
+        /// KT-11 (copied from KiemTraDocLapTests): a door next to the room corner (its gap runs from the jamb to the
+        /// face of the wall across, the ve-kien-truc "hinge at the corner") is cut into the right wall, never into the
+        /// bottom wall.
+        /// </summary>
+        [Fact]
+        public void KT11_door_at_room_corner_goes_into_its_own_wall()
+        {
+            double g0 = 110, g1 = g0 + 900;
+            var s = new List<PlanSeg>();
+            s.AddRange(Poly("A1", 4110, g1, 4110, 6110, -110, 6110, -110, -110, 4110, -110, 4110, g0));
+            s.AddRange(Poly("A2", 3890, g1, 3890, 5890, 110, 5890, 110, 110, 3890, 110));
+            s.Add(new PlanSeg(3890, g1, 4110, g1, "J1"));
+            s.Add(new PlanSeg(3890, g0, 4110, g0, "J2"));
+            var sym = new List<PlanSymbol>
+            {
+                new PlanSymbol { Kind = "door", Min = new double[] { 2990, g0 }, Max = new double[] { 3890, g0 }, Sources = { "D1" } },
+                new PlanSymbol { Kind = "door", Min = new double[] { 2990, g0 }, Max = new double[] { 3890, g1 }, Sources = { "D2" } },
+            };
+            var r = FloorPlanLogic.Recognize(s, null, sym, new PlanOptions());
+            foreach (var op in r.Openings)
+            {
+                var w = r.Walls[op.Wall];
+                Assert.True(Math.Abs(w.Dir[1]) > 0.9, $"door cut into a horizontal wall (s {op.S0:0}–{op.S1:0}), not into the right wall where the gap is");
+            }
+            Assert.True(r.Openings.Count == 1 || r.OpenGaps.Count > 0 || r.Skipped.Count > 0, "the corner door is neither built nor reported");
+            // and it is built: one door, 900 wide, in the gap at the wall's end, with a lintel there
+            var door = Assert.Single(r.Openings);
+            Assert.Equal("gap", door.From);
+            Assert.Equal(900, door.Width, 6);
+            Assert.Empty(r.OpenGaps);
+            var lintel = FloorPlanLogic.Boxes(r, H).Where(b => Math.Abs(b.Height - 1100) < 1e-6).ToList();
+            var l = Assert.Single(lintel);
+            Assert.Equal(4000, l.Center[0], 6);
+            Assert.Equal((g0 + g1) / 2, l.Center[1], 6);
+        }
+
+        [Fact]
+        public void KT11_corner_gap_without_symbol_is_reported_and_can_be_given()
+        {
+            double g0 = 110, g1 = g0 + 900;
+            var s = new List<PlanSeg>();
+            s.AddRange(Poly("A1", 4110, g1, 4110, 6110, -110, 6110, -110, -110, 4110, -110, 4110, g0));
+            s.AddRange(Poly("A2", 3890, g1, 3890, 5890, 110, 5890, 110, 110, 3890, 110));
+            s.Add(new PlanSeg(3890, g1, 4110, g1, "J1"));
+            s.Add(new PlanSeg(3890, g0, 4110, g0, "J2"));
+            var r = FloorPlanLogic.Recognize(s, null, null, O);
+            var gap = Assert.Single(r.OpenGaps);
+            Assert.Equal(900, gap.s1 - gap.s0, 6);
+            Assert.Null(FloorPlanLogic.AddGivenOpening(r, "door", new double[] { 4000, 560 }, 0, null, null, O));
+            Assert.Equal(900, Assert.Single(r.Openings).Width, 6);
+        }
+
+        [Fact]
+        public void KT17_pier_next_to_a_corner_is_a_220_wall_not_a_420_one()
+        {
+            // right wall: pier 200 from the inner corner, then a 900 door gap (y 310–1210)
+            var s = new List<PlanSeg>();
+            s.AddRange(Poly("A1", 4110, 1210, 4110, 6110, -110, 6110, -110, -110, 4110, -110, 4110, 310));
+            s.AddRange(Poly("A2", 3890, 1210, 3890, 5890, 110, 5890, 110, 110, 3890, 110, 3890, 310));
+            s.Add(new PlanSeg(3890, 1210, 4110, 1210, "J1"));
+            s.Add(new PlanSeg(3890, 310, 4110, 310, "J2"));
+            var r = FloorPlanLogic.Recognize(s, null, null, O);
+            Assert.Equal(4, r.Walls.Count);
+            Assert.Equal(220, Assert.Single(FloorPlanLogic.ThicknessSummary(r)).thickness);
+            var gap = Assert.Single(r.OpenGaps);
+            Assert.Equal(900, gap.s1 - gap.s0, 6);
+            Assert.Empty(r.Skipped);
+        }
+
+        [Fact]
+        public void KT18_door_between_a_220_and_a_110_wall_in_line()
+        {
+            var s = new List<PlanSeg>
+            {
+                new PlanSeg(0, 0, 3000, 0, "a1"), new PlanSeg(0, 220, 3000, 220, "a2"), new PlanSeg(3000, 0, 3000, 220, "aj"),
+                new PlanSeg(3900, 0, 7000, 0, "b1"), new PlanSeg(3900, 110, 7000, 110, "b2"), new PlanSeg(3900, 0, 3900, 110, "bj"),
+            };
+            var sym = new List<PlanSymbol> { new PlanSymbol { Kind = "door", Min = new double[] { 3000, 110 }, Max = new double[] { 3900, 1010 }, Sources = { "D" } } };
+            var r = FloorPlanLogic.Recognize(s, null, sym, O);
+            Assert.Equal(2, r.Walls.Count);
+            var door = Assert.Single(r.Openings);
+            Assert.Equal(900, door.Width, 6);
+            Assert.Equal(110, r.Walls[door.Wall].Thickness, 6); // the lintel takes the thinner wall
+            Assert.DoesNotContain(r.Skipped, x => x.Handle == "D");
+            var lintel = Assert.Single(FloorPlanLogic.Boxes(r, H), b => Math.Abs(b.Height - 1100) < 1e-6);
+            Assert.Equal(3450, lintel.Center[0], 6);
+        }
+
+        [Fact]
+        public void KT19_given_opening_without_width_at_a_recognised_door_changes_its_height()
+        {
+            var r = FloorPlanLogic.Recognize(SkillRoom(), null, SkillDoor(), O);
+            Assert.Null(FloorPlanLogic.AddGivenOpening(r, "door", new double[] { 4000, 3000 }, 0, 0, 2400, O));
+            var d = Assert.Single(r.Openings);
+            Assert.Equal(900, d.Width, 6);
+            FloorPlanLogic.ResolveHeights(r, H);
+            Assert.Equal(2400, d.Top, 6);
+        }
+
+        [Fact]
+        public void KT22_island_inside_a_hole_is_a_slab_again()
+        {
+            // 0 = slab, 1 = stair hole in it, 2 = island in the hole, 3 = a second hole in the slab
+            var areas = new double[] { 100, 40, 10, 5 };
+            bool Inside(int i, int j) => (i, j) switch { (1, 0) => true, (2, 1) => true, (2, 0) => true, (3, 0) => true, _ => false };
+            var (depth, parent) = FloorPlanLogic.SlabNesting(areas, Inside);
+            Assert.Equal(new[] { 0, 1, 2, 1 }, depth);
+            Assert.Equal(new[] { -1, 0, 1, 0 }, parent);
+        }
+
+        private static Existing3d Ex(string h, bool slab, double z0, double z1, double x0 = -110, double x1 = 4110) =>
+            new Existing3d { Handle = h, IsSlab = slab, Min = new[] { x0, -110, z0 }, Max = new[] { x1, 6110, z1 } };
+
+        [Fact]
+        public void KT14_second_storey_is_not_a_rerun_and_the_slab_cut_into_old_walls_is_reported()
+        {
+            var r = FloorPlanLogic.Recognize(SkillRoom(), null, SkillDoor(), O);
+            var h2 = new FloorPlanLogic.Heights { Wall = 3180, Door = 2200, Sill = 900, Window = 1500, Slab = 120 };
+            var boxes = FloorPlanLogic.Boxes(r, h2);
+            var slabs = new List<(double[] min, double[] max)> { (new double[] { -110, -110 }, new double[] { 4110, 6110 }) };
+            // storey 1 built with the old rule (walls 0–3300) and its slab −120–0; storey 2 at base_z 3300
+            var existing = new[] { Ex("W1", false, 0, 3300), Ex("S1", true, -120, 0) };
+            var c = FloorPlanLogic.CheckRerun(existing, boxes, slabs, 3300, 3180, 120, O.JoinTol);
+            Assert.Empty(c.Rerun);
+            Assert.Equal(new[] { "W1" }, c.SlabIntoWallsBelow);
+            Assert.Equal(120, c.SlabIntoWallsBy, 6);
+            // storey 1 with walls = storey height − slab (0–3180): storey 2 touches nothing
+            var ok = FloorPlanLogic.CheckRerun(new[] { Ex("W1", false, 0, 3180), Ex("S1", true, -120, 0) }, boxes, slabs, 3300, 3180, 120, O.JoinTol);
+            Assert.Empty(ok.Rerun);
+            Assert.Empty(ok.SlabIntoWallsBelow);
+            // the same storey again: walls and slab are a rerun
+            var again = FloorPlanLogic.CheckRerun(existing, boxes, slabs, 0, 3180, 120, O.JoinTol);
+            Assert.Equal(new[] { "W1", "S1" }, again.Rerun);
+        }
+
+        [Fact]
+        public void KT23_part_built_beside_an_earlier_part_is_not_a_rerun()
+        {
+            // the earlier part ends at x = 4110; the new part's wall starts there (boxes touch, no overlap)
+            var box = new PlanBox { Center = new double[] { 6000, 0, 1650 }, Length = 3780, Width = 220, Height = 3300, RotationDeg = 0 };
+            var none = new List<(double[] min, double[] max)>();
+            Assert.Empty(FloorPlanLogic.CheckRerun(new[] { Ex("W1", false, 0, 3300) }, new[] { box }, none, 0, 3300, 0, O.JoinTol).Rerun);
+            // overlapping by more than the tolerance is a rerun
+            var over = new PlanBox { Center = new double[] { 4000, 0, 1650 }, Length = 3780, Width = 220, Height = 3300, RotationDeg = 0 };
+            Assert.Single(FloorPlanLogic.CheckRerun(new[] { Ex("W1", false, 0, 3300) }, new[] { over }, none, 0, 3300, 0, O.JoinTol).Rerun);
+            Assert.False(FloorPlanLogic.BoxesOverlapStrict(new double[] { 0, 0 }, new double[] { 10, 10 }, new double[] { 10, 0 }, new double[] { 20, 10 }, 0.1));
+            // a rotated box: its xy box
+            var (mn, mx) = FloorPlanLogic.BoxXY(new PlanBox { Center = new double[] { 0, 0, 0 }, Length = 1000, Width = 200, Height = 1, RotationDeg = 90 });
+            Assert.Equal(-100, mn[0], 6); Assert.Equal(500, mx[1], 6);
         }
     }
 }

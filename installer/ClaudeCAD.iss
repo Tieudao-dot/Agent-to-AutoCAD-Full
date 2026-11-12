@@ -58,6 +58,11 @@ UninstallDisplayName={#AppDisplayName}
 [Languages]
 Name: "english"; MessagesFile: "compiler:Default.isl"
 
+[InstallDelete]
+; KT-38 (12/11/2026): replacing the original ClaudeCAD, its update link (to the original repository) must not stay: a
+; Full build made with --update-url brings its own, one made without would otherwise update back to the original
+Type: files; Name: "{app}\Contents\update-config.json"; Check: ReplacesOriginal
+
 [Files]
 ; program files are replaced on upgrade
 Source: "{#BundleDir}\*"; DestDir: "{app}"; Excludes: "Contents\skills\*"; Flags: recursesubdirs createallsubdirs ignoreversion
@@ -351,28 +356,44 @@ begin
     Log('silent install: replacing ' + What + ' with {#AppDisplayName} {#AppVersion} without asking');
     exit;
   end;
-  Result := MsgBox('Máy này đang có ' + What + '.' + #13#10#13#10 +
-                   'Cài {#AppDisplayName} sẽ thay bản này. Lịch sử chat, cài đặt và đăng nhập Claude được giữ.' + #13#10 +
-                   'Key cũ không dùng được: máy sẽ xin kích hoạt lại, chủ plugin duyệt và chọn gói cho máy.' + #13#10#13#10 +
-                   'Bấm OK để tiếp tục cài, Cancel để hủy (giữ nguyên bản đang có).',
-                   mbConfirmation, MB_OKCANCEL) = IDOK;
+  { a task dialog, so the two buttons read "Tiếp tục" / "Hủy" (decided 12/11/2026); this setup has only the English
+    language, whose MsgBox buttons are OK / Cancel. Hủy (or closing the dialog) leaves Setup before anything changed. }
+  Result := TaskDialogMsgBox('Máy này đang có ' + What + '.',
+                             'Cài {#AppDisplayName} sẽ thay bản này. Lịch sử chat, cài đặt và đăng nhập Claude được giữ.' + #13#10 +
+                             'Key cũ không dùng được: máy sẽ xin kích hoạt lại, chủ plugin duyệt và chọn gói cho máy.' + #13#10#13#10 +
+                             'Bấm Tiếp tục để cài, Hủy để thoát (máy giữ nguyên bản đang có).',
+                             mbConfirmation, MB_OKCANCEL, ['Tiếp tục', 'Hủy'], 0) = IDOK;
   if Result then Log('the user agreed to replace ' + What)
   else Log('the user cancelled: ' + What + ' is kept');
 end;
 
-{ An update the original ClaudeCAD downloaded (CLAUDECHATUPDATE) waits in %LocalAppData%\ClaudeCAD\updates\stage and
-  is copied over the bundle when AutoCAD closes: it would put the original back over this edition. Only for a
-  replaced original / unknown bundle, once the user went ahead. }
+{ An update the original ClaudeCAD downloaded (CLAUDECHATUPDATE) waits in %LocalAppData%\ClaudeCAD\updates\stage, and
+  its apply-update.cmd waits for AutoCAD to close to copy it over the bundle: it would put the original back over this
+  edition. KT-07 (12/11/2026): removed in PrepareToInstall, before Setup closes AutoCAD (CloseApplications), so the
+  waiting script finds nothing to copy (and a deleted batch file stops). Only for a replaced original / unknown bundle. }
 procedure DropOriginalStagedUpdate();
 var
-  Stage: String;
+  Stage, Script: String;
 begin
+  Script := ExpandConstant('{localappdata}\ClaudeCAD\updates\apply-update.cmd');
+  if FileExists(Script) then
+  begin
+    if DeleteFile(Script) then Log('removed the updater script of the replaced edition: ' + Script)
+    else Log('could not remove the updater script ' + Script);
+  end;
   Stage := ExpandConstant('{localappdata}\ClaudeCAD\updates\stage');
   if not DirExists(Stage) then exit;
   if DelTree(Stage, True, True, True) then
     Log('removed the update staged by the replaced edition: ' + Stage)
   else
     Log('could not remove the staged update ' + Stage);
+end;
+
+{ KT-07: runs before Setup checks / closes the applications that use the bundle (CloseApplications=yes) }
+function PrepareToInstall(var NeedsRestart: Boolean): String;
+begin
+  Result := '';
+  if ReplacesOriginal() then DropOriginalStagedUpdate();
 end;
 
 function InitializeSetup(): Boolean;
@@ -408,7 +429,8 @@ end;
 
 var
   KeyPage: TWizardPage;
-  KeyEdit, CodeEdit: TNewEdit;
+  CodeEdit: TNewEdit;
+  KeyEdit: TNewMemo;
   KeyStatus: TNewStaticText;
   AskButton: TNewButton;
   Machine: String;
@@ -580,26 +602,67 @@ begin
   Result := SaveStringToFile(ExpandConstant('{localappdata}\ClaudeCAD\status.txt'), Line, False);
 end;
 
-{ key → signed licence (online), or an offline activation code pasted as is. Err = why not. }
+{ the signed service plan (CCF1|...): saved so the plugin starts with the machine's plan }
+function SavePlanLine(const Line: String): Boolean;
+begin
+  ForceDirectories(ExpandConstant('{localappdata}\ClaudeCAD'));
+  Result := SaveStringToFile(ExpandConstant('{localappdata}\ClaudeCAD\plan.txt'), Line, False);
+end;
+
+{ the first word of S (S keeps the rest); words are separated by spaces }
+function TakeToken(var S: String): String;
+var
+  p: Integer;
+begin
+  S := Trim(S);
+  p := Pos(' ', S);
+  if p = 0 then
+  begin
+    Result := S;
+    S := '';
+  end
+  else
+  begin
+    Result := Copy(S, 1, p - 1);
+    S := Copy(S, p + 1, Length(S));
+  end;
+end;
+
+{ key → signed licence (online), or an offline activation code pasted as is. Err = why not.
+  KT-01 (12/11/2026): the no-network email has up to 3 lines, CCL1 (licence), CCS1 (no-network pass), CCF1 (plan), in any
+  order: split on spaces / tabs / line breaks like Activation.ActivateAsync in the plugin and save each line in its own file
+  (license.txt, status.txt, plan.txt). Before, everything from "CCS1|" on went to status.txt and the plugin refused it. }
 function Activate(const Input: String; var Err: String): Boolean;
 var
-  K, Body, Lic, St: String;
-  p: Integer;
+  K, Body, Lic, St, Pl, Rest, Tok: String;
 begin
   Result := False;
   Err := '';
-  K := Trim(Input);
-  if Pos('CCL1|', K) = 1 then
+  K := Input;
+  StringChangeEx(K, #13, ' ', True);
+  StringChangeEx(K, #10, ' ', True);
+  StringChangeEx(K, #9, ' ', True);
+  K := Trim(K);
+  if (Pos('CCL1|', K) > 0) or (Pos('CCS1|', K) > 0) or (Pos('CCF1|', K) > 0) then
   begin
-    { the no-network pass (CCS1|...) may be pasted together with the licence }
-    p := Pos('CCS1|', K);
-    if p > 0 then
+    Lic := '';
+    St := '';
+    Pl := '';
+    Rest := K;
+    while Rest <> '' do
     begin
-      SaveStatusLine(Trim(Copy(K, p, Length(K))));
-      K := Trim(Copy(K, 1, p - 1));
+      Tok := TakeToken(Rest);
+      if Pos('CCL1|', Tok) = 1 then Lic := Tok
+      else if Pos('CCS1|', Tok) = 1 then St := Tok
+      else if Pos('CCF1|', Tok) = 1 then Pl := Tok;
     end;
-    if Pos('CCL1|' + MachineCode() + '|', K) <> 1 then begin Err := 'Mã kích hoạt offline này của máy khác.'; exit; end;
-    Result := SaveLicense(K);
+    if Lic = '' then begin Err := 'Thiếu dòng giấy phép CCL1| — dán đủ các dòng trong email của chủ plugin.'; exit; end;
+    if Pos('CCL1|' + MachineCode() + '|', Lic) <> 1 then begin Err := 'Mã kích hoạt offline này của máy khác.'; exit; end;
+    if Pos('CCS1|' + MachineCode() + '|', St) = 1 then SaveStatusLine(St)
+    else if St <> '' then Log('activation: the CCS1 line is for another machine, not saved');
+    if Pos('CCF1|' + MachineCode() + '|', Pl) = 1 then SavePlanLine(Pl)
+    else if Pl <> '' then Log('activation: the CCF1 line is for another machine, not saved');
+    Result := SaveLicense(Lic);
     if not Result then Err := 'Không lưu được giấy phép.';
     exit;
   end;
@@ -625,6 +688,9 @@ begin
   { the service marks the machine Active with the key and signs that too }
   St := JsonValue(Body, 'status');
   if Pos('CCS1|' + MachineCode() + '|', St) = 1 then SaveStatusLine(St);
+  { KT-08: and the machine's plan, so the plugin starts with it (not with the default 2D until its first status check) }
+  Pl := JsonValue(Body, 'plan');
+  if Pos('CCF1|' + MachineCode() + '|', Pl) = 1 then SavePlanLine(Pl);
 end;
 
 procedure InitializeWizard();
@@ -682,12 +748,18 @@ begin
   KeyLabel := TNewStaticText.Create(KeyPage);
   KeyLabel.Parent := KeyPage.Surface;
   KeyLabel.Top := CodeEdit.Top + CodeEdit.Height + ScaleY(16);
-  KeyLabel.Caption := 'Key kích hoạt (XXXX-XXXX-XXXX-XXXX):';
+  KeyLabel.Width := KeyPage.SurfaceWidth;
+  KeyLabel.WordWrap := True;
+  KeyLabel.Caption := 'Key kích hoạt (XXXX-XXXX-XXXX-XXXX), hoặc mã không cần mạng (dán đủ các dòng trong email):';
 
-  KeyEdit := TNewEdit.Create(KeyPage);
+  { several lines: the no-network code is 2-3 lines (CCL1 / CCS1 / CCF1); a one-line box keeps only the first (KT-01) }
+  KeyEdit := TNewMemo.Create(KeyPage);
   KeyEdit.Parent := KeyPage.Surface;
   KeyEdit.Top := KeyLabel.Top + KeyLabel.Height + ScaleY(4);
   KeyEdit.Width := KeyPage.SurfaceWidth;
+  KeyEdit.Height := ScaleY(46);
+  KeyEdit.ScrollBars := ssVertical;
+  KeyEdit.WordWrap := True;
   KeyEdit.Text := ExpandConstant('{param:KEY|}'); { /KEY= also fills the box in a normal (not silent) run }
 
   KeyStatus := TNewStaticText.Create(KeyPage);
@@ -751,8 +823,6 @@ begin
       if Activate(ExpandConstant('{param:KEY|}'), Err) then Log('activation: activated') else Log('activation: ' + Err);
     end
     else Log('activation: silent install without /KEY= — the plugin will ask for the key');
-  { replacing the original ClaudeCAD: its staged update must not come back over this edition when AutoCAD closes }
-  if (CurStep = ssInstall) and ReplacesOriginal() then DropOriginalStagedUpdate();
   { sign-in now happens inside AutoCAD ("Đăng nhập Claude" button) — nothing to type in a terminal }
   if CurStep = ssPostInstall then TrustBundle();
 end;

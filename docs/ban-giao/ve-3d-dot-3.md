@@ -159,6 +159,33 @@ Phía plugin, danh sách skill của khung chat vẫn hiện skill này trong th
 ngoài mô hình), `GetSection` + `Explode` với cung / spline, hatch kiểu Normal để trống trong vòng, thời gian cộng nhiều
 hộp, nhận diện trên mặt bằng thật của cậu.
 
+## Sửa sau kiểm tra độc lập (12/11/2026)
+
+Luồng chính giao (báo cáo `docs/ban-giao/kiem-tra-doc-lap.md` ở nhánh `full/kiem-tra-doc-lap`). Gộp `full/test-tong-the`
+@ `3f05da7` (fast-forward), sửa trên `full/ve-3d-dot-3`, commit code **`fddffdb`**. Không chạy CI (CI chung chạy ở nhánh
+tích hợp). Chủ dự án dặn không hỏi tới 7h 13/11: những chỗ cần chọn đều chọn cách an toàn nhất, ghi dưới đây.
+
+| Mã | Mức | Sửa | Test |
+| --- | --- | --- | --- |
+| KT-11 | nặng | **Khe ở đầu tường** (`FindEndGaps`): đầu tường cách mặt tường chắn ngang (che hết bề dày) 300–6000 → một khe, ký hiệu cửa trong khe thành cửa của **tường có khe**. Bước 2 (ký hiệu đè tường liền) chỉ nhận ký hiệu nằm **trong** dải tường; chỉ chạm mặt tường → bỏ qua kèm lý do, không đoán. `openings` trỏ vào khe đầu tường dùng được | `KT11_door_at_room_corner_goes_into_its_own_wall` (chép từ báo cáo, thêm kiểm 1 cửa 900 + lanh tô đúng chỗ), `KT11_corner_gap_without_symbol…` |
+| KT-14 | nặng | Kiểm dựng lại tách vào lõi `FloorPlanLogic.CheckRerun`: khối tường cũ chồng thật trong mặt bằng **và** phủ > ½ chiều cao tường mới; sàn cũ chồng thật và > ½ dày sàn mới (tường và sàn kiểm riêng). Tầng dưới chỉ chạm → không chặn; sàn tầng mới cắt vào tường tầng dưới → chỉ ghi chú. Câu lỗi nói rõ "cùng cao độ", **không bao giờ gợi ý xóa tầng khác**. Skill 3D: tường = cao tầng − dày sàn (3180), tầng 2 `base_z` 3300; system prompt và mô tả lệnh cùng ý | `KT14_second_storey…`, `KT14_rerun_message…` (nguồn + skill), trợ lý `plan3d.test.ts`. Thử thật: checklist **L24** |
+| KT-15 | nhẹ | `ToolDef.ReadsWhen` + `WritesFor(p)` ở `ToolDispatcher` (lệnh đơn, batch, macro): `dry_run` chạy như lệnh đọc (transaction chỉ đọc, không bản sao phiên bản, không nhóm U, không ghi macro, chạy được khi "Chỉ xem") | `KT15_dry_run_is_dispatched_as_a_read`; L26 |
+| KT-16 | nhẹ | `base_z` nhập mm, chia theo INSUNITS như chiều cao; báo cáo `heights_mm.base_z` là mm | `KT16_…`; L27 |
+| KT-17 | nhẹ | Cặp nét ngắn hơn chiều dày chỉ nhận khi nét dài nhô ra mỗi đầu tối đa bằng chiều dày (trụ cạnh góc vẫn nhận, nét bịt + mặt tường dài không còn thành tường 330 / 420) | `KT17_pier_next_to_a_corner…` |
+| KT-18 | nhẹ | Khe đầu tường cũng tìm tới tường thẳng hàng khác dày; khe thuộc tường mỏng hơn (lanh tô theo tường mỏng) | `KT18_door_between_a_220_and_a_110_wall…` |
+| KT-19 | nhẹ | `openings` không `width` tại cửa đã nhận → lấy bề rộng cửa đó (đổi chiều cao / loại) | `KT19_…` |
+| KT-20 | nhẹ | Block `CUA-DI-*` / `CUA-SO-*` xét theo tên trước layer (cả trên `A-WALL`) | `KT20_…` (nguồn); L28 |
+| KT-21 | nhẹ | Chọn: thêm `A-SLAB` (đường bao sàn kín, lỗ là đường kín bên trong) vào bảng layer `ve-kien-truc` (chỉ phần layer); skill 3D ghi rõ | skill test có sẵn |
+| KT-22 | nhẹ | `FloorPlanLogic.SlabNesting`: cha = đường bao nhỏ nhất chứa nó; độ lồng chẵn = sàn, lẻ = lỗ của cha (đảo trong lỗ là sàn) | `KT22_island_inside_a_hole…`; L28 |
+| KT-23 | nhẹ | Chồng trong mặt bằng phải > dung sai cả hai chiều (`BoxesOverlapStrict`), so từng hộp tường mới (`BoxXY`), không còn hộp bao chạm nhau | `KT23_part_built_beside…` |
+
+Test cũ phải sửa theo code mới (ý kiểm giữ nguyên): `FloorPlanTests.Symbol_far_from_walls_or_touching_two_walls…`
+(lý do mới "not guessed" thay "two walls"), `FloorPlanFixTests.Dry_run_report_lists_skipped…` và
+`Plan3dToolTests.Temporary_solids…` (tên biến trong nguồn).
+
+Test: lõi **343/343** (331 sau khi gộp + 12 mới), trợ lý **201/201**; build net48 / net8.0-windows / net10.0-windows
+(xóa `obj` / `bin` giữa các lần) 0 lỗi, 0 cảnh báo. Chưa sửa: không có.
+
 ## Tiến độ
 
 - [x] `build_3d_from_plan`

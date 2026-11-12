@@ -34,6 +34,7 @@ Quy ước chung: đơn vị mm, WCS. Tỷ lệ in mặc định **1:100** (nế
 | `A-DIM` | kích thước | 2 (vàng) | CONTINUOUS | 0.18 |
 | `A-TEXT` | tên phòng, ghi chú | 7 | CONTINUOUS | 0.25 |
 | `A-HIDDEN` | nét khuất | 8 | HIDDEN | 0.18 |
+| `A-SLAB` | đường bao sàn: polyline **kín** (polyline kín nằm trong là lỗ sàn); dùng khi dựng 3D từ mặt bằng | 8 | CONTINUOUS | 0.18 |
 
 ## 3. Tường, cột, trục
 

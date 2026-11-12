@@ -69,7 +69,8 @@ export function plan3dTools(b: ToolBridge): AnyTool[] {
         '(lintel above doors, sill and lintel at windows) on A-WALL-3D and slabs (top at base_z, slab_thickness down) on A-SLAB-3D. ' +
         'Only straight walls: curved walls, walls inside blocks / xrefs and unclear pieces are skipped and listed with handle and reason (nothing is guessed). ' +
         'The plan objects are only read, never changed. dry_run: true builds nothing and returns walls, openings, open_gaps (gaps with no symbol, left open), ' +
-        'skipped and existing_solids (solids of an earlier run over this plan). Refuses (nothing built) when this plan was already built, unless on_existing "add". ' +
+        'skipped and existing_solids (solids of an earlier run over this plan); it only reads (no undo step, allowed in read-only mode). ' +
+        'Refuses (nothing built) when this plan was already built at the same level, unless on_existing "add"; the storey below or a part beside only touching it is not a rerun. ' +
         'Returns handles, wall_solid {volume_m3, pieces_volume_m3, min, max}, slabs, walls / openings / skipped, thickness_summary.',
       {
         wall_height: z.number().min(L.MinWallHeight).max(L.MaxWallHeight).optional().describe(`Wall height (mm, default ${L.DefaultWallHeight}).`),
@@ -77,7 +78,7 @@ export function plan3dTools(b: ToolBridge): AnyTool[] {
         window_sill: z.number().min(0).optional().describe(`Window sill height (mm, default ${L.DefaultSill}).`),
         window_height: z.number().positive().optional().describe(`Window opening height (mm, default ${L.DefaultWindowHeight}).`),
         slab_thickness: z.number().min(0).max(L.MaxSlabThickness).optional().describe(`Slab thickness (mm, default ${L.DefaultSlabThickness}; 0 = no slab).`),
-        base_z: z.number().optional().describe('Floor level: walls start here, slab top is here (default 0; e.g. 3300 for the next storey).'),
+        base_z: z.number().optional().describe('Floor level in mm (scaled like the heights): walls start here, this storey\'s slab top is here (default 0; e.g. 3300 for storey 2). With it use wall_height = storey height − slab thickness so the slab sits on the walls below.'),
         slab: z.enum(['auto', 'none', 'bbox']).optional()
           .describe('auto (default): slabs from closed outlines on the slab layers / slab_handles (an outline inside another is a hole); bbox: one slab under the walls\' bounding box; none.'),
         wall_layers: layerList('wall face lines', PLAN3D_LAYERS.wall),
@@ -97,8 +98,8 @@ export function plan3dTools(b: ToolBridge): AnyTool[] {
         max_thickness: z.number().positive().max(L.MaxThicknessLimit).optional().describe(`Thickest wall to recognise (mm, default ${L.DefaultMaxThickness}).`),
         area_min: point.optional().describe('With area_max: only read plan objects lying inside this rectangle.'),
         area_max: point.optional(),
-        on_existing: z.enum(['stop', 'add']).optional().describe('stop (default): refuse when this plan was already built; add: build again anyway.'),
-        dry_run: z.boolean().optional().describe('Only recognise and report; build nothing.'),
+        on_existing: z.enum(['stop', 'add']).optional().describe('stop (default): refuse when this plan was already built at this level; add: build again anyway.'),
+        dry_run: z.boolean().optional().describe('Only recognise and report; build nothing (a read: no undo step, works in read-only mode).'),
         wall_layer_3d: z.string().min(1).max(255).optional().describe(`Layer of the wall solids (default ${PLAN3D_LAYERS.wall3d}, created when missing).`),
         slab_layer_3d: z.string().min(1).max(255).optional().describe(`Layer of the slab solids (default ${PLAN3D_LAYERS.slab3d}).`),
       }),

@@ -61,6 +61,8 @@ namespace ClaudeCAD.Plugin.Core
         /// <summary>Solids check_interference compares (all pairs, or handles × other_handles).</summary>
         public const int MaxInterferenceSolids = 100;
         public const int MaxInterferencePairs = 200;
+        /// <summary>Pairs whose bounding boxes touch that one call compares at most (KT-25: each one is slow on AutoCAD's main thread).</summary>
+        public const int MaxInterferenceCandidates = 2000;
         /// <summary>Sweep twist (degrees) and scale.</summary>
         public const double MaxTwist = 3600;
         public const double MinSweepScale = 0.01;
@@ -78,28 +80,35 @@ namespace ClaudeCAD.Plugin.Core
         // ------------------------------------------------------------------ topology id
 
         /// <summary>
-        /// A short id of the solid's edges and faces in Brep order, relative to the min corner of its bounding box
-        /// (so a solid moved as a whole keeps it), rounded to 0.01 mm. Same id = edge / face i is the same one.
+        /// A short id of the solid's edges and faces in Brep order. It hashes only what moving or turning the whole solid
+        /// keeps (KT-27): each edge's type, length, the distances of its points from the mean of all edge points, the
+        /// faces it bounds, and each face's type, rounded to 1e-5 of the solid's size (not to 0.01 mm of the
+        /// absolute position). Same id = edge / face i is the same one. min is no longer used (kept for callers).
         /// </summary>
-        public static string TopologyId(IList<EdgeDesc> edges, IList<FaceDesc> faces, double[] min)
+        public static string TopologyId(IList<EdgeDesc> edges, IList<FaceDesc> faces, double[] min = null)
         {
-            var o = min ?? new double[] { 0, 0, 0 };
+            var pts = edges.SelectMany(e => new[] { e.Start, e.End, e.Mid }).Where(p => p != null).Select(V3).ToList();
+            var c = new double[3];
+            if (pts.Count > 0) for (int k = 0; k < 3; k++) c[k] = pts.Average(p => p[k]);
+            double size = pts.Count > 0 ? pts.Max(p => SolidLogic.Len(SolidLogic.Sub(p, c))) : 0;
+            double unit = Math.Max(size * 1e-5, 1e-6);
             var sb = new StringBuilder();
             sb.Append(edges.Count).Append('/').Append(faces.Count).Append(';');
-            void P(double[] p)
+            void Q(double v) => sb.Append(((long)Math.Round(v / unit)).ToString(CultureInfo.InvariantCulture)).Append(',');
+            void D(double[] p) { if (p == null) sb.Append("n,"); else Q(SolidLogic.Len(SolidLogic.Sub(V3(p), c))); }
+            foreach (var e in edges)
             {
-                if (p == null) { sb.Append("n;"); return; }
-                for (int i = 0; i < 3; i++)
-                {
-                    double r = Math.Round((i < p.Length ? p[i] : 0) - (i < o.Length ? o[i] : 0), 2);
-                    // -0 prints "-0" on .NET 8 / 10 but "0" on .NET Framework (AutoCAD 2022-2024): one id on every AutoCAD
-                    if (r == 0) r = 0;
-                    sb.Append(r.ToString("0.##", CultureInfo.InvariantCulture)).Append(',');
-                }
+                sb.Append(e.Straight ? 's' : 'c');
+                D(e.Start); D(e.End); D(e.Mid);
+                if (e.Start != null && e.End != null) Q(SolidLogic.Len(SolidLogic.Sub(V3(e.End), V3(e.Start)))); else sb.Append("n,");
+                foreach (var fi in e.Faces) sb.Append('f').Append(fi.ToString(CultureInfo.InvariantCulture));
                 sb.Append(';');
             }
-            foreach (var e in edges) { P(e.Start); P(e.End); P(e.Mid); sb.Append(e.Straight ? 's' : 'c'); }
-            foreach (var f in faces) { P(f.Center); sb.Append(f.Planar ? 'p' : 'c'); }
+            foreach (var f in faces)
+            {
+                // areas are left out: AutoCAD estimates curved areas numerically, they could differ between two copies
+                sb.Append(f.Planar ? 'p' : 'c').Append(';');
+            }
             // FNV-1a 64
             ulong h = 14695981039346656037UL;
             foreach (var ch in sb.ToString()) { h ^= ch; h *= 1099511628211UL; }
@@ -142,8 +151,10 @@ namespace ClaudeCAD.Plugin.Core
             return n;
         }
 
+        /// <summary>A missing point (an edge / face Brep could not read) is never on a side (KT-13).</summary>
         private static bool OnSide(double[] p, string side, double[] min, double[] max, double tol)
         {
+            if (p == null) return false;
             int a = Axis(side);
             double target = AtMax(side) ? V3(max)[a] : V3(min)[a];
             return Math.Abs(V3(p)[a] - target) <= tol;
@@ -151,7 +162,7 @@ namespace ClaudeCAD.Plugin.Core
 
         private static bool Parallel(EdgeDesc e, int axis, double tol)
         {
-            if (!e.Straight) return false;
+            if (!e.Straight || e.Start == null || e.End == null) return false;
             var d = SolidLogic.Sub(e.End, e.Start);
             double len = SolidLogic.Len(d);
             if (len < 1e-9) return false;
@@ -474,6 +485,20 @@ namespace ClaudeCAD.Plugin.Core
             };
         }
 
+        // ------------------------------------------------------------------ interference
+
+        /// <summary>
+        /// What a pair that CheckInterference flagged is (KT-24): "clash" (overlap volume measured), "touching" (the
+        /// common volume was measured as 0) or "clash_unmeasured" (the volume could not be measured: still a clash, so
+        /// interfere stays true and nothing is reported as safe by mistake).
+        /// </summary>
+        public static string ClassifyInterference(double? overlap) =>
+            !overlap.HasValue || double.IsNaN(overlap.Value) ? "clash_unmeasured" : overlap.Value <= 1e-6 ? "touching" : "clash";
+
+        public static string InterferenceTruncatedNote(int candidates, int checkedPairs) =>
+            $"Only the first {checkedPairs} of {candidates} pairs whose bounding boxes touch were checked (limit {MaxInterferenceCandidates} per call), " +
+            "so there may be more clashes. Tell the user, and check smaller groups (e.g. one storey, or handles against other_handles) to cover the rest.";
+
         // ------------------------------------------------------------------ UCS
 
         /// <summary>
@@ -504,6 +529,20 @@ namespace ClaudeCAD.Plugin.Core
             if (SolidLogic.Len(y) < 1e-9 * Math.Max(SolidLogic.Len(yd), 1e-12)) throw ToolException.Invalid($"{tool}: y_axis must not be parallel to x_axis.");
             y = SolidLogic.Unit(y, tool);
             return (x, y, SolidLogic.Cross(x, y));
+        }
+
+        /// <summary>
+        /// The view twist (radians, 0 to 2π) that shows the UCS x axis to the right when looking straight at the UCS
+        /// (KT-26), given the screen right / up of the same view with twist 0. Like PLAN in a UCS turned 30° about Z,
+        /// which gives VIEWTWIST 330°.
+        /// </summary>
+        public static double PlanTwist(double[] ucsX, double[] right, double[] up)
+        {
+            double a = Math.Atan2(SolidLogic.Dot(ucsX, up), SolidLogic.Dot(ucsX, right));
+            double t = -a;
+            while (t < 0) t += 2 * Math.PI;
+            while (t >= 2 * Math.PI) t -= 2 * Math.PI;
+            return Math.Abs(t) < 1e-9 || Math.Abs(t - 2 * Math.PI) < 1e-9 ? 0 : t;
         }
 
         /// <summary>Names AutoCAD accepts for a saved UCS (no &lt;&gt;/\":;?*|,=` and at most 255 characters).</summary>

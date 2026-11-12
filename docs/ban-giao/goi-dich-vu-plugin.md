@@ -80,6 +80,25 @@ tên trường). Khác với gợi ý ban đầu: ngữ cảnh gửi trợ lý d
 6. **Tài liệu:** `activation/README.md`, `bo-cai/README.md`, `docs/checklist-thu-that.md` (thêm phần gói),
    `docs/ke-hoach-3d-goi-dich-vu.md`.
 
+## Sửa sau kiểm tra độc lập (12/11/2026)
+
+Lỗi từ `docs/ban-giao/kiem-tra-doc-lap.md` (nhánh `full/kiem-tra-doc-lap`). Gộp `full/test-tong-the` @ `3f05da7`
+(fast-forward), sửa trong commit `457bc98`. Test lõi 334/334, trợ lý 209/209, build net48 + net8.0-windows; chưa chạy CI
+(CI chung chạy sau khi thread Test tổng thể gộp).
+
+| Mã | Cách sửa | Test |
+| --- | --- | --- |
+| KT-02 | Chốt C3 (chặn). `PlanLogic.TextParams` / `BlockedParam`: gói không có 2D bị `ToolDispatcher` từ chối `attributes` (không rỗng) của `define_block` và `insert_block`, mã `NOT_IN_PLAN`, cả lệnh lẻ và trong `batch_execute`. `set_block_attributes` chuyển sang nhóm 2D. Block không thuộc tính vẫn dùng được; chèn block có sẵn định nghĩa thuộc tính thì thuộc tính lấy giá trị mặc định. Trợ lý gói 3D không thấy tham số `attributes`; system prompt gói 3D ghi "blocks without attributes" | `PlanTests.KT02_*`, `plan-fixes.test.ts` |
+| KT-03 | `session.ts`: "−" / "+" tính trên skill gói thật sự nạp (`skillsForPlan`); skill bị gói loại khi đổi gói vào `skills_removed`, skill thêm mà gói không nạp không được báo "đã thêm" | `plan-fixes.test.ts` |
+| KT-04 | `MacroLogic.BlockedCalls` + `PlanLogic.MacroBlockedText`: kiểm cả macro trước khi chạy; có lệnh (hoặc thuộc tính block) ngoài gói thì không chạy lệnh nào, thẻ lỗi tiếng Việt "Không chạy macro …: máy này dùng gói …" | `PlanTests.KT04_*` |
+| KT-05 | Chốt C4. `LicenseLogic.AcceptPlan`: `SavePlan` chỉ nhận dòng gói mới hơn hoặc cùng ngày dòng đang lưu; dán dòng cũ báo lý do. Tài liệu ghi rõ máy offline không thu hồi được gói nếu khách không dán dòng mới, chỉ cấp Full offline cho máy tin cậy | `PlanTests.KT05_*` |
+| KT-06 | `upsertDevice` (Apps Script): tên giữ chỗ "(…)" chỉ điền ô Thiết bị trống, không ghi đè tên máy gửi lên | `activation.test.ts` (KT-06) |
+| KT-35 | `buildTools(…, plan)`: gói 2D bỏ `view` / `direction` / `visual_style` và câu "3D:" khỏi `capture_view` | `plan-fixes.test.ts` |
+| KT-36 | Regex `plan:` bỏ phần `# ghi chú`; `propose_skill` ghi `plan: 2d` / `plan: 3d` theo gói đang dùng (Full: không ghi, dùng ở mọi gói) | `plan-fixes.test.ts` |
+
+Còn biết: cùng ngày UTC, `plan.txt` chỉ đọc vẫn giữ dòng Full cũ tới hết ngày (dòng cùng ngày được tin). Chấp nhận, vì
+hạ gói lần nữa trong ngày là hiếm.
+
 ## Giới hạn
 
 - Không merge / push `main`, không tạo PR, không chạy CI `release: true`.

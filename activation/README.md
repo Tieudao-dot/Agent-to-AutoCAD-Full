@@ -65,6 +65,10 @@ Mở dự án Apps Script (từ bảng tính: Tiện ích mở rộng → Apps S
 - **KEY**: dùng cho máy có mạng.
 - **Dòng gói** `CCF1|…` (thêm từ bản Full): gói của máy lấy từ cột Gói. Máy không có mạng dán dòng này cùng hai dòng
   bên dưới (dán riêng dòng gói cũng được, để đổi gói cho máy đã kích hoạt). Không dán thì máy dùng gói mặc định.
+  - Plugin chỉ nhận dòng gói **mới hơn hoặc cùng ngày** với dòng đang lưu (chốt C4, 12/11/2026). Dán lại dòng Full cũ
+    sau khi cậu đã hạ gói thì bị từ chối.
+  - ⚠️ Máy không có mạng **không thu hồi được gói** nếu khách không dán dòng mới: máy giữ gói đang có. Chỉ cấp **Full**
+    cho máy offline cậu tin cậy.
 - **Mã cho máy không có mạng**: **hai dòng** — dòng `CCL1|…` (giấy phép) và dòng `CCS1|…|offline|…` (mã miễn kiểm tra trạng thái). Dán **cả hai dòng** vào ô key của khung chat trong AutoCAD. Máy có mã miễn kiểm tra sẽ **không bị khóa từ xa và không bị giới hạn 7 ngày** — chỉ cấp cho máy thật sự không có mạng.
 
 ## Cài ngầm cho nhiều máy
@@ -88,6 +92,10 @@ Key vẫn riêng cho từng máy. Cài ngầm mà không có `/KEY=` thì plugin
     về gói mặc định (chặn việc giữ lại dòng `Full` cũ), máy có mã miễn kiểm tra giữ dòng gói được cấp.
   - Lưu ở `%LocalAppData%\ClaudeCAD\plan.txt`. Bản build không có máy chủ kích hoạt: mọi lệnh, như trước.
   - `ToolDispatcher` từ chối lệnh ngoài gói với mã `NOT_IN_PLAN` (lệnh lẻ, từng lệnh trong `batch_execute`, macro).
+  - Thuộc tính block là chữ (chốt C3, 12/11/2026): gói không có 2D bị từ chối `attributes` của `define_block` /
+    `insert_block` (`PlanLogic.BlockedParam`); `set_block_attributes` thuộc nhóm 2D. Block không thuộc tính vẫn dùng được.
+  - Macro có lệnh ngoài gói (ví dụ ghi ở Full, chạy ở 3D) không chạy lệnh nào, khung chat báo tiếng Việt.
+  - `SavePlan` chỉ nhận dòng gói mới hơn hoặc cùng ngày với dòng đang lưu (`LicenseLogic.AcceptPlan`).
   - Plugin gửi `context.service_plan` + `context.plan_tools` kèm mỗi tin nhắn; trợ lý chỉ nạp các lệnh đó, system prompt
     nói rõ gói, và khởi động lại phiên Claude (cùng cuộc chat) khi gói đổi.
   - **Gói mặc định `2D`** (đã chốt 12/11/2026) cho máy mới, ô Gói trống và ô gõ sai. Muốn đổi thì đổi cùng lúc
@@ -96,8 +104,10 @@ Key vẫn riêng cho từng máy. Cài ngầm mà không có `/KEY=` thì plugin
 - **Google Sheet:** script phải **gắn với bảng tính** (tạo từ Tiện ích mở rộng → Apps Script) vì dùng `SpreadsheetApp.getActive()`. `request` thêm dòng Chờ duyệt; `activate`/`taoKeyThuCong` đặt Active; `status` cập nhật Lần cuối dùng + Phiên bản (tối đa 30 phút/lần/máy, có LockService); `Disabled` chặn cả `request` (không email) lẫn `activate` (key đúng cũng từ chối). Máy lạ gọi `status` không được thêm dòng.
 - **Tạo lại `ClaudeCAD-Code.gs`** (đổi email, hoặc mất file):
   ```bash
-  node activation/make-apps-script.mjs --private-key license-private.pem --email <gmail> --secret <secret cũ> --out ClaudeCAD-Code.gs
+  node activation/make-apps-script.mjs --private-key D:/claudecad-khoa/license-private.pem --email <gmail> --secret <secret cũ> --out D:/claudecad-khoa/ClaudeCAD-Code.gs
   ```
+  `--out` phải là thư mục **ngoài repo** (script từ chối ghi vào trong repo): file có SECRET và khóa riêng. `.gitignore`
+  cũng chặn mọi file `*.gs` (mẫu `*.gs.template` vẫn được theo dõi) và `*.pem`.
   Bỏ `--secret` thì script tạo SECRET mới, và mọi key đã gửi trước đó đều không còn dùng được để kích hoạt máy mới. Giấy phép đã kích hoạt vẫn dùng được.
 - **Đổi cặp khóa** (lộ khóa riêng): tạo khóa mới bằng `openssl genrsa -out license-private.pem 2048`, chạy `--print-public` để lấy khóa công khai, cập nhật `LicenseLogic.PublicModulus`, rồi phát hành bản mới. Lưu ý: giấy phép cũ sẽ hết hiệu lực trên bản mới, nên mọi máy phải kích hoạt lại.
 - **Giới hạn:** mã nguồn đang công khai. Người biết lập trình có thể sửa mã để bỏ bước kiểm tra rồi tự build lại. Key + trạng thái chặn được người dùng thông thường; muốn chặn cả trường hợp này thì phải để repo ở chế độ riêng tư.

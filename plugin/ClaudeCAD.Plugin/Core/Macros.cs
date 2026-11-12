@@ -85,6 +85,13 @@ namespace ClaudeCAD.Plugin.Core
 
         public const int MaxCalls = 2000;
 
+        /// <summary>
+        /// Tools of the macro outside this machine's plan (e.g. recorded on Full, run on 2D / 3D). The macro is then
+        /// not run at all: running only the calls in the plan would leave half a drawing.
+        /// </summary>
+        public static List<string> BlockedCalls(Macro m, string plan) =>
+            PlanLogic.BlockedCalls(plan, (m?.Calls ?? new List<MacroCall>()).Select(c => (c.Tool, (IDictionary<string, object>)c.Params)));
+
         public static bool ShouldRecord(string tool, bool writes) => writes && !string.IsNullOrEmpty(tool) && !NotRecorded.Contains(tool);
 
         /// <summary>The "handles" array of a tool result (strings only).</summary>
@@ -164,6 +171,40 @@ namespace ClaudeCAD.Plugin.Core
             }
             return external;
         }
+
+        /// <summary>The 3D tools that change a solid's shape: from a turn they always need the confirmation card (decided 12/11/2026).</summary>
+        public static readonly HashSet<string> AlwaysConfirmTools = new HashSet<string>(StringComparer.Ordinal)
+        {
+            "solid_union", "solid_subtract", "solid_intersect", "slice_solid", "fillet_edges", "chamfer_edges", "shell_solid",
+        };
+
+        /// <summary>
+        /// KT-10: calls of the macro that change the shape of solids the macro did not build itself ("tool (handles)"). A macro
+        /// has no confirmation card, so such a macro is not run (the 3D booleans / slice / fillet / chamfer / shell of
+        /// objects that already exist go through Claude, who asks with the card). explode / erase of older solids are refused
+        /// by the plugin call by call (no user_confirmed in a macro).
+        /// </summary>
+        public static List<string> ExternalSolidEdits(Macro m)
+        {
+            var created = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            var found = new List<string>();
+            foreach (var c in m?.Calls ?? new List<MacroCall>())
+            {
+                if (AlwaysConfirmTools.Contains(c.Tool ?? ""))
+                {
+                    var ext = HandleParams(c.Params ?? new Dictionary<string, object>()).Where(h => !created.Contains(h)).Distinct(StringComparer.OrdinalIgnoreCase).ToList();
+                    if (ext.Count > 0) found.Add($"{c.Tool} ({string.Join(", ", ext.Take(5))}{(ext.Count > 5 ? ", …" : "")})");
+                }
+                foreach (var h in c.ResultHandles ?? new List<string>()) created.Add(h);
+            }
+            return found;
+        }
+
+        /// <summary>What the palette says when ExternalSolidEdits refuses a macro (Vietnamese, for the user).</summary>
+        public static string ExternalSolidEditsMessage(List<string> edits) =>
+            "Macro này sửa khối 3D có sẵn trong bản vẽ (" + string.Join("; ", edits.Take(3)) + (edits.Count > 3 ? "; …" : "") + "). " +
+            "Chạy macro không có thẻ xác nhận nên tớ không chạy. Nhờ Claude làm việc này (Claude hỏi bằng thẻ xác nhận), " +
+            "hoặc lưu lại macro chỉ sửa khối do chính macro dựng.";
 
         /// <summary>Values of params named handle / handles / *_handle(s) (where tools take entity handles).</summary>
         public static IEnumerable<string> HandleParams(Dictionary<string, object> p)
@@ -268,10 +309,12 @@ namespace ClaudeCAD.Plugin.Core
             lock (_lock)
             {
                 if (_calls.Count >= MacroLogic.MaxCalls) { _overflow = true; return; }
+                var copy = (MacroLogic.DeepCopy(p ?? new Dictionary<string, object>()) as Dictionary<string, object>) ?? new Dictionary<string, object>();
+                copy.Remove(SolidLogic.UserConfirmedParam); // KT-10: the card's yes belongs to that turn, never to a replay
                 _calls.Add(new MacroCall
                 {
                     Tool = tool,
-                    Params = (MacroLogic.DeepCopy(p ?? new Dictionary<string, object>()) as Dictionary<string, object>) ?? new Dictionary<string, object>(),
+                    Params = copy,
                     ResultHandles = MacroLogic.ResultHandles(result),
                 });
             }

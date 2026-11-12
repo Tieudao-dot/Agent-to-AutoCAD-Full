@@ -76,11 +76,12 @@ namespace ClaudeCAD.Plugin.Core
                 // transforms and properties
                 "move_entities copy_entities rotate_entities scale_entities mirror_entities erase_entities array_rect array_polar set_entity_props " +
                 // blocks and xrefs
-                "define_block insert_block set_block_attributes set_dynamic_props reset_dynamic_block attach_xref detach_xref bind_xref reload_xref " +
+                // (block attributes are text: their parameters need 2D, see TextParams; set_block_attributes is 2D)
+                "define_block insert_block set_dynamic_props reset_dynamic_block attach_xref detach_xref bind_xref reload_xref " +
                 // basic curves: 3D uses them as profiles and paths
                 "draw_line draw_polyline draw_circle draw_arc draw_spline draw_ellipse draw_rectangle draw_polygon draw_point draw_ray draw_xline");
             Add(ToolGroup.TwoD,
-                "add_text add_mtext edit_text add_mleader add_table " +
+                "add_text add_mtext edit_text add_mleader add_table set_block_attributes " +
                 "add_dim_linear add_dim_aligned add_dim_angular add_dim_radial add_dim_diameter add_dim_ordinate add_dim_baseline add_dim_continue " +
                 "draw_hatch draw_wipeout draw_revcloud " +
                 "create_layout delete_layout set_current_layout add_viewport set_viewport plot_pdf list_plot_media " +
@@ -114,6 +115,58 @@ namespace ClaudeCAD.Plugin.Core
                 case ToolGroup.ThreeD: return Has3D(plan);
                 default: return Normalize(plan) == PlanFull;
             }
+        }
+
+        /// <summary>
+        /// Parameters of Common tools that write text, so they need 2D (decided 12/11/2026, C3): block attribute
+        /// definitions of define_block and attribute values of insert_block. A block without attributes stays Common.
+        /// </summary>
+        public static readonly IReadOnlyDictionary<string, string> TextParams = new Dictionary<string, string>(StringComparer.Ordinal)
+        {
+            ["define_block"] = "attributes",
+            ["insert_block"] = "attributes",
+        };
+
+        /// <summary>The parameter of this call the plan does not have (a non-empty block attribute list on a plan without 2D), or null.</summary>
+        public static string BlockedParam(string plan, string tool, IDictionary<string, object> p)
+        {
+            if (tool == null || p == null || Has2D(plan) || !TextParams.TryGetValue(tool, out var name)) return null;
+            if (!p.TryGetValue(name, out var v) || v == null) return null;
+            if (v is System.Collections.ICollection c && c.Count == 0) return null;
+            if (v is string s && s.Length == 0) return null;
+            return name;
+        }
+
+        /// <summary>The whole call: the tool and its parameters belong to the plan.</summary>
+        public static bool CallAllowed(string plan, string tool, IDictionary<string, object> p) =>
+            Allowed(plan, tool) && BlockedParam(plan, tool, p) == null;
+
+        /// <summary>Error text for Claude when a parameter (block attributes) is outside the machine's plan.</summary>
+        public static string BlockedParamMessage(string tool, string param, string plan, string contact) =>
+            $"{tool}: this machine's plan is \"{Label(plan)}\", which has no text, and '{param}' (block attributes) is text from the 2D group. " +
+            "Define or insert the block without attributes, or tell the user in Vietnamese that this machine uses the " +
+            $"\"{Label(plan)}\" plan and that the plugin owner can open the 2D group" +
+            (string.IsNullOrWhiteSpace(contact) ? "." : $" ({contact}).");
+
+        /// <summary>Tools of a call list (a macro) outside the plan, each once, in order; an empty list = the calls may run.</summary>
+        public static List<string> BlockedCalls(string plan, IEnumerable<(string tool, IDictionary<string, object> p)> calls)
+        {
+            var list = new List<string>();
+            foreach (var (tool, p) in calls)
+            {
+                string what = !Allowed(plan, tool) ? tool : BlockedParam(plan, tool, p) != null ? tool + " (thuộc tính block)" : null;
+                if (what != null && !list.Contains(what)) list.Add(what);
+            }
+            return list;
+        }
+
+        /// <summary>What the palette says when a macro uses tools outside the plan (it is not run at all).</summary>
+        public static string MacroBlockedText(string macro, string plan, IList<string> blocked, string contact)
+        {
+            var shown = blocked.Take(5).ToList();
+            var more = blocked.Count > shown.Count ? $" và {blocked.Count - shown.Count} lệnh khác" : "";
+            return $"Không chạy macro \"{macro}\": máy này dùng gói {Label(plan)}, mà macro có lệnh ngoài gói ({string.Join(", ", shown)}{more}). " +
+                   "Bản vẽ không bị thay đổi. Liên hệ chủ plugin để mở thêm gói" + (string.IsNullOrWhiteSpace(contact) ? "." : $" ({contact}).");
         }
 
         public static List<string> AllowedTools(string plan) =>

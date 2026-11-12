@@ -278,7 +278,7 @@ namespace ClaudeCAD.Plugin.Drawing
                     var pl = Acad.MakePolyline(pts, true, bulges);
                     temp.Add(pl);
                     curves.Add(pl);
-                    vertices.AddRange(pts);
+                    SamplePoints(pl, vertices);
                 }
                 else
                 {
@@ -297,9 +297,7 @@ namespace ClaudeCAD.Plugin.Drawing
                             throw ToolException.Invalid($"{p.Tool}: {h} is a {obj.GetType().Name}; a profile must be a closed curve (polyline, circle, ellipse, spline), lines / arcs forming a closed loop, or a region.");
                         curves.Add(c);
                         sources.Add(id);
-                        if (c is Polyline poly)
-                            for (int i = 0; i < poly.NumberOfVertices; i++) { var v = poly.GetPoint3dAt(i); vertices.Add(new[] { v.X, v.Y, v.Z }); }
-                        else { vertices.Add(new[] { c.StartPoint.X, c.StartPoint.Y, c.StartPoint.Z }); vertices.Add(new[] { c.EndPoint.X, c.EndPoint.Y, c.EndPoint.Z }); }
+                        SamplePoints(c, vertices);
                     }
                 }
                 regions.AddRange(temp.OfType<Region>());
@@ -323,6 +321,32 @@ namespace ClaudeCAD.Plugin.Drawing
             }
             foreach (var t in temp) if (!(t is Region)) t.Dispose();
             return regions;
+        }
+
+        /// <summary>
+        /// Points along a profile curve for the revolve axis check: the vertices plus points inside every segment, so
+        /// a bulge, an arc, a circle or a spline that bulges over the axis is caught too (KT-30).
+        /// </summary>
+        private static void SamplePoints(Curve c, List<double[]> outPoints)
+        {
+            try
+            {
+                if (c is Polyline poly)
+                    for (int i = 0; i < poly.NumberOfVertices; i++) { var v = poly.GetPoint3dAt(i); outPoints.Add(new[] { v.X, v.Y, v.Z }); }
+                double a = c.StartParam, b = c.EndParam;
+                const int n = 96;
+                for (int i = 0; i <= n; i++)
+                {
+                    var pt = c.GetPointAtParameter(a + (b - a) * i / n);
+                    outPoints.Add(new[] { pt.X, pt.Y, pt.Z });
+                }
+            }
+            catch (Autodesk.AutoCAD.Runtime.Exception)
+            {
+                // a curve that cannot be evaluated: fall back to its end points, AutoCAD still checks the revolve itself
+                try { outPoints.Add(new[] { c.StartPoint.X, c.StartPoint.Y, c.StartPoint.Z }); outPoints.Add(new[] { c.EndPoint.X, c.EndPoint.Y, c.EndPoint.Z }); }
+                catch (Autodesk.AutoCAD.Runtime.Exception) { }
+            }
         }
 
         private static void EraseProfiles(ToolContext ctx, Params p, List<ObjectId> sources)
@@ -359,7 +383,8 @@ namespace ClaudeCAD.Plugin.Drawing
                         s.Dispose();
                         throw ToolException.Invalid($"extrude: AutoCAD could not extrude the profile ({ex.ErrorStatus}). A large taper_angle that makes the sides meet before the full height is a common cause: use a smaller angle or height.");
                     }
-                    // the profile layer / colour are the defaults of the new solid when no layer is given
+                    // like every new object: 'layer' / 'color' when given, else the current layer and ByLayer
+                    // (not the profile's layer: the profile is often a construction line on another layer)
                     ids.Add(AddSolid(ctx, s, p));
                     solids.Add(s);
                 }
@@ -379,10 +404,11 @@ namespace ClaudeCAD.Plugin.Drawing
             var solids = new List<Solid3d>();
             try
             {
-                var crossing = SolidLogic.ProfileCrossesAxis(vertices, a, b);
-                if (crossing != null) throw ToolException.Invalid(crossing);
                 foreach (var reg in regions)
                 {
+                    // checked in the region's own plane (a profile drawn on a vertical plane too)
+                    var crossing = SolidLogic.ProfileCrossesAxis(vertices, a, b, new[] { reg.Normal.X, reg.Normal.Y, reg.Normal.Z });
+                    if (crossing != null) throw ToolException.Invalid(crossing);
                     var s = new Solid3d();
                     try { s.Revolve(reg, P(a), Acad.V3(dir), angle); }
                     catch (Autodesk.AutoCAD.Runtime.Exception ex)
@@ -469,6 +495,9 @@ namespace ClaudeCAD.Plugin.Drawing
                 BooleanChecked(target, other, op, p.Tool, hs[0], h);
                 if (!other.IsErased) other.Erase();
                 erased.Add(h);
+                // KT-28: an empty intersection after any step (not only the last) is "no overlap", not a modelling error
+                if (op == BooleanOperationType.BoolIntersect && IsEmpty(target))
+                    throw ToolException.Invalid(SolidLogic.EmptyIntersectionMessage(p.Tool, hs.TakeWhile(x => x != h).Concat(new[] { h }).ToList()));
             }
             if (IsEmpty(target))
                 throw ToolException.Invalid(op == BooleanOperationType.BoolIntersect
@@ -604,7 +633,7 @@ namespace ClaudeCAD.Plugin.Drawing
         /// Points the current model-space view along v and frames min–max (null = keep the target and size).
         /// No undo step (like ZoomTo).
         /// </summary>
-        internal static void ApplyView3d(Document doc, ViewPreset v, Point3d? min, Point3d? max)
+        internal static void ApplyView3d(Document doc, ViewPreset v, Point3d? min, Point3d? max, double twist = 0)
         {
             var ed = doc.Editor;
             using (doc.LockDocument())
@@ -612,13 +641,15 @@ namespace ClaudeCAD.Plugin.Drawing
             using (var view = ed.GetCurrentView())
             {
                 view.ViewDirection = Acad.V3(v.Direction);
-                view.ViewTwist = 0;
+                view.ViewTwist = twist;
                 view.PerspectiveEnabled = false;
                 if (min.HasValue && max.HasValue)
                 {
                     var a = min.Value; var b = max.Value;
                     var (w, h, c) = SolidLogic.ProjectedSize(new[] { a.X, a.Y, a.Z }, new[] { b.X, b.Y, b.Z }, v);
                     w = Math.Max(w, 1) * 1.1; h = Math.Max(h, 1) * 1.1;
+                    // a twisted view turns the framed box on screen: frame its diagonal both ways
+                    if (Math.Abs(twist) > 1e-9) { double d = Math.Sqrt(w * w + h * h); w = d; h = d; }
                     view.Target = P(c);
                     view.CenterPoint = new Point2d(0, 0);
                     double ratio = view.Width / Math.Max(view.Height, 1e-9);
@@ -636,16 +667,28 @@ namespace ClaudeCAD.Plugin.Drawing
             Point3d? min = null, max = null;
             if (p.Bool("zoom", true))
             {
-                var ext = p.Has("handles") ? HandlesExtents(ctx, p.Handles("handles", 5000)) : Capture.ModelExtents(ctx.Doc);
+                Extents3d? ext;
+                if (p.Has("handles"))
+                {
+                    // KT-29: same answers as capture_view when the handles are wrong
+                    ext = HandlesExtents(ctx, p.Handles("handles", 5000), out int found);
+                    if (found == 0) throw new ToolException(ErrorCodes.EntityNotFound, "set_view_3d: none of the handles exists. Call list_entities to get current handles.");
+                    if (!ext.HasValue) throw ToolException.Invalid("set_view_3d: the objects have no extents (empty text?). Pass other handles or leave 'handles' out to frame the whole model.");
+                }
+                else ext = Capture.ModelExtents(ctx.Doc);
                 if (ext.HasValue) { min = ext.Value.MinPoint; max = ext.Value.MaxPoint; }
             }
             ApplyView3d(ctx.Doc, v, min, max);
             return new Dictionary<string, object> { ["ok"] = true, ["view"] = v.Name, ["direction"] = v.Direction.Select(x => (object)Acad.R(x)).ToList() };
         }
 
-        internal static Extents3d? HandlesExtents(ToolContext ctx, IEnumerable<string> handles)
+        internal static Extents3d? HandlesExtents(ToolContext ctx, IEnumerable<string> handles) => HandlesExtents(ctx, handles, out _);
+
+        /// <summary>Extents of the objects that exist; found = how many of the handles name an existing entity.</summary>
+        internal static Extents3d? HandlesExtents(ToolContext ctx, IEnumerable<string> handles, out int found)
         {
             Extents3d? ext = null;
+            found = 0;
             using (var tr = ctx.Doc.TransactionManager.StartOpenCloseTransaction())
             {
                 foreach (var h in handles)
@@ -653,6 +696,7 @@ namespace ClaudeCAD.Plugin.Drawing
                     ObjectId id;
                     try { id = Acad.IdFromHandle(ctx.Db, h); } catch (ToolException) { continue; }
                     if (!(tr.GetObject(id, OpenMode.ForRead) is Entity e)) continue;
+                    found++;
                     var x = EntityInfo.Extents(e);
                     if (x.HasValue) { if (ext.HasValue) { var t = ext.Value; t.AddExtents(x.Value); ext = t; } else ext = x; }
                 }

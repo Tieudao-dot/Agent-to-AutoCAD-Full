@@ -100,9 +100,10 @@ describe('3D phase 2 confirmation gate', () => {
       assert.match(err ?? '', /request_confirmation/, t);
       // built in this turn: none
       assert.equal(confirmationError(t, { handle: '2F4A' }, first({ created: new Set(['2F4A']) })), undefined, t);
-      // after the user's yes
-      assert.equal(confirmationError(t, { handle: '2F4A' }, first({ userText: 'đồng ý', answersQuestion: true })), undefined, t);
-      assert.equal(confirmationError(t, { handle: '2F4A' }, first({ confirmedByButton: true })), undefined, t);
+      // only after the Đồng ý button of a card listing the solid (expectation changed 12/11/2026, C2: a typed yes no longer counts)
+      assert.match(confirmationError(t, { handle: '2F4A' }, first({ userText: 'đồng ý', answersQuestion: true })) ?? '', /Confirmation required/, t);
+      assert.match(confirmationError(t, { handle: '2F4A' }, first({ confirmedByButton: true })) ?? '', /Confirmation required/, t);
+      assert.equal(confirmationError(t, { handle: '2F4A' }, first({ confirmedByButton: true, cardConfirmed: new Set(['2F4A']) })), undefined, t);
     }
   });
 

@@ -711,7 +711,7 @@ namespace ClaudeCAD.Plugin
         }
 
         /// <summary>Builds and sends the user_message (main thread).</summary>
-        private void Send(ComposedMessage m, bool edited, string confirm = null, string plan = null)
+        private void Send(ComposedMessage m, bool edited, string confirm = null, string plan = null, string confirmId = null)
         {
             if (_busy) return;
             if (!RequireActivation()) return; // retry / edit / plan answers come here without SendComposed
@@ -781,6 +781,7 @@ namespace ClaudeCAD.Plugin
             if (ctx.Count > 0) payload["context"] = ctx;
             if (edited) payload["edited"] = true;
             if (confirm != null) payload["confirm"] = confirm;
+            if (confirmId != null) payload["confirm_id"] = confirmId;
             if (plan != null) payload["plan"] = plan;
 
             var entry = new ChatEntry { Role = "user", Text = m.Text, SelectionCount = selCount, ImageCount = m.Images.Count, Layers = m.Layers.ToList() };
@@ -898,7 +899,8 @@ namespace ClaudeCAD.Plugin
         private void AnswerConfirm(string id, bool yes)
         {
             if (_busy) { _pendingConfirm = (id, yes); return; } // the card arrived before the turn ended
-            MainThread.Post(() => Send(new ComposedMessage { Text = yes ? "Đồng ý" : "Không, hủy thao tác đó." }, false, yes ? "yes" : "no"));
+            // confirm_id: the card the button belongs to; the assistant unlocks exactly that card's handles (C2, 12/11/2026)
+            MainThread.Post(() => Send(new ComposedMessage { Text = yes ? "Đồng ý" : "Không, hủy thao tác đó." }, false, yes ? "yes" : "no", null, id));
         }
 
         private void Cancel()
@@ -1359,6 +1361,21 @@ namespace ClaudeCAD.Plugin
             if (_transcript?.ReadOnly == true)
             {
                 Ui.AddErrorCard("Bản vẽ này đang bật 🔒 Chỉ xem — tắt Chỉ xem rồi chạy macro.", false);
+                return;
+            }
+            // a macro recorded on another plan (e.g. Full) is checked whole before it runs: never half a drawing
+            var blocked = MacroLogic.BlockedCalls(m, Activation.Plan);
+            if (blocked.Count > 0)
+            {
+                Ui.AddErrorCard(PlanLogic.MacroBlockedText(m.Name, Activation.Plan, blocked, Activation.Contact), false);
+                return;
+            }
+            // KT-10: a macro runs without a confirmation card, so it never changes 3D solids it did not build itself
+            // (checked before the point pick too, like the plan check above)
+            var external = MacroLogic.ExternalSolidEdits(m);
+            if (external.Count > 0)
+            {
+                Ui.AddErrorCard(MacroLogic.ExternalSolidEditsMessage(external), false);
                 return;
             }
             if (atPoint)
