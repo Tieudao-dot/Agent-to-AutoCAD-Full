@@ -140,9 +140,11 @@ cài đặt, đăng nhập Claude; máy xin kích hoạt lại ở bảng thiế
      bản gốc; chứa `agent-to-autocad-full/` → Full (bản Full build trước khi có `edition.json`);
    - có thư mục bundle mà không đọc được hai file → không rõ, xử lý như bản gốc;
    - so chữ thường, bỏ khoảng trắng / xuống dòng. Phiên bản đọc từ `AppVersion="…"` của `PackageContents.xml`;
-   - bản gốc / không rõ: hộp thoại tiếng Việt (bản gì, phiên bản, giữ gì, mất gì) với **OK / Cancel**. Bộ cài chỉ có
-     giao diện tiếng Anh nên nút là OK / Cancel; câu trong hộp thoại ghi rõ "Bấm OK để tiếp tục cài, Cancel để hủy".
-     Hủy thì bản gốc giữ nguyên;
+   - bản gốc / không rõ: hộp thoại tiếng Việt (bản gì, phiên bản, giữ gì, mất gì) với hai nút **"Tiếp tục" / "Hủy"**
+     (chủ dự án chốt 12/11/2026). Dùng `TaskDialogMsgBox` có nhãn nút riêng, vì `MsgBox` của bộ cài chỉ có nút tiếng Anh
+     (OK / Cancel). Hủy hoặc đóng hộp thoại: bộ cài thoát trước khi đổi bất cứ gì, bản gốc giữ nguyên. Bản đầu (OK / Cancel,
+     commit `b6ad539`) đã qua CI; bản `TaskDialogMsgBox` chưa được biên dịch, sẽ được kiểm ở lượt CI chung sau khi gộp
+     các bản sửa của thread kiểm tra độc lập (luồng chính giao, không chạy CI riêng);
    - `/SILENT`, `/VERYSILENT`: không hỏi, cài tiếp, ghi log "existing install: …" và "silent install: replacing …".
 5. **Thêm hai việc để nâng cấp thật sự an toàn** (ngoài danh sách giao, cùng mục đích):
    - giấy phép bản gốc (`license.txt`) không còn được tính là "đã kích hoạt" khi thay bản gốc / không rõ, nên bộ cài hiện
@@ -217,3 +219,5 @@ dấu góc vát (J11), dấu `ShellBody` (K17), thứ tự ma trận `align` (K2
 - [x] CI Windows sau 3 điểm (1 lượt, xanh: run 43236499463)
 - [x] Thay bản gốc như nâng cấp (chốt 12/11/2026): tên hiển thị, `edition.json`, bộ cài nhận ra bản gốc, skill mẫu cũ (commit `b6ad539`)
 - [x] CI Windows sau phần thay bản gốc (1 lượt, xanh: run 43243835815)
+- [x] Hộp thoại cảnh báo bản gốc: hai nút "Tiếp tục" / "Hủy" (`TaskDialogMsgBox`, chốt 12/11/2026)
+- [ ] Lượt CI chung sau khi gộp bản sửa của thread kiểm tra độc lập (kiểm luôn biên dịch `.iss` với `TaskDialogMsgBox`)

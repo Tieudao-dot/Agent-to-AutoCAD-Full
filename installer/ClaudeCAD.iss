@@ -351,11 +351,13 @@ begin
     Log('silent install: replacing ' + What + ' with {#AppDisplayName} {#AppVersion} without asking');
     exit;
   end;
-  Result := MsgBox('Máy này đang có ' + What + '.' + #13#10#13#10 +
-                   'Cài {#AppDisplayName} sẽ thay bản này. Lịch sử chat, cài đặt và đăng nhập Claude được giữ.' + #13#10 +
-                   'Key cũ không dùng được: máy sẽ xin kích hoạt lại, chủ plugin duyệt và chọn gói cho máy.' + #13#10#13#10 +
-                   'Bấm OK để tiếp tục cài, Cancel để hủy (giữ nguyên bản đang có).',
-                   mbConfirmation, MB_OKCANCEL) = IDOK;
+  { a task dialog, so the two buttons read "Tiếp tục" / "Hủy" (decided 12/11/2026); this setup has only the English
+    language, whose MsgBox buttons are OK / Cancel. Hủy (or closing the dialog) leaves Setup before anything changed. }
+  Result := TaskDialogMsgBox('Máy này đang có ' + What + '.',
+                             'Cài {#AppDisplayName} sẽ thay bản này. Lịch sử chat, cài đặt và đăng nhập Claude được giữ.' + #13#10 +
+                             'Key cũ không dùng được: máy sẽ xin kích hoạt lại, chủ plugin duyệt và chọn gói cho máy.' + #13#10#13#10 +
+                             'Bấm Tiếp tục để cài, Hủy để thoát (máy giữ nguyên bản đang có).',
+                             mbConfirmation, MB_OKCANCEL, ['Tiếp tục', 'Hủy'], 0) = IDOK;
   if Result then Log('the user agreed to replace ' + What)
   else Log('the user cancelled: ' + What + ' is kept');
 end;

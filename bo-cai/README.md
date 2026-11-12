@@ -39,8 +39,8 @@ cài đè là xong, không gỡ bản cũ trước.
 1. Đóng AutoCAD, chạy `ClaudeCAD-Setup.exe` của bản Full (tên file giữ nguyên).
 2. Bộ cài tự nhận ra bản đang có. Máy đang có bản gốc thì hiện hộp thoại: *"Máy này đang có ClaudeCAD (bản gốc, chỉ 2D),
    phiên bản …. Cài Agent to AutoCAD Full sẽ thay bản này. Lịch sử chat, cài đặt và đăng nhập Claude được giữ. Key cũ
-   không dùng được: máy sẽ xin kích hoạt lại…"*. Bấm **OK** để cài tiếp, **Cancel** để thôi (bản gốc giữ nguyên). Nút
-   hiện bằng tiếng Anh vì bộ cài chỉ có giao diện tiếng Anh.
+   không dùng được: máy sẽ xin kích hoạt lại…"*. Bấm **Tiếp tục** để cài, **Hủy** để thoát bộ cài (máy giữ nguyên bản
+   gốc, không có gì thay đổi).
 3. Trang **Kích hoạt** hiện lại (dù máy đã có key của bản gốc), mã máy giữ như cũ. Yêu cầu tự gửi tới máy chủ của bản
    Full; chủ plugin duyệt máy ở bảng thiết bị mới, hoặc gửi key mới.
 4. Chủ plugin chọn gói cho máy ở ô **Gói** (2D / 3D / Full; mặc định 2D). Sau đó đổi gói chỉ cần sửa ô Gói: máy nhận ở lần

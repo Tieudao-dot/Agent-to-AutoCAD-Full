@@ -141,9 +141,12 @@ namespace ClaudeCAD.Core.Tests
         {
             var iss = Iss;
             var confirm = Body(iss, "function ConfirmReplaceOriginal(): Boolean;");
-            int silent = confirm.IndexOf("if WizardSilent() then", StringComparison.Ordinal), box = confirm.IndexOf("MsgBox(", StringComparison.Ordinal);
+            int silent = confirm.IndexOf("if WizardSilent() then", StringComparison.Ordinal), box = confirm.IndexOf("TaskDialogMsgBox(", StringComparison.Ordinal);
             Assert.True(silent > 0 && silent < box, "a silent install must not show the question");
-            foreach (var t in new[] { "bản gốc, chỉ 2D", "phiên bản ' + ExistingVersion", "Lịch sử chat, cài đặt và đăng nhập Claude được giữ", "Key cũ không dùng được", "kích hoạt lại", "chọn gói", "OK để tiếp tục", "Cancel để hủy", "MB_OKCANCEL) = IDOK" })
+            // the two buttons read "Tiếp tục" / "Hủy" (decided 12/11/2026): a task dialog with button labels, not MsgBox (OK / Cancel)
+            Assert.DoesNotContain(":= MsgBox(", confirm);
+            foreach (var t in new[] { "bản gốc, chỉ 2D", "phiên bản ' + ExistingVersion", "Lịch sử chat, cài đặt và đăng nhập Claude được giữ", "Key cũ không dùng được", "kích hoạt lại", "chọn gói",
+                                      "Bấm Tiếp tục để cài, Hủy để thoát", "MB_OKCANCEL, ['Tiếp tục', 'Hủy'], 0) = IDOK" })
                 Assert.Contains(t, confirm);
             Assert.Contains("Log('silent install: replacing '", confirm);
             var init = Body(iss, "function InitializeSetup(): Boolean;");
