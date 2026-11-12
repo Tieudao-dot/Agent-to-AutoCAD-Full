@@ -1,7 +1,7 @@
 # Agent to AutoCAD Full — chat với Claude trong AutoCAD 2022–2027
 
 > **Về repo này:** đây là bản sao đầy đủ của plugin ClaudeCAD, chép ngày 12/11/2026 từ repo gốc để phát triển tiếp
-> **vẽ 3D** và **gói dịch vụ theo máy (2D / 3D / 2D + 3D)**. Dự án độc lập với repo gốc. Bản 2D lúc tách được giữ
+> **vẽ 3D** và **gói dịch vụ theo máy (2D / 3D / Full)**. Dự án độc lập với repo gốc. Bản 2D lúc tách được giữ
 > nguyên ở nhánh lưu trữ `luu-tru/2d-base`. Kế hoạch: [`docs/ke-hoach-3d-goi-dich-vu.md`](docs/ke-hoach-3d-goi-dich-vu.md).
 >
 > Tên plugin, lệnh và bộ cài trong code vẫn là `ClaudeCAD`. Link tải, nguồn cập nhật và máy chủ kích hoạt bên dưới

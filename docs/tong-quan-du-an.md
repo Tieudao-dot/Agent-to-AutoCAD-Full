@@ -47,7 +47,7 @@ File này là tổng quan duy nhất của dự án. Nó gộp các file cũ `pl
 4. Sau phát hành:
    - viết hướng dẫn cho người dùng cuối;
    - tách `ChatControl.cs` cho dễ bảo trì;
-   - **vẽ 3D + gói dịch vụ theo máy (2D / 3D / 2D + 3D)**, dự kiến 0.10.0. Plan ở
+   - **vẽ 3D + gói dịch vụ theo máy (2D / 3D / Full)**, dự kiến 0.10.0. Plan ở
      [`ke-hoach-3d-goi-dich-vu.md`](ke-hoach-3d-goi-dich-vu.md), đang chờ cậu chốt 5 điểm.
 
 ## 4. Các thread
