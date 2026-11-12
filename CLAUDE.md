@@ -77,6 +77,11 @@ dự án gốc), `bo-cai/README.md`.
     chặn; khi đó chủ dự án gõ 1 dòng trong thread đợt;
   - "Test tổng thể" do luồng chính mở sau Test & sửa đợt 3: rà toàn bộ gói + 3 đợt, chạy đủ test + 1 lượt CI, sửa
     lỗi, ra checklist tổng cho chủ dự án thử tay; không mở thread con.
+  - **Kiểm tra độc lập (chủ dự án yêu cầu 12/11/2026):** làm xong hết các việc của một đợt lớn thì luồng chính mở một
+    thread mới (agent chưa viết hay test phần nào) test lại toàn bộ một lượt. Thread này chỉ ghi lỗi, không tự sửa.
+    - Lỗi được chuyển về thread phụ trách phần đó (gói dịch vụ, đợt 1, 2, 3, bộ cài / tài liệu) để sửa.
+    - Thread sửa: gộp nhánh tích hợp mới nhất vào nhánh của mình, sửa, chạy test lõi + trợ lý, push, báo commit.
+    - Thread giữ nhánh tích hợp gộp các bản sửa và chạy CI; thread kiểm tra độc lập soát lại các lỗi đã sửa.
 - **Sub-thread:**
   - chỉ làm đúng tác vụ được giao, trên nhánh riêng của mình;
   - gặp việc ngoài phạm vi thì báo về thread cha 1–2 dòng, không làm thay thread khác; chỉ mở thread con khi được
