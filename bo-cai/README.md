@@ -1,5 +1,9 @@
 # Bộ cài ClaudeCAD
 
+> **Bản Agent to AutoCAD Full chưa có bộ cài riêng.** Các link tải bên dưới vẫn là bộ cài ClaudeCAD của dự án gốc
+> (bản 2D). Sẽ đổi khi chủ dự án chốt nơi phát hành của bản Full: xem
+> [`../docs/cho-tro-ve-repo-goc.md`](../docs/cho-tro-ve-repo-goc.md).
+
 ## Tải bộ cài (luôn là bản mới nhất)
 
 **[⬇ ClaudeCAD-Setup.exe](https://github.com/Tieudao-dot/Agent-to-Autocad/releases/latest/download/ClaudeCAD-Setup.exe)**

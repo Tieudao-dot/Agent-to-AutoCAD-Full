@@ -1,10 +1,31 @@
-# ClaudeCAD — quy tắc làm việc cho mọi thread
+# Agent to AutoCAD Full — quy tắc làm việc cho mọi thread
 
 ## Dự án
 
+Repo `Tieudao-dot/Agent-to-AutoCAD-Full`: bản sao đầy đủ của plugin ClaudeCAD (chép 12/11/2026) để giữ bản 2D và
+phát triển tiếp **vẽ 3D** cùng **gói dịch vụ theo máy (2D / 3D / 2D + 3D)**.
+
 Plugin AutoCAD 2022–2027: khung chat WPF (C#, `plugin/`) + trợ lý Node/TS chạy Claude Agent SDK (`agent/`),
-bộ cài Inno Setup (`installer/`), skill (`skills/`). Đọc trước: `docs/tong-quan-du-an.md` (tổng quan duy nhất:
-tình hình, việc chờ quyết, thread, plugin, nhật ký; luồng chính cập nhật), `bo-cai/README.md`.
+bộ cài Inno Setup (`installer/`), skill (`skills/`). Đọc trước: `docs/ke-hoach-3d-goi-dich-vu.md` (kế hoạch 3D và
+gói), `docs/cho-tro-ve-repo-goc.md` (các chỗ còn trỏ về dự án gốc), `docs/tong-quan-du-an.md` (tổng quan chép từ
+dự án gốc), `bo-cai/README.md`.
+
+## Độc lập với dự án gốc (bắt buộc)
+
+- Không push, không sửa gì ở repo gốc `Tieudao-dot/Agent-to-Autocad`.
+- Không nhắn tin hay đánh thức thread nào của dự án gốc. Chỉ dùng danh bạ ở cuối file này.
+- Không đụng máy chủ kích hoạt (Apps Script), Google Sheet "Thiết bị" hay secret CI của dự án gốc. Bản Full sẽ có
+  máy chủ kích hoạt riêng; chủ dự án quyết cách làm.
+- Các chỗ trong code, bộ cài, CI còn trỏ về dự án gốc: chỉ sửa khi chủ dự án đã chốt (xem
+  `docs/cho-tro-ve-repo-goc.md`).
+
+## Nhánh
+
+- `main` = v0.9.3 (mã đã phát hành của bản gốc).
+- `luu-tru/2d-base` = bản 2D mới nhất lúc tách, chưa thử trên AutoCAD thật. Nhánh lưu trữ: **không sửa, không xóa**.
+- Các nhánh `claude/*` có sẵn lúc tách là bản chép lưu trữ của dự án gốc: không sửa.
+- Proxy chặn push tag, nên lưu trữ bằng nhánh.
+- Repo chưa có secret CI nên bước phát hành của CI bị chặn. Giữ nguyên tới khi chủ dự án tự cài.
 
 ## Giao tiếp với chủ dự án
 
@@ -24,21 +45,15 @@ tình hình, việc chờ quyết, thread, plugin, nhật ký; luồng chính c�
 
 ## Phạm vi và phối hợp giữa các thread
 
-- Chỉ làm đúng tác vụ thuộc phạm vi thread mình; không làm thay thread khác, không tự mở thread mới (việc mới
-  chưa có thread nhận thì chuyển về luồng chính).
-- Phát sinh vấn đề thuộc thread khác:
-  1. Báo cậu 1–2 dòng: vấn đề gì, thuộc thread nào.
-  2. Gửi yêu cầu sang thread phù hợp kèm đủ bối cảnh (cậu muốn gì, đã biết / đã kiểm gì, nhánh + commit + file,
-     kết quả mong muốn, mức gấp), mở đầu `[Chuyển việc từ thread <tên>] Chủ dự án yêu cầu: …`.
-  3. Báo cậu đã chuyển cho thread nào kèm link, rồi quay về việc của mình. Không làm thay, không ngồi chờ.
-- Cách gửi: `mcp__claude-code-remote__send_message` với `session_id` của thread nhận; không có thì
-  `create_trigger` một lần với `persistent_session_id`. Một tin cho mỗi vấn đề (mỗi tin đánh thức thread nhận).
-- Nhận tin `[Chuyển việc từ …]`: việc trong phạm vi và đảo ngược được thì làm; việc khó đảo ngược hoặc hướng ra
-  ngoài (merge `main`, phát hành, đổi khóa, xóa dữ liệu, gửi gì ra ngoài) thì hỏi cậu trước. Việc ngoài phạm vi
-  thì chuyển tiếp đúng nơi và báo cậu.
-- Hoàn thành hết tác vụ được giao (hoặc phải dừng chờ cậu): báo cáo 3–6 dòng về luồng chính, mở đầu
-  `[Báo cáo từ thread <tên>]`: việc đã xong, nhánh + commit, CI, việc chờ cậu, thời gian. Chỉ ở mốc lớn, một
-  lần mỗi mốc.
+- Hiện chỉ có luồng chính; mọi việc do luồng chính nhận và báo cáo thẳng cho chủ dự án.
+- Không tự mở thread mới. Khi chủ dự án mở thêm thread, ghi vào danh bạ ở cuối file.
+- Khi đã có nhiều thread:
+  - mỗi thread chỉ làm việc trong phạm vi của mình; việc của thread khác thì báo cậu 1–2 dòng rồi gửi một tin
+    `[Chuyển việc từ thread <tên>] Chủ dự án yêu cầu: …` kèm đủ bối cảnh (nhánh, commit, file, kết quả mong muốn,
+    mức gấp) qua `mcp__claude-code-remote__send_message`, không làm thay và không ngồi chờ;
+  - nhận tin chuyển việc: việc trong phạm vi và đảo ngược được thì làm; việc khó đảo ngược hoặc hướng ra ngoài
+    (merge `main`, phát hành, đổi khóa, xóa dữ liệu, gửi gì ra ngoài) thì hỏi cậu trước;
+  - xong mốc lớn thì báo 3–6 dòng về luồng chính, mở đầu `[Báo cáo từ thread <tên>]`.
 
 ## Git và phát hành
 
@@ -67,14 +82,6 @@ tình hình, việc chờ quyết, thread, plugin, nhật ký; luồng chính c�
 
 | Thread | Session id | Phạm vi |
 | --- | --- | --- |
-| Luồng chính | `session_01D56HmELvEuaLYUjB1TYfNq` | Điều phối, tổng hợp, việc chưa thuộc thread nào |
-| Gộp nhánh & phát hành | `session_01D56HmErdvF4wWAbxpf9F5t` | Nhánh `claude/release-0.9.5`: gộp, bộ cài thử, sửa theo phản hồi test, nâng phiên bản, phát hành |
-| Bảo mật, khóa key & quản lý thiết bị | `session_01D56HmEsRHYufkFu48qFmGR` | Nhánh `claude/device-management`: key, kích hoạt, Apps Script / Google Sheet, trang key của bộ cài |
-| Giao diện & UX | `session_01D56HmHQPBueRAkYDSecN9n` | Nhánh `claude/ux-autocad`: khung chat, theme, thu gọn, icon thanh trạng thái, tiến độ từng bước |
-| Kiểm thử | `session_01D56HmG5SsqRGRPe9bHKUad` | Nhánh `claude/test-checklist`: checklist thử thật, lệnh tự kiểm tra, test-log |
-| AutoCAD 2026/2027 | `session_01D56HmFfmat4UZDMPVZar76` | Nhánh `claude/acad-2026-2027`: bản AutoCAD mới, PackageContents, `install.ps1`, build .NET 10 |
-| QnA | `session_01D56HmGkaq6YFfr46Xdigci` | Hỏi đáp về plugin, không sửa code |
-| Dùng thử & hỗ trợ Autodesk | `session_01D56HmGdeNRHtH8Vob4cXGr` | Bản dùng thử AutoCAD, làm việc với Autodesk |
-| Cài đặt plugin (bộ cài thử AutoCAD 2026) | `session_01D56HmFkjV3poaV54WEEFYJ` | Hướng dẫn cài / kích hoạt bộ cài thử, gỡ rối khi cài, giúp chạy checklist; không sửa code. Lỗi bộ cài / plugin chuyển cho thread gộp nhánh & phát hành |
+| Luồng chính | `session_01D56HmFT5bwapmbypmLY5nr` | Điều phối và làm mọi việc của dự án Full: gói dịch vụ, vẽ 3D, bộ cài, tài liệu |
 
 Link mở thread: `https://claude.ai/code/<session id>`.

@@ -1,4 +1,11 @@
-# ClaudeCAD — chat với Claude trong AutoCAD 2022–2027
+# Agent to AutoCAD Full — chat với Claude trong AutoCAD 2022–2027
+
+> **Về repo này:** đây là bản sao đầy đủ của plugin ClaudeCAD, chép ngày 12/11/2026 từ repo gốc để phát triển tiếp
+> **vẽ 3D** và **gói dịch vụ theo máy (2D / 3D / 2D + 3D)**. Dự án độc lập với repo gốc. Bản 2D lúc tách được giữ
+> nguyên ở nhánh lưu trữ `luu-tru/2d-base`. Kế hoạch: [`docs/ke-hoach-3d-goi-dich-vu.md`](docs/ke-hoach-3d-goi-dich-vu.md).
+>
+> Tên plugin, lệnh và bộ cài trong code vẫn là `ClaudeCAD`. Link tải, nguồn cập nhật và máy chủ kích hoạt bên dưới
+> **còn trỏ về dự án gốc**, chưa đổi: xem [`docs/cho-tro-ve-repo-goc.md`](docs/cho-tro-ve-repo-goc.md).
 
 Plugin cho AutoCAD 2022 (bản full, Windows; từ phase 3 hỗ trợ cả 2023, 2024, 2025): chat tiếng Việt trong một palette, Claude **vẽ, đọc, sửa, xóa đối tượng trực tiếp trên bản vẽ đang mở**. Spec đầy đủ: [`docs/spec.md`](docs/spec.md). Tiến độ từng phase: [`docs/progress.md`](docs/progress.md).
 

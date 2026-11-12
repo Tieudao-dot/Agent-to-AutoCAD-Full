@@ -1,5 +1,10 @@
 # Tổng quan dự án ClaudeCAD
 
+> **Ghi chú của dự án Agent to AutoCAD Full (12/11/2026):** file này chép nguyên từ dự án gốc ClaudeCAD lúc tách repo.
+> Các mục về thread, bộ cài thử, link run CI và việc phát hành 0.9.5 bên dưới là của dự án gốc, **không áp dụng**
+> cho bản Full. Tình hình bản Full: xem [`ke-hoach-3d-goi-dich-vu.md`](ke-hoach-3d-goi-dich-vu.md) và
+> [`cho-tro-ve-repo-goc.md`](cho-tro-ve-repo-goc.md). Luồng chính sẽ viết lại file này khi có mốc đầu tiên.
+
 *Cập nhật: 12/11/2026 (giờ Việt Nam). Luồng chính cập nhật mục "Tình hình" và "Nhật ký" khi có mốc mới.*
 
 File này là tổng quan duy nhất của dự án. Nó gộp các file cũ `plugin-tong-quan.md` và `ke-hoach-gop-nhanh.md`.
