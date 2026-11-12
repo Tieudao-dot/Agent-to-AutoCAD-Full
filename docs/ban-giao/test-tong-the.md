@@ -48,7 +48,7 @@ Logic gói: **không sửa**. Không đổi `activation/activation.json`, `Licen
 - Trợ lý `npm test`: **191/191** (185 + 6) ở lượt đầu; **199/199** (+8) sau 3 điểm đã chốt.
 - Build Linux (.NET SDK 10, xóa `obj` / `bin` giữa các lần): net48, net8.0-windows, net10.0-windows: 0 lỗi, 0 cảnh báo.
 - CI Windows lượt đầu: run 43230375890 (`build.yml`, workflow_dispatch, `release: false`, commit `fa68791`) **xanh** (~10 phút, gồm UI test WPF, build 3 bản, Setup.exe).
-- CI Windows sau 3 điểm đã chốt: CI2.
+- CI Windows sau 3 điểm đã chốt: run 43236499463 (`build.yml`, workflow_dispatch, `release: false`, commit `6e9193d`) **xanh** (~9 phút, gồm UI test WPF, build 3 bản, Setup.exe; các bước phát hành bỏ qua).
 
 ## Chủ dự án đã chốt (12/11/2026) và đã làm
 
@@ -158,4 +158,4 @@ dấu góc vát (J11), dấu `ShellBody` (K17), thứ tự ma trận `align` (K2
 - [x] Tài liệu: file này, `docs/checklist-tong-the.md`, checklist thử thật, kế hoạch, `bo-cai/README.md`
 - [x] CI Windows (1 lượt, xanh: run 43230375890)
 - [x] 3 điểm chủ dự án chốt 12/11/2026: phá khối 3D qua thẻ, skill 2D không nạp ở gói 3D, giảm token (commit `41e4b37`)
-- [ ] CI Windows sau 3 điểm (1 lượt)
+- [x] CI Windows sau 3 điểm (1 lượt, xanh: run 43236499463)
