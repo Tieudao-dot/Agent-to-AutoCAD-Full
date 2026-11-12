@@ -76,6 +76,14 @@ dự án gốc), `bo-cai/README.md`.
   AskUserQuestion rồi chuyển câu trả lời xuống lại.
 - Mở hay đóng sub-thread: chỉ khi cậu đồng ý (chuỗi 3D: cậu đã đồng ý 12/11/2026). Sub-thread mới ghi vào danh
   bạ ở cuối file; thread con ghi kèm thread cha.
+- **Được tự mở thread (chủ dự án cho phép 12/11/2026):** luồng chính và thread mỗi đợt được tự gọi
+  `mcp__claude-code-remote__create_session` để mở thread / thread con làm đúng tác vụ chủ dự án đã yêu cầu (theo
+  "Cây thread"), không phải hỏi lại.
+  - Chỉ mở thread cho việc đã được giao; không mở thread cho việc tự nghĩ ra, không mở trùng.
+  - Mỗi thread mới: báo ngay session id về thread cha; thread cha báo lên luồng chính để ghi danh bạ.
+  - Giới hạn chi phí, số lượt CI vẫn theo tin giao việc. Đóng / lưu trữ thread vẫn phải hỏi cậu.
+  - Quyền chạy lệnh này nằm trong `.claude/settings.json` (`permissions.allow`), do **chủ dự án tự thêm**: thread
+    không được tự sửa file quyền. Nhánh mới phải tách từ nhánh đã có file đó thì thread con mới dùng được quyền.
 
 ## Git và phát hành
 
