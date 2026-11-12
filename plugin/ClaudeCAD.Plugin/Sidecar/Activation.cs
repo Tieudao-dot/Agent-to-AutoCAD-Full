@@ -32,6 +32,12 @@ namespace ClaudeCAD.Plugin.Sidecar
         public static string Root => Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "ClaudeCAD");
         public static string LicenseFile => Path.Combine(Root, "license.txt");
         public static string StatusFile => Path.Combine(Root, "status.txt");
+        /// <summary>
+        /// Lines the installer got while a status.txt / plan.txt already existed: the installer cannot check signatures
+        /// or dates, so the plugin applies them with the same "not older" rules (KT-43, KT-05) and deletes the files.
+        /// </summary>
+        public static string StatusNewFile => Path.Combine(Root, "status-new.txt");
+        public static string PlanNewFile => Path.Combine(Root, "plan-new.txt");
         /// <summary>Signed service plan (CCF1 line) from the last answer of the service.</summary>
         public static string PlanFile => Path.Combine(Root, "plan.txt");
         private static string RequestStamp => Path.Combine(Root, "activation-request.txt");
@@ -75,6 +81,7 @@ namespace ClaudeCAD.Plugin.Sidecar
             get
             {
                 if (_status != null && _statusDay == DateTime.UtcNow.Date) return _status; // Fresh depends on the day
+                ImportInstallerLines();
                 string text = null;
                 try { if (File.Exists(StatusFile)) text = File.ReadAllText(StatusFile, Encoding.UTF8); }
                 catch (Exception ex) { Logger.Warn("status unreadable: " + ex.Message); }
@@ -286,6 +293,51 @@ namespace ClaudeCAD.Plugin.Sidecar
             }
         }
 
+        /// <summary>The saved status line checked for signature and machine only (to compare dates with a new one).</summary>
+        private static StatusCheck SavedStatusLine()
+        {
+            string text = null;
+            try { if (File.Exists(StatusFile)) text = File.ReadAllText(StatusFile, Encoding.UTF8); }
+            catch (Exception ex) { Logger.Warn("status unreadable: " + ex.Message); }
+            return LicenseLogic.VerifyStatus(text, MachineCode, DateTime.UtcNow);
+        }
+
+        /// <summary>The installer's status-new.txt / plan-new.txt (see StatusNewFile), applied once and deleted.</summary>
+        private static void ImportInstallerLines()
+        {
+            try
+            {
+                if (File.Exists(StatusNewFile))
+                {
+                    var line = File.ReadAllText(StatusNewFile, Encoding.UTF8);
+                    File.Delete(StatusNewFile);
+                    var st = LicenseLogic.VerifyStatus(line, MachineCode, DateTime.UtcNow);
+                    var why = LicenseLogic.StatusRefusal(st, SavedStatusLine(), fromService: false);
+                    if (why == null) { Directory.CreateDirectory(Root); File.WriteAllText(StatusFile, line.Trim(), new UTF8Encoding(false)); }
+                    else Logger.Warn("installer status line not used: " + why);
+                }
+                if (File.Exists(PlanNewFile))
+                {
+                    var line = File.ReadAllText(PlanNewFile, Encoding.UTF8);
+                    File.Delete(PlanNewFile);
+                    if (!SavePlan(line)) Logger.Warn("installer plan line not used");
+                }
+            }
+            catch (Exception ex) { Logger.Warn("installer lines not applied: " + ex.Message); }
+        }
+
+        /// <summary>
+        /// Saves a verified CCS1 line unless it is older than the saved one (or, pasted, a same-day pass over a saved
+        /// "disabled": LicenseLogic.StatusRefusal). Returns null when saved, otherwise the reason for the user.
+        /// </summary>
+        private static string TrySaveStatus(string line, StatusCheck verified, bool fromService)
+        {
+            var why = LicenseLogic.StatusRefusal(verified, SavedStatusLine(), fromService);
+            if (why != null) { Logger.Warn("status line refused: " + why); return why; }
+            SaveStatus(line, verified);
+            return null;
+        }
+
         /// <summary>Writes a verified CCS1 line to status.txt and refreshes the cached status.</summary>
         private static void SaveStatus(string line, StatusCheck verified)
         {
@@ -345,7 +397,8 @@ namespace ClaudeCAD.Plugin.Sidecar
                     if (!st.Ok) return (false, "Trả lời của máy chủ không hợp lệ: " + st.Reason + ".");
                     // a fresh answer dated by the service: this clock is right again (a clock that was wrong-ahead recovers)
                     if (st.Fresh) RememberSeen(DateTime.UtcNow, reset: true);
-                    SaveStatus(r.status, st);
+                    var refused = TrySaveStatus(r.status, st, fromService: true); // never older than the saved one
+                    if (refused != null) return (false, refused);
                     SavePlan(r.plan); // an older service sends no plan line: the default plan applies
                     if (!string.IsNullOrEmpty(r.license))
                     {
@@ -404,7 +457,8 @@ namespace ClaudeCAD.Plugin.Sidecar
                 {
                     var st = LicenseLogic.VerifyStatus(statusLine, MachineCode, DateTime.UtcNow);
                     if (!st.Ok) return (false, "Dòng CCS1 (mã miễn kiểm tra) không dùng được: " + st.Reason + ".");
-                    SaveStatus(statusLine, st);
+                    var refused = TrySaveStatus(statusLine, st, fromService: false);
+                    if (refused != null) return (false, refused);
                     if (license == null)
                         return IsActivated && DeviceAllowed
                             ? (true, "Đã lưu mã miễn kiểm tra cho máy này.")
@@ -434,7 +488,7 @@ namespace ClaudeCAD.Plugin.Sidecar
                         {
                             // the service marks the machine Active with the key: keep its signed answer
                             var st = LicenseLogic.VerifyStatus(r.status, MachineCode, DateTime.UtcNow);
-                            if (st.Ok) SaveStatus(r.status, st);
+                            if (st.Ok) TrySaveStatus(r.status, st, fromService: true);
                         }
                         SavePlan(r.plan);
                     }

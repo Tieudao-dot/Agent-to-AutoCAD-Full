@@ -293,6 +293,58 @@ namespace ClaudeCAD.Core.Tests
             Assert.True(PlanLogic.CallAllowed("2d", "set_block_attributes", P(("handle", "2F4A"))));
         }
 
+        private static string SignStatus(string machine, string status, string date)
+        {
+            var body = $"CCS1|{machine}|{status}|{date}";
+            var sig = Key.SignData(Encoding.UTF8.GetBytes(body), HashAlgorithmName.SHA256, RSASignaturePadding.Pkcs1);
+            return body + "|" + B64Url(sig);
+        }
+
+        private static StatusCheck VStatus(string machine, string status, string date) =>
+            LicenseLogic.VerifyStatus(SignStatus(machine, status, date), Machine, new DateTime(2026, 11, 12, 12, 0, 0, DateTimeKind.Utc), Modulus, Exponent);
+
+        [Fact]
+        public void KT43_an_old_no_network_pass_cannot_unlock_a_machine_the_owner_locked()
+        {
+            var oldPass = VStatus(Machine, "offline", "2026-11-01");
+            var disabled = VStatus(Machine, "disabled", "2026-11-10");
+            Assert.True(oldPass.Ok && disabled.Ok);
+            // older than the saved line: refused, pasted or not
+            Assert.Contains("cũ hơn trạng thái máy đang có", LicenseLogic.StatusRefusal(oldPass, disabled, fromService: false));
+            Assert.NotNull(LicenseLogic.StatusRefusal(oldPass, disabled, fromService: true));
+            // same day: a pass / active / pending does not replace "disabled" when pasted
+            foreach (var st in new[] { "offline", "active", "pending" })
+                Assert.Contains("tạm khóa", LicenseLogic.StatusRefusal(VStatus(Machine, st, "2026-11-10"), disabled, fromService: false));
+            // ...but the service itself may lock and unlock on the same day
+            Assert.Null(LicenseLogic.StatusRefusal(VStatus(Machine, "active", "2026-11-10"), disabled, fromService: true));
+            // same day, saved not disabled: accepted; a same-day disabled is always accepted
+            Assert.Null(LicenseLogic.StatusRefusal(VStatus(Machine, "offline", "2026-11-10"), VStatus(Machine, "active", "2026-11-10"), false));
+            Assert.Null(LicenseLogic.StatusRefusal(VStatus(Machine, "disabled", "2026-11-10"), VStatus(Machine, "active", "2026-11-10"), false));
+            // newer: always accepted (the owner unlocked the machine, or issued a new pass)
+            Assert.Null(LicenseLogic.StatusRefusal(VStatus(Machine, "offline", "2026-11-11"), disabled, false));
+            Assert.Null(LicenseLogic.StatusRefusal(VStatus(Machine, "active", "2026-11-12"), disabled, true));
+            // another machine's line never verifies, so it is refused
+            var other = VStatus("CC-9999-9999-9999", "offline", "2026-11-12");
+            Assert.False(other.Ok);
+            Assert.NotNull(LicenseLogic.StatusRefusal(other, disabled, false));
+            Assert.NotNull(LicenseLogic.StatusRefusal(other, null, false));
+            // nothing saved yet (or an unreadable file): any valid line is taken
+            Assert.Null(LicenseLogic.StatusRefusal(oldPass, null, false));
+            Assert.Null(LicenseLogic.StatusRefusal(oldPass, new StatusCheck(), false));
+        }
+
+        [Fact]
+        public void KT43_the_installer_never_overwrites_a_saved_status_or_plan_line()
+        {
+            var iss = File.ReadAllText(Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "..", "installer", "ClaudeCAD.iss")));
+            Assert.Contains("if FileExists(Target) then Target := Dir + '\\' + Name + '-new.txt';", iss);
+            Assert.Contains("SaveSignedLine('status', Line)", iss);
+            Assert.Contains("SaveSignedLine('plan', Line)", iss);
+            var act = File.ReadAllText(Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "ClaudeCAD.Plugin", "Sidecar", "Activation.cs")));
+            Assert.Contains("\"status-new.txt\"", act);
+            Assert.Contains("\"plan-new.txt\"", act);
+        }
+
         [Fact]
         public void KT04_a_macro_outside_the_plan_is_refused_whole_with_a_Vietnamese_message()
         {

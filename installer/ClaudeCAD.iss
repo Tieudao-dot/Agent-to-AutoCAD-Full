@@ -595,18 +595,31 @@ begin
   Result := SaveStringToFile(LicenseFile(), License, False);
 end;
 
+{ Saves a signed line as Name (status.txt / plan.txt). When the machine already has one, the line goes to
+  <name>-new.txt instead: the installer cannot check signatures or dates, so the plugin applies it with the same
+  "not older" rules as a pasted line (an old no-network pass must not replace a newer "disabled", KT-43) and
+  deletes it. }
+function SaveSignedLine(const Name, Line: String): Boolean;
+var
+  Dir, Target: String;
+begin
+  Dir := ExpandConstant('{localappdata}\ClaudeCAD');
+  ForceDirectories(Dir);
+  Target := Dir + '\' + Name + '.txt';
+  if FileExists(Target) then Target := Dir + '\' + Name + '-new.txt';
+  Result := SaveStringToFile(Target, Line, False);
+end;
+
 { the signed device status (CCS1|...) that comes with the licence: saved so the plugin starts unlocked }
 function SaveStatusLine(const Line: String): Boolean;
 begin
-  ForceDirectories(ExpandConstant('{localappdata}\ClaudeCAD'));
-  Result := SaveStringToFile(ExpandConstant('{localappdata}\ClaudeCAD\status.txt'), Line, False);
+  Result := SaveSignedLine('status', Line);
 end;
 
 { the signed service plan (CCF1|...): saved so the plugin starts with the machine's plan }
 function SavePlanLine(const Line: String): Boolean;
 begin
-  ForceDirectories(ExpandConstant('{localappdata}\ClaudeCAD'));
-  Result := SaveStringToFile(ExpandConstant('{localappdata}\ClaudeCAD\plan.txt'), Line, False);
+  Result := SaveSignedLine('plan', Line);
 end;
 
 { the first word of S (S keeps the rest); words are separated by spaces }

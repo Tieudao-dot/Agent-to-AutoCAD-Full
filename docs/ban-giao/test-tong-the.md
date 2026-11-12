@@ -255,6 +255,26 @@ có clipboard; log không ghi lượt này có dán thật không, nên M10–M1
 lần) 0 lỗi, 0 cảnh báo. CI run `43259984843` (1 lượt, workflow_dispatch `release: "false"`): **xanh**, mọi bước gồm UI
 test WPF và `Setup.exe`; bước phát hành bỏ qua.
 
+### Vòng 3: kiểm tra độc lập lượt 3
+
+Lượt 3 xác nhận KT-40, KT-41 sửa đúng, KT-42 chấp nhận; thêm 1 lỗi nhẹ KT-43. Gộp `full/goi-dich-vu` @ `a8f0430` (đã gộp
+`813ab45`) → `fc7654d`, không xung đột. Test `EditionTests.KT01` (thread gói sửa kỳ vọng theo cách lưu mới của bộ cài):
+vẫn kiểm đúng ý, và thêm câu kiểm thư mục `{localappdata}\ClaudeCAD` + tên file khớp chỗ plugin đọc (`status.txt`,
+`plan.txt`, `status-new.txt`, `plan-new.txt`). Checklist tổng thêm I5d.
+
+| Mã | Mức | Thread sửa | Commit | Sửa | Test / thử tay |
+| --- | --- | --- | --- | --- | --- |
+| KT-43 | nhẹ | Gói dịch vụ | `a8f0430` | Chặn như C4 (luồng chính chốt thay chủ dự án, chủ dự án xem lại): `LicenseLogic.StatusRefusal`: dòng `CCS1` cũ hơn dòng đang lưu bị từ chối; dòng dán tay cùng ngày không đè `disabled` (mã miễn kiểm tra cũ không mở lại máy đã khóa); trả lời của máy chủ chỉ cần không cũ hơn. Áp ở mọi đường dán (thẻ Kích hoạt, "Dùng mã" trên 🔒, ⚙ ▸ Dán mã), kích hoạt bằng key, kiểm tra trạng thái. Bộ cài không kiểm được chữ ký nên khi đã có `status.txt` / `plan.txt` thì ghi `status-new.txt` / `plan-new.txt`; plugin áp theo cùng luật rồi xóa | `PlanTests.KT43_*` (2), `EditionTests.KT01_*`; I5d |
+
+### Tổng cả 3 lượt kiểm tra độc lập
+
+**43 mã** (3 nặng, 9 vừa, 31 nhẹ): **39 đã sửa** (gồm KT-25, sửa đủ nhờ KT-40), **4 chấp nhận** (KT-05, KT-27, KT-30 phần
+layer, KT-42), **0 chưa sửa**. KT-43 sửa sau lượt 3, chưa có lượt kiểm tra độc lập soát lại. Ba lỗi nặng (KT-01 dán mã
+offline ở bộ cài, KT-11 cửa sát góc, KT-14 dựng tầng 2) đã khỏi, có test tự động.
+
+Test sau gộp vòng 3: lõi 369/369, trợ lý 215/215, build net48 / net8.0-windows / net10.0-windows và project UI test 0 lỗi,
+0 cảnh báo. CI run `43272295317` (1 lượt): **xanh**, cả `Setup.exe` với phần `.iss` mới của KT-43.
+
 ## Số token theo gói
 
 Đo bằng script: dựng danh sách lệnh của từng gói đúng như plugin gửi (`plan_tools`), đổi schema sang JSON như SDK gửi
@@ -283,10 +303,9 @@ cho Claude, cộng system prompt. Không có bộ đếm token chính xác trên
 ## Còn lưu ý (không phải lỗi)
 
 - ~~Mô tả `capture_view` ở gói 2D vẫn kể tùy chọn góc nhìn / kiểu hiển thị 3D~~: đã sửa (KT-35).
-- Bộ cài (chỉ khi máy chưa có `license.txt`) lưu dòng gói của mã không cần mạng mà không so ngày như `AcceptPlan`
-  (KT-05). Muốn dán lại dòng Full cũ qua đường này khách phải xóa `license.txt`, cũng như xóa `plan.txt` rồi dán trong
-  plugin: cùng giới hạn đã ghi ở chốt C4 (máy offline không thu hồi được gói; chỉ cấp Full offline cho máy tin cậy).
-  Không sửa.
+- ~~Bộ cài lưu dòng gói / trạng thái của mã không cần mạng mà không so ngày~~: từ KT-43, khi máy đã có `status.txt` /
+  `plan.txt` bộ cài ghi `*-new.txt`, plugin áp theo cùng luật "không cũ hơn". Còn lại đúng giới hạn của chốt C4: khách tự
+  xóa các file đó rồi dán dòng cũ thì máy offline vẫn không thu hồi được gói; chỉ cấp Full offline cho máy tin cậy.
 
 ## Còn chỉ thấy trên AutoCAD thật
 
@@ -325,3 +344,5 @@ thẻ 🔒 và ⚙ (M10–M12; UI test chỉ dán được khi máy CI có clipb
 - [x] Lượt CI chung sau khi gộp (1 lượt, xanh: run 43259984843 trên `a62a7b7`, ~10 phút; bước `Setup.exe` biên dịch được `.iss` mới: `TaskDialogMsgBox` hai nút "Tiếp tục" / "Hủy", ô key nhiều dòng, `PrepareToInstall`, `[InstallDelete]`; bước phát hành bỏ qua)
 - [x] Vòng 2 (kiểm tra độc lập lượt 2): KT-41 (`2ddbbc1`), gộp KT-42 (`69e7109`) và KT-40 (`21c54d9`); lõi 367/367, trợ lý 215/215, build 3 bản
 - [x] CI chung vòng 2 (1 lượt, xanh: run 43267347630 trên `e8b4ede`, ~10 phút; UI test WPF gồm `KT41_code_boxes_take_every_line_of_the_offline_email` xanh, `Setup.exe` xanh; bước phát hành bỏ qua)
+- [x] Vòng 3: gộp KT-43 (`fc7654d`), test `EditionTests.KT01` kiểm thêm thư mục / tên file; lõi 369/369, trợ lý 215/215, build 3 bản
+- [x] CI chung vòng 3 (1 lượt, xanh: run 43272295317 trên `0c789ef`, ~10 phút; `Setup.exe` biên dịch được `.iss` mới của KT-43, UI test WPF xanh; bước phát hành bỏ qua)
