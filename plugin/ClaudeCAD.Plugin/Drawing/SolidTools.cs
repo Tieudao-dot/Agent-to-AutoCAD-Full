@@ -40,15 +40,42 @@ namespace ClaudeCAD.Plugin.Drawing
 
         internal static Point3d P(double[] p) => Acad.P3(p);
 
+        /// <summary>
+        /// Builds a solid that is not in the drawing yet; disposes it when the build throws. A DBObject outside the
+        /// database must be disposed on the main thread: left to the garbage collector it can crash AutoCAD.
+        /// </summary>
+        internal static Solid3d Build(Action<Solid3d> build)
+        {
+            var s = new Solid3d();
+            try { build(s); return s; }
+            catch { s.Dispose(); throw; }
+        }
+
+        /// <summary>Appends a new solid (Acad.Add); disposes it when it could not be appended (locked layer...).</summary>
+        private static ObjectId AddSolid(ToolContext ctx, Solid3d s, Params p)
+        {
+            try { return Acad.Add(ctx, s, p); }
+            catch { if (s.ObjectId.IsNull) s.Dispose(); throw; }
+        }
+
+        /// <summary>radius, or diameter / 2; a clear error when neither is given.</summary>
+        private static double RadiusOf(Params p)
+        {
+            if (p.Has("radius")) return p.Positive("radius");
+            if (p.Has("diameter")) return p.Positive("diameter") / 2;
+            throw ToolException.Invalid($"{p.Tool}: pass 'radius' (or 'diameter') in mm.");
+        }
+
         /// <summary>Box with its corner (min x, y, z before rotation) at corner, or centred on center; rotation about Z (degrees).</summary>
         internal static Solid3d MakeBox(double length, double width, double height, double[] corner, double[] center, double rotationDeg)
         {
             SolidLogic.CheckBox(length, width, height);
-            var s = new Solid3d();
-            s.CreateBox(length, width, height); // centroid at the origin
             var c = center ?? SolidLogic.BoxCenter(corner, length, width, height, rotationDeg);
-            s.TransformBy(Matrix3d.Displacement(P(c) - Point3d.Origin) * Matrix3d.Rotation(Geometry.DegToRad(rotationDeg), Vector3d.ZAxis, Point3d.Origin));
-            return s;
+            return Build(s =>
+            {
+                s.CreateBox(length, width, height); // centroid at the origin
+                s.TransformBy(Matrix3d.Displacement(P(c) - Point3d.Origin) * Matrix3d.Rotation(Geometry.DegToRad(rotationDeg), Vector3d.ZAxis, Point3d.Origin));
+            });
         }
 
         /// <summary>
@@ -93,10 +120,11 @@ namespace ClaudeCAD.Plugin.Drawing
         {
             double h = axis.Length;
             SolidLogic.CheckFrustum(radius, topRadius, h);
-            var s = new Solid3d();
-            s.CreateFrustum(h, radius, radius, topRadius);
-            PlaceOnAxis(s, h / 2, basePt, axis, 0);
-            return s;
+            return Build(s =>
+            {
+                s.CreateFrustum(h, radius, radius, topRadius);
+                PlaceOnAxis(s, h / 2, basePt, axis, 0);
+            });
         }
 
         private static object DrawBox(ToolContext ctx, Params p)
@@ -114,7 +142,7 @@ namespace ClaudeCAD.Plugin.Drawing
         private static object DrawCylinder(ToolContext ctx, Params p)
         {
             var (b, axis) = AxisOf(p);
-            double r = p.Has("radius") ? p.Positive("radius") : p.Positive("diameter") / 2;
+            double r = RadiusOf(p);
             double top = p.Has("top_radius") ? p.Num("top_radius") : r;
             return SolidResult(ctx, MakeFrustum(b, axis, r, top), p);
         }
@@ -122,10 +150,12 @@ namespace ClaudeCAD.Plugin.Drawing
         private static object DrawSphere(ToolContext ctx, Params p)
         {
             var c = p.Point("center");
-            double r = p.Has("radius") ? p.Positive("radius") : p.Positive("diameter") / 2;
-            var s = new Solid3d();
-            s.CreateSphere(r);
-            s.TransformBy(Matrix3d.Displacement(P(c) - Point3d.Origin));
+            double r = RadiusOf(p);
+            var s = Build(x =>
+            {
+                x.CreateSphere(r);
+                x.TransformBy(Matrix3d.Displacement(P(c) - Point3d.Origin));
+            });
             return SolidResult(ctx, s, p);
         }
 
@@ -139,17 +169,31 @@ namespace ClaudeCAD.Plugin.Drawing
             double l = p.Positive("length"), w = p.Positive("width"), h = p.Positive("height");
             double[] corner = p.PointOpt("corner") ?? new double[] { 0, 0, 0 };
             double rot = p.Num("rotation", 0);
-            var s = new Solid3d();
-            s.CreateWedge(l, w, h);
-            // bounding box centre to the origin, then the tall face to -X
+            var c = SolidLogic.BoxCenter(corner, l, w, h, rot);
+            var s = Build(x =>
+            {
+                x.CreateWedge(l, w, h);
+                // bounding box centre to the origin; the centroid of a right wedge then sits at (±l/6, 0, ±h/6)
+                Recentre(x);
+                var cg = x.MassProperties.Centroid;
+                // right angle on top (upside down): turn it over about X (keeps the slope along X)
+                if (cg.Z > 1e-6 * h) { x.TransformBy(Matrix3d.Rotation(Math.PI, Vector3d.XAxis, Point3d.Origin)); cg = x.MassProperties.Centroid; }
+                // tall face to -X
+                if (cg.X > 1e-6 * l) { x.TransformBy(Matrix3d.Rotation(Math.PI, Vector3d.ZAxis, Point3d.Origin)); cg = x.MassProperties.Centroid; }
+                if (!SolidLogic.WedgeCentroidOk(new[] { cg.X, cg.Y, cg.Z }, l, w, h))
+                    throw new ToolException(ErrorCodes.AcadError,
+                        $"draw_wedge: this AutoCAD built the wedge in an unexpected orientation (centroid {cg.X:0.#}, {cg.Y:0.#}, {cg.Z:0.#}); nothing was drawn. Build it with extrude of a triangle profile instead.");
+                x.TransformBy(Matrix3d.Displacement(P(c) - Point3d.Origin) * Matrix3d.Rotation(Geometry.DegToRad(rot), Vector3d.ZAxis, Point3d.Origin));
+            });
+            return SolidResult(ctx, s, p);
+        }
+
+        /// <summary>Moves a solid so the centre of its bounding box is the origin.</summary>
+        private static void Recentre(Solid3d s)
+        {
             var e = s.GeometricExtents;
             var mid = new Point3d((e.MinPoint.X + e.MaxPoint.X) / 2, (e.MinPoint.Y + e.MaxPoint.Y) / 2, (e.MinPoint.Z + e.MaxPoint.Z) / 2);
             s.TransformBy(Matrix3d.Displacement(Point3d.Origin - mid));
-            var cg = s.MassProperties.Centroid;
-            if (cg.X > 1e-6) s.TransformBy(Matrix3d.Rotation(Math.PI, Vector3d.ZAxis, Point3d.Origin));
-            var c = SolidLogic.BoxCenter(corner, l, w, h, rot);
-            s.TransformBy(Matrix3d.Displacement(P(c) - Point3d.Origin) * Matrix3d.Rotation(Geometry.DegToRad(rot), Vector3d.ZAxis, Point3d.Origin));
-            return SolidResult(ctx, s, p);
         }
 
         private static object DrawTorus(ToolContext ctx, Params p)
@@ -157,9 +201,11 @@ namespace ClaudeCAD.Plugin.Drawing
             var c = p.Point("center");
             double R = p.Positive("radius"), r = p.Positive("tube_radius");
             SolidLogic.CheckTorus(R, r);
-            var s = new Solid3d();
-            s.CreateTorus(R, r);
-            s.TransformBy(Matrix3d.Displacement(P(c) - Point3d.Origin));
+            var s = Build(x =>
+            {
+                x.CreateTorus(R, r);
+                x.TransformBy(Matrix3d.Displacement(P(c) - Point3d.Origin));
+            });
             return SolidResult(ctx, s, p);
         }
 
@@ -171,16 +217,19 @@ namespace ClaudeCAD.Plugin.Drawing
             double top = p.Num("top_radius", 0);
             double h = axis.Length;
             SolidLogic.CheckPyramid(sides, r, top, h);
-            var s = new Solid3d();
-            s.CreatePyramid(h, sides, r, top);
-            PlaceOnAxis(s, h / 2, b, axis, p.Num("rotation", 0));
+            double rot = p.Num("rotation", 0);
+            var s = Build(x =>
+            {
+                x.CreatePyramid(h, sides, r, top);
+                PlaceOnAxis(x, h / 2, b, axis, rot);
+            });
             return SolidResult(ctx, s, p);
         }
 
         /// <summary>Appends a new solid and returns its handle, volume and bounding box (so Claude can check it at once).</summary>
         private static object SolidResult(ToolContext ctx, Solid3d s, Params p)
         {
-            var id = Acad.Add(ctx, s, p);
+            var id = AddSolid(ctx, s, p);
             var r = Acad.Handles(id);
             AddSolidNumbers(r, s);
             return r;
@@ -217,51 +266,62 @@ namespace ClaudeCAD.Plugin.Drawing
             var temp = new List<DBObject>();
             if (p.Has("profile_points") && p.Has("profile_handles"))
                 throw ToolException.Invalid($"{p.Tool}: pass either 'profile_points' or 'profile_handles', not both.");
-            if (p.Has("profile_points"))
+            if (!p.Has("profile_points") && !p.Has("profile_handles"))
+                throw ToolException.Invalid($"{p.Tool}: pass the profile as 'profile_points' (a closed polygon) or 'profile_handles' (closed curves / regions).");
+            var regions = new List<Region>();
+            try
             {
-                var pts = p.Points("profile_points", 3, 5000);
-                var bulges = p.NumbersOpt("profile_bulges");
-                var pl = Acad.MakePolyline(pts, true, bulges);
-                temp.Add(pl);
-                curves.Add(pl);
-                vertices.AddRange(pts);
-            }
-            else
-            {
-                foreach (var h in p.Handles("profile_handles", 500))
+                if (p.Has("profile_points"))
                 {
-                    var id = Acad.IdFromHandle(ctx.Db, h);
-                    var obj = ctx.Tr.GetObject(id, OpenMode.ForRead);
-                    if (obj is Region reg)
+                    var pts = p.Points("profile_points", 3, 5000);
+                    var bulges = p.NumbersOpt("profile_bulges");
+                    var pl = Acad.MakePolyline(pts, true, bulges);
+                    temp.Add(pl);
+                    curves.Add(pl);
+                    vertices.AddRange(pts);
+                }
+                else
+                {
+                    foreach (var h in p.Handles("profile_handles", 500))
                     {
-                        var copy = (Region)reg.Clone();
-                        temp.Add(copy);
+                        var id = Acad.IdFromHandle(ctx.Db, h);
+                        var obj = ctx.Tr.GetObject(id, OpenMode.ForRead);
+                        if (obj is Region reg)
+                        {
+                            var copy = (Region)reg.Clone();
+                            temp.Add(copy);
+                            sources.Add(id);
+                            continue; // a region is used as it is
+                        }
+                        if (!(obj is Curve c))
+                            throw ToolException.Invalid($"{p.Tool}: {h} is a {obj.GetType().Name}; a profile must be a closed curve (polyline, circle, ellipse, spline), lines / arcs forming a closed loop, or a region.");
+                        curves.Add(c);
                         sources.Add(id);
-                        continue; // a region is used as it is
+                        if (c is Polyline poly)
+                            for (int i = 0; i < poly.NumberOfVertices; i++) { var v = poly.GetPoint3dAt(i); vertices.Add(new[] { v.X, v.Y, v.Z }); }
+                        else { vertices.Add(new[] { c.StartPoint.X, c.StartPoint.Y, c.StartPoint.Z }); vertices.Add(new[] { c.EndPoint.X, c.EndPoint.Y, c.EndPoint.Z }); }
                     }
-                    if (!(obj is Curve c))
-                        throw ToolException.Invalid($"{p.Tool}: {h} is a {obj.GetType().Name}; a profile must be a closed curve (polyline, circle, ellipse, spline), lines / arcs forming a closed loop, or a region.");
-                    curves.Add(c);
-                    sources.Add(id);
-                    if (c is Polyline poly)
-                        for (int i = 0; i < poly.NumberOfVertices; i++) { var v = poly.GetPoint3dAt(i); vertices.Add(new[] { v.X, v.Y, v.Z }); }
-                    else { vertices.Add(new[] { c.StartPoint.X, c.StartPoint.Y, c.StartPoint.Z }); vertices.Add(new[] { c.EndPoint.X, c.EndPoint.Y, c.EndPoint.Z }); }
                 }
-            }
-            var regions = temp.OfType<Region>().ToList();
-            if (curves.Count > 0)
-            {
-                DBObjectCollection made;
-                try { made = Region.CreateFromCurves(curves); }
-                catch (Autodesk.AutoCAD.Runtime.Exception ex)
+                regions.AddRange(temp.OfType<Region>());
+                if (curves.Count > 0)
                 {
-                    foreach (var t in temp) t.Dispose();
-                    throw ToolException.Invalid($"{p.Tool}: the profile is not a closed, flat, non-self-intersecting loop ({ex.ErrorStatus}). Close the polyline, join the pieces, or draw it again with profile_points.");
+                    DBObjectCollection made;
+                    try { made = Region.CreateFromCurves(curves); }
+                    catch (Autodesk.AutoCAD.Runtime.Exception ex)
+                    {
+                        throw ToolException.Invalid($"{p.Tool}: the profile is not a closed, flat, non-self-intersecting loop ({ex.ErrorStatus}). Close the polyline, join the pieces, or draw it again with profile_points.");
+                    }
+                    foreach (DBObject o in made) if (o is Region r) regions.Add(r); else o.Dispose();
                 }
-                foreach (DBObject o in made) if (o is Region r) regions.Add(r); else o.Dispose();
+                if (regions.Count == 0) throw ToolException.Invalid($"{p.Tool}: no closed area found in the profile. Use closed curves (closed polyline, circle...).");
+            }
+            catch
+            {
+                foreach (var r in regions) if (!temp.Contains(r)) r.Dispose();
+                foreach (var t in temp) t.Dispose();
+                throw;
             }
             foreach (var t in temp) if (!(t is Region)) t.Dispose();
-            if (regions.Count == 0) throw ToolException.Invalid($"{p.Tool}: no closed area found in the profile. Use closed curves (closed polyline, circle...).");
             return regions;
         }
 
@@ -290,14 +350,17 @@ namespace ClaudeCAD.Plugin.Drawing
                 foreach (var reg in regions)
                 {
                     var s = new Solid3d();
-                    try { s.Extrude(reg, h, Geometry.DegToRad(taper)); }
+                    // a flat profile whose normal points down (clockwise lines / arcs, mirrored curves) would go down:
+                    // positive height always means +Z for profiles in the XY plane
+                    double hh = SolidLogic.ExtrudeHeightAlongNormal(h, reg.Normal.Z);
+                    try { s.Extrude(reg, hh, Geometry.DegToRad(taper)); }
                     catch (Autodesk.AutoCAD.Runtime.Exception ex)
                     {
                         s.Dispose();
                         throw ToolException.Invalid($"extrude: AutoCAD could not extrude the profile ({ex.ErrorStatus}). A large taper_angle that makes the sides meet before the full height is a common cause: use a smaller angle or height.");
                     }
                     // the profile layer / colour are the defaults of the new solid when no layer is given
-                    ids.Add(Acad.Add(ctx, s, p));
+                    ids.Add(AddSolid(ctx, s, p));
                     solids.Add(s);
                 }
             }
@@ -327,7 +390,7 @@ namespace ClaudeCAD.Plugin.Drawing
                         s.Dispose();
                         throw ToolException.Invalid($"revolve: AutoCAD could not revolve the profile ({ex.ErrorStatus}). The axis must lie in the profile's plane and must not cross the profile.");
                     }
-                    ids.Add(Acad.Add(ctx, s, p));
+                    ids.Add(AddSolid(ctx, s, p));
                     solids.Add(s);
                 }
             }
@@ -375,6 +438,17 @@ namespace ClaudeCAD.Plugin.Drawing
         /// <summary>The boolean of two solids, into target (also used by the self-test). The tool solid is left empty.</summary>
         internal static void BooleanInto(Solid3d target, Solid3d tool, BooleanOperationType op) => target.BooleanOperation(op, tool);
 
+        /// <summary>BooleanInto for the tools: an AutoCAD modelling failure becomes an error Claude can act on (nothing is changed).</summary>
+        private static void BooleanChecked(Solid3d target, Solid3d tool, BooleanOperationType op, string toolName, string targetHandle, string otherHandle)
+        {
+            try { BooleanInto(target, tool, op); }
+            catch (Autodesk.AutoCAD.Runtime.Exception ex)
+            {
+                throw ToolException.Invalid($"{toolName}: AutoCAD could not combine {targetHandle} with {otherHandle} ({ex.ErrorStatus}). " +
+                    "Nothing was changed. Faces that only touch or nearly coincide are a common cause: make the cutting solid a little bigger (e.g. 10 mm through the wall) and retry.");
+            }
+        }
+
         private static bool IsEmpty(Solid3d s)
         {
             try { return s.IsNull || s.MassProperties.Volume <= 1e-9; }
@@ -392,7 +466,7 @@ namespace ClaudeCAD.Plugin.Drawing
             foreach (var h in hs.Skip(1))
             {
                 var other = SolidForWrite(ctx, h, p.Tool);
-                BooleanInto(target, other, op);
+                BooleanChecked(target, other, op, p.Tool, hs[0], h);
                 if (!other.IsErased) other.Erase();
                 erased.Add(h);
             }
@@ -423,12 +497,12 @@ namespace ClaudeCAD.Plugin.Drawing
                 {
                     var e = Acad.GetEntity(ctx, h, false);
                     if (!(e is Solid3d src)) throw ToolException.Invalid($"solid_subtract: {h} is a {Acad.TypeName(e)}, not a 3D solid.");
-                    using (var copy = (Solid3d)src.Clone()) BooleanInto(target, copy, BooleanOperationType.BoolSubtract);
+                    using (var copy = (Solid3d)src.Clone()) BooleanChecked(target, copy, BooleanOperationType.BoolSubtract, "solid_subtract", targetHandle, h);
                 }
                 else
                 {
                     var tool = SolidForWrite(ctx, h, "solid_subtract");
-                    BooleanInto(target, tool, BooleanOperationType.BoolSubtract);
+                    BooleanChecked(target, tool, BooleanOperationType.BoolSubtract, "solid_subtract", targetHandle, h);
                     if (!tool.IsErased) tool.Erase();
                     erased.Add(h);
                 }
@@ -580,9 +654,25 @@ namespace ClaudeCAD.Plugin.Drawing
         internal static ObjectId VisualStyleId(Database db, Transaction tr, string acadName, string tool)
         {
             var dict = (DBDictionary)tr.GetObject(db.VisualStyleDictionaryId, OpenMode.ForRead);
+            var entries = new List<(string name, string type, bool internalUse)>();
+            var ids = new Dictionary<string, ObjectId>(StringComparer.OrdinalIgnoreCase);
             foreach (DBDictionaryEntry e in dict)
-                if (e.Key.Equals(acadName, StringComparison.OrdinalIgnoreCase)) return e.Value;
-            throw ToolException.Invalid($"{tool}: this drawing has no visual style '{acadName}' (VISUALSTYLES lists them).");
+            {
+                string type = null;
+                bool internalUse = false;
+                try
+                {
+                    if (tr.GetObject(e.Value, OpenMode.ForRead) is DBVisualStyle vs) { type = vs.Type.ToString(); internalUse = vs.InternalUseOnly; }
+                }
+                catch (Exception ex) { Logger.Warn($"visual style {e.Key} not read: {ex.Message}"); }
+                entries.Add((e.Key, type, internalUse));
+                ids[e.Key] = e.Value;
+            }
+            // by name, then by type (localized AutoCAD / templates name them in their own language)
+            var name = SolidLogic.PickVisualStyle(entries, acadName);
+            if (name != null && ids.TryGetValue(name, out var id)) return id;
+            var shown = entries.Where(x => !x.internalUse).Select(x => x.name).Take(20);
+            throw ToolException.Invalid($"{tool}: this drawing has no visual style '{acadName}'. Its styles: {string.Join(", ", shown)}.");
         }
 
         /// <summary>Sets the visual style of the current model-space viewport. No undo step (a view setting).</summary>

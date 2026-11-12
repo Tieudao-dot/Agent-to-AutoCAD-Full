@@ -122,6 +122,52 @@ namespace ClaudeCAD.Plugin.Core
 
         public static IEnumerable<string> VisualStyleKeys => Styles.Select(s => s.key);
 
+        /// <summary>
+        /// GraphicsInterface.VisualStyleType member of each style (compared as text): the fallback when the drawing's
+        /// dictionary names are not the English ones (localized AutoCAD / templates), e.g. "Conceptual" → Conceptual.
+        /// </summary>
+        public static string VisualStyleTypeOf(string acadName)
+        {
+            switch (acadName)
+            {
+                case "2dWireframe": return "Wireframe2D";
+                case "Wireframe": return "Wireframe3D";
+                case "Hidden": return "Hidden";
+                case "Conceptual": return "Conceptual";
+                case "Shaded": return "Shaded";
+                case "Shaded with edges": return "ShadedWithEdges";
+                case "Realistic": return "Realistic";
+                case "X-Ray": return "XRay";
+                default: return null;
+            }
+        }
+
+        /// <summary>Older dictionary names of the same styles (drawings from AutoCAD 2010 and before).</summary>
+        public static IEnumerable<string> VisualStyleAliases(string acadName)
+        {
+            yield return acadName;
+            if (acadName == "Wireframe") yield return "3dWireframe";
+            if (acadName == "Hidden") yield return "3dHidden";
+        }
+
+        /// <summary>
+        /// Picks the drawing's visual style for acadName among (name, type, internal) entries: first by name (or an
+        /// older name), then by VisualStyleType, skipping internal-use styles. Null when the drawing has none.
+        /// </summary>
+        public static string PickVisualStyle(IEnumerable<(string name, string type, bool internalUse)> entries, string acadName)
+        {
+            var list = entries.ToList();
+            foreach (var alias in VisualStyleAliases(acadName))
+            {
+                var hit = list.FirstOrDefault(e => !e.internalUse && string.Equals(e.name, alias, StringComparison.OrdinalIgnoreCase));
+                if (hit.name != null) return hit.name;
+            }
+            var type = VisualStyleTypeOf(acadName);
+            if (type == null) return null;
+            var byType = list.FirstOrDefault(e => !e.internalUse && e.type == type);
+            return byType.name;
+        }
+
         /// <summary>"conceptual" → "Conceptual", "2d wireframe" → "2dWireframe"...; throws INVALID_PARAMS for an unknown style.</summary>
         public static string VisualStyleName(string style, string tool = "set_visual_style")
         {
@@ -167,11 +213,31 @@ namespace ClaudeCAD.Plugin.Core
             CheckFrustum(radius, topRadius, height, tool);
         }
 
+        /// <summary>Largest |taper_angle| (degrees), the same bound as the assistant's schema.</summary>
+        public const double MaxTaper = 89.9;
+
         /// <summary>Extrusion: height ≠ 0, taper strictly between -90° and 90° (positive narrows the solid, like EXTRUDE).</summary>
         public static void CheckExtrude(double height, double taperDeg, string tool = "extrude")
         {
             if (!(Math.Abs(height) > Eps)) throw ToolException.Invalid($"{tool}: 'height' must not be 0 (negative extrudes downwards).");
-            if (!(Math.Abs(taperDeg) < 89.9)) throw ToolException.Invalid($"{tool}: 'taper_angle' must be between -89.9 and 89.9 degrees (got {taperDeg}).");
+            if (!(Math.Abs(taperDeg) <= MaxTaper)) throw ToolException.Invalid($"{tool}: 'taper_angle' must be between -89.9 and 89.9 degrees (got {taperDeg}).");
+        }
+
+        /// <summary>
+        /// The height to give Solid3d.Extrude so a positive height always builds upwards (+Z) from a flat profile in
+        /// the XY plane, whatever way its normal points (lines / arcs drawn clockwise, mirrored curves give -Z).
+        /// Profiles that are not flat on XY extrude along their own normal.
+        /// </summary>
+        public static double ExtrudeHeightAlongNormal(double height, double normalZ) => normalZ < -0.5 ? -height : height;
+
+        /// <summary>
+        /// draw_wedge: after centring the bounding box, the centroid of the wanted wedge (tall face at -X, slope down
+        /// towards +X, right angle at the bottom) is (-l/6, 0, -h/6). False for any other orientation.
+        /// </summary>
+        public static bool WedgeCentroidOk(double[] centroid, double l, double w, double h)
+        {
+            double tol = 1e-3 * Math.Max(l, Math.Max(w, h));
+            return Math.Abs(centroid[0] + l / 6) <= tol && Math.Abs(centroid[1]) <= tol && Math.Abs(Z3(centroid) + h / 6) <= tol;
         }
 
         /// <summary>Revolve axis start → end: a unit direction, and the angle (degrees, 0 &lt; a ≤ 360) in radians.</summary>

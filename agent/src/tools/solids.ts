@@ -116,7 +116,7 @@ export function solidTools(b: ToolBridge): AnyTool[] {
         'Typical use: walls, slabs, footings from plan outlines: draw the outline on XY (or pass profile_points) and extrude by the height.' + RET,
       {
         ...profile,
-        height: z.number().describe('Extrusion height (mm, along the profile normal; negative = opposite).'),
+        height: z.number().describe('Extrusion height (mm): for profiles on the XY plane positive = up (+Z), negative = down; other profiles along their normal.'),
         taper_angle: z.number().min(-89.9).max(89.9).optional().describe('Taper angle in degrees (default 0).'),
         ...entityProps,
       }),

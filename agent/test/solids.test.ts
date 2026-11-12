@@ -115,6 +115,17 @@ describe('3D confirmation gate', () => {
     assert.equal(affectedCount('solid_subtract', { target: 'A', subtract: ['B', 'C'] }), 3);
   });
 
+  it('erasing an existing tool solid needs a yes even when the target is new (test round 1)', () => {
+    // the new wall 3A is fine to change, the user's old solid 2F4B would be erased by the subtract
+    const g = first({ created: new Set(['3A']) });
+    assert.deepEqual(existingSolidsChanged('solid_subtract', { target: '3a', subtract: ['2f4b'] }, g), ['2F4B']);
+    assert.match(confirmationError('solid_subtract', { target: '3A', subtract: ['2F4B'] }, g) ?? '', /1 3D solid/);
+    // keep_tools leaves 2F4B as it is: nothing existing changes
+    assert.equal(confirmationError('solid_subtract', { target: '3A', subtract: ['2F4B'], keep_tools: true }, g), undefined);
+    // a union with one solid of an earlier turn
+    assert.deepEqual(existingSolidsChanged('solid_union', { handles: ['3A', '1C'] }, g), ['1C']);
+  });
+
   it('passes after the user confirms (answer or the Đồng ý button)', () => {
     const p = { target: '2F4A', subtract: ['2F4B'] };
     assert.equal(confirmationError('solid_subtract', p, first({ userText: 'đồng ý', answersQuestion: true })), undefined);
@@ -157,5 +168,12 @@ describe('3D system prompt', () => {
   it('carries the conventions of the plan', () => {
     for (const needle of ['Z is up', 'mm', 'XY plane', 'extrude', 'One layer per kind of solid', 'sw_iso', 'conceptual', 'get_solid_info', 'request_confirmation'])
       assert.ok(THREE_D_RULES.includes(needle), needle);
+  });
+});
+
+describe('3D tool texts (test round 1)', () => {
+  it('extrude says a positive height goes up for XY profiles, like the plugin', () => {
+    const h = (byName('extrude').inputSchema as Record<string, z.ZodTypeAny>).height!;
+    assert.match(h.description ?? '', /positive = up \(\+Z\)/);
   });
 });
