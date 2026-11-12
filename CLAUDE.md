@@ -58,16 +58,24 @@ dự án gốc), `bo-cai/README.md`.
   - nhánh, commit xuất phát, file liên quan, tài liệu bàn giao trong `docs/ban-giao/`;
   - giới hạn: chi phí, số lượt CI, việc phải hỏi cậu trước;
   - mức gấp.
+- **Cây thread (chốt 12/11/2026):**
+  - luồng chính mở thread cho từng đợt / phần việc (gói dịch vụ, Vẽ 3D đợt 1, đợt 2, đợt 3, test tổng thể);
+  - thread của mỗi đợt, khi luồng chính giao, tự mở **sub-thread con "Test & sửa"** của đợt đó (`create_session`
+    từ chính thread đợt, nhánh tách từ nhánh của đợt), chuyển đủ context theo mẫu giao việc ở trên;
+  - sub-thread con báo về thread đợt (thread cha); thread đợt tổng hợp rồi báo về luồng chính;
+  - đợt sau chỉ bắt đầu khi test & sửa của đợt trước báo xong.
 - **Sub-thread:**
   - chỉ làm đúng tác vụ được giao, trên nhánh riêng của mình;
-  - gặp việc ngoài phạm vi thì báo về luồng chính 1–2 dòng, không làm thay thread khác, không tự mở thread mới;
+  - gặp việc ngoài phạm vi thì báo về thread cha 1–2 dòng, không làm thay thread khác; chỉ mở thread con khi được
+    giao như trong "Cây thread";
   - việc khó đảo ngược hoặc hướng ra ngoài (merge `main`, phát hành, đổi khóa, xóa dữ liệu, gửi gì ra ngoài) thì
-    báo về luồng chính để hỏi cậu trước;
-  - xong mốc lớn hoặc phải dừng chờ quyết: báo 3–6 dòng về luồng chính, mở đầu `[Báo cáo từ thread <tên>]`:
+    báo về thread cha để chuyển lên luồng chính hỏi cậu trước;
+  - xong mốc lớn hoặc phải dừng chờ quyết: báo 3–6 dòng về thread cha, mở đầu `[Báo cáo từ thread <tên>]`:
     việc đã xong, nhánh + commit, test / CI, việc chờ cậu, thời gian. Một lần mỗi mốc.
-- Điểm cần cậu chốt phát sinh ở sub-thread: sub-thread báo về luồng chính, luồng chính hỏi cậu bằng
-  AskUserQuestion rồi chuyển câu trả lời lại.
-- Mở hay đóng sub-thread: chỉ khi cậu đồng ý. Sub-thread mới ghi vào danh bạ ở cuối file.
+- Điểm cần cậu chốt phát sinh ở sub-thread: báo ngược lên tới luồng chính, luồng chính hỏi cậu bằng
+  AskUserQuestion rồi chuyển câu trả lời xuống lại.
+- Mở hay đóng sub-thread: chỉ khi cậu đồng ý (chuỗi 3D: cậu đã đồng ý 12/11/2026). Sub-thread mới ghi vào danh
+  bạ ở cuối file; thread con ghi kèm thread cha.
 
 ## Git và phát hành
 
@@ -98,6 +106,6 @@ dự án gốc), `bo-cai/README.md`.
 | --- | --- | --- |
 | Luồng chính | `session_01D56HmFT5bwapmbypmLY5nr` | Tổng quan, trao đổi với chủ dự án, điều phối sub-thread. Không tự làm việc kỹ thuật |
 | Gói dịch vụ | `session_01D56HmJEU9szFU3rjc38bwT` | Nhánh `full/goi-dich-vu`: gói 2D / 3D / Full trong plugin (đọc gói, nhãn lệnh, chặn lệnh, trợ lý, giao diện), mẫu Apps Script phần gói. Bàn giao: `docs/ban-giao/goi-dich-vu-plugin.md` |
-| Vẽ 3D | `session_01D56HmEKLjGrgQjCYBHyRFV` | Nhánh `full/ve-3d` (tách từ `full/goi-dich-vu`): 3D đợt 1 (khối cơ bản, extrude / revolve, cộng trừ khối, góc nhìn, kiểu hiển thị, thông tin khối, chụp ảnh 3D), nhãn gói 3D. Bàn giao: `docs/ban-giao/ve-3d-dot-1.md` |
+| Vẽ 3D đợt 1 | `session_01D56HmEKLjGrgQjCYBHyRFV` | Nhánh `full/ve-3d` (tách từ `full/goi-dich-vu`): 3D đợt 1 (khối cơ bản, extrude / revolve, cộng trừ khối, góc nhìn, kiểu hiển thị, thông tin khối, chụp ảnh 3D), nhãn gói 3D. Bàn giao: `docs/ban-giao/ve-3d-dot-1.md` |
 
 Link mở thread: `https://claude.ai/code/<session id>`.
