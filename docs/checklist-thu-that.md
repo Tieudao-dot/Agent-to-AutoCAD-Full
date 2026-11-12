@@ -151,6 +151,12 @@ Máy phải ở gói `3D` hoặc `Full` (phần I). Mở một bản vẽ mới 
 | J7 | ○ | Bật 🔒 Chỉ xem, gõ "xem góc iso kiểu Conceptual" rồi "dựng hộp 1x1x1 m" | Góc nhìn / kiểu đổi được; dựng hộp bị từ chối (chỉ xem) | ☐ | ☐ | 3D-7 |
 | J8 | ★ | Đổi máy về gói `2D`, Kiểm tra lại, gõ "dựng hộp 1000x1000x1000" | Claude nói máy dùng gói 2D, chưa có 3D, liên hệ chủ plugin; không cố vẽ hộp bằng đường | ☐ | ☐ | 3D-8 |
 | J9 | ○ | AutoCAD 2022–2024 và 2025–2027 (nếu có): chạy J1 | J1 ✓ trên từng đời | ☐ | ☐ | 3D-9 |
+| J10 | ★ | "dựng nêm dài 3000, rộng 1200, cao 600 tại gốc", xem góc SW iso | Mặt đứng cao 600 ở phía x = 0, mặt dốc hạ xuống 0 tại x = 3000; `get_solid_info`: thể tích 1,08 m³, hộp bao [0,0,0]–[3000,1200,600]. Nếu Claude báo "unexpected orientation" thì ghi lại cả câu lỗi | ☐ | ☐ | 3D-10 |
+| J11 | ★ | "vẽ hình chữ nhật 1000x500 rồi đùn cao 300 có góc vát 10 độ" | Khối nhỏ dần lên trên (mặt trên nhỏ hơn mặt đáy); hộp bao z từ 0 tới 300 | ☐ | ☐ | 3D-11 |
+| J12 | ★ | Vẽ tay 4 LINE nối kín một hình chữ nhật **theo chiều kim đồng hồ**, rồi gõ "đùn 4 đường vừa vẽ cao 500" | Khối đi **lên** (z 0 → 500), không đi xuống | ☐ | ☐ | 3D-12 |
+| J13 | ★ | Lượt J2 (tường + cửa, trừ trong cùng lượt) → ⋯ ▸ Lưu thành macro → mở bản vẽ mới, chạy macro; rồi chạy macro lần nữa trong **chính bản vẽ cũ** | Mỗi lần chạy có một tường mới có lỗ cửa; tường cũ trong bản vẽ cũ **không** bị khoét thêm | ☐ | ☐ | 3D-13 |
+| J14 | ○ | AutoCAD bản ngôn ngữ khác tiếng Anh (nếu có), hoặc bản vẽ từ mẫu tiếng nước ngoài: "chuyển kiểu Conceptual", "chụp ảnh góc iso kiểu Conceptual" | Kiểu đổi được, ảnh có màu; nếu lỗi thì Claude nêu tên các kiểu có trong bản vẽ — ghi lại danh sách đó | ☐ | ☐ | 3D-14 |
+| J15 | ○ | Dựng hộp 1000×1000×1000 và hộp thứ hai chạm đúng mặt (cạnh nhau, không chồng), gõ "giao hai hộp" | Claude báo hai khối không giao nhau / AutoCAD không ghép được, **bản vẽ không đổi**, AutoCAD không treo | ☐ | ☐ | 3D-15 |
 
 ## Gửi lại gì khi lỗi
 
