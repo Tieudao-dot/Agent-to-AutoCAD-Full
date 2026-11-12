@@ -194,10 +194,10 @@ Bổ sung sau Test & sửa đợt 2 ([`ban-giao/ve-3d-test-2.md`](ban-giao/ve-3d
 Còn chỉ thấy trên AutoCAD thật: `FilletEdges` với setback 0, căn tiết diện của `sweep` (tâm tiết diện đặt vào đầu
 đường dẫn), U hoàn tác `set_ucs` (K10), quy ước mảng của `Matrix3d(double[])` (plugin tự kiểm, K21).
 
-## L. 3D đợt 3 (bản Full, gói 3D hoặc Full, ~12 phút)
+## L. 3D đợt 3 (bản Full, gói 3D hoặc Full, ~18 phút)
 
 Máy ở gói `Full` (L2 cần vẽ mặt bằng 2D). Bản vẽ mới (acadiso.dwt, đơn vị mm), tab Model. Chi tiết:
-[`ban-giao/ve-3d-dot-3.md`](ban-giao/ve-3d-dot-3.md).
+[`ban-giao/ve-3d-dot-3.md`](ban-giao/ve-3d-dot-3.md); L17–L23 từ test & sửa: [`ban-giao/ve-3d-test-3.md`](ban-giao/ve-3d-test-3.md).
 
 | # | | Làm gì | Kết quả mong đợi | Đạt | Lỗi | Mã gốc |
 | --- | --- | --- | --- | --- | --- | --- |
@@ -217,6 +217,13 @@ Máy ở gói `Full` (L2 cần vẽ mặt bằng 2D). Bản vẽ mới (acadiso.
 | L14 | ★ | Bật "Chỉ xem", "dựng 3D mặt bằng này" | Claude báo đang "Chỉ xem", bản vẽ không đổi | ☐ | ☐ | 3D3-14 |
 | L15 | ○ | AutoCAD không phải tiếng Anh (Đức / Pháp…): L2, L9 | Như L2, L9 (tên mẫu hatch ANSI31 giống nhau ở mọi ngôn ngữ) | ☐ | ☐ | 3D3-15 |
 | L16 | ○ | Lưu macro lượt L2 + L9 ("Lưu thành macro"), mở bản vẽ khác có cùng mặt bằng, chạy macro | Dựng + cắt trên mặt bằng mới, không đụng bản vẽ cũ | ☐ | ☐ | 3D3-16 |
+| L17 | ★ | Vẽ 2 tường song song dày 200 (2 nét mỗi tường, đóng đầu) cách nhau 400 trên `A-WALL`, "dựng 3D mặt bằng này" | Claude chạy thử, báo 2 tường 200 và 1 mục bỏ qua "space between two walls"; khối **không** lấp khe 400 | ☐ | ☐ | 3D3T-1 |
+| L18 | ○ | Tường chung mặt ngoài đổi dày 200 → 100 giữa chừng (có nét bậc); và 2 polyline bề rộng 100 / 300 gặp nhau thành góc L; "dựng 3D" | Nhìn Top: khối đúng bằng nét vẽ, không lồi ra ở chỗ đổi dày hay ở góc | ☐ | ☐ | 3D3T-2 |
+| L19 | ★ | Vẽ phòng L2 bằng polyline có bề rộng 25 (nét in) thay cho LINE, "dựng 3D" | Vẫn 4 tường 220, 1 cửa; ghi chú "read as plain wall face lines" | ☐ | ☐ | 3D3T-3 |
+| L20 | ★ | Trong một tường liền, vẽ cửa sổ bằng 2 nét song song giữa hai mặt tường, trên `A-WALL`; "dựng 3D" | Claude báo 2 nét đó bị bỏ qua ("inside wall… window drawn on the wall layer?") và hỏi; không âm thầm mất cửa sổ | ☐ | ☐ | 3D3T-4 |
+| L21 | ○ | Đường bao sàn L7 copy tại chỗ sang layer `A-FLOR`, "dựng 3D có sàn" | Một sàn; báo 1 mục "the same outline" | ☐ | ☐ | 3D3T-5 |
+| L22 | ★ | Sau L2: "chạy thử dựng 3D lại mặt bằng này" | Báo cáo chạy thử có `existing_solids`; Claude hỏi trước khi dựng | ☐ | ☐ | 3D3T-6 |
+| L23 | ○ | "thêm cửa sổ rộng 1200 tại góc phòng" (điểm đúng góc trong của 2 tường) | Claude báo điểm nằm ở chỗ hai tường gặp nhau và hỏi lại; không dựng gì | ☐ | ☐ | 3D3T-7 |
 
 Còn chỉ thấy trên AutoCAD thật (đã viết an toàn nhất có thể, chưa kiểm được trên máy cloud):
 
