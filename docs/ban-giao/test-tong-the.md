@@ -273,7 +273,7 @@ layer, KT-42), **0 chưa sửa**. KT-43 sửa sau lượt 3, chưa có lượt k
 offline ở bộ cài, KT-11 cửa sát góc, KT-14 dựng tầng 2) đã khỏi, có test tự động.
 
 Test sau gộp vòng 3: lõi 369/369, trợ lý 215/215, build net48 / net8.0-windows / net10.0-windows và project UI test 0 lỗi,
-0 cảnh báo. CI: xem Tiến độ (lượt này cần để biên dịch phần `.iss` mới của KT-43).
+0 cảnh báo. CI run `43272295317` (1 lượt): **xanh**, cả `Setup.exe` với phần `.iss` mới của KT-43.
 
 ## Số token theo gói
 
@@ -345,4 +345,4 @@ thẻ 🔒 và ⚙ (M10–M12; UI test chỉ dán được khi máy CI có clipb
 - [x] Vòng 2 (kiểm tra độc lập lượt 2): KT-41 (`2ddbbc1`), gộp KT-42 (`69e7109`) và KT-40 (`21c54d9`); lõi 367/367, trợ lý 215/215, build 3 bản
 - [x] CI chung vòng 2 (1 lượt, xanh: run 43267347630 trên `e8b4ede`, ~10 phút; UI test WPF gồm `KT41_code_boxes_take_every_line_of_the_offline_email` xanh, `Setup.exe` xanh; bước phát hành bỏ qua)
 - [x] Vòng 3: gộp KT-43 (`fc7654d`), test `EditionTests.KT01` kiểm thêm thư mục / tên file; lõi 369/369, trợ lý 215/215, build 3 bản
-- [ ] CI chung vòng 3 (biên dịch `.iss` mới của KT-43)
+- [x] CI chung vòng 3 (1 lượt, xanh: run 43272295317 trên `0c789ef`, ~10 phút; `Setup.exe` biên dịch được `.iss` mới của KT-43, UI test WPF xanh; bước phát hành bỏ qua)
