@@ -71,6 +71,14 @@ Mở dự án Apps Script (từ bảng tính: Tiện ích mở rộng → Apps S
   - ⚠️ Máy không có mạng **không thu hồi được gói** nếu khách không dán dòng mới: máy giữ gói đang có. Chỉ cấp **Full**
     cho máy offline cậu tin cậy.
 - **Mã cho máy không có mạng**: dòng `CCL1|…` (giấy phép) và dòng `CCS1|…|offline|…` (mã miễn kiểm tra trạng thái), cùng dòng gói ở trên: email có **ba dòng**. Dán **đủ các dòng** vào một ô (ô nào cũng nhận nhiều dòng, KT-41): ô key của bộ cài, ô key trên thẻ Kích hoạt của khung chat, ô **Dùng mã** trên thẻ 🔒 (máy đã kích hoạt nhưng đang khóa), hoặc ⚙ ▸ Tài khoản AI ▸ **Dán mã của chủ plugin**. Máy có mã miễn kiểm tra sẽ **không bị khóa từ xa và không bị giới hạn 7 ngày** — chỉ cấp cho máy thật sự không có mạng.
+  - **Máy đã bị khóa thì mã miễn kiểm tra cũ không mở lại được** (KT-43, luồng chính chốt 12/11/2026, chủ dự án xem
+    lại): plugin chỉ nhận dòng `CCS1` không cũ hơn dòng đang lưu, và dòng dán tay (`offline` / `active` / `pending`)
+    cùng ngày không đè được dòng `disabled`. Báo người dùng: "Mã này … cũ hơn trạng thái máy đang có; liên hệ chủ plugin
+    để nhận mã mới". Muốn cho máy dùng lại: đổi `Active` (máy có mạng) hoặc cấp mã miễn kiểm tra **mới** (ngày sau ngày
+    khóa). Trả lời trực tiếp của máy chủ vẫn được khóa / mở trong cùng một ngày.
+  - Bộ cài không kiểm được chữ ký, nên khi máy đã có `status.txt` / `plan.txt` nó ghi dòng mới vào `status-new.txt` /
+    `plan-new.txt`; plugin áp dụng hai file này theo cùng luật rồi xóa.
+  - Máy offline **chưa từng nhận** dòng `disabled` thì vẫn không khóa từ xa được (đúng thiết kế mã miễn kiểm tra).
 
 ## Cài ngầm cho nhiều máy
 

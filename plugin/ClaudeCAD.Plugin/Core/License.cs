@@ -240,6 +240,25 @@ namespace ClaudeCAD.Plugin.Core
         /// machine on the no-network pass cannot paste back an older "Full" line after the owner lowered its plan.
         /// It still keeps its plan when the user pastes nothing new: offline machines cannot be downgraded remotely.
         /// </summary>
+        /// <summary>
+        /// Whether a verified status line (CCS1) may replace the saved one (KT-43, decided 12/11/2026 like C4): never an
+        /// older line, and for a pasted line (offline pass, "Dùng mã", installer) not even a same-day line over a saved
+        /// "disabled" one, so an old no-network pass cannot unlock a machine the owner locked. A newer line is always
+        /// taken (the owner unlocked the machine or issued a new pass). An answer of the service itself (fromService)
+        /// only has to be at least as new: the owner may lock and unlock on the same day.
+        /// Returns null when accepted, otherwise the Vietnamese reason for the user.
+        /// </summary>
+        public static string StatusRefusal(StatusCheck incoming, StatusCheck current, bool fromService)
+        {
+            if (incoming == null || !incoming.Ok) return "mã trạng thái không hợp lệ";
+            if (current == null || !current.Ok) return null;
+            int c = string.CompareOrdinal(incoming.Date, current.Date);
+            if (c < 0) return $"Mã này (ngày {incoming.Date}) cũ hơn trạng thái máy đang có (ngày {current.Date}); liên hệ chủ plugin để nhận mã mới.";
+            if (c == 0 && !fromService && current.Status == "disabled" && incoming.Status != "disabled")
+                return $"Máy này đã bị chủ plugin tạm khóa ngày {current.Date}, sau khi cấp mã này; liên hệ chủ plugin để nhận mã mới.";
+            return null;
+        }
+
         public static bool AcceptPlan(PlanCheck incoming, PlanCheck current)
         {
             if (incoming == null || !incoming.Ok) return false;
