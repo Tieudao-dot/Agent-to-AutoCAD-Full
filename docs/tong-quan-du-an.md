@@ -8,14 +8,17 @@ quy tắc làm việc và danh bạ thread: [`../CLAUDE.md`](../CLAUDE.md).
 
 ## 1. Tình hình
 
-- **Nhánh tích hợp mới nhất:** `full/test-tong-the`, commit `9b23471`. Gồm gói dịch vụ, 3D đợt 1, 2, 3 (đã test & sửa
-  từng đợt) và lượt test tổng thể.
-  - Test lõi 322/322, trợ lý 199/199, build net48 / net8 / net10 sạch, CI Windows run 43236499463 xanh.
+- **Nhánh tích hợp mới nhất:** `full/test-tong-the`, commit `860101b`. Gồm gói dịch vụ, 3D đợt 1, 2, 3, test tổng thể,
+  bộ cài thay bản gốc + cảnh báo, và bản sửa sau **4 lượt kiểm tra độc lập** (43 lỗi: 39 đã sửa đúng, 4 chấp nhận,
+  0 mở).
+  - Test lõi 369/369, trợ lý 215/215, build net48 / net8 / net10 sạch, CI Windows run 43272295317 xanh.
   - **Chưa thử trên AutoCAD thật. Chưa phát hành.** `main` vẫn là v0.9.3 của bản gốc.
 - **Chưa dùng được bộ cài:** `activation/activation.json` và khóa công khai trong `License.cs` vẫn là của dự án gốc.
   Bộ cài CI build ra chỉ để kiểm build, không cài thử, không phát cho ai.
-- **Checklist thử tay:** [`checklist-tong-the.md`](checklist-tong-the.md) (rút gọn ~50 phút, đủ ~90 phút; chi tiết ở
-  [`checklist-thu-that.md`](checklist-thu-that.md) phần I, J, K, L, X). Bản dùng thử AutoCAD hết khoảng 10/12/2026.
+- **Checklist thử tay:** [`checklist-tong-the.md`](checklist-tong-the.md) (rút gọn ~97 phút, đủ ~157 phút; chi tiết ở
+  [`checklist-thu-that.md`](checklist-thu-that.md) phần I, J, K, L, M, X). Bản dùng thử AutoCAD hết khoảng 10/12/2026.
+- **Báo cáo sáng 13/11:** [`bao-cao-sang-13-11.md`](bao-cao-sang-13-11.md), gồm các quyết định luồng chính tự đưa ra
+  trong đêm, chờ chủ dự án xem lại.
 
 ## 2. Việc chờ chủ dự án
 
@@ -37,6 +40,7 @@ quy tắc làm việc và danh bạ thread: [`../CLAUDE.md`](../CLAUDE.md).
 | 12/11 | Skill 2D | `ve-kien-truc`, `ve-mep`, `ve-ha-tang` gắn `plan: 2d`: gói 3D không nạp |
 | 12/11 | Giảm token | Cách an toàn (bỏ thuộc tính lặp ở lệnh dựng khối, rút mô tả), không đổi tên lệnh |
 | 12/11 | Máy đã có ClaudeCAD gốc | Bản Full **thay thế** bản gốc như nâng cấp (giữ dữ liệu, kích hoạt lại ở Sheet mới); bộ cài tự nhận ra bản gốc và hỏi "Tiếp tục / Hủy"; tên hiển thị "Agent to AutoCAD Full" |
+| 12/11 (đêm, tạm) | Quyết định luồng chính tự đưa ra khi chủ dự án dặn không hỏi | Xem [`bao-cao-sang-13-11.md`](bao-cao-sang-13-11.md) mục 3: nút "Tiếp tục / Hủy"; xóa khối 3D cũ luôn hỏi; chỉ nút Đồng ý trên thẻ mở khóa sửa khối 3D cũ; chặn thuộc tính block ở gói 3D; máy offline chỉ nhận dòng gói / trạng thái mới hơn; giữ phương án A; thêm ô dán mã ở thẻ 🔒 và ⚙; chấp nhận chữ mặc định khi chèn block ở gói 3D |
 | 12/11 | Cách làm việc | Luồng chính điều phối; mỗi đợt một thread, thread đợt tự mở thread con "Test & sửa" |
 
 ## 4. Đã làm
@@ -69,3 +73,7 @@ Cách giảm thêm còn lại: gộp 6 lệnh khối cơ bản thành 1 lệnh (
   - làm gói dịch vụ;
   - chuỗi 6 bước 3D (đợt 1 → test → đợt 2 → test → đợt 3 → test → test tổng thể), mỗi bước 1 lượt CI xanh;
   - sửa 3 điểm chốt sau test tổng thể.
+- **Đêm 12/11 → 13/11/2026:**
+  - bộ cài thay bản gốc + cảnh báo;
+  - kiểm tra độc lập 4 lượt bằng agent mới, lỗi chuyển về thread phụ trách sửa;
+  - 3 vòng gộp + CI, kết thúc ở `860101b`.
