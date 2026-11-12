@@ -49,6 +49,24 @@ namespace ClaudeCAD.UI.Tests
         }
 
         [Fact]
+        public void PlanBadgeShowsTheServicePlanAndHidesWithoutOne()
+        {
+            ChatControl.SelfTestProbe none = null, full = null, hidden = null;
+            Sta(() =>
+            {
+                var c = new ChatControl();
+                none = c.ProbeForSelfTest();
+                c.SetPlan(PlanLogic.Label("2d3d"));
+                full = c.ProbeForSelfTest();
+                c.SetPlan(null);
+                hidden = c.ProbeForSelfTest();
+            });
+            Assert.Equal("", none.PlanBadge);
+            Assert.Equal("Gói: 2D + 3D", full.PlanBadge);
+            Assert.Equal("", hidden.PlanBadge);
+        }
+
+        [Fact]
         public void CompactRoundTripPassesTheSelfTestRule()
         {
             ChatControl.SelfTestProbe p0 = null, p1 = null, p2 = null;

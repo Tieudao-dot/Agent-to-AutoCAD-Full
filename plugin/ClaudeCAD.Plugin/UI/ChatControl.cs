@@ -123,6 +123,8 @@ namespace ClaudeCAD.Plugin.UI
         private List<VersionInfo> _versions = new List<VersionInfo>();
         private bool _viewingVersion;
         private TextBlock _accountStatus;
+        /// <summary>"Gói 2D" in the top bar and "Gói dịch vụ của máy này: …" in ⚙ (hidden for a build without plans).</summary>
+        private TextBlock _planBadge, _planLine;
         private Category _accountCat;
         private Border _apiKeyPanel;
         private PasswordBox _apiKeyBox;
@@ -221,6 +223,13 @@ namespace ClaudeCAD.Plugin.UI
             _new.Click += (s, e) => NewChatRequested?.Invoke();
             _stop.Click += (s, e) => StopRequested?.Invoke();
             foreach (var b in new[] { _settingsBtn, _compactBtn, _new, _export, _stop }) { DockPanel.SetDock(b, Dock.Right); top.Children.Add(b); }
+            _planBadge = MutedText("");
+            _planBadge.FontSize = 11;
+            _planBadge.Margin = new Thickness(6, 0, 4, 0);
+            _planBadge.VerticalAlignment = VerticalAlignment.Center;
+            _planBadge.Visibility = Visibility.Collapsed;
+            DockPanel.SetDock(_planBadge, Dock.Right);
+            top.Children.Add(_planBadge);
             var statusStack = new StackPanel { VerticalAlignment = VerticalAlignment.Center };
             _connection = MutedText("Đang khởi động...");
             _usage = MutedText("");
@@ -788,6 +797,13 @@ namespace ClaudeCAD.Plugin.UI
             _accountStatus.TextTrimming = TextTrimming.None;
             _accountStatus.FontSize = 11;
             account.Children.Add(_accountStatus);
+            _planLine = MutedText("");
+            _planLine.TextWrapping = TextWrapping.Wrap;
+            _planLine.TextTrimming = TextTrimming.None;
+            _planLine.FontSize = 11;
+            _planLine.Margin = new Thickness(0, 2, 0, 0);
+            _planLine.Visibility = Visibility.Collapsed;
+            account.Children.Add(_planLine);
             var accButtons = new WrapPanel { Margin = new Thickness(0, 4, 0, 0) };
             Button Act(WrapPanel into, string text, string tip, Action a)
             {
@@ -2558,6 +2574,21 @@ namespace ClaudeCAD.Plugin.UI
         });
 
         // ---------------------------------------------------------------- account
+
+        /// <summary>Service plan of this machine ("2D", "3D", "2D + 3D"); null or empty hides it.</summary>
+        public void SetPlan(string label) => Ui(() =>
+        {
+            bool show = !string.IsNullOrWhiteSpace(label);
+            var vis = show ? Visibility.Visible : Visibility.Collapsed;
+            _planBadge.Text = show ? "Gói: " + label : "";
+            _planBadge.ToolTip = show ? $"Gói dịch vụ của máy này: {label}. Chủ plugin đổi gói trong danh sách thiết bị; plugin cập nhật sau lượt kiểm tra trạng thái." : null;
+            _planBadge.Visibility = vis;
+            if (_planLine != null)
+            {
+                _planLine.Text = show ? "Gói dịch vụ của máy này: " + label : "";
+                _planLine.Visibility = vis;
+            }
+        });
 
         public void SetAccountStatus(string text) => Ui(() =>
         {

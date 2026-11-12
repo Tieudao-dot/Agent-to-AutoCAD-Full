@@ -2,7 +2,8 @@
 
 > **Bản Agent to AutoCAD Full:** dùng máy chủ kích hoạt, Google Sheet và cặp khóa **riêng**, không chung với dự án
 > gốc. Các bước dựng: [`../docs/dung-may-chu-kich-hoat-full.md`](../docs/dung-may-chu-kich-hoat-full.md). Mẫu Apps
-> Script ở đây đã có cột **Gói** (2D / 3D / 2D + 3D); phần plugin đọc gói chưa làm.
+> Script ở đây đã có cột **Gói** (2D / 3D / 2D + 3D), và plugin trên nhánh `full/goi-dich-vu` đã đọc gói và chặn lệnh
+> ngoài gói (chưa phát hành, chưa thử trên AutoCAD thật).
 
 Mỗi máy muốn dùng ClaudeCAD cần được **chủ plugin cho phép**. Chủ plugin quản lý mọi máy trong một **Google Sheet "ClaudeCAD – Thiết bị"**: thấy máy nào đang dùng, duyệt máy mới (`Active`) hoặc ngưng cho dùng (`Disabled`) chỉ bằng cách đổi một ô. Key gửi qua Zalo vẫn dùng được làm đường dự phòng.
 
@@ -62,7 +63,8 @@ Sửa script về sau: dán code mới → 💾 Lưu → chạy **`kiemTra`** m�
 Mở dự án Apps Script (từ bảng tính: Tiện ích mở rộng → Apps Script), sửa dòng `var MAY_THU_CONG = 'CC-…';` thành mã máy người đó gửi, chọn hàm **`taoKeyThuCong`**, bấm ▶ **Chạy**. Máy đó được ghi vào Sheet là `Active`, và email gửi về có:
 
 - **KEY**: dùng cho máy có mạng.
-- **Dòng gói** `CCF1|…` (thêm từ bản Full): gói của máy lấy từ cột Gói. Plugin hiện chưa đọc dòng này.
+- **Dòng gói** `CCF1|…` (thêm từ bản Full): gói của máy lấy từ cột Gói. Máy không có mạng dán dòng này cùng hai dòng
+  bên dưới (dán riêng dòng gói cũng được, để đổi gói cho máy đã kích hoạt). Không dán thì máy dùng gói mặc định.
 - **Mã cho máy không có mạng**: **hai dòng** — dòng `CCL1|…` (giấy phép) và dòng `CCS1|…|offline|…` (mã miễn kiểm tra trạng thái). Dán **cả hai dòng** vào ô key của khung chat trong AutoCAD. Máy có mã miễn kiểm tra sẽ **không bị khóa từ xa và không bị giới hạn 7 ngày** — chỉ cấp cho máy thật sự không có mạng.
 
 ## Cài ngầm cho nhiều máy
@@ -79,6 +81,16 @@ Key vẫn riêng cho từng máy. Cài ngầm mà không có `/KEY=` thì plugin
 - **Key:** 80 bit đầu của HMAC-SHA256(SECRET, `"CCK1|"` + mã máy), viết bằng base32 Crockford dạng `XXXX-XXXX-XXXX-XXXX`. Chỉ máy chủ biết SECRET, và chỉ máy chủ kiểm tra key.
 - **Giấy phép:** `CCL1|<mã máy>|<ngày>|<chữ ký RSA-2048 SHA-256 PKCS#1 v1.5, base64url>`. Khóa riêng nằm trong Apps Script; khóa công khai nằm trong `plugin/ClaudeCAD.Plugin/Core/License.cs`. Lưu ở `%LocalAppData%\ClaudeCAD\license.txt`.
 - **Trạng thái thiết bị:** `?action=status` trả `CCS1|<mã máy>|<active|disabled|pending|offline>|<ngày UTC>|<chữ ký>` (cùng khóa và cùng kiểu chữ ký với giấy phép), lưu ở `status.txt`. Plugin (`LicenseLogic.VerifyStatus`) chỉ mở khóa khi: giấy phép hợp lệ **và** trạng thái `active` ký trong vòng **7 ngày** (`StatusMaxAgeDays`) — hoặc `offline` (không bao giờ hết hạn). Trạng thái `pending`/`disabled`, quá hạn, hay ngày nằm ở tương lai (vặn lùi đồng hồ) đều khóa. Máy `Active` gọi `status` được trả kèm giấy phép, nên duyệt qua Sheet không cần key; `activate` bằng key cũng trả kèm trạng thái đã ký.
+- **Gói trong plugin:**
+  - `Core/Plans.cs` (`PlanLogic`) gắn nhãn Chung / 2D / 3D cho mọi lệnh. Lệnh chưa có nhãn chỉ mở cho gói `2d3d`;
+    test lõi `PlanTests` đỏ khi một lệnh đăng ký trong `Drawing/*.cs` chưa có nhãn.
+  - `LicenseLogic.VerifyPlan` kiểm chữ ký dòng `CCF1` và đúng máy; `EffectivePlan`: dòng gói cũ hơn dòng trạng thái thì
+    về gói mặc định (chặn việc giữ lại dòng `2D + 3D` cũ), máy có mã miễn kiểm tra giữ dòng gói được cấp.
+  - Lưu ở `%LocalAppData%\ClaudeCAD\plan.txt`. Bản build không có máy chủ kích hoạt: mọi lệnh, như trước.
+  - `ToolDispatcher` từ chối lệnh ngoài gói với mã `NOT_IN_PLAN` (lệnh lẻ, từng lệnh trong `batch_execute`, macro).
+  - Plugin gửi `context.service_plan` + `context.plan_tools` kèm mỗi tin nhắn; trợ lý chỉ nạp các lệnh đó, system prompt
+    nói rõ gói, và khởi động lại phiên Claude (cùng cuộc chat) khi gói đổi.
+  - **Gói mặc định `2D` là tạm**, chờ chủ dự án chốt: đổi cùng lúc `GOI_MAC_DINH` (script) và `PlanLogic.DefaultPlan`.
 - **Gói:** `?action=status` và `?action=activate` trả thêm `plan` = `CCF1|<mã máy>|<2d|3d|2d3d>|<ngày UTC>|<chữ ký>`, cùng khóa và cùng kiểu chữ ký với dòng trạng thái. Giá trị lấy từ cột Gói (cột 10); mặc định là hằng `GOI_MAC_DINH` trong script. Dòng `CCS1` không đổi. `taoKeyThuCong` gửi thêm dòng này cho máy không có mạng.
 - **Google Sheet:** script phải **gắn với bảng tính** (tạo từ Tiện ích mở rộng → Apps Script) vì dùng `SpreadsheetApp.getActive()`. `request` thêm dòng Chờ duyệt; `activate`/`taoKeyThuCong` đặt Active; `status` cập nhật Lần cuối dùng + Phiên bản (tối đa 30 phút/lần/máy, có LockService); `Disabled` chặn cả `request` (không email) lẫn `activate` (key đúng cũng từ chối). Máy lạ gọi `status` không được thêm dòng.
 - **Tạo lại `ClaudeCAD-Code.gs`** (đổi email, hoặc mất file):

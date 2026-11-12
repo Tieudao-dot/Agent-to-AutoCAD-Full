@@ -18,9 +18,12 @@ import { viewTools } from './view.js';
 
 export const MCP_SERVER_NAME = 'claudecad';
 
-/** Every ClaudeCAD tool, in the order Claude sees them. */
-export function buildTools(bridge: ToolBridge): AnyTool[] {
-  return [
+/**
+ * Every ClaudeCAD tool, in the order Claude sees them. allowed = the tools of this machine's service plan (sent by
+ * the plugin): the others are left out to save tokens. The plugin's dispatcher refuses them anyway (NOT_IN_PLAN).
+ */
+export function buildTools(bridge: ToolBridge, allowed?: readonly string[]): AnyTool[] {
+  const all = [
     ...queryTools(bridge),
     ...batchTools(bridge),
     ...drawTools(bridge),
@@ -35,13 +38,16 @@ export function buildTools(bridge: ToolBridge): AnyTool[] {
     ...advancedTools(bridge),
     ...systemTools(bridge),
   ];
+  if (!allowed) return all;
+  const keep = new Set(allowed);
+  return all.filter((t) => keep.has(t.name));
 }
 
 /** emit: palette messages of the local tools (confirmation / plan / suggestion / skill draft cards). */
-export function createCadServer(bridge: ToolBridge, version: string, emit?: (msg: SidecarToPlugin) => void) {
+export function createCadServer(bridge: ToolBridge, version: string, emit?: (msg: SidecarToPlugin) => void, allowed?: readonly string[]) {
   return createSdkMcpServer({
     name: MCP_SERVER_NAME,
     version,
-    tools: [...buildTools(bridge), ...(emit ? interactionTools(emit) : [])],
+    tools: [...buildTools(bridge, allowed), ...(emit ? interactionTools(emit) : [])],
   });
 }

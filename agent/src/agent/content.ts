@@ -1,5 +1,5 @@
 import type { SDKUserMessage } from '@anthropic-ai/claude-agent-sdk';
-import type { UserMessage } from '../ipc/protocol.js';
+import { servicePlanLabel, type UserMessage } from '../ipc/protocol.js';
 
 /** Skill names the palette's "Chuẩn" selector can choose. */
 export const STANDARD_LABELS: Record<string, string> = {
@@ -41,6 +41,10 @@ export function contextPreamble(msg: UserMessage): string[] {
     lines.push(`[Người dùng vừa thêm skill vào đoạn chat này: ${msg.skills_added.map(q).join(', ')} — load them with the Skill tool when the request concerns them]`);
   }
   if (msg.context?.scale) lines.push(`[Tỷ lệ in người dùng chọn: ${msg.context.scale} — size text/dimensions for this scale]`);
+  const plan = msg.context?.service_plan;
+  if (plan && plan !== '2d3d') {
+    lines.push(`[Gói của máy này: ${servicePlanLabel(plan)} — only the tools of this plan exist; for anything outside it say so, do not imitate it]`);
+  }
   if (msg.context?.read_only) {
     lines.push('[CHỈ XEM: người dùng bật "Chỉ xem" cho bản vẽ này — only read, measure, look (capture_view) and answer; do not call tools that change the drawing]');
   }

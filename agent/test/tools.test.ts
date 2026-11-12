@@ -10,6 +10,7 @@ import { fileURLToPath } from 'node:url';
 import { z } from 'zod';
 import type { ToolBridge } from '../src/tools/common.js';
 import { buildTools } from '../src/tools/index.js';
+import { ERROR_CODES, parsePluginMessage } from '../src/ipc/protocol.js';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const repo = path.resolve(here, '..', '..', '..');
@@ -78,5 +79,41 @@ describe('tool catalogue', () => {
     const r = await line.handler({ start: [0, 0], end: [4000, 0], layer: undefined }, {});
     assert.deepEqual(calls.at(-1), { tool: 'draw_line', params: { start: [0, 0], end: [4000, 0] } });
     assert.deepEqual(JSON.parse((r.content[0] as any).text), { handles: ['1A'] });
+  });
+});
+
+/** Tool names labelled in the plugin's Core/Plans.cs (PlanLogic), the gate of the service plans. */
+function planLabels(): Set<string> {
+  const src = fs.readFileSync(path.join(repo, 'plugin', 'ClaudeCAD.Plugin', 'Core', 'Plans.cs'), 'utf8');
+  const names = new Set<string>();
+  for (const m of src.matchAll(/Add\(ToolGroup\.\w+,([\s\S]*?)\);/g))
+    for (const s of m[1]!.matchAll(/"([^"]*)"/g)) for (const n of s[1]!.split(/\s+/)) if (n) names.add(n);
+  return names;
+}
+
+describe('service plan tools', () => {
+  it('every tool declared to Claude has a plan label in the plugin', () => {
+    const labels = planLabels();
+    assert.ok(labels.size >= 90);
+    const missing = buildTools(bridge).map((t) => t.name).filter((n) => !labels.has(n));
+    assert.deepEqual(missing, []);
+  });
+
+  it('keeps only the tools of the plan, capture_view and ping included', () => {
+    const kept = buildTools(bridge, ['draw_line', 'capture_view', 'ping', 'not_a_tool']).map((t) => t.name).sort();
+    assert.deepEqual(kept, ['capture_view', 'draw_line', 'ping']);
+    assert.equal(buildTools(bridge, undefined).length, buildTools(bridge).length);
+  });
+
+  it('NOT_IN_PLAN is a known error code', () => {
+    assert.ok((ERROR_CODES as readonly string[]).includes('NOT_IN_PLAN'));
+  });
+
+  it('reads the plan and its tools from the message context, drops unknown plans and bad names', () => {
+    const m = parsePluginMessage({ type: 'user_message', text: 'x', context: { service_plan: '3d', plan_tools: ['draw_line', 'Bad Name', 7] } }) as any;
+    assert.equal(m.context.service_plan, '3d');
+    assert.deepEqual(m.context.plan_tools, ['draw_line']);
+    const u = parsePluginMessage({ type: 'user_message', text: 'x', context: { service_plan: '4d', plan_tools: ['draw_line'] } }) as any;
+    assert.equal(u.context, undefined);
   });
 });

@@ -42,7 +42,14 @@
   - Build không có máy chủ kích hoạt thì `Plan = 2d3d` (mọi lệnh, như trước).
 - `plugin/ClaudeCAD.Core.Tests/ClaudeCAD.Core.Tests.csproj`: đã link `Plans.cs`.
 
-## Còn phải làm
+## Kết quả sub-thread "Gói dịch vụ" (12/11/2026, nhánh `full/goi-dich-vu`)
+
+Đã làm cả 6 việc bên dưới. Phần WIP được giữ nguyên (build được, test cũ không vỡ: `ParseResponse` chỉ được gọi qua
+tên trường). Khác với gợi ý ban đầu: ngữ cảnh gửi trợ lý dùng tên `context.service_plan` và `context.plan_tools`, vì
+`plan` đã là cờ duyệt thẻ kế hoạch trong tin nhắn. Plugin gửi `plan_tools` (danh sách lệnh mở cho gói) trừ khi gói là
+`2d3d`; trợ lý lọc `buildTools` theo danh sách đó, nên `capture_view` và `ping` được tính như mọi lệnh.
+
+## Còn phải làm (danh sách gốc)
 
 1. **Build và test lõi:** `dotnet test plugin/ClaudeCAD.Core.Tests`. Máy cloud cài được SDK 8 bằng
    `apt-get update && apt-get install -y dotnet-sdk-8.0`. Viết test:

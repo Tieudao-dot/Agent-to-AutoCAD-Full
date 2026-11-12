@@ -123,6 +123,19 @@ Làm trên máy có AutoCAD 2026 và / hoặc 2027. Phần A–G chỉ cần là
 | H4 | ★ | Lặp lại F2 (đổi `COLORTHEME`) và nhìn icon thanh trạng thái | Khung chat đổi theo; icon **C** hiện, có chấm xanh khi Claude làm | ☐ | ☐ | 2026, 2027 (dòng theme) |
 | H5 | ○ | (2027) Kéo một file ảnh vào ô chat; bấm icon **Chụp** | Ảnh đính kèm được, không báo lỗi; ảnh chụp bản vẽ rõ nét | ☐ | ☐ | 2027 (dòng vẽ thử) |
 
+## I. Gói dịch vụ 2D / 3D / 2D + 3D (bản Full, ~5 phút)
+
+Cần máy chủ kích hoạt riêng của bản Full đã dựng (cột **Gói** trong trang "Thiết bị"). Sau mỗi lần đổi ô Gói, bấm
+**Kiểm tra lại** (⚙ hoặc thẻ 🔒) thay cho chờ ~6 giờ.
+
+| # | | Làm gì | Kết quả mong đợi | Đạt | Lỗi | Mã gốc |
+| --- | --- | --- | --- | --- | --- | --- |
+| I1 | ★ | Máy mới kích hoạt, mở khung chat | Thanh trên cùng và ⚙ hiện **Gói: 2D** (mặc định tạm) | ☐ | ☐ | GOI-1 |
+| I2 | ★ | Đổi ô Gói thành `3D`, Kiểm tra lại, gõ "vẽ hình chữ nhật 2000x1000 và ghi kích thước" | Toast "Gói đã đổi sang 3D"; vẽ được hình chữ nhật; Claude nói máy dùng gói 3D, chưa có kích thước, liên hệ chủ plugin; không cố vẽ kích thước bằng đường | ☐ | ☐ | GOI-2 |
+| I3 | ★ | (gói 3D) Chạy một macro cũ có ghi chữ hoặc kích thước | Lệnh chữ / kích thước trong macro báo lỗi ngoài gói, bản vẽ không có chữ / kích thước mới | ☐ | ☐ | GOI-3 |
+| I4 | ★ | Đổi ô Gói thành `2D + 3D`, Kiểm tra lại, gõ lại câu ở I2 | Toast "Gói đã đổi sang 2D + 3D"; có kích thước; cuộc chat cũ vẫn còn | ☐ | ☐ | GOI-4 |
+| I5 | ○ | Đặt `%LocalAppData%\ClaudeCAD\plan.txt` chỉ đọc, đổi ô Gói về `2D`, Kiểm tra lại | Máy không giữ được gói cũ: về gói mặc định | ☐ | ☐ | GOI-5 |
+
 ## Gửi lại gì khi lỗi
 
 1. **Mã bước** bị lỗi (ví dụ `D2`) + một dòng: đã làm gì, thấy gì khác với "kết quả mong đợi".

@@ -467,6 +467,58 @@ describe('skills per chat', () => {
   });
 });
 
+describe('service plan (2D / 3D / 2D + 3D)', () => {
+  it('states the plan in the system prompt and restarts Claude (same conversation) when the plan changes', async () => {
+    const texts: string[] = [];
+    const starts: any[] = [];
+    const fn = ((params: { prompt: AsyncIterable<SDKUserMessage>; options: any }) => {
+      starts.push(params.options);
+      const gen = (async function* () {
+        for await (const m of params.prompt) {
+          texts.push(String(m.message.content));
+          yield init;
+          yield result();
+        }
+      })();
+      return Object.assign(gen, { interrupt: async () => {}, close: () => {} });
+    }) as unknown as QueryFn;
+    const { s } = makeSession(fn);
+    const sent = (context?: Record<string, unknown>) => s.sendMessage({ type: 'user_message', text: 'vẽ', ...(context ? { context } : {}) } as never);
+
+    sent({ service_plan: '3d', plan_tools: ['draw_line', 'ping'] });
+    await tick();
+    assert.equal(starts.length, 1);
+    assert.match(starts[0].systemPrompt, /This machine's service plan: 3D/);
+    assert.match(starts[0].systemPrompt, /Máy này dùng gói 3D/);
+    assert.match(texts.at(-1)!, /\[Gói của máy này: 3D/);
+
+    sent({ service_plan: '3d', plan_tools: ['ping', 'draw_line'] }); // same plan and tools: no restart
+    await tick();
+    assert.equal(starts.length, 1);
+
+    sent({ service_plan: '2d3d' }); // the owner opened 2D + 3D
+    await tick();
+    assert.equal(starts.length, 2);
+    assert.equal(starts[1].resume, 's1');
+    assert.match(starts[1].systemPrompt, /service plan: 2D \+ 3D/);
+    assert.doesNotMatch(starts[1].systemPrompt, /Máy này dùng gói/);
+    assert.doesNotMatch(texts.at(-1)!, /Gói của máy này/); // the full plan needs no line in every message
+
+    sent(); // an older plugin message without a plan keeps the last plan: no restart
+    await tick();
+    assert.equal(starts.length, 2);
+  });
+
+  it('an older plugin (no plan) gets the plain system prompt', async () => {
+    const { fn, calls } = fakeQuery(async () => {});
+    const { s } = makeSession(fn);
+    s.sendMessage({ type: 'user_message', text: 'x' });
+    const { SYSTEM_PROMPT } = await import('../src/agent/systemPrompt.js');
+    assert.equal(calls.options.systemPrompt, SYSTEM_PROMPT);
+    assert.match(SYSTEM_PROMPT, /NOT_IN_PLAN/);
+  });
+});
+
 describe('review fixes: confirmation gate in the session', () => {
   it('objects created in this turn are not "existing"; cards and the plan button count; a resent "đồng ý" still answers', async () => {
     const { fn } = fakeQuery(async (input, push) => {

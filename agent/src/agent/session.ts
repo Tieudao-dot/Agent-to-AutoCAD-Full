@@ -5,14 +5,14 @@ import {
   type SDKMessage,
   type SDKUserMessage,
 } from '@anthropic-ai/claude-agent-sdk';
-import type { SidecarToPlugin, UserMessage } from '../ipc/protocol.js';
+import type { ServicePlan, SidecarToPlugin, UserMessage } from '../ipc/protocol.js';
 import { confirmationError, createdHandles, newlyAffected } from './confirmation.js';
 import { toSdkUserMessage } from './content.js';
 import type { ToolBridge } from '../tools/common.js';
 import { MCP_SERVER_NAME, createCadServer } from '../tools/index.js';
 import { InputQueue } from './inputQueue.js';
 import { SKILLS_PLUGIN_NAME, enabledSkills, librarySkills, prepareSkillsPlugin } from './skills.js';
-import { SYSTEM_PROMPT } from './systemPrompt.js';
+import { systemPromptFor } from './systemPrompt.js';
 
 export type QueryFn = typeof sdkQuery;
 
@@ -102,6 +102,11 @@ export class AgentSession {
   private lastSentSkills?: string[];
   /** Skills last sent per conversation: the "−" / "+" note survives a switch to another drawing and back. */
   private readonly skillsBySession = new Map<string, string[]>();
+  // service plan of this machine (2D / 3D / 2D + 3D) and its tools, from the palette (undefined = an older plugin:
+  // every tool); the tool list is fixed when a Claude process starts, so a changed plan restarts it (resumed)
+  private servicePlan?: ServicePlan;
+  private planTools?: string[];
+  private loadedPlanKey?: string;
 
   constructor(private readonly cfg: SessionConfig) {
     this.defaultModel = cfg.model;
@@ -154,14 +159,16 @@ export class AgentSession {
       if (req.type === 'suggestions') this.toolSuggested = true;
       if (req.type === 'confirm_request' || req.type === 'plan_request') this.turnAsked = true; // a card asks too
       this.cfg.emit(req);
-    });
+    }, this.planTools);
+    this.loadedPlanKey = planKey(this.servicePlan, this.planTools);
+    if (this.servicePlan) this.cfg.log(`service plan: ${this.servicePlan}${this.planTools ? ` (${this.planTools.length} tools)` : ''}`);
     const plugin = prepareSkillsPlugin(this.cfg.skillsDir, this.cfg.workDir, this.chatSkills);
     this.loadedSkillsKey = skillsKey(this.chatSkills);
     if (plugin) this.cfg.log(`skills loaded: ${plugin.skills.join(', ') || '(none)'}`);
 
     const options: Options = {
       cwd: this.cfg.workDir,
-      systemPrompt: SYSTEM_PROMPT,
+      systemPrompt: systemPromptFor(this.servicePlan),
       model: this.cfg.model,
       fallbackModel: this.cfg.fallbackModel,
       ...(this.cfg.effort ? { effort: this.cfg.effort as Options['effort'] } : {}),
@@ -231,6 +238,15 @@ export class AgentSession {
     }
     // Skills per chat: the skill list is fixed when a Claude process starts, so a changed list ("−" / "+" in
     // the palette, or another drawing's chat) restarts it — resuming the SAME conversation, context kept.
+    // Service plan: the tools and the system prompt are fixed when a Claude process starts → a changed plan
+    // restarts it, resuming the same conversation. A message without a plan (older plugin) keeps the last one.
+    const plan = msg.context?.service_plan;
+    if (plan) {
+      const tools = msg.context?.plan_tools;
+      if (this.q && this.loadedPlanKey !== planKey(plan, tools)) this.closeQuery();
+      this.servicePlan = plan;
+      this.planTools = tools;
+    }
     let removed: string[] = [];
     let added: string[] = [];
     if (msg.skills) {
@@ -530,4 +546,9 @@ export class AgentSession {
 /** Same skills in any order → same key; undefined (skills.json) has its own key. */
 function skillsKey(list: string[] | undefined): string {
   return list ? [...list].sort().join(',') : '(enabled)';
+}
+
+/** Identity of a service plan + its tool list (order-free). */
+function planKey(plan?: string, tools?: readonly string[]): string {
+  return `${plan ?? ''}|${tools ? [...tools].sort().join(',') : '*'}`;
 }

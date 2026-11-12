@@ -19,6 +19,8 @@ namespace ClaudeCAD.Plugin.UI
             public bool StylesMerged;
             /// <summary>The palette brushes are in this control's resources.</summary>
             public bool BrushesSet;
+            /// <summary>Text of the "Gói: …" badge in the top bar ("" when hidden).</summary>
+            public string PlanBadge;
         }
 
         public SelfTestProbe ProbeForSelfTest() => new SelfTestProbe
@@ -29,6 +31,7 @@ namespace ClaudeCAD.Plugin.UI
             QueuedShown = _queuedRow != null && _queuedRow.Visibility == Visibility.Visible,
             StylesMerged = Resources.MergedDictionaries.Count > 0,
             BrushesSet = Resources.Contains(Theme.PanelBg) && Resources.Contains(Theme.Fg),
+            PlanBadge = _planBadge != null && _planBadge.Visibility == Visibility.Visible ? _planBadge.Text : "",
         };
     }
 }

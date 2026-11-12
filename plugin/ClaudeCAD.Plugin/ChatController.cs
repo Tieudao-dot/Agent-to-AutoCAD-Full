@@ -233,6 +233,7 @@ namespace ClaudeCAD.Plugin
             if (!Activation.IsActivated) ShowActivationCard();
             else if (Activation.DeviceAllowed) _sidecar.EnsureStarted();
             else ShowLockedCard();
+            ShowPlan();
             // the owner's Active/Disabled decision: checked now and every ~6 hours — also on a machine still waiting
             // for approval, so a machine the owner set Active unlocks by itself at the next AutoCAD start
             StartDeviceWatch();
@@ -759,6 +760,10 @@ namespace ClaudeCAD.Plugin
             var ctx = new Dictionary<string, object>();
             if (!string.IsNullOrEmpty(_settings.Scale)) ctx["scale"] = _settings.Scale;
             if (_transcript?.ReadOnly == true) ctx["read_only"] = true;
+            // service plan: the assistant loads only the tools of the plan (the dispatcher refuses the others anyway)
+            var servicePlan = Activation.Plan;
+            ctx["service_plan"] = servicePlan;
+            if (servicePlan != PlanLogic.PlanFull) ctx["plan_tools"] = PlanLogic.AllowedTools(servicePlan).Cast<object>().ToList();
             var notes = NotesFor(doc);
             if (notes != null) ctx["notes"] = notes;
             if (!_settings.VisualCheck) ctx["visual_check"] = false;
@@ -1953,6 +1958,7 @@ namespace ClaudeCAD.Plugin
                 Ui.Enqueue(() =>
                 {
                     StartDeviceWatch();
+                    ShowPlan();
                     if (Activation.IsAllowed)
                     {
                         _sidecar.EnsureStarted(); // not started while the machine had no licence
@@ -1995,12 +2001,14 @@ namespace ClaudeCAD.Plugin
             if (Activation.ServiceUrl == null) return;
             if (System.Threading.Interlocked.Exchange(ref _deviceChecking, 1) == 1) return;
             bool before = Activation.IsAllowed;
+            string planBefore = Activation.Plan;
             Activation.CheckStatusAsync().ContinueWith(t =>
             {
                 System.Threading.Interlocked.Exchange(ref _deviceChecking, 0);
                 var (ok, msg) = t.IsFaulted
                     ? (false, "Không kiểm tra được trạng thái: " + t.Exception?.GetBaseException().Message)
                     : t.Result;
+                NotePlanChange(planBefore);
                 bool after = Activation.IsAllowed;
                 if (after == before)
                 {
@@ -2026,6 +2034,22 @@ namespace ClaudeCAD.Plugin
                     }
                 });
             });
+        }
+
+        /// <summary>"Gói: …" in the palette; hidden for a build without an activation service (every tool, no plans).</summary>
+        private void ShowPlan() => Ui.SetPlan(Activation.ServiceUrl == null || !Activation.IsActivated ? null : Activation.PlanLabel);
+
+        /// <summary>
+        /// After a status check: the owner may have changed the plan in the device list. The palette shows it and the
+        /// next message carries the new plan (the assistant restarts with the tools of that plan, same conversation).
+        /// </summary>
+        private void NotePlanChange(string planBefore)
+        {
+            var now = Activation.Plan;
+            ShowPlan();
+            if (now == planBefore || !Activation.IsActivated) return;
+            Logger.Info($"service plan changed: {planBefore} -> {now}");
+            Ui.ShowToast("Gói đã đổi sang " + PlanLogic.Label(now), ChatControl.ToastKind.Info, 8);
         }
 
         /// <summary>The answer of a manual check, on whichever 🔒 card is live.</summary>
@@ -2161,6 +2185,11 @@ namespace ClaudeCAD.Plugin
         public bool ReadOnly => _transcript?.ReadOnly == true;
 
         public void RecordCall(string tool, Dictionary<string, object> parameters, object result) => _recorder.Record(tool, parameters, result);
+
+        /// <summary>Service plan of this machine (2d / 3d / 2d3d), see Activation.Plan.</summary>
+        public string Plan => Activation.Plan;
+
+        public string PlanContact => Activation.Contact;
 
         /// <summary>First change of a chat turn: keep a copy of the drawing as it was (every 30 min max).</summary>
         public void BeforeWrite(Document doc)

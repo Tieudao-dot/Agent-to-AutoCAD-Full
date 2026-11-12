@@ -15,6 +15,7 @@ export const ERROR_CODES = [
   'TOO_MANY_ENTITIES',
   'READ_ONLY', // the user turned on "Chỉ xem" for this drawing
   'UNKNOWN_TOOL',
+  'NOT_IN_PLAN', // the tool is outside this machine's service plan (2D / 3D / 2D + 3D)
 ] as const;
 export type ErrorCode = (typeof ERROR_CODES)[number] | (string & {});
 
@@ -222,7 +223,21 @@ export interface UserContext {
   suggestions?: boolean;
   /** v0.7: what the user changed by hand outside the chat since the last chat turn. */
   manual_changes?: ManualChanges;
+  /** Service plan of this machine: "2d", "3d" or "2d3d". Absent = an older plugin (every tool). */
+  service_plan?: ServicePlan;
+  /** The plugin's tools open to that plan; Claude is given only these. Absent = every tool. */
+  plan_tools?: string[];
 }
+
+export const SERVICE_PLANS = ['2d', '3d', '2d3d'] as const;
+export type ServicePlan = (typeof SERVICE_PLANS)[number];
+
+/** "2D", "3D", "2D + 3D" — as the palette shows it. */
+export function servicePlanLabel(plan: ServicePlan): string {
+  return plan === '2d3d' ? '2D + 3D' : plan === '3d' ? '3D' : '2D';
+}
+
+const TOOL_NAME_RX = /^[a-z][a-z0-9_]{0,63}$/;
 
 export interface ManualChanges {
   /** Vietnamese summary by kind and layer, e.g. "sửa 3 (A-WALL 2, A-TEXT 1); xóa 1 (A-DOOR 1)". */
@@ -381,6 +396,11 @@ function parseContext(v: unknown): UserContext | undefined {
   if (c.suggestions === false) out.suggestions = false;
   const manual = parseManualChanges(c.manual_changes);
   if (manual) out.manual_changes = manual;
+  if (typeof c.service_plan === 'string' && (SERVICE_PLANS as readonly string[]).includes(c.service_plan)) {
+    out.service_plan = c.service_plan as ServicePlan;
+    if (Array.isArray(c.plan_tools))
+      out.plan_tools = c.plan_tools.filter((t): t is string => typeof t === 'string' && TOOL_NAME_RX.test(t)).slice(0, 1000);
+  }
   return Object.keys(out).length > 0 ? out : undefined;
 }
 

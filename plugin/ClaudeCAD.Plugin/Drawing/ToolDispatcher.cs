@@ -49,6 +49,10 @@ namespace ClaudeCAD.Plugin.Drawing
         void RecordCall(string tool, Dictionary<string, object> parameters, object result);
         /// <summary>Right before the first change of the turn (version history copy).</summary>
         void BeforeWrite(Document doc);
+        /// <summary>Service plan of this machine: "2d", "3d" or "2d3d" (PlanLogic). Tools outside it are refused.</summary>
+        string Plan { get; }
+        /// <summary>Who opens a bigger plan (shown to Claude in the NOT_IN_PLAN error).</summary>
+        string PlanContact { get; }
     }
 
     /// <summary>
@@ -101,6 +105,7 @@ namespace ClaudeCAD.Plugin.Drawing
                 if (string.IsNullOrEmpty(tool)) throw ToolException.Invalid("tool_call without 'tool' name.");
                 if (!_tools.TryGetValue(tool, out var def))
                     throw ToolException.Invalid($"Unknown tool '{tool}'. Available tools: {string.Join(", ", _tools.Keys.OrderBy(k => k))}.");
+                RequireInPlan(tool);
 
                 var paramsObj = msg.TryGetValue("params", out var pv) ? pv : null;
                 if (paramsObj != null && !(paramsObj is Dictionary<string, object>))
@@ -117,6 +122,17 @@ namespace ClaudeCAD.Plugin.Drawing
                 Logger.Info($"tool {tool} failed in {sw.ElapsedMilliseconds} ms: {JsonCodec.Serialize(env["error"])}");
                 return env;
             }
+        }
+
+        /// <summary>
+        /// The real gate of the service plans: the assistant only hides tools outside the plan, this refuses them
+        /// (one tool_call, every call of a batch, and macros, which run through HandleAsync).
+        /// </summary>
+        private void RequireInPlan(string tool)
+        {
+            var plan = _host.Plan;
+            if (!PlanLogic.Allowed(plan, tool))
+                throw new ToolException(ErrorCodes.NotInPlan, PlanLogic.BlockedMessage(tool, plan, _host.PlanContact));
         }
 
         public static Dictionary<string, object> Ok(string id, object result) => new Dictionary<string, object>
@@ -293,6 +309,7 @@ namespace ClaudeCAD.Plugin.Drawing
                         if (tool == "batch_execute") throw ToolException.Invalid("batch_execute cannot be nested.");
                         if (!_tools.TryGetValue(tool, out var def))
                             throw ToolException.Invalid($"batch_execute: calls[{i}] unknown tool '{tool}'.");
+                        RequireInPlan(tool);
                         if (def.BatchForbidden)
                             throw ToolException.Invalid($"batch_execute: '{tool}' cannot run inside a batch; call it on its own.");
                         if (def.Writes && !ctx.Writable) ctx.RequireWritable(tool);

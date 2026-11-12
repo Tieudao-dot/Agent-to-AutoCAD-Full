@@ -109,6 +109,20 @@ Lệnh này dựa trên đợt 1 nên làm sau cùng.
 | Giao diện | Header hoặc ⚙ hiện "Gói: 2D + 3D". Đổi gói thì có thông báo nhỏ "Gói đã đổi sang …" ở lượt kiểm tra kế tiếp |
 | Bộ cài | Không đổi. Trang kích hoạt vẫn chỉ cần key |
 
+### Trạng thái (12/11/2026)
+
+- **Đã chốt:** phương án A; máy chủ kích hoạt riêng cho bản Full (chủ dự án tự dựng).
+- **Đã làm** trên nhánh `full/goi-dich-vu`, chưa phát hành, chưa thử trên AutoCAD thật:
+  - máy chủ: cột Gói, dòng `CCF1` (commit `f570344`);
+  - plugin: đọc và kiểm chữ ký dòng gói (`plan.txt`), nhãn cho cả 90 lệnh, chặn lệnh ngoài gói ở `ToolDispatcher`
+    (`NOT_IN_PLAN`, cả `batch_execute` và macro), test bắt buộc nhãn;
+  - trợ lý: chỉ nạp lệnh của gói, system prompt và dòng ngữ cảnh nói rõ gói, đổi gói thì khởi động lại phiên (cùng chat);
+  - giao diện: "Gói: …" trên thanh trên cùng và trong ⚙, toast "Gói đã đổi sang …".
+- **Còn chờ chốt:** gói mặc định cho máy mới, đang **tạm `2D`**.
+- Lệnh 3D mới phải thêm nhãn `ToolGroup.ThreeD` trong `Core/Plans.cs`; quên thì test lõi đỏ, và lệnh chỉ mở cho gói
+  `2D + 3D`.
+- Thử thật: phần I của [`checklist-thu-that.md`](checklist-thu-that.md).
+
 ### Chia lệnh theo gói (đề xuất A)
 
 - **Chung (mọi gói):**
