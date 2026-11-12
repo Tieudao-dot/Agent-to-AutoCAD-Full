@@ -1,6 +1,7 @@
 ---
 name: ve-ha-tang
 description: Chuẩn vẽ hạ tầng / quy hoạch của người dùng - layer tim đường, mép đường, vỉa hè, bó vỉa, cống, ranh giới; quy ước ghi cao độ và lý trình (Km0+125.50); vẽ tuyến bằng polyline qua điểm tọa độ thực (VN-2000, đổi trục X/Y); bảng tọa độ bằng add_table. Dùng khi được yêu cầu vẽ đường giao thông, tuyến đường, mặt cắt ngang, vỉa hè, cống thoát nước, hố ga, ranh giới lô đất, mốc tọa độ, cao độ, lý trình, quy hoạch. Use for roads, alignments, chainage, levels, drainage networks, plot boundaries and coordinate tables.
+plan: 2d
 ---
 
 # Vẽ hạ tầng / quy hoạch theo chuẩn

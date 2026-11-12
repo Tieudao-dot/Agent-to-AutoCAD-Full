@@ -1,6 +1,7 @@
 ---
 name: ve-kien-truc
 description: Chuẩn vẽ kiến trúc của người dùng (bảng layer A-*, tường 220/110, quy trình mặt bằng trục → cột → tường → cửa → kích thước → chữ, chiều cao chữ và dim style theo tỷ lệ in, ký hiệu cửa đi/cửa sổ). Dùng skill này mỗi khi được yêu cầu vẽ hoặc sửa bản vẽ kiến trúc - mặt bằng, phòng, căn hộ, tường, cột, lưới trục, cửa đi, cửa sổ, cầu thang, ghi kích thước kiến trúc, ghi tên phòng/diện tích. Use for any architectural floor-plan task (walls, doors, windows, columns, grid axes, room labels, architectural dimensions).
+plan: 2d
 ---
 
 # Vẽ kiến trúc theo chuẩn

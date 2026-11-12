@@ -66,7 +66,9 @@ export function modifyTools(b: ToolBridge): AnyTool[] {
       { handle1: handle, handle2: handle, dist1: z.number().min(0), dist2: z.number().min(0).optional() }),
 
     cadTool(b, 'explode_entities',
-      'Explode polylines, blocks, dimensions, hatches... into their components. The originals are erased; returns the new handles.' + CONFIRM,
+      'Explode polylines, blocks, dimensions, hatches... into their components. The originals are erased; returns the new handles. ' +
+        '3D solids, surfaces and meshes that existed before this turn are refused ("Confirmation required") until the user says yes: ' +
+        'ask with request_confirmation first.' + CONFIRM,
       { handles }),
 
     cadTool(b, 'join_entities',

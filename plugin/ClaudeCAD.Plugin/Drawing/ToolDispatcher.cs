@@ -53,6 +53,8 @@ namespace ClaudeCAD.Plugin.Drawing
         string Plan { get; }
         /// <summary>Who opens a bigger plan (shown to Claude in the NOT_IN_PLAN error).</summary>
         string PlanContact { get; }
+        /// <summary>The entity was added during the running turn or macro (explode_entities: such a 3D solid needs no yes).</summary>
+        bool CreatedThisTurn(string handle);
     }
 
     /// <summary>
@@ -128,6 +130,9 @@ namespace ClaudeCAD.Plugin.Drawing
         /// The real gate of the service plans: the assistant only hides tools outside the plan, this refuses them
         /// (one tool_call, every call of a batch, and macros, which run through HandleAsync).
         /// </summary>
+        /// <summary>See ITurnHost.CreatedThisTurn; false without a host (self-test handlers): the safe side.</summary>
+        internal bool CreatedThisTurn(string handle) => _host != null && _host.CreatedThisTurn(handle);
+
         private void RequireInPlan(string tool)
         {
             var plan = _host.Plan;

@@ -356,6 +356,58 @@ describe('v0.9.4 review fixes', () => {
     assert.match(s.gate('erase_entities', h(30)) ?? '', /Confirmation required/);
   });
 
+  it('explode of existing 3D solids: the plugin refuses, the turn asks, a yes adds user_confirmed (alone and in a batch)', async () => {
+    const { fn } = fakeQuery(async (input, push) => {
+      for await (const _m of input) {
+        push(init);
+        push(textDelta('Khối 2F4A có từ trước lượt này nên cần cậu đồng ý trước khi phá.')); // no "?": the refusal itself asks
+        push(result());
+      }
+    });
+    const { s } = makeSession(fn);
+    const ex = { handles: ['2F4A'] };
+    s.sendMessage({ type: 'user_message', text: 'phá khối hộp đó ra' });
+    assert.deepEqual(s.paramsToSend('explode_entities', ex), ex); // no yes yet: no flag
+    // Claude cannot earn the flag itself, alone or inside a batch
+    assert.deepEqual(s.paramsToSend('explode_entities', { ...ex, user_confirmed: true }), ex);
+    assert.deepEqual(
+      s.paramsToSend('batch_execute', { calls: [{ tool: 'explode_entities', params: { ...ex, user_confirmed: 'true' } }] }),
+      { calls: [{ tool: 'explode_entities', params: ex }] },
+    );
+    s.noteResult('explode_entities', ex, { ok: false, error: { message: 'Confirmation required: explode_entities would break up 1 3D solid(s)…' } });
+    await tick();
+    s.sendMessage({ type: 'user_message', text: 'đồng ý' });
+    assert.deepEqual(s.paramsToSend('explode_entities', ex), { ...ex, user_confirmed: true });
+    assert.deepEqual(
+      s.paramsToSend('batch_execute', { calls: [{ tool: 'draw_line', params: {} }, { tool: 'explode_entities', params: ex }] }),
+      { calls: [{ tool: 'draw_line', params: {} }, { tool: 'explode_entities', params: { ...ex, user_confirmed: true } }] },
+    );
+    assert.deepEqual(s.paramsToSend('erase_entities', ex), ex); // other tools never carry it
+    await tick();
+    // the yes is used up: a later "ok" after a turn that asked nothing is not one
+    s.sendMessage({ type: 'user_message', text: 'ok phá tiếp khối 2F4C' });
+    assert.deepEqual(s.paramsToSend('explode_entities', { handles: ['2F4C'] }), { handles: ['2F4C'] });
+  });
+
+  it('a batch whose explode call the plugin refused also makes the turn ask', async () => {
+    const { fn } = fakeQuery(async (input, push) => {
+      for await (const _m of input) {
+        push(init);
+        push(textDelta('Cần cậu đồng ý.'));
+        push(result());
+      }
+    });
+    const { s } = makeSession(fn);
+    s.sendMessage({ type: 'user_message', text: 'xóa đường tạm rồi phá khối 2F4A' });
+    s.noteResult('batch_execute', { calls: [{ tool: 'erase_entities', params: { handles: ['1A'] } }, { tool: 'explode_entities', params: { handles: ['2F4A'] } }] }, {
+      ok: true,
+      result: { results: [{ ok: true, result: {} }, { ok: false, error: { code: 'INVALID_PARAMS', message: 'Confirmation required: explode_entities …' } }] },
+    });
+    await tick();
+    s.sendMessage({ type: 'user_message', text: 'ok' });
+    assert.deepEqual(s.paramsToSend('explode_entities', { handles: ['2F4A'] }), { handles: ['2F4A'], user_confirmed: true });
+  });
+
   it('no SDK next-step prediction when Claude made its own buttons or the user turned them off', async () => {
     const suggestion = { type: 'prompt_suggestion', suggestion: 'vẽ cửa', session_id: 's1' } as unknown as SDKMessage;
     const { fn } = fakeQuery(async (input, push) => {

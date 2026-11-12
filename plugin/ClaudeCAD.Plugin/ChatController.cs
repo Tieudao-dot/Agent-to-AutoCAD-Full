@@ -2191,6 +2191,9 @@ namespace ClaudeCAD.Plugin
 
         public string PlanContact => Activation.Contact;
 
+        /// <summary>Added during this turn / macro run, from the "Thêm · Sửa · Xóa" tracker (entities of the turn's drawing).</summary>
+        public bool CreatedThisTurn(string handle) => _busy && _changes.WasAdded(handle);
+
         /// <summary>First change of a chat turn: keep a copy of the drawing as it was (every 30 min max).</summary>
         public void BeforeWrite(Document doc)
         {

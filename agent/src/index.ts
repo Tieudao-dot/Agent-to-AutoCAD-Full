@@ -66,7 +66,7 @@ async function main(): Promise<void> {
         log(`confirmation gate blocked ${tool}`);
         return { id: 'local', ok: false, error: { code: 'INVALID_PARAMS', message: block } };
       }
-      const resp = await rpc.call(tool, params);
+      const resp = await rpc.call(tool, session ? session.paramsToSend(tool, params) : params);
       session?.noteResult(tool, params, resp);
       return resp;
     },

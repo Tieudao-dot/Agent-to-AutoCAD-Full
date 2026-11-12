@@ -62,6 +62,16 @@ namespace ClaudeCAD.Plugin.Core
 
         public bool IsEmpty { get { lock (_lock) return Total == 0; } }
 
+        /// <summary>
+        /// The object was added in this turn and still exists (explode_entities: such a 3D solid needs no confirmation).
+        /// Past MaxTracked nothing more is recorded, so a new object then counts as existing: the safe side (one more question).
+        /// </summary>
+        public bool WasAdded(string h)
+        {
+            if (string.IsNullOrEmpty(h)) return false;
+            lock (_lock) return _added.Contains(h);
+        }
+
         /// <summary>Snapshot: (kind, handle) with kind = added | modified | erased.</summary>
         public List<(string kind, string handle)> Snapshot()
         {

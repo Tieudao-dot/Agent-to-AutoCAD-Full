@@ -54,6 +54,9 @@ namespace ClaudeCAD.Plugin.Drawing
 
         internal void ResetCache() => _modelSpace = null;
 
+        /// <summary>The entity was added in this turn (or this macro run); false when unknown, so the caller asks first.</summary>
+        public bool CreatedThisTurn(string handle) => Dispatcher != null && Dispatcher.CreatedThisTurn(handle);
+
         /// <summary>
         /// Owner block of new entities: model space, or the paper space of a named
         /// layout (phase 2: drawing title blocks / notes on layouts).

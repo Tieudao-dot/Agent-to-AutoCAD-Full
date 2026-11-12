@@ -10,7 +10,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { describe, it } from 'node:test';
 import { fileURLToPath } from 'node:url';
-import { ALWAYS_CONFIRM, affectedCount, existingSolidsChanged } from '../src/agent/confirmation.js';
+import { ALWAYS_CONFIRM, PLUGIN_CONFIRMED, USER_CONFIRMED_PARAM, affectedCount, applyUserConfirmation, existingSolidsChanged, refusedForConfirmation } from '../src/agent/confirmation.js';
 import { librarySkills, skillsForPlan } from '../src/agent/skills.js';
 import { BASE_PROMPT, SYSTEM_PROMPT, TWO_D_HINTS, THREE_D_RULES, systemPromptFor } from '../src/agent/systemPrompt.js';
 import type { ToolBridge } from '../src/tools/common.js';
@@ -65,15 +65,25 @@ describe('service plans × 3D', () => {
     assert.ok(systemPromptFor('3d').startsWith(BASE_PROMPT));
   });
 
-  it('the 3D sample skill is loaded on the 3D and Full plans only', () => {
+  it('the 3D sample skill is loaded on the 3D and Full plans only, the 2D samples on the 2D and Full plans only', () => {
     const dir = path.join(repo, 'skills');
     const names = librarySkills(dir);
     assert.ok(names.includes('ve-3d-kien-truc'));
     assert.ok(!skillsForPlan(dir, names, '2d').includes('ve-3d-kien-truc'));
     assert.ok(skillsForPlan(dir, names, '3d').includes('ve-3d-kien-truc'));
     assert.ok(skillsForPlan(dir, names, '2d3d').includes('ve-3d-kien-truc'));
-    // the 2D samples stay on every plan
+    // the 2D samples ("plan: 2d", decided 12/11/2026): 2D and Full only
+    const twoD = ['ve-ha-tang', 've-kien-truc', 've-mep'];
     assert.deepEqual(skillsForPlan(dir, names, '2d'), names.filter((n) => n !== 've-3d-kien-truc'));
+    assert.deepEqual(skillsForPlan(dir, names, '3d').filter((n) => twoD.includes(n)), []);
+    assert.deepEqual(skillsForPlan(dir, names, '2d3d'), names);
+    for (const n of twoD) assert.ok(names.includes(n), n);
+    // the 3D machine still knows the plan conventions build_3d_from_plan reads (layers, wall lines, door / window symbols)
+    const md = fs.readFileSync(path.join(dir, 've-3d-kien-truc', 'SKILL.md'), 'utf8');
+    for (const needle of ['A-WALL', 'A-DOOR', 'A-WIND', 'A-SLAB', 'A-FLOR', 'CUA-DI-', 'CUA-SO-', '220', '110'])
+      assert.ok(md.includes(needle), needle);
+    // without the 2D-only parts of ve-kien-truc (text heights, dimension styles)
+    for (const needle of ['add_dim_linear', 'KT-ARIAL', 'create_dim_style', 'add_text']) assert.ok(!md.includes(needle), needle);
   });
 });
 
@@ -112,5 +122,77 @@ describe('confirmation gate × every 3D tool', () => {
   it('the counted ones count, the others never do', () => {
     for (const t of COUNTED) assert.ok(affectedCount(t, p) > 0, t);
     for (const t of NONE) assert.equal(affectedCount(t, p), 0, t);
+  });
+});
+
+describe('explode_entities × 3D solids (decided 12/11/2026)', () => {
+  const yes = { userText: 'đồng ý', answersQuestion: true };
+  const no = { userText: 'phá khối đó ra', answersQuestion: false };
+
+  it('the flag the plugin reads is set only after a yes and never left from Claude', () => {
+    assert.deepEqual([...PLUGIN_CONFIRMED], ['explode_entities']);
+    const plans = fs.readFileSync(path.join(repo, 'plugin', 'ClaudeCAD.Plugin', 'Core', 'Solids.cs'), 'utf8');
+    assert.ok(plans.includes(`UserConfirmedParam = "${USER_CONFIRMED_PARAM}"`), 'same name as SolidLogic.UserConfirmedParam');
+    assert.deepEqual(applyUserConfirmation('explode_entities', { handles: ['A'] }, yes), { handles: ['A'], user_confirmed: true });
+    assert.deepEqual(applyUserConfirmation('explode_entities', { handles: ['A'], user_confirmed: true }, no), { handles: ['A'] });
+    assert.deepEqual(applyUserConfirmation('explode_entities', { handles: ['A'] }, { ...no, confirmedByButton: true }), { handles: ['A'], user_confirmed: true });
+    const batch = { calls: [{ tool: 'explode_entities', params: { handles: ['A'], user_confirmed: true } }, { tool: 'move_entities', params: { handles: ['B'], user_confirmed: true } }] };
+    assert.deepEqual(applyUserConfirmation('batch_execute', batch, no).calls, [
+      { tool: 'explode_entities', params: { handles: ['A'] } },
+      { tool: 'move_entities', params: { handles: ['B'], user_confirmed: true } }, // the plugin ignores it on other tools
+    ]);
+    const plain = { handles: ['A'] };
+    assert.equal(applyUserConfirmation('erase_entities', plain, yes), plain);
+    const b = { calls: [{ tool: 'erase_entities', params: plain }] };
+    assert.equal(applyUserConfirmation('batch_execute', b, yes), b); // nothing to flag: sent as is
+  });
+
+  it('the plugin refusal is recognised alone and inside a batch', () => {
+    assert.ok(refusedForConfirmation({ ok: false, error: { message: 'Confirmation required: explode_entities would break up 1 3D solid(s)' } }));
+    assert.ok(!refusedForConfirmation({ ok: false, error: { message: 'explode_entities: entity not found' } }));
+    assert.ok(refusedForConfirmation({ ok: true, result: { results: [{ ok: true }, { ok: false, error: { message: 'Confirmation required: …' } }] } }));
+    assert.ok(!refusedForConfirmation({ ok: true, result: { results: [{ ok: false, error: { message: 'LOCKED' } }] } }));
+    assert.ok(!refusedForConfirmation({ ok: true, result: { handles: ['A'] } }));
+  });
+
+  it('explode_entities tells Claude to ask first; the 2D rule (> 20 objects) is unchanged', () => {
+    const t = buildTools(bridge).find((x) => x.name === 'explode_entities')!;
+    assert.match(t.description, /3D solids, surfaces and meshes that existed before this turn/);
+    assert.match(t.description, /request_confirmation/);
+    assert.ok(!(USER_CONFIRMED_PARAM in t.inputSchema), 'Claude never sees the flag');
+    assert.equal(affectedCount('explode_entities', { handles: ['A', 'B'] }), 2);
+    assert.deepEqual(existingSolidsChanged('explode_entities', { handles: ['A'] }, no), []); // the plugin decides by type
+  });
+});
+
+describe('3D token cut (decided 12/11/2026): no tool renamed, parameter meanings kept', () => {
+  const BUILDERS = ['draw_box', 'draw_cylinder', 'draw_sphere', 'draw_wedge', 'draw_torus', 'draw_pyramid', 'extrude', 'revolve', 'sweep', 'loft'];
+  const tools = buildTools(bridge);
+  const shape = (n: string) => tools.find((t) => t.name === n)!.inputSchema as Record<string, unknown>;
+
+  it('the 10 solid builders show only the layer of the common properties', () => {
+    for (const n of BUILDERS) {
+      const s = shape(n);
+      assert.ok('layer' in s, `${n}: layer`);
+      for (const k of ['color', 'linetype', 'lineweight', 'layout']) assert.ok(!(k in s), `${n}: ${k}`);
+    }
+    // the 2D drawing tools keep them
+    for (const k of ['layer', 'color', 'linetype', 'lineweight', 'layout']) assert.ok(k in shape('draw_line'), `draw_line: ${k}`);
+    // the 3D rules say how to colour solids instead
+    assert.match(THREE_D_RULES, /set_entity_props/);
+  });
+
+  it('the 3D tool names and the plan labels are unchanged (29 tools)', () => {
+    assert.deepEqual(tools.filter((t) => G.get(t.name) === 'ThreeD').map((t) => t.name).sort(), threeD);
+    assert.equal(threeD.length, 29);
+  });
+
+  it('the moved uses and examples are in the 3D skill, the rules stay in the tool parameters', () => {
+    const md = fs.readFileSync(path.join(repo, 'skills', 've-3d-kien-truc', 'SKILL.md'), 'utf8');
+    for (const needle of ['`extrude`', '`revolve`', '`sweep`', '`loft`', 'area_min', 'openings', 'set_entity_props'])
+      assert.ok(md.includes(needle), needle);
+    const b3 = shape('build_3d_from_plan') as Record<string, { description?: string }>;
+    for (const k of ['wall_handles', 'centerline_handles', 'thickness', 'openings', 'min_thickness', 'area_min', 'on_existing', 'dry_run'])
+      assert.ok((b3[k]?.description ?? '').length > 10, `build_3d_from_plan.${k} still described`);
   });
 });

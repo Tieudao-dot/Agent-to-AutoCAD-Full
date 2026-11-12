@@ -21,6 +21,48 @@ namespace ClaudeCAD.Plugin.Core
     {
         public const double Eps = 1e-9;
 
+        // ================================================================= explode (decided 12/11/2026)
+
+        /// <summary>
+        /// Set on explode_entities by the assistant (never by Claude: it is not in the tool's schema and is stripped from
+        /// batch calls) when the user said yes in this turn: then 3D solids that existed before the turn are broken up too.
+        /// </summary>
+        public const string UserConfirmedParam = "user_confirmed";
+
+        /// <summary>
+        /// AutoCAD .NET types (Autodesk.AutoCAD.DatabaseServices, base types included) that explode_entities breaks up only
+        /// after the user's yes when they existed before the turn: 3D solids, ACIS bodies, surfaces (PlaneSurface,
+        /// NurbSurface, ExtrudedSurface… all derive from Surface) and meshes. 2D objects (blocks, polylines, regions…)
+        /// keep the usual rule (a question only above 20 objects).
+        /// </summary>
+        public static readonly IReadOnlyList<string> ExplodeConfirmTypes = new[] { "Solid3d", "Body", "Surface", "SubDMesh", "PolyFaceMesh", "PolygonMesh" };
+
+        /// <summary>typeNames = the entity's type and its base types (DatabaseServices only).</summary>
+        public static bool IsExplodeConfirmType(IEnumerable<string> typeNames) =>
+            typeNames != null && typeNames.Any(n => ExplodeConfirmTypes.Contains(n, StringComparer.Ordinal));
+
+        /// <summary>
+        /// The handles explode_entities must not break up yet: 3D solids / surfaces / meshes not created in this turn,
+        /// unless the user confirmed. Empty = go ahead.
+        /// </summary>
+        public static List<string> ExplodeNeedsYes(IEnumerable<(string handle, bool solidLike, bool createdThisTurn)> items, bool userConfirmed)
+        {
+            if (userConfirmed || items == null) return new List<string>();
+            return items.Where(i => i.solidLike && !i.createdThisTurn)
+                .Select(i => (i.handle ?? "").ToUpperInvariant()).Distinct(StringComparer.Ordinal).ToList();
+        }
+
+        /// <summary>The refusal Claude gets: starts with "Confirmation required" like the assistant's own gate.</summary>
+        public static string ExplodeConfirmMessage(IReadOnlyList<string> handles)
+        {
+            var list = string.Join(", ", handles.Take(20)) + (handles.Count > 20 ? ", …" : "");
+            return $"Confirmation required: explode_entities would break up {handles.Count} 3D solid(s) / surface(s) / mesh(es) that were " +
+                   $"already in the drawing before this turn ({list}). Nothing was exploded. Do not retry now and do not work around it " +
+                   "(no copy-then-explode, no erase and redraw). Call request_confirmation with these handles and one Vietnamese sentence " +
+                   "saying what will change (e.g. \"Phá khối 2F4A thành các mặt?\"), write \"Cậu có đồng ý không?\" and end your turn. " +
+                   "Run it only after the user confirms.";
+        }
+
         // ================================================================= views
 
         private static readonly double[] Z = { 0, 0, 1 };

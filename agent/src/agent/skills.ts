@@ -39,28 +39,33 @@ export function enabledSkills(skillsDir: string | undefined): string[] {
 }
 
 /**
- * The service plan a skill needs, from its SKILL.md frontmatter ("plan: 3d" = only useful with the 3D tools).
- * undefined = every plan (the user's own skills and the 2D samples have no such line).
+ * The service plan a skill needs, from its SKILL.md frontmatter: "plan: 3d" = only useful with the 3D tools (3D kiến
+ * trúc), "plan: 2d" = a 2D drafting standard (text, dimensions, hatch, offset… that a 3D machine does not have: the
+ * samples ve-kien-truc, ve-mep, ve-ha-tang; decided 12/11/2026). undefined = every plan (the user's own skills).
  */
-export function skillPlan(skillsDir: string, name: string): '3d' | undefined {
+export function skillPlan(skillsDir: string, name: string): '2d' | '3d' | undefined {
   try {
     const md = fs.readFileSync(path.join(skillsDir, name, 'SKILL.md'), 'utf8').replace(/^\uFEFF/, '');
     const fm = /^---\r?\n([\s\S]*?)\r?\n---/.exec(md);
     if (!fm) return undefined;
     const m = /^plan:\s*["']?([A-Za-z0-9]+)["']?\s*$/m.exec(fm[1]!);
-    return m && m[1]!.toLowerCase() === '3d' ? '3d' : undefined;
+    const v = m ? m[1]!.toLowerCase() : undefined;
+    return v === '3d' ? '3d' : v === '2d' ? '2d' : undefined;
   } catch {
     return undefined;
   }
 }
 
 /**
- * Skills a machine of this plan can use: a "plan: 3d" skill (3D kiến trúc) is left out on a 2D machine, which has
- * no 3D tools (it would only cost tokens and invite Claude to try). undefined plan = an older plugin: all skills.
+ * Skills a machine of this plan can use: a "plan: 3d" skill is left out on a 2D machine and a "plan: 2d" skill on a 3D
+ * machine, which lack those tools (the skill would only cost tokens and invite Claude to try). Full and an older plugin
+ * (no plan) load every skill; skills without a plan line load everywhere.
  */
 export function skillsForPlan(skillsDir: string | undefined, names: string[], plan?: string): string[] {
-  if (!skillsDir || !plan || plan === '3d' || plan === '2d3d') return names;
-  return names.filter((n) => skillPlan(skillsDir, n) !== '3d');
+  if (!skillsDir || !plan || plan === '2d3d') return names;
+  const other = plan === '2d' ? '3d' : plan === '3d' ? '2d' : undefined;
+  if (!other) return names;
+  return names.filter((n) => skillPlan(skillsDir, n) !== other);
 }
 
 export interface SkillsPlugin {

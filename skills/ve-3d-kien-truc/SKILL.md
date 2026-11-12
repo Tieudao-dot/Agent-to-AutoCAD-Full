@@ -7,10 +7,40 @@ plan: 3d
 # Dựng 3D kiến trúc theo chuẩn
 
 > Khung chuẩn mẫu, chỉ dùng ở máy gói 3D / Full (máy gói 2D không nạp skill này). Người dùng sửa các bảng dưới cho
-> đúng chuẩn công ty; luôn làm theo nội dung hiện có của file này. Mặt bằng 2D theo skill `ve-kien-truc` (layer
-> `A-WALL`, `A-DOOR`, `A-WIND`).
+> đúng chuẩn công ty; luôn làm theo nội dung hiện có của file này. Mặt bằng 2D theo quy ước của skill `ve-kien-truc`;
+> phần `build_3d_from_plan` cần đọc được chép ở mục 0 (máy gói 3D không nạp `ve-kien-truc`).
 
 Quy ước: đơn vị mm, WCS, Z hướng lên. Cốt ±0.000 (sàn tầng 1) ở z = 0. Người dùng nói mét thì đổi ra mm.
+
+## 0. Mặt bằng 2D mà `build_3d_from_plan` đọc (quy ước của `ve-kien-truc`)
+
+| Layer | Nội dung trên mặt bằng | Cách vẽ để được nhận |
+| --- | --- | --- |
+| `A-WALL` | tường (nét cắt) | **Hai nét mặt tường** song song, cách nhau đúng chiều dày: tường **220** (tường bao) và **110** (tường ngăn), đối xứng qua trục tường (mỗi bên 110 / 55). Nét đi liên tục quanh phòng bằng polyline; chừa khoảng hở đúng bề rộng lỗ cửa và đóng hai mép lỗ bằng đoạn ngắn cùng layer |
+| `A-DOOR` | cửa đi | Cánh cửa: đoạn thẳng dài W (mặc định 900) vẽ ở vị trí mở 90°, gốc tại bản lề (mép một bên lỗ); cung mở 90° tâm bản lề, bán kính W |
+| `A-WIND` | cửa sổ | 3 nét song song trong bề dày tường (hai nét mép + một nét giữa), hoặc 4 nét chia đều với tường 220, đặt trong lỗ tường |
+| `A-SLAB` / `A-FLOR` | đường bao sàn | Polyline **kín**; polyline kín nằm trong polyline khác là lỗ sàn (cầu thang, giếng trời) |
+| `A-COL` | cột | Không được đọc: dựng cột riêng bằng `draw_box` / `extrude` trên `A-COLS-3D` |
+
+- Block cửa: tên `CUA-DI-<W>` / `CUA-SO-<W>` (ví dụ `CUA-DI-900`) được nhận là cửa đi / cửa sổ dù chèn trên layer nào.
+- Tường vẽ bằng **một polyline có bề rộng** = chiều dày được đọc là tường theo đường tim; bề rộng nhỏ hơn `min_thickness`
+  chỉ là nét in, đọc như nét mặt tường. Tường vẽ bằng đường trục: truyền `centerline_handles` + `thickness`.
+- Mặt bằng của người dùng dùng tên layer khác: `list_layers`, rồi truyền `wall_layers` / `door_layers` / `window_layers`
+  / `slab_layers` (có `*`, ví dụ `KT_TUONG*`).
+
+Máy gói 3D cần vẽ mặt bằng để dựng (chỉ có đường cơ bản, không có kích thước / chữ): phòng 4 × 6 m theo trục
+[0,0]–[4000,6000], tường 220, cửa đi 900 ở cạnh phải (lỗ y = 2550…3450), một `batch_execute`:
+
+```json
+{"calls": [
+  {"tool": "draw_polyline", "params": {"layer": "A-WALL", "vertices": [[4110,3450],[4110,6110],[-110,6110],[-110,-110],[4110,-110],[4110,2550]]}},
+  {"tool": "draw_polyline", "params": {"layer": "A-WALL", "vertices": [[3890,3450],[3890,5890],[110,5890],[110,110],[3890,110],[3890,2550]]}},
+  {"tool": "draw_line", "params": {"layer": "A-WALL", "start": [3890,2550], "end": [4110,2550]}},
+  {"tool": "draw_line", "params": {"layer": "A-WALL", "start": [3890,3450], "end": [4110,3450]}},
+  {"tool": "draw_line", "params": {"layer": "A-DOOR", "start": [3890,2550], "end": [2990,2550]}},
+  {"tool": "draw_arc",  "params": {"layer": "A-DOOR", "center": [3890,2550], "radius": 900, "start_angle": 90, "end_angle": 180}}
+]}
+```
 
 ## 1. Kích thước mặc định
 
@@ -41,7 +71,8 @@ Dùng khi người dùng và ghi chú dự án không nói khác. Báo lại gi�
 | `A-ELEV` | mặt đứng 2D | 7 |
 
 `build_3d_from_plan`, `section_view`, `projection_view` tự tạo layer của mình khi thiếu. Cột, cầu thang, mái: tạo
-layer bằng `create_layer` trước khi dựng. Không dựng gì trên layer `0`.
+layer bằng `create_layer` (đúng màu ở bảng) trước khi dựng. Không dựng gì trên layer `0`. Lệnh dựng khối chỉ nhận
+`layer`: khối lấy màu của layer; muốn màu / nét riêng cho vài khối thì `set_entity_props` với handle vừa dựng.
 
 ## 3. Quy trình chuẩn bị và dựng 3D từ mặt bằng
 
@@ -60,14 +91,19 @@ layer bằng `create_layer` trước khi dựng. Không dựng gì trên layer `
 5. Tầng trên: cùng mặt bằng (hoặc mặt bằng tầng đó) với `base_z` = cao độ sàn tầng. Báo lỗi "already built" nghĩa là
    tầng này đã dựng: hỏi người dùng xóa khối cũ (cần xác nhận) hay dựng thêm (`on_existing: "add"`).
 6. Tường cong, tường trong block: dựng riêng bằng `extrude` (biên dạng kín) hoặc `sweep`, layer `A-WALL-3D`.
+7. Cửa người dùng nói thêm cho một khe hở (`open_gaps`): `openings` với `at` ở giữa khe; cửa chỉ định ở góc / chỗ
+   hai tường gặp nhau bị từ chối: dời điểm vào giữa đoạn tường.
 
-Ví dụ phòng 4 × 6 m, tường 220, cửa đi 900 của skill `ve-kien-truc`, tường cao 3,3 m:
+Ví dụ phòng 4 × 6 m ở mục 0 (tường 220, cửa đi 900), tường cao 3,3 m:
 
 ```json
 {"tool": "build_3d_from_plan", "params": {"wall_height": 3300, "door_height": 2200, "slab_thickness": 120, "slab": "bbox"}}
 ```
 
 ## 4. Tự kiểm tra trước khi báo xong
+
+- Mỗi lệnh dựng khối (`draw_box`, `extrude`, `revolve`, `sweep`, `loft`…) trả `volume_m3`, `min`, `max`: so ngay với
+  kích thước định dựng (tường 4000 × 220 × 3300 = 2,904 m³).
 
 - **Bằng số** (`wall_solid` của kết quả):
   - `volume_m3` ≈ Σ (dài tường theo trục × dày × cao) − lỗ cửa; ví dụ trên: (4220 × 6220 − 3780 × 5780 − 220 × 900) ×
@@ -80,7 +116,18 @@ Ví dụ phòng 4 × 6 m, tường 220, cửa đi 900 của skill `ve-kien-truc`
 - Báo cáo: số tường, số cửa, thể tích tường / sàn (m³), phần bỏ qua, các chiều cao đã dùng; nhắc gõ U một lần để hoàn
   tác cả lượt.
 
-## 5. Mặt cắt và mặt đứng 2D từ mô hình
+## 5. Chọn lệnh dựng cho từng loại cấu kiện
+
+| Cấu kiện | Lệnh | Ghi chú |
+| --- | --- | --- |
+| Tường, sàn, móng từ đường bao | `extrude` | Vẽ đường bao kín trên XY (hoặc `profile_points`) rồi đùn theo chiều cao; `taper_angle` cho móng vát |
+| Cột tròn có đầu cột, chậu, bể tròn, ống ngắn | `revolve` | Biên dạng nửa mặt cắt vẽ cạnh trục, trục không cắt biên dạng |
+| Tay vịn, ống, gờ chỉ, máng xối, thép uốn | `sweep` | Tiết diện kín + đường dẫn; tiết diện rộng hơn bán kính cong thì AutoCAD từ chối |
+| Móng vuông lên cột tròn, ống khói thon, thân tàu | `loft` | Các tiết diện kín theo thứ tự từ dưới lên |
+| Cột vuông, dầm, bậc thang | `draw_box` | Bậc: một hộp mỗi bậc, hoặc `extrude` biên dạng răng cưa |
+| Dốc, mái dốc một phía | `draw_wedge` | Mặt cao ở phía `corner`, `rotation` để đổi hướng dốc |
+
+## 6. Mặt cắt và mặt đứng 2D từ mô hình
 
 - **Mặt cắt đứng:** `section_view` với `line` = đường cắt trên mặt bằng (đứng bên trái đường cắt nhìn sang phải;
   `flip` để nhìn ngược lại), `show_behind: true` để có nét nhìn thấy phía sau, `hatch` `ANSI31` (tường gạch) hoặc
@@ -89,5 +136,6 @@ Ví dụ phòng 4 × 6 m, tường 220, cửa đi 900 của skill `ve-kien-truc`
 - **Mặt đứng:** `projection_view` `view` `front` / `back` / `left` / `right`.
 - Kết quả là nét 2D đặt cạnh mô hình (layer ở mục 2), không đè lên mô hình; nhiều hình thì đặt bằng `position` thành
   hàng, cách nhau 2000. Kiểm `cut_area_m2` (tường 220 cắt ngang cao 3300 → 0,726 m² mỗi tường) và nhìn lại bằng
-  `capture_view` `top` với handles của kết quả.
+  `capture_view` `top` với handles của kết quả. Đặt nhiều hình: kết quả trả `size` và `frame` (điểm mô hình → điểm trên
+  bản vẽ) để căn hình sau theo hình trước.
 - Máy gói 3D không có lệnh ghi kích thước / chữ: chỉ dựng hình; muốn ghi kích thước thì cần gói Full.

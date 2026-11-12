@@ -6,7 +6,7 @@ import {
   type SDKUserMessage,
 } from '@anthropic-ai/claude-agent-sdk';
 import type { ServicePlan, SidecarToPlugin, UserMessage } from '../ipc/protocol.js';
-import { confirmationError, createdHandles, newlyAffected } from './confirmation.js';
+import { applyUserConfirmation, confirmationError, createdHandles, newlyAffected, refusedForConfirmation, type GateState } from './confirmation.js';
 import { toSdkUserMessage } from './content.js';
 import type { ToolBridge } from '../tools/common.js';
 import { MCP_SERVER_NAME, createCadServer } from '../tools/index.js';
@@ -131,13 +131,7 @@ export class AgentSession {
    * be confirmed first (the count is cumulative over the turn), otherwise undefined (and the call is counted).
    */
   gate(tool: string, params: Record<string, unknown>): string | undefined {
-    const g = {
-      userText: this.lastUser,
-      answersQuestion: this.answersQuestion,
-      confirmedByButton: this.lastConfirm === 'yes' || this.lastPlan === 'approved',
-      touched: this.touchedThisTurn,
-      created: this.createdThisTurn,
-    };
+    const g = this.gateState();
     const err = confirmationError(tool, params, g);
     if (err) {
       this.turnAsked = true; // Claude now asks: the user's next "đồng ý" answers it
@@ -147,8 +141,28 @@ export class AgentSession {
     return undefined;
   }
 
+  private gateState(): GateState {
+    return {
+      userText: this.lastUser,
+      answersQuestion: this.answersQuestion,
+      confirmedByButton: this.lastConfirm === 'yes' || this.lastPlan === 'approved',
+      touched: this.touchedThisTurn,
+      created: this.createdThisTurn,
+    };
+  }
+
+  /**
+   * The params sent to the plugin after the gate let the call through: explode_entities carries user_confirmed only
+   * when the user said yes in this turn (the plugin then breaks up existing 3D solids too).
+   */
+  paramsToSend(tool: string, params: Record<string, unknown>): Record<string, unknown> {
+    return applyUserConfirmation(tool, params, this.gateState());
+  }
+
   /** After a tool call: objects it created in this turn are the user's request itself, never "existing" ones. */
-  noteResult(tool: string, params: Record<string, unknown>, resp: { ok: boolean; result?: unknown }): void {
+  noteResult(tool: string, params: Record<string, unknown>, resp: { ok: boolean; result?: unknown; error?: { message?: string } }): void {
+    // the plugin refused until the user says yes (explode of existing 3D solids): the user's next "đồng ý" answers it
+    if (refusedForConfirmation(resp)) this.turnAsked = true;
     if (!resp.ok) return;
     for (const h of createdHandles(tool, params, resp.result)) this.createdThisTurn.add(h);
   }

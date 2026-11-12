@@ -48,7 +48,14 @@ export const visualStyle = z
   .enum(VISUAL_STYLES)
   .describe('Visual style: 2d_wireframe (AutoCAD default), wireframe, hidden, conceptual (best to check a model), shaded, shaded_with_edges, realistic, xray.');
 
-const RET = ' Returns {"handles": [...], "volume" (mm³), "volume_m3", "min", "max"} of the new solid: compare them with what you meant to build.';
+const RET = ' Returns handles, volume (mm³), volume_m3, min and max of the new solid(s).';
+
+/**
+ * The solid-building tools take only the layer (decided 12/11/2026, to save tokens): color / linetype / lineweight
+ * are set afterwards with set_entity_props, and solids are never built on a paper-space layout. The plugin still
+ * accepts those parameters (older macros), Claude just does not see them.
+ */
+const solidLayer = { layer: entityProps.layer };
 
 const profile = {
   profile_points: points(3, 'profile vertices').max(5000).optional()
@@ -78,7 +85,7 @@ export function solidTools(b: ToolBridge): AnyTool[] {
         corner: point.optional(),
         center: point.optional().describe('Centre of the box (alternative to corner).'),
         rotation: angle('Rotation about Z').optional(),
-        ...entityProps,
+        ...solidLayer,
       }),
 
     cadTool(b, 'draw_cylinder',
@@ -91,14 +98,14 @@ export function solidTools(b: ToolBridge): AnyTool[] {
         top_radius: z.number().min(0).optional().describe('Top radius (default = radius; 0 = cone).'),
         height: z.number().optional().describe('Height along Z (mm, negative = downwards).'),
         top_center: point.optional().describe('Centre of the top face, for an axis not along Z (instead of height).'),
-        ...entityProps,
+        ...solidLayer,
       }),
 
     cadTool(b, 'draw_sphere', 'Build a 3D solid SPHERE from center and radius (or diameter).' + RET, {
       center: point,
       radius: z.number().positive().optional(),
       diameter: z.number().positive().optional(),
-      ...entityProps,
+      ...solidLayer,
     }),
 
     cadTool(b, 'draw_wedge',
@@ -111,7 +118,7 @@ export function solidTools(b: ToolBridge): AnyTool[] {
         height: z.number().positive(),
         corner: point.optional().describe('Min corner of the base (default [0, 0, 0]).'),
         rotation: angle('Rotation about Z').optional(),
-        ...entityProps,
+        ...solidLayer,
       }),
 
     cadTool(b, 'draw_torus',
@@ -120,7 +127,7 @@ export function solidTools(b: ToolBridge): AnyTool[] {
         center: point,
         radius: z.number().positive(),
         tube_radius: z.number().positive(),
-        ...entityProps,
+        ...solidLayer,
       }),
 
     cadTool(b, 'draw_pyramid',
@@ -134,29 +141,28 @@ export function solidTools(b: ToolBridge): AnyTool[] {
         height: z.number().optional(),
         top_center: point.optional(),
         rotation: angle('Rotation of the polygon about the axis').optional(),
-        ...entityProps,
+        ...solidLayer,
       }),
 
     cadTool(b, 'extrude',
       'EXTRUDE closed 2D profiles into 3D solids along their normal (profiles in the XY plane go up +Z; negative height goes down). ' +
-        'taper_angle in degrees (positive narrows the solid towards the top, like EXTRUDE). One solid per closed area. ' +
-        'Typical use: walls, slabs, footings from plan outlines: draw the outline on XY (or pass profile_points) and extrude by the height.' + RET,
+        'taper_angle in degrees (positive narrows the solid towards the top, like EXTRUDE). One solid per closed area.' + RET,
       {
         ...profile,
         height: z.number().describe('Extrusion height (mm): for profiles on the XY plane positive = up (+Z), negative = down; other profiles along their normal.'),
         taper_angle: z.number().min(-89.9).max(89.9).optional().describe('Taper angle in degrees (default 0).'),
-        ...entityProps,
+        ...solidLayer,
       }),
 
     cadTool(b, 'revolve',
       'REVOLVE closed 2D profiles about the axis axis_start → axis_end into 3D solids (angle degrees, default 360, counter-clockwise looking from axis_end towards axis_start). ' +
-        'The axis must lie in the profile plane and must not cross the profile. Typical use: columns with capitals, vases, round tanks, pipes.' + RET,
+        'The axis must lie in the profile plane and must not cross the profile.' + RET,
       {
         ...profile,
         axis_start: point,
         axis_end: point,
         angle: z.number().gt(0).max(360).optional(),
-        ...entityProps,
+        ...solidLayer,
       }),
 
     cadTool(b, 'solid_union',
@@ -241,9 +247,9 @@ const CHECK_AFTER = ' Returns the handle, volume_before and the new volume / min
 function solidTools2(b: ToolBridge): AnyTool[] {
   return [
     cadTool(b, 'sweep',
-      'SWEEP a closed 2D profile along a path into a 3D solid (handrails, pipes, mouldings, gutters, bent bars). Path: path_handle (line, arc, polyline, 3D polyline, spline, helix) ' +
+      'SWEEP a closed 2D profile along a path into a 3D solid. Path: path_handle (line, arc, polyline, 3D polyline, spline, helix) ' +
         'or path_points (a polyline through the points, not added to the drawing). align (default true) stands the profile perpendicular to the path start with its centre on the path; ' +
-        'false sweeps it where it is. Fails clearly (nothing drawn) when the solid would cut itself (profile wider than a tight bend).' + RET,
+        'false sweeps it where it is. Fails (nothing drawn) when the solid would cut itself (profile wider than a tight bend).' + RET,
       {
         ...profile,
         path_handle: handle.optional().describe('The path curve.'),
@@ -252,11 +258,11 @@ function solidTools2(b: ToolBridge): AnyTool[] {
         twist: z.number().min(-SOLID2_LIMITS.MaxTwist).max(SOLID2_LIMITS.MaxTwist).optional().describe('Twist of the profile along the whole path, degrees (default 0).'),
         scale: z.number().min(SOLID2_LIMITS.MinSweepScale).max(SOLID2_LIMITS.MaxSweepScale).optional().describe('Scale of the profile at the end of the path (default 1).'),
         bank: z.boolean().optional().describe('Let the profile bank (roll) with a 3D path (default false).'),
-        ...entityProps,
+        ...solidLayer,
       }),
 
     cadTool(b, 'loft',
-      'LOFT a 3D solid through 2 or more closed sections in order (bottom to top), e.g. a square footing to a round column, a tapered chimney, a boat hull. ' +
+      'LOFT a 3D solid through 2 or more closed sections in order (bottom to top). ' +
         'Sections: section_handles (closed curves: polylines, circles, ellipses, closed splines) or sections_points (closed polygons, each flat at the z of its points). ' +
         'ruled: straight between sections (default smooth). Optional guide_handles (curves touching every section) or path_handle. erase_profile erases the section curves.' + RET,
       {
@@ -268,7 +274,7 @@ function solidTools2(b: ToolBridge): AnyTool[] {
         guide_handles: handles.max(50).optional(),
         path_handle: handle.optional(),
         erase_profile: profile.erase_profile,
-        ...entityProps,
+        ...solidLayer,
       }),
 
     cadTool(b, 'slice_solid',

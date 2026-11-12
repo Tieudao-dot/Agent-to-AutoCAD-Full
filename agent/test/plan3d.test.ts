@@ -95,7 +95,8 @@ describe('3D kiến trúc skill', () => {
 
   it('is a 3D-only skill with the layers and the self-check of build_3d_from_plan', () => {
     assert.equal(skillPlan(skillsDir, 've-3d-kien-truc'), '3d');
-    assert.equal(skillPlan(skillsDir, 've-kien-truc'), undefined);
+    // the 2D samples are tagged "plan: 2d" since 12/11/2026 (the owner: a 3D machine does not load them)
+    assert.equal(skillPlan(skillsDir, 've-kien-truc'), '2d');
     const md = src('skills', 've-3d-kien-truc', 'SKILL.md');
     for (const needle of ['A-WALL-3D', 'A-SLAB-3D', 'dry_run', 'wall_height', 'door_height', 'window_sill', 'window_height', 'slab_thickness', 'capture_view', 'section_view', 'projection_view'])
       assert.ok(md.includes(needle), needle);
@@ -104,7 +105,8 @@ describe('3D kiến trúc skill', () => {
   it('a 2D machine does not load it; 3D / Full / an older plugin do', () => {
     const all = ['ve-3d-kien-truc', 've-kien-truc', 've-mep'];
     assert.deepEqual(skillsForPlan(skillsDir, all, '2d'), ['ve-kien-truc', 've-mep']);
-    assert.deepEqual(skillsForPlan(skillsDir, all, '3d'), all);
+    // changed 12/11/2026 (owner): the 3D machine leaves out the 2D samples ("plan: 2d"), it keeps the 3D one
+    assert.deepEqual(skillsForPlan(skillsDir, all, '3d'), ['ve-3d-kien-truc']);
     assert.deepEqual(skillsForPlan(skillsDir, all, '2d3d'), all);
     assert.deepEqual(skillsForPlan(skillsDir, all, undefined), all);
   });
@@ -129,8 +131,17 @@ describe('3D kiến trúc skill', () => {
       fs.writeFileSync(path.join(dir, 'a', 'SKILL.md'), '﻿---\r\nname: a\r\nplan: "3D"\r\ndescription: x\r\n---\r\n# A\r\n');
       fs.mkdirSync(path.join(dir, 'b'));
       fs.writeFileSync(path.join(dir, 'b', 'SKILL.md'), '---\nname: b\ndescription: plan: 3d in the text only\n---\nplan: 3d\n');
+      fs.mkdirSync(path.join(dir, 'c'));
+      fs.writeFileSync(path.join(dir, 'c', 'SKILL.md'), '---\nname: c\nplan: 2D\ndescription: x\n---\n');
+      fs.mkdirSync(path.join(dir, 'd'));
+      fs.writeFileSync(path.join(dir, 'd', 'SKILL.md'), '---\nname: d\nplan: 4d\ndescription: an unknown plan is every plan\n---\n');
       assert.equal(skillPlan(dir, 'a'), '3d');
       assert.equal(skillPlan(dir, 'b'), undefined);
+      assert.equal(skillPlan(dir, 'c'), '2d');
+      assert.equal(skillPlan(dir, 'd'), undefined);
+      assert.deepEqual(skillsForPlan(dir, ['a', 'b', 'c', 'd'], '3d'), ['a', 'b', 'd']);
+      assert.deepEqual(skillsForPlan(dir, ['a', 'b', 'c', 'd'], '2d'), ['b', 'c', 'd']);
+      assert.deepEqual(skillsForPlan(dir, ['a', 'b', 'c', 'd'], '2d3d'), ['a', 'b', 'c', 'd']);
       assert.equal(skillPlan(dir, 'missing'), undefined);
     } finally {
       fs.rmSync(dir, { recursive: true, force: true });
@@ -141,7 +152,9 @@ describe('3D kiến trúc skill', () => {
 describe('3D phase 3 test & fix (docs/ban-giao/ve-3d-test-3.md)', () => {
   it('build_3d_from_plan tells Claude what the plugin now does with print-width polylines, earlier solids and given openings', () => {
     const d = byName('build_3d_from_plan').description;
-    assert.match(d, /below min_thickness is only a print line weight/);
+    // since 12/11/2026 (token cut, owner) the print-width rule is told on the min_thickness parameter, not in the description
+    const minT = (byName('build_3d_from_plan').inputSchema as Record<string, { description?: string }>).min_thickness!.description ?? '';
+    assert.match(minT, /width below it is a print line weight, read as a face line/);
     assert.match(d, /existing_solids/);
     const plugin = src('plugin', 'ClaudeCAD.Plugin', 'Drawing', 'PlanTo3dTools.cs');
     assert.match(plugin, /report\["existing_solids"\]/);

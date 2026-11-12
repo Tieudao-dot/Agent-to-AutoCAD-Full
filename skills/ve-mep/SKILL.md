@@ -1,6 +1,7 @@
 ---
 name: ve-mep
 description: Chuẩn vẽ điện nước (MEP) của người dùng - layer hệ điện E-* (chiếu sáng, ổ cắm, máng cáp) và cấp thoát nước P-* (cấp nước, thoát nước, thông hơi), nguyên tắc đi tuyến song song tường với offset chuẩn, ký hiệu thiết bị dạng block, ghi chú đường kính ống / tiết diện dây bằng multileader. Dùng khi được yêu cầu vẽ hoặc sửa bản vẽ điện, chiếu sáng, ổ cắm, công tắc, tủ điện, máng cáp, cấp nước, thoát nước, ống, thiết bị vệ sinh, MEP. Use for electrical, lighting, power, cable tray, plumbing, water supply and drainage drawings.
+plan: 2d
 ---
 
 # Vẽ điện nước (MEP) theo chuẩn

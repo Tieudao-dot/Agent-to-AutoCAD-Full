@@ -231,6 +231,54 @@ export function existingSolidsChanged(tool: string, params: Record<string, unkno
   return [...new Set(affectedHandles(tool, params).filter((h) => !h.startsWith('#') && !g.created?.has(h)))];
 }
 
+/**
+ * explode_entities breaks up 3D solids / surfaces / meshes only after the user's yes when they existed before the turn
+ * (decided 12/11/2026). Only the plugin knows an object's type, so the plugin refuses them ("Confirmation required")
+ * unless the call carries this flag, which the assistant sets when the user said yes in this turn. Claude cannot set it:
+ * it is not in the tool's schema and applyUserConfirmation removes it from every call it did not earn.
+ */
+export const USER_CONFIRMED_PARAM = 'user_confirmed';
+/** Tools whose confirmation the plugin checks itself (by object type), with USER_CONFIRMED_PARAM. */
+export const PLUGIN_CONFIRMED = new Set(['explode_entities']);
+
+function flagged(params: Record<string, unknown>, yes: boolean): Record<string, unknown> {
+  const { [USER_CONFIRMED_PARAM]: _ignored, ...rest } = params;
+  return yes ? { ...rest, [USER_CONFIRMED_PARAM]: true } : rest;
+}
+
+/**
+ * The params actually sent to the plugin: explode_entities (alone or inside batch_execute) carries
+ * user_confirmed: true when the user confirmed in this turn, and never otherwise.
+ */
+export function applyUserConfirmation(tool: string, params: Record<string, unknown>, g: GateState): Record<string, unknown> {
+  const yes = userConfirmed(g);
+  if (PLUGIN_CONFIRMED.has(tool)) return flagged(params, yes);
+  if (tool === 'batch_execute' && Array.isArray(params.calls)) {
+    let changed = false;
+    const calls = (params.calls as unknown[]).map((c) => {
+      const call = c as { tool?: unknown; params?: unknown } | null;
+      if (!call || typeof call !== 'object' || typeof call.tool !== 'string' || !PLUGIN_CONFIRMED.has(call.tool)) return c;
+      const p = call.params && typeof call.params === 'object' ? (call.params as Record<string, unknown>) : {};
+      if (!yes && !(USER_CONFIRMED_PARAM in p)) return c;
+      changed = true;
+      return { ...call, params: flagged(p, yes) };
+    });
+    return changed ? { ...params, calls } : params;
+  }
+  return params;
+}
+
+/** The plugin refused the call (or a call of the batch) until the user says yes: the turn now asks a question. */
+export function refusedForConfirmation(resp: { ok: boolean; error?: { message?: string }; result?: unknown }): boolean {
+  const asks = (m: unknown) => typeof m === 'string' && m.startsWith('Confirmation required');
+  if (!resp.ok) return asks(resp.error?.message);
+  const results = (resp.result as { results?: unknown[] } | undefined)?.results;
+  return Array.isArray(results) && results.some((r) => {
+    const x = r as { ok?: unknown; error?: { message?: unknown } } | null;
+    return !!x && x.ok === false && asks(x.error?.message);
+  });
+}
+
 export function confirmationError(tool: string, params: Record<string, unknown>, g: GateState): string | undefined {
   const solids = existingSolidsChanged(tool, params, g);
   if (solids.length > 0 && !userConfirmed(g)) {
