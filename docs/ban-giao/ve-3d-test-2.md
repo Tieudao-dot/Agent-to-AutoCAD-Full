@@ -40,7 +40,7 @@ AutoCAD thật: viết code an toàn nhất có thể và đưa vào checklist p
 | 5 | Nhẹ | `topology_id`: tọa độ làm tròn ra −0 in "-0" trên .NET 8/10 nhưng "0" trên .NET Framework → macro bo / vát theo số thứ tự ghi ở AutoCAD 2022–2024 chạy ở 2025–2027 (hoặc ngược lại) báo "solid has changed" dù khối giống hệt | Đổi −0 thành 0 trước khi băm |
 | 6 | Nhẹ | `align` dựng `Matrix3d` từ mảng 16 số giả định thứ tự hàng; tài liệu không ghi | `CheckedMatrix`: trước khi dời, kiểm ma trận đưa điểm nguồn đúng chỗ như phép tính trong `Solid2Logic.Apply`; nếu AutoCAD đọc theo cột thì dùng ma trận chuyển vị, khác nữa thì báo lỗi, không dời |
 
-Commit sửa: xem `git log full/ve-3d-dot-2..full/ve-3d-test-2` (commit "Test & sửa 3D đợt 2").
+Commit sửa: `e377aa7`.
 
 ## Test
 
@@ -48,7 +48,7 @@ Commit sửa: xem `git log full/ve-3d-dot-2..full/ve-3d-test-2` (commit "Test & 
   `topology_id`, cặp va chạm, dấu / kiểm làm rỗng, `faces: []`, đường tạm vào bản vẽ, kiểm ma trận align).
 - Trợ lý `npm test`: **171/171** (169 + 2 trong `test/solids2fix.test.ts`).
 - Build Linux (.NET SDK 10): net48, net8.0-windows, net10.0-windows: 0 lỗi.
-- CI Windows: xem mục Tiến độ.
+- CI Windows: run 43212088529 (`build.yml`, workflow_dispatch, `release: false`, commit `e377aa7`) **xanh** (~10 phút, gồm UI test WPF).
 
 ## Cần chủ dự án thử tay trên AutoCAD (checklist phần K)
 
@@ -72,4 +72,4 @@ K2: `FilletEdges` setback 0).
 
 - [x] Rà soát + sửa lỗi + test
 - [x] Tài liệu: file này, checklist K17–K21, `bo-cai/README.md`, kế hoạch
-- [ ] CI Windows (1 lượt)
+- [x] CI Windows (1 lượt, xanh: run 43212088529)
