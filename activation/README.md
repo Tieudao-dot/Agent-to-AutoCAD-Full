@@ -65,6 +65,10 @@ Mở dự án Apps Script (từ bảng tính: Tiện ích mở rộng → Apps S
 - **KEY**: dùng cho máy có mạng.
 - **Dòng gói** `CCF1|…` (thêm từ bản Full): gói của máy lấy từ cột Gói. Máy không có mạng dán dòng này cùng hai dòng
   bên dưới (dán riêng dòng gói cũng được, để đổi gói cho máy đã kích hoạt). Không dán thì máy dùng gói mặc định.
+  - Plugin chỉ nhận dòng gói **mới hơn hoặc cùng ngày** với dòng đang lưu (chốt C4, 12/11/2026). Dán lại dòng Full cũ
+    sau khi cậu đã hạ gói thì bị từ chối.
+  - ⚠️ Máy không có mạng **không thu hồi được gói** nếu khách không dán dòng mới: máy giữ gói đang có. Chỉ cấp **Full**
+    cho máy offline cậu tin cậy.
 - **Mã cho máy không có mạng**: **hai dòng** — dòng `CCL1|…` (giấy phép) và dòng `CCS1|…|offline|…` (mã miễn kiểm tra trạng thái). Dán **cả hai dòng** vào ô key của khung chat trong AutoCAD. Máy có mã miễn kiểm tra sẽ **không bị khóa từ xa và không bị giới hạn 7 ngày** — chỉ cấp cho máy thật sự không có mạng.
 
 ## Cài ngầm cho nhiều máy
@@ -88,6 +92,10 @@ Key vẫn riêng cho từng máy. Cài ngầm mà không có `/KEY=` thì plugin
     về gói mặc định (chặn việc giữ lại dòng `Full` cũ), máy có mã miễn kiểm tra giữ dòng gói được cấp.
   - Lưu ở `%LocalAppData%\ClaudeCAD\plan.txt`. Bản build không có máy chủ kích hoạt: mọi lệnh, như trước.
   - `ToolDispatcher` từ chối lệnh ngoài gói với mã `NOT_IN_PLAN` (lệnh lẻ, từng lệnh trong `batch_execute`, macro).
+  - Thuộc tính block là chữ (chốt C3, 12/11/2026): gói không có 2D bị từ chối `attributes` của `define_block` /
+    `insert_block` (`PlanLogic.BlockedParam`); `set_block_attributes` thuộc nhóm 2D. Block không thuộc tính vẫn dùng được.
+  - Macro có lệnh ngoài gói (ví dụ ghi ở Full, chạy ở 3D) không chạy lệnh nào, khung chat báo tiếng Việt.
+  - `SavePlan` chỉ nhận dòng gói mới hơn hoặc cùng ngày với dòng đang lưu (`LicenseLogic.AcceptPlan`).
   - Plugin gửi `context.service_plan` + `context.plan_tools` kèm mỗi tin nhắn; trợ lý chỉ nạp các lệnh đó, system prompt
     nói rõ gói, và khởi động lại phiên Claude (cùng cuộc chat) khi gói đổi.
   - **Gói mặc định `2D`** (đã chốt 12/11/2026) cho máy mới, ô Gói trống và ô gõ sai. Muốn đổi thì đổi cùng lúc

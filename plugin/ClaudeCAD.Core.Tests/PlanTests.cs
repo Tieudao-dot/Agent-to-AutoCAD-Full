@@ -249,6 +249,70 @@ namespace ClaudeCAD.Core.Tests
             Assert.EndsWith(".", PlanLogic.BlockedMessage("add_text", "3d", ""));
         }
 
+        // ------------------------------------------------------------ fixes after the independent review (12/11/2026)
+
+        private static System.Collections.Generic.Dictionary<string, object> P(params (string k, object v)[] kv)
+        {
+            var d = new System.Collections.Generic.Dictionary<string, object>();
+            foreach (var (k, v) in kv) d[k] = v;
+            return d;
+        }
+
+        [Fact]
+        public void KT02_block_attributes_need_2D()
+        {
+            var atts = P(("name", "NHAN"), ("attributes", new System.Collections.Generic.List<object> { P(("tag", "TEN")) }));
+            var values = P(("name", "NHAN"), ("attributes", P(("TEN", "Phòng khách"))));
+            Assert.Equal("attributes", PlanLogic.BlockedParam("3d", "define_block", atts));
+            Assert.Equal("attributes", PlanLogic.BlockedParam("3d", "insert_block", values));
+            Assert.False(PlanLogic.CallAllowed("3d", "define_block", atts));
+            // a block without attributes stays Common
+            Assert.Null(PlanLogic.BlockedParam("3d", "define_block", P(("name", "B"))));
+            Assert.Null(PlanLogic.BlockedParam("3d", "define_block", P(("attributes", new System.Collections.Generic.List<object>()))));
+            Assert.Null(PlanLogic.BlockedParam("3d", "insert_block", P(("attributes", null))));
+            Assert.True(PlanLogic.CallAllowed("3d", "insert_block", P(("name", "B"))));
+            // plans with 2D keep them
+            Assert.Null(PlanLogic.BlockedParam("2d", "define_block", atts));
+            Assert.Null(PlanLogic.BlockedParam("2d3d", "insert_block", values));
+            // setting attribute values is 2D
+            Assert.Equal(ToolGroup.TwoD, PlanLogic.GroupOf("set_block_attributes"));
+            Assert.False(PlanLogic.Allowed("3d", "set_block_attributes"));
+            Assert.Contains("block attributes", PlanLogic.BlockedParamMessage("define_block", "attributes", "3d", ""));
+        }
+
+        [Fact]
+        public void KT04_a_macro_outside_the_plan_is_refused_whole_with_a_Vietnamese_message()
+        {
+            var m = new Macro { Name = "Phòng mẫu" };
+            m.Calls.Add(new MacroCall { Tool = "draw_rectangle" });
+            m.Calls.Add(new MacroCall { Tool = "add_dim_linear" });
+            m.Calls.Add(new MacroCall { Tool = "add_dim_linear" });
+            m.Calls.Add(new MacroCall { Tool = "insert_block", Params = P(("attributes", P(("TEN", "A")))) });
+            m.Calls.Add(new MacroCall { Tool = "draw_box" });
+            Assert.Equal(new[] { "add_dim_linear", "insert_block (thuộc tính block)" }, MacroLogic.BlockedCalls(m, "3d"));
+            Assert.Equal(new[] { "draw_box" }, MacroLogic.BlockedCalls(m, "2d"));
+            Assert.Empty(MacroLogic.BlockedCalls(m, "2d3d"));
+            var text = PlanLogic.MacroBlockedText(m.Name, "3d", MacroLogic.BlockedCalls(m, "3d"), "Zalo 0");
+            Assert.StartsWith("Không chạy macro \"Phòng mẫu\": máy này dùng gói 3D", text);
+            Assert.Contains("Bản vẽ không bị thay đổi", text);
+            Assert.DoesNotContain("Tell the user", text);
+            Assert.Empty(MacroLogic.BlockedCalls(null, "3d"));
+        }
+
+        [Fact]
+        public void KT05_an_older_plan_line_does_not_replace_the_saved_one()
+        {
+            var full = Verify(Sign(Machine, "2d3d", "2026-11-01"));
+            var lowered = Verify(Sign(Machine, "2d", "2026-11-12"));
+            Assert.True(LicenseLogic.AcceptPlan(lowered, full));   // the owner lowered the plan: newer line wins
+            Assert.False(LicenseLogic.AcceptPlan(full, lowered));  // pasting the old Full line back is refused
+            Assert.True(LicenseLogic.AcceptPlan(Verify(Sign(Machine, "3d", "2026-11-12")), lowered)); // same day: accepted
+            Assert.True(LicenseLogic.AcceptPlan(full, null));
+            Assert.True(LicenseLogic.AcceptPlan(full, new PlanCheck()));
+            Assert.False(LicenseLogic.AcceptPlan(new PlanCheck(), null));
+            Assert.False(LicenseLogic.AcceptPlan(null, lowered));
+        }
+
         // ------------------------------------------------------------ every registered tool has a label
 
         private static string DrawingDir =>

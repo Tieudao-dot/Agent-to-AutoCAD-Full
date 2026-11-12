@@ -29,7 +29,9 @@
  * Tạo key bằng tay (máy không có mạng): sửa MAY_THU_CONG bên dưới rồi chạy hàm taoKeyThuCong
  * (nút ▶ Run) — key, mã kích hoạt offline, mã miễn-kiểm-tra và dòng gói được gửi vào email của cậu.
  * Gói của máy đó lấy từ ô "Gói" trong Sheet (máy chưa có dòng thì là GOI_MAC_DINH; muốn gói khác thì thêm dòng
- * và chọn gói trước khi chạy). Máy không có mạng không tự nhận gói mới: đổi gói thì chạy lại hàm này.
+ * và chọn gói trước khi chạy). Máy không có mạng không tự nhận gói mới: đổi gói thì chạy lại hàm này và gửi dòng gói
+ * mới cho khách dán. Plugin chỉ nhận dòng gói mới hơn hoặc cùng ngày với dòng đang có, nhưng KHÔNG thu hồi được gói nếu
+ * khách không dán dòng mới: chỉ cấp Full cho máy offline tin cậy.
  */
 
 var EMAIL = '{{EMAIL}}';
@@ -135,7 +137,12 @@ function upsertDevice(sh, machine, device, user) {
     sh.appendRow([machine, cellText(device || '(không rõ)'), cellText(user || '(không rõ)'), nowText(), '', STATUS_VALUES[0], '', '', '', GOI_MAC_DINH]);
     return findRow(sh, machine);
   }
-  if (device && device !== '(không rõ)') sh.getRange(row, 2).setValue(cellText(device));
+  // a real name from the machine replaces the cell; a placeholder such as "(kích hoạt bằng key)" only fills an empty
+  // cell, so activating by key never overwrites the name the machine sent (or the owner typed)
+  if (device && device !== '(không rõ)') {
+    var placeholder = /^\(.*\)$/.test(device);
+    if (!placeholder || !String(sh.getRange(row, 2).getValue()).trim()) sh.getRange(row, 2).setValue(cellText(device));
+  }
   if (user && user !== '(không rõ)') sh.getRange(row, 3).setValue(cellText(user));
   return row;
 }

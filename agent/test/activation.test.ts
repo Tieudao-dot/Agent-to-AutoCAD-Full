@@ -187,6 +187,30 @@ describe('activation service (Apps Script)', () => {
     assert.equal(s.get({ action: 'activate', machine, key: 'AAAA-BBBB-CCCC-DDDD' }).ok, false);
   });
 
+  it('activating by key keeps the device name the machine sent; a placeholder only fills an empty cell (KT-06)', () => {
+    const s = loadService();
+    s.get({ action: 'request', machine, device: 'PC-KTS-01', user: 'u' });
+    const key = /KEY: (\S+)/.exec(s.mails[0].body)![1];
+    assert.equal(s.get({ action: 'activate', machine, key }).ok, true);
+    assert.equal(s.row(machine)![1], 'PC-KTS-01');
+    // the manual key function keeps it too
+    vm.runInContext("MAY_THU_CONG = 'CC-1A2B-3C4D-5E6F';", s.sandbox);
+    (s.sandbox.taoKeyThuCong as () => void)();
+    assert.equal(s.row(machine)![1], 'PC-KTS-01');
+    // a machine with no row yet (key typed on a machine that never asked): the placeholder names it
+    const other = 'CC-2222-3333-4444';
+    vm.runInContext(`MAY_THU_CONG = '${other}';`, s.sandbox);
+    (s.sandbox.taoKeyThuCong as () => void)();
+    assert.equal(s.row(other)![1], '(key thủ công)');
+    // an empty cell is filled by the placeholder; a later real name from the machine replaces it
+    s.row(other)![1] = '';
+    const key2 = /KEY[^:]*: (\S+)/.exec(s.mails.at(-1)!.body)![1];
+    assert.equal(s.get({ action: 'activate', machine: other, key: key2 }).ok, true);
+    assert.equal(s.row(other)![1], '(kích hoạt bằng key)');
+    s.get({ action: 'request', machine: other, device: 'LAPTOP-2', user: 'v' });
+    assert.equal(s.row(other)![1], 'LAPTOP-2');
+  });
+
   it('Active in the sheet activates without a key ("Kiểm tra lại"), and last-use is recorded', () => {
     const s = loadService();
     s.get({ action: 'request', machine, device: 'PC', user: 'u' });

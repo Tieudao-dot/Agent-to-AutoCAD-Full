@@ -1363,6 +1363,13 @@ namespace ClaudeCAD.Plugin
                 Ui.AddErrorCard("Bản vẽ này đang bật 🔒 Chỉ xem — tắt Chỉ xem rồi chạy macro.", false);
                 return;
             }
+            // a macro recorded on another plan (e.g. Full) is checked whole before it runs: never half a drawing
+            var blocked = MacroLogic.BlockedCalls(m, Activation.Plan);
+            if (blocked.Count > 0)
+            {
+                Ui.AddErrorCard(PlanLogic.MacroBlockedText(m.Name, Activation.Plan, blocked, Activation.Contact), false);
+                return;
+            }
             if (atPoint)
             {
                 if (m.BasePoint == null) return;
