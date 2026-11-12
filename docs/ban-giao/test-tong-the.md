@@ -248,7 +248,8 @@ tổng thêm K25.
 | KT-42 | nhẹ | Gói dịch vụ | `074abe1`, `d6d8110` | **Chấp nhận** (luồng chính chốt thay chủ dự án, chủ dự án xem lại): gói 3D chèn block có sẵn vẫn hiện chữ mặc định của block; Claude không đặt / sửa được chữ thuộc tính | `PlanTests.KT42_*`, `plan-fixes.test.ts` |
 
 Test sau gộp vòng 2: lõi 367/367, trợ lý 215/215, build net48 / net8.0-windows / net10.0-windows và project UI test 0 lỗi,
-0 cảnh báo. CI: xem Tiến độ.
+0 cảnh báo. CI run `43267347630` (1 lượt): **xanh**, cả UI test WPF của KT-41. Test chỉ dán thật qua clipboard khi máy CI
+có clipboard; log không ghi lượt này có dán thật không, nên M10–M12 vẫn là phần kiểm thật.
 
 **Test sau gộp:** lõi 364/364, trợ lý 214/214, build net48 / net8.0-windows / net10.0-windows (xóa `obj` / `bin` giữa các
 lần) 0 lỗi, 0 cảnh báo. CI run `43259984843` (1 lượt, workflow_dispatch `release: "false"`): **xanh**, mọi bước gồm UI
@@ -323,4 +324,4 @@ thẻ 🔒 và ⚙ (M10–M12; UI test chỉ dán được khi máy CI có clipb
 - [x] Gộp 4 nhánh sửa (`f42fb3f`, `54201f9`, `61cc03d`, `3527374`) + ghép nối (`601b2f9`); lõi 364/364, trợ lý 214/214, build 3 bản
 - [x] Lượt CI chung sau khi gộp (1 lượt, xanh: run 43259984843 trên `a62a7b7`, ~10 phút; bước `Setup.exe` biên dịch được `.iss` mới: `TaskDialogMsgBox` hai nút "Tiếp tục" / "Hủy", ô key nhiều dòng, `PrepareToInstall`, `[InstallDelete]`; bước phát hành bỏ qua)
 - [x] Vòng 2 (kiểm tra độc lập lượt 2): KT-41 (`2ddbbc1`), gộp KT-42 (`69e7109`) và KT-40 (`21c54d9`); lõi 367/367, trợ lý 215/215, build 3 bản
-- [ ] CI chung vòng 2 (cần cho UI test KT-41)
+- [x] CI chung vòng 2 (1 lượt, xanh: run 43267347630 trên `e8b4ede`, ~10 phút; UI test WPF gồm `KT41_code_boxes_take_every_line_of_the_offline_email` xanh, `Setup.exe` xanh; bước phát hành bỏ qua)
