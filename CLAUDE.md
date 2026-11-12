@@ -139,5 +139,6 @@ dự án gốc), `bo-cai/README.md`.
 | Vẽ 3D đợt 3 | `session_01D56HmJn6B9q2BakrVAExkg` | Nhánh `full/ve-3d-dot-3` (tách từ `full/ve-3d-test-2` @ `a51cd63`): `build_3d_from_plan` (dựng 3D từ mặt bằng 2D), mặt cắt / hình chiếu 2D từ khối 3D, skill mẫu "3D kiến trúc". Viết xong tự mở thread con Test & sửa đợt 3. Bàn giao: `docs/ban-giao/ve-3d-dot-3.md` |
 | ↳ Test & sửa đợt 3 (con của Vẽ 3D đợt 3) | `session_01D56HmJf7EpVVyCj13r68fL` | Nhánh `full/ve-3d-test-3` (tách từ `full/ve-3d-dot-3` @ `e464662`): rà soát, thêm test tự động, sửa lỗi đợt 3; 1 lượt CI. Báo về thread đợt 3. Bàn giao: `docs/ban-giao/ve-3d-test-3.md` |
 | Test tổng thể | `session_01D56HmGjmEKBFmZETiignkt` | Nhánh `full/test-tong-the` (tách từ `full/ve-3d-test-3` @ `4bf5cce`, gộp tài liệu luồng chính): rà theo chiều ngang gói + 3 đợt 3D, sửa lỗi, đo token theo gói, checklist tổng `docs/checklist-tong-the.md`; 1 lượt CI. Bàn giao: `docs/ban-giao/test-tong-the.md` |
+| Kiểm tra độc lập | `session_01D56HmF7CGr1nonkGWUKkGr` | Nhánh `full/kiem-tra-doc-lap` (tách từ `full/test-tong-the` @ `9ef9db9`): agent mới test lại toàn bộ một lượt, chỉ ghi lỗi (không sửa), phân theo phần phụ trách; 1 lượt CI; sau đó soát lại các lỗi đã sửa. Báo cáo: `docs/ban-giao/kiem-tra-doc-lap.md` |
 
 Link mở thread: `https://claude.ai/code/<session id>`.
