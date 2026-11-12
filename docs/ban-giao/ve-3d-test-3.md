@@ -57,7 +57,7 @@ hay tham số mới (chỉ thêm trường báo cáo `existing_solids` khi chạ
   đợt 3 cũ**, xanh sau khi sửa.
 - Trợ lý `npm test`: **185/185** (184 + 1 trong `test/plan3d.test.ts`).
 - Build Linux (.NET SDK 10, xóa `obj` / `bin` giữa các lần): net48, net8.0-windows, net10.0-windows: 0 lỗi, 0 cảnh báo.
-- CI Windows: *(điền sau lượt CI)*.
+- CI Windows: run 43225451972 (`build.yml`, workflow_dispatch, `release: false`, commit `7c61e2e`) **xanh** (~10 phút, gồm UI test WPF, bộ cài).
 
 ## Cần chủ dự án thử tay trên AutoCAD (checklist phần L, L17–L23)
 
@@ -82,4 +82,4 @@ nhiều hộp). Thêm: `Polyline.ConstantWidth` của polyline có bề rộng 0
 
 - [x] Rà soát + sửa lỗi + test (commit `da50e5c`)
 - [x] Tài liệu: file này, checklist L17–L23, `bo-cai/README.md`, kế hoạch
-- [ ] CI Windows (1 lượt)
+- [x] CI Windows (1 lượt, xanh: run 43225451972)
