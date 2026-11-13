@@ -31,9 +31,10 @@ export function modifyTools(b: ToolBridge): AnyTool[] {
       { handles, axis_p1: point, axis_p2: point, keep_original: z.boolean().optional() }),
 
     cadTool(b, 'offset_entity',
-      'Offset a line, polyline, arc, circle, ellipse or spline by distance towards side_point (any point on the side where the copy should go). ' +
-        'Typical use: second wall line ("tường 220": offset the wall axis/edge by 220). Returns the new handle(s).',
-      { handle, distance: z.number().positive(), side_point: point }),
+      'Offset a line, polyline, arc, circle, ellipse or spline by distance towards side_point (any point on the side where the copy should go), ' +
+        'or both_sides: true for one copy on each side (no side_point). ' +
+        'Typical use: second wall line ("tường 220": offset the wall axis/edge by 220; wall centred on an axis: both_sides, distance 110). Returns the new handle(s).',
+      { handle, distance: z.number().positive(), side_point: point.optional(), both_sides: z.boolean().optional() }),
 
     cadTool(b, 'array_rect',
       'Rectangular array (non-associative copies): rows x cols with row_spacing (Y) and col_spacing (X) in mm, optional angle of the array axes. ' +
@@ -59,13 +60,15 @@ export function modifyTools(b: ToolBridge): AnyTool[] {
       }),
 
     cadTool(b, 'fillet_entities',
-      'Fillet the corner between two LINEs with radius (0 = trim/extend to a sharp corner). Each line keeps its end farther from the corner. ' +
-        'Returns the two lines and the new arc (arc_handle).',
-      { handle1: handle, handle2: handle, radius: z.number().min(0) }),
+      'Fillet the corner between two LINEs / ARCs (line + arc, arc + arc) with radius (0 = trim/extend to a sharp corner). Each keeps its end farther from the corner. ' +
+        'Returns the two objects and the new arc (arc_handle). An LWPOLYLINE: handle1 only (no handle2) fillets all its corners between straight segments, ' +
+        'or just "vertex" (0-based index); changed in place, too-short corners are listed in skipped.',
+      { handle1: handle, handle2: handle.optional(), radius: z.number().min(0), vertex: z.number().int().min(0).optional() }),
 
     cadTool(b, 'chamfer_entities',
-      'Chamfer the corner between two LINEs: dist1 along line 1, dist2 along line 2 (default = dist1) from the intersection.',
-      { handle1: handle, handle2: handle, dist1: z.number().min(0), dist2: z.number().min(0).optional() }),
+      'Chamfer the corner between two LINEs / ARCs: dist1 along object 1, dist2 along object 2 (default = dist1) from the intersection (along the arc for an arc). ' +
+        'An LWPOLYLINE: handle1 only chamfers all its corners (or "vertex"), dist1 back along the incoming segment, dist2 along the outgoing one.',
+      { handle1: handle, handle2: handle.optional(), dist1: z.number().min(0), dist2: z.number().min(0).optional(), vertex: z.number().int().min(0).optional() }),
 
     cadTool(b, 'explode_entities',
       'Explode polylines, blocks, dimensions, hatches... into their components. The originals are erased; returns the new handles. ' +
@@ -75,8 +78,9 @@ export function modifyTools(b: ToolBridge): AnyTool[] {
 
     cadTool(b, 'join_entities',
       'Join touching LINE / ARC / LWPOLYLINE entities into one polyline (the first handle, or a new polyline if the first is a line/arc). ' +
-        'Order does not matter. Returns the polyline handle, joined count and not_joined handles.',
-      { handles }),
+        'Order does not matter. tolerance (mm): gaps up to it are bridged by a straight segment (listed in bridged). ' +
+        'Returns the polyline handle, joined count and not_joined handles.',
+      { handles, tolerance: z.number().min(0).optional() }),
 
     cadTool(b, 'erase_entities',
       'Erase entities by handle (max 1000 per call; the plugin refuses more with TOO_MANY_ENTITIES). ' +
@@ -122,6 +126,65 @@ export function modifyTools(b: ToolBridge): AnyTool[] {
         bulges: z.array(z.number()).optional(),
         closed: z.boolean().optional(),
         width: z.number().min(0).optional(),
+      }),
+
+    // nâng cấp đợt B (Drawing/Edit2DTools.cs)
+    cadTool(b, 'stretch_entities',
+      'STRETCH: crossing window corner1 + corner2 (or polygon); vertices / ends inside it move by from → to (or displacement), the rest stays ' +
+        '(objects wholly inside just move). Without handles: everything in the window (max 20 objects, else the plugin lists them to ask about); ' +
+        'with handles: only those. 3D objects partly inside are skipped.' + CONFIRM,
+      {
+        handles: handles.optional(),
+        corner1: point.optional(), corner2: point.optional(),
+        polygon: points(3, 'crossing polygon').optional(),
+        from: point.optional(), to: point.optional(), displacement: point.optional(),
+      }),
+
+    cadTool(b, 'break_entity',
+      'BREAK a curve: at "point" only = split in two there (not for closed curves); point + point2 = remove the part between them ' +
+        '(closed curve: from point to point2 counter-clockwise / in its direction). Points are snapped onto the curve. The pieces get new handles.' + CONFIRM,
+      { handle, point, point2: point.optional() }),
+
+    cadTool(b, 'lengthen_entity',
+      'LENGTHEN a line, arc or open polyline at one end: mode delta (value mm added, negative shortens; default), total (new length) or percent ' +
+        '(of the current length). end: start | end (default), or near_point picks the end nearest to it. Same handle.' + CONFIRM,
+      {
+        handle,
+        mode: z.enum(['delta', 'total', 'percent']).optional(),
+        value: z.number(),
+        end: z.enum(['start', 'end']).optional(),
+        near_point: point.optional(),
+      }),
+
+    cadTool(b, 'divide_entity',
+      'DIVIDE (count = N equal parts) or MEASURE (segment_length, from start or end) a curve: places points, or block_name inserts that block ' +
+        '(align_block default true = rotated along the curve). The curve is unchanged. Points show per the point style (PDMODE).',
+      {
+        handle,
+        count: z.number().int().min(2).max(10000).optional(),
+        segment_length: z.number().positive().optional(),
+        from: z.enum(['start', 'end']).optional(),
+        block_name: z.string().optional(),
+        align_block: z.boolean().optional(),
+      }),
+
+    cadTool(b, 'group_entities',
+      'GROUP: action create (default) groups handles under name (optional, auto CLAUDE_GROUP_n; optional description); action ungroup removes ' +
+        'the group by name, or the groups of the handles. Objects are not changed.',
+      {
+        action: z.enum(['create', 'ungroup']).optional(),
+        handles: handles.optional(),
+        name: z.string().optional(),
+        description: z.string().optional(),
+      }),
+
+    cadTool(b, 'match_properties',
+      'MATCHPROP: copy properties from source to handles: layer, color, linetype, lineweight, linetype_scale, transparency, thickness, ' +
+        'text (style, height: text to text) and dimension (style: dimension to dimension). Default: all (text / dimension only on plans with 2D).' + CONFIRM,
+      {
+        source: handle,
+        handles,
+        properties: z.array(z.enum(['layer', 'color', 'linetype', 'lineweight', 'linetype_scale', 'transparency', 'thickness', 'text', 'dimension'])).optional(),
       }),
   ];
 }

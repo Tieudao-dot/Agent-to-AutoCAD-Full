@@ -306,6 +306,35 @@ Còn chỉ thấy trên AutoCAD thật: sao chép khối tầng 1 lên các tầ
 (N13 với đường rất dài: thời gian; mảnh không cộng được để riêng, báo `separate_pieces`); cột hình tròn / polyline có
 cung (đùn từ region).
 
+## O. Nâng cấp đợt B — sửa hình 2D (bản Full, gói 2D hoặc Full, ~30 phút)
+
+*13/11/2026 · từ [`ban-giao/nang-cap-b.md`](ban-giao/nang-cap-b.md). Máy ở gói `2D` hoặc `Full` (O14, O15: gói `3D`),
+bản vẽ mới (acadiso.dwt), tab Model. Sau mỗi dòng gõ U một lần: mọi thay đổi của lượt đó mất hết. **Quan trọng nhất: O0,
+O1, O4, O6, O14.***
+
+| # | | Làm gì | Kết quả mong đợi | Đạt | Lỗi | Mã gốc |
+| --- | --- | --- | --- | --- | --- | --- |
+| O0 | ★ | Gõ `CLAUDECHATSELFTEST` | Dòng mới ✓ "Nâng cấp đợt B: bo 4 góc polyline, kéo dài, bẻ gãy, chia đều, nối có dung sai, kéo giãn" (chu vi bo góc ≈ 282,832). Dòng ✗ thì gửi file báo cáo | ☐ | ☐ | B1–B9 |
+| O1 | ★ | Vẽ hình chữ nhật 6000x3000. "kéo giãn cạnh phải hình này sang phải 1000" | Hình thành 7000x3000, cạnh trái giữ nguyên, vẫn cùng handle; chữ / đối tượng nằm hẳn trong khung thì được dời theo | ☐ | ☐ | B1 |
+| O2 | ○ | Vẽ 30 đoạn thẳng ngắn cạnh nhau rồi "kéo giãn tất cả đầu bên phải sang phải 500" | Claude **hỏi trước** (nói số đối tượng), chỉ làm sau khi cậu đồng ý | ☐ | ☐ | B1 |
+| O3 | ★ | Vẽ đường thẳng 5000. "bẻ gãy đường này ở giữa" rồi "cắt bỏ đoạn từ 1000 tới 2000 của đoạn đầu" | Lần 1: 2 đoạn 2500; lần 2: còn 1000 + 500, khoảng hở 1000. Vẽ đường tròn rồi "cắt bỏ một phần tư đường tròn" → còn cung 3/4 | ☐ | ☐ | B2 |
+| O4 | ★ | Vẽ đường thẳng 3000 và cung bán kính 1000. "kéo dài đường thẳng thêm 500", "rút ngắn cung còn 80%", "cho đường thẳng dài đúng 4200" | Đường 3500 rồi 4200 (chỉ một đầu đổi); cung ngắn lại, tâm và bán kính giữ nguyên | ☐ | ☐ | B3 |
+| O5 | ○ | Vẽ polyline 2 đoạn (đoạn cuối là cung). "kéo dài đầu cuối thêm 300" | Cung cuối dài thêm theo đúng đường tròn của nó, polyline vẫn một đối tượng | ☐ | ☐ | B3 |
+| O6 | ★ | Vẽ đường thẳng 6000. "chia đường này làm 6 phần" rồi "cứ 1500 đặt một block cọc (block có sẵn) dọc đường" | 5 điểm chia (thấy rõ nếu kiểu điểm PDMODE đã đổi; nếu không Claude nhắc đổi kiểu điểm); 3 block cọc xoay theo đường. Đường không bị đổi | ☐ | ☐ | B4 |
+| O7 | ★ | Chọn một bộ bàn ghế (vài đối tượng). "nhóm các đối tượng này thành nhóm BAN AN" rồi kéo thử một đối tượng | Cả nhóm chọn cùng nhau (lệnh GROUP của AutoCAD thấy nhóm BAN AN). "bỏ nhóm BAN AN" → chọn riêng từng cái được, đối tượng không đổi | ☐ | ☐ | B5 |
+| O8 | ★ | Một đường layer `A-WALL` màu đỏ nét đứt; 5 đường khác layer `0`. "chép thuộc tính đường đỏ sang 5 đường kia" | 5 đường thành layer `A-WALL`, màu đỏ, nét đứt, cùng độ dày nét / tỉ lệ nét | ☐ | ☐ | B6 |
+| O9 | ○ | Một chữ kiểu `Standard` cao 250 và vài chữ khác cao 100. "chép thuộc tính chữ cao 250 sang các chữ kia" | Các chữ đổi kiểu chữ và chiều cao, nội dung giữ nguyên. Kích thước: chép kiểu kích thước sang kích thước khác được | ☐ | ☐ | B6 |
+| O10 | ★ | Vẽ polyline kín 6000x3000 (một đối tượng). "bo tròn tất cả các góc bán kính 300", rồi trên một polyline khác "vát góc thứ 2 cạnh 200" | Bốn góc bo R300, polyline vẫn một đối tượng cùng handle; lần 2 chỉ đúng một góc bị vát. Góc nào cạnh quá ngắn thì Claude nói rõ góc đó bỏ qua | ☐ | ☐ | B7 |
+| O11 | ★ | Vẽ một đường thẳng và một cung chạm nhau thành góc. "bo góc giữa đường và cung bán kính 200" | Có cung bo R200 tiếp xúc cả hai; đường và cung được cắt bớt đúng đến chỗ tiếp xúc. "vát góc 150" trên cặp khác cũng làm được | ☐ | ☐ | B7 |
+| O12 | ★ | Vẽ trục tường (đường thẳng). "vẽ tường 220 tim ở trục này" | Hai đường song song cách trục 110 mỗi bên (một lệnh, không phải hỏi phía) | ☐ | ☐ | B8 |
+| O13 | ★ | Vẽ 3 đoạn thẳng nối nhau nhưng hở 0,3 mm ở một chỗ. "nối các đường này thành polyline" | Claude nối được (dung sai, khe được nối bằng một đoạn thẳng ngắn), báo chỗ đã nối khe; không có dung sai thì báo đoạn không nối | ☐ | ☐ | B9 |
+| O14 | ★ | Gói `3D`: một khối 3D trên layer `0` và một khối trên `A-WALL-3D` màu xanh. "chép thuộc tính khối xanh sang khối kia" | Làm được (layer, màu…). "chép kiểu chữ của chữ này sang chữ kia" → Claude nói phần chữ / kích thước thuộc gói 2D | ☐ | ☐ | B6 |
+| O15 | ○ | Gói `3D`: "nhóm các khối này" / "kéo giãn hình này" | Nhóm làm được; kéo giãn Claude nói thuộc gói 2D | ☐ | ☐ | B5, B1 |
+| O16 | ○ | Macro ghi **trước** đợt B có `fillet_entities` / `offset_entity` / `join_entities`: chạy trên bản mới | Macro chạy như cũ (tên lệnh, tham số cũ giữ nguyên) | ☐ | ☐ | B7–B9 |
+
+Còn chỉ thấy trên AutoCAD thật: kéo giãn kích thước / block / chữ (điểm kéo giãn của AutoCAD), cắt đường tròn / elip /
+spline kín (thứ tự các mảnh khi tách), chia đường cong spline, nhóm trên layer khóa.
+
 ## Gửi lại gì khi lỗi
 
 1. **Mã bước** bị lỗi (ví dụ `D2`) + một dòng: đã làm gì, thấy gì khác với "kết quả mong đợi".

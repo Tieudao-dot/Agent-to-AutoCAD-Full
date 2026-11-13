@@ -133,10 +133,11 @@ namespace ClaudeCAD.Plugin.Core
 
         /// <summary>
         /// handle / handles / *_handle(s) / handle1, handle2 (fillet_entities, chamfer_entities) / target, subtract
-        /// (solid_subtract: without them a replayed subtract would cut the recorded solids, not the new ones).
+        /// (solid_subtract: without them a replayed subtract would cut the recorded solids, not the new ones) / source
+        /// (match_properties, nâng cấp đợt B).
         /// </summary>
         public static bool IsHandleKey(string k) =>
-            k == "handle" || k == "handles" || k == "target" || k == "subtract" || k.EndsWith("_handle", StringComparison.Ordinal) || k.EndsWith("_handles", StringComparison.Ordinal) ||
+            k == "handle" || k == "handles" || k == "target" || k == "subtract" || k == "source" || k.EndsWith("_handle", StringComparison.Ordinal) || k.EndsWith("_handles", StringComparison.Ordinal) ||
             (k.Length > 6 && k.StartsWith("handle", StringComparison.Ordinal) && k.Substring(6).All(char.IsDigit));
 
         /// <summary>

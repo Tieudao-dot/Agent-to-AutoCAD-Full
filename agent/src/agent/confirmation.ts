@@ -54,6 +54,12 @@ const DESTRUCTIVE: Record<string, (p: Record<string, unknown>) => number> = {
   rotate_3d: (p) => len(p.handles),
   align: (p) => len(p.handles),
   mirror_3d: (p) => (p.keep_original === false ? len(p.handles) : 0),
+  // nâng cấp đợt B: the 2D rule (more than 20 existing objects). stretch_entities without handles: the plugin itself
+  // refuses a window that would change more than 20 objects and lists them, so Claude asks and calls again with handles.
+  stretch_entities: (p) => len(p.handles),
+  break_entity: (p) => (typeof p.handle === 'string' ? 1 : 0),
+  lengthen_entity: (p) => (typeof p.handle === 'string' ? 1 : 0),
+  match_properties: (p) => len(p.handles),
 };
 
 /**
