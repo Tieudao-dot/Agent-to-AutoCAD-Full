@@ -32,7 +32,7 @@ Máy cloud không có AutoCAD: "test" = rà code 9 việc của đợt B, viết
 | NB-1 | `stretch_entities` không nêu `handles` (kéo giãn theo khung) không được trợ lý tính vào số đối tượng có sẵn bị sửa trong lượt; plugin chỉ chặn trên 20 **cho riêng lần gọi đó**. Kết quả của nó còn bị tính là "đối tượng mới tạo trong lượt" | (1) Một lượt kéo giãn hai khung 20 + 20, hoặc kéo giãn 18 rồi xóa 5, **sửa quá 20 đối tượng mà không hỏi** (lách luật đã chốt). (2) Khối 3D có sẵn bị kéo giãn (dời) theo khung thành "khối mới", nên sau đó cộng / trừ / xóa khối đó **không cần thẻ xác nhận** (lách luật thẻ 3D) | Trợ lý gửi kèm `max_unasked` = 20 − số đối tượng lượt đã sửa (chia đều cho các lần kéo giãn khung trong một `batch_execute`; Claude không tự đặt được, macro không ghi). Plugin chặn khi khung sửa nhiều hơn số đó và liệt kê handle để Claude hỏi. Sau lần gọi, các đối tượng khung đã sửa được cộng vào số của lượt và không bao giờ là "mới tạo" (`confirmation.ts` `windowChanged`, `session.ts` `noteResult`, `Edit2DLogic.WindowLimit`) |
 | NB-2 | `join_entities` có `tolerance`: khe được nối ngay khi một đối tượng chưa nối khít được, kể cả lúc còn đối tượng khác chạm khít đúng đầu đó | Thứ tự handle khác nhau thì kết quả khác: đoạn nối khe có thể chiếm đầu polyline, đoạn chạm khít bị bỏ sót (`not_joined`) hoặc thêm đoạn nối khe thừa | Chỉ nối khe khi một lượt quét không còn gì nối khít được, mỗi lần một khe, khe nhỏ nhất trước (`ModifyTools.cs` `JoinEntities`, `BridgeGap`) |
 
-Commit: `—` (sửa + test + tài liệu), sau đó một commit ghi kết quả CI vào file này.
+Commit: `4467a65` (sửa + test + tài liệu), sau đó một commit ghi kết quả CI vào file này.
 
 ## Test
 
@@ -48,7 +48,8 @@ Commit: `—` (sửa + test + tài liệu), sau đó một commit ghi kết qu�
   thành "mới tạo" (thẻ 3D vẫn hỏi), phiên thật: kéo giãn 18 rồi xóa 5 thì hỏi.
 - Build net48 / net8.0-windows / net10.0-windows (Linux, `-p:EnableWindowsTargeting=true`, .NET SDK 10 cài từ kho Ubuntu):
   xanh, 0 cảnh báo.
-- CI: *(điền sau khi chạy)*.
+- CI: run **43423428390 xanh** ở `4467a65` (`release: "false"`, Windows: trợ lý qua named pipe, test lõi, UI test WPF, build
+  3 bản, gói + Setup.exe; bước phát hành bỏ qua đúng). ~9,5 phút.
 
 ## Token
 
