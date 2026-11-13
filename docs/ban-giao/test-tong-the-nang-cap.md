@@ -31,7 +31,8 @@ Test: lõi 866 (+5: `TongTheNangCapTests` KT2-01 ×3, KT2-20, KT2-29), trợ lý
 ### Phần 2: gộp bản sửa của 5 đợt
 
 Gộp vào `full/nang-cap-tong-the` (không xung đột) theo thứ tự A `75344e0`, B `7cf2873`, C `d14e8fc`, D `345c9ad`, E
-`4a43452`; kết quả test / CI ghi dưới. Cả 31 lỗi:
+`4a43452`. Sau gộp: lõi **908**, trợ lý **298** xanh; build 3 bản xanh 0 cảnh báo; CI run **43475785808 xanh** ở
+`0153a1f` (`release: "false"`). Cả 31 lỗi:
 
 | Mã | Mức | Lỗi (tóm tắt) | Thread sửa | Commit |
 | --- | --- | --- | --- | --- |
