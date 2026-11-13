@@ -32,6 +32,14 @@ dự án gốc), `bo-cai/README.md`.
 - Trả lời tiếng Việt, gọi người dùng là "cậu", xưng "tớ". Ngắn gọn, đi thẳng vào kết quả; nội dung dài
   (báo cáo, hướng dẫn) viết thành file.
 - Việc cần xác nhận: hỏi bằng AskUserQuestion có lựa chọn, tách khỏi phần báo trạng thái, mỗi lần một câu.
+- **Kiểm kỹ câu hỏi trước khi gửi cậu quyết định (chủ dự án yêu cầu 12/11/2026):**
+  - nói bằng ngôn ngữ thông thường, ít thuật ngữ kỹ thuật. Thuật ngữ nào buộc phải dùng thì giải thích ngắn bằng ví dụ
+    thực tế: cậu hoặc khách sẽ thấy gì, phải làm gì;
+  - nêu rõ vì sao phải quyết, và mỗi lựa chọn dẫn tới kết quả gì, tốn gì;
+  - câu hỏi đọc riêng vẫn hiểu; các lựa chọn rõ ràng, không chồng chéo; ghi lựa chọn đề xuất kèm lý do;
+  - đọc lại một lượt như người không biết code trước khi gửi. Cậu còn hỏi lại "là sao" nghĩa là câu hỏi chưa đạt:
+    giải thích lại đơn giản hơn rồi mới hỏi tiếp;
+  - sub-thread nêu điểm cần chốt cũng theo quy tắc này; luồng chính viết lại cho dễ hiểu trước khi hỏi cậu.
 - Hiện mọi tác vụ đang chạy / chạy nền trong task list.
 - Push noti khi xong một việc hoặc phải dừng chờ cậu quyết; không push cho từng bước nhỏ.
 
@@ -69,6 +77,11 @@ dự án gốc), `bo-cai/README.md`.
     chặn; khi đó chủ dự án gõ 1 dòng trong thread đợt;
   - "Test tổng thể" do luồng chính mở sau Test & sửa đợt 3: rà toàn bộ gói + 3 đợt, chạy đủ test + 1 lượt CI, sửa
     lỗi, ra checklist tổng cho chủ dự án thử tay; không mở thread con.
+  - **Kiểm tra độc lập (chủ dự án yêu cầu 12/11/2026):** làm xong hết các việc của một đợt lớn thì luồng chính mở một
+    thread mới (agent chưa viết hay test phần nào) test lại toàn bộ một lượt. Thread này chỉ ghi lỗi, không tự sửa.
+    - Lỗi được chuyển về thread phụ trách phần đó (gói dịch vụ, đợt 1, 2, 3, bộ cài / tài liệu) để sửa.
+    - Thread sửa: gộp nhánh tích hợp mới nhất vào nhánh của mình, sửa, chạy test lõi + trợ lý, push, báo commit.
+    - Thread giữ nhánh tích hợp gộp các bản sửa và chạy CI; thread kiểm tra độc lập soát lại các lỗi đã sửa.
 - **Sub-thread:**
   - chỉ làm đúng tác vụ được giao, trên nhánh riêng của mình;
   - gặp việc ngoài phạm vi thì báo về thread cha 1–2 dòng, không làm thay thread khác; chỉ mở thread con khi được
@@ -97,6 +110,10 @@ dự án gốc), `bo-cai/README.md`.
   người dùng.
 - Không bỏ / tắt test để CI xanh. Luôn cập nhật `bo-cai/README.md` và tài liệu trong `docs/` cùng với thay đổi.
 - Không đưa tên hay ID model vào commit, PR, code.
+- **Gộp bản Full vào `main` (chốt 13/11/2026):** khi chủ dự án đồng ý phát hành, gộp nhánh tích hợp vào `main` thành
+  **một commit gọn** (squash), không giữ từng commit. Lý do: 2 commit đầu của dự án (`d8b1b58`, `f570344`, ngày 12/11)
+  có tên model trong dòng ghi công; squash giữ lịch sử `main` sạch. Không viết lại lịch sử các nhánh làm việc; lịch sử
+  chi tiết xem ở các nhánh đó.
 
 ## Bí mật
 
@@ -126,5 +143,6 @@ dự án gốc), `bo-cai/README.md`.
 | Vẽ 3D đợt 3 | `session_01D56HmJn6B9q2BakrVAExkg` | Nhánh `full/ve-3d-dot-3` (tách từ `full/ve-3d-test-2` @ `a51cd63`): `build_3d_from_plan` (dựng 3D từ mặt bằng 2D), mặt cắt / hình chiếu 2D từ khối 3D, skill mẫu "3D kiến trúc". Viết xong tự mở thread con Test & sửa đợt 3. Bàn giao: `docs/ban-giao/ve-3d-dot-3.md` |
 | ↳ Test & sửa đợt 3 (con của Vẽ 3D đợt 3) | `session_01D56HmJf7EpVVyCj13r68fL` | Nhánh `full/ve-3d-test-3` (tách từ `full/ve-3d-dot-3` @ `e464662`): rà soát, thêm test tự động, sửa lỗi đợt 3; 1 lượt CI. Báo về thread đợt 3. Bàn giao: `docs/ban-giao/ve-3d-test-3.md` |
 | Test tổng thể | `session_01D56HmGjmEKBFmZETiignkt` | Nhánh `full/test-tong-the` (tách từ `full/ve-3d-test-3` @ `4bf5cce`, gộp tài liệu luồng chính): rà theo chiều ngang gói + 3 đợt 3D, sửa lỗi, đo token theo gói, checklist tổng `docs/checklist-tong-the.md`; 1 lượt CI. Bàn giao: `docs/ban-giao/test-tong-the.md` |
+| Kiểm tra độc lập | `session_01D56HmF7CGr1nonkGWUKkGr` | Nhánh `full/kiem-tra-doc-lap` (tách từ `full/test-tong-the` @ `9ef9db9`): agent mới test lại toàn bộ một lượt, chỉ ghi lỗi (không sửa), phân theo phần phụ trách; 1 lượt CI; sau đó soát lại các lỗi đã sửa. Báo cáo: `docs/ban-giao/kiem-tra-doc-lap.md` |
 
 Link mở thread: `https://claude.ai/code/<session id>`.
