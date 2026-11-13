@@ -846,6 +846,9 @@ namespace ClaudeCAD.Plugin.Drawing
                 return sd;
             }
             var pairs = Solid2Logic.InterferencePairs(hs, others);
+            // KT2-18: handles [A] against other_handles [A] gives no pair: say so instead of "no clash"
+            if (pairs.Count == 0)
+                throw ToolException.Invalid("check_interference: no pair of two different solids to compare (the same solid in handles and other_handles). Nothing was checked; pass at least two different solids.");
             // KT-25: the bounding-box test is cheap; only the pairs that pass it cost AutoCAD real work, and they are capped
             var candidates = new List<(string a, string b)>();
             foreach (var (a, b) in pairs)

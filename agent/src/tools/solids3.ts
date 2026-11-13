@@ -106,7 +106,7 @@ export function solid3Tools(b: ToolBridge): AnyTool[] {
       { destructive: true }),
 
     cadTool(b, 'export_stl',
-      'EXPORT 3D solids to an STL file (3D printing / other software): handles, or every solid (on layers). One file, in mm, moved into the positive octant when needed ' +
+      'EXPORT 3D solids to an STL file (3D printing / other software): handles, or every solid (on layers). One file, in mm, moved to start at 0 when it has negative or survey-size coordinates ' +
         '(moved_by_mm). output: file path ending in .stl (default <drawing>-3d.stl next to the drawing; a relative name goes there too). An existing file needs overwrite: true ' +
         '(ask the user first). Binary by default (ascii: true for text). The drawing is not changed.',
       {

@@ -92,3 +92,20 @@ gói 3D (plugin + trợ lý + macro); token (rút gọn mô tả nếu đáng).
 
 `2f0ffc6` (code 6 việc + test + tài liệu, CI 43451219212 xanh), sau đó một commit ghi kết quả CI vào file này (chỉ tài liệu; CI của
 thread con phủ nó).
+
+## Sửa sau kiểm tra độc lập nâng cấp
+
+*13/11/2026 · lỗi từ [`kiem-tra-doc-lap-nang-cap.md`](kiem-tra-doc-lap-nang-cap.md) (nhánh `full/kiem-tra-doc-lap-2`
+@ `8e6fede`). Nhánh `full/nang-cap-d` đã gộp nhánh tích hợp `full/nang-cap-tong-the` @ `f1e7123` trước khi sửa. Không
+chạy CI ở bước này (thread "Test tổng thể nâng cấp" gộp và chạy CI chung).*
+
+| Lỗi | Sửa | Ở đâu |
+| --- | --- | --- |
+| KT2-06 (vừa) STL méo ở tọa độ lớn (VN-2000) | Mô hình có tọa độ âm **hoặc** xa 0 hơn 10⁶ mm được dời cho góc nhỏ nhất hộp bao về 0 (`moved_by_mm`); mô hình nhỏ ở góc dương giữ tọa độ | `Solid3Logic.StlShift`, `ExportStl` |
+| KT2-07 (vừa) Hướng dẫn dầm dưới sàn ngược dấu | Skill: `top_z` = cao độ mặt sàn tầng trên, đỉnh dầm = `top_z` − `slab_thickness`. Checklist tổng V2: dầm đỉnh 3150, đáy 2750, chạm đáy sàn; V3: dầm chồng tường, chỉ chạm đáy sàn | `skills/ve-3d-kien-truc/SKILL.md`, `docs/checklist-tong-the.md` |
+| KT2-12 Dầm theo polyline mở quay về điểm đầu thiếu góc | Điểm cuối trùng điểm đầu (dung sai 10⁻⁶ × tọa độ) = vòng kín, góc đầu có miếng góc | `Solid3Logic.Beam` |
+| KT2-13 PRESSPULL `distance` không quy đổi | `distance` là mm, chia theo hệ số đơn vị bản vẽ như `build_beam` (bản vẽ mét: 200 → 0,2) | `Presspull` |
+| KT2-18 `check_interference` không có cặp nào báo "không va chạm" | Không có cặp hai khối khác nhau (vd `[A]` so `[A]`) → báo lỗi, không trả `interfere: false` | `CheckInterferenceTool` |
+| KT2-19 `build_beam` không giới hạn tổng | Tổng đoạn mọi đường ≤ 5000 mỗi lần gọi, kiểm trước khi dựng | `Solid3Logic.CheckBeamTotal`, `BuildBeam` |
+
+Test: `NangCapDKiemTraTests.cs` (6 test). Lõi 867, trợ lý 291 xanh; build net48 / net8.0-windows / net10.0-windows 0 cảnh báo.
