@@ -129,6 +129,17 @@ test nào.
 
 ## Lượt CI
 
+**Lượt mới (dùng lượt này):**
+
+- Lượt **#32**, run `43481896536`, commit `29fa991` (đã gộp nâng cấp A → E), workflow_dispatch `release: "false"`:
+  **xanh** (~6 phút). Trang: <https://github.com/Tieudao-dot/Agent-to-AutoCAD-Full/actions/runs/43481896536>.
+- Mọi bước build / test qua; "Refuse to publish" và Release **bỏ qua** (không phát hành).
+- Artifact bộ cài: **`AgentToAutoCADFull-ThuNoiBo-nang-cap-0.9.4`** (~141 MB zip, chứa
+  `AgentToAutoCADFull-ThuNoiBo-Setup.exe`), tải được tới **11/02/2027**. Link tải thẳng (cần đăng nhập GitHub):
+  <https://github.com/Tieudao-dot/Agent-to-AutoCAD-Full/actions/runs/43481896536/artifacts/14065019481>.
+
+**Lượt cũ (chưa có nâng cấp A → E, đừng dùng):**
+
 - Lượt **#16**, run `43373318854`, commit `57a55fa`, workflow_dispatch `release: "false"`, nhánh `full/ban-thu-noi-bo`:
   **xanh** (~7 phút). Trang: <https://github.com/Tieudao-dot/Agent-to-AutoCAD-Full/actions/runs/43373318854>.
 - Bước nào chạy: test trợ lý, test lõi, UI test WPF, build 3 bản plugin, kiểm dll, bundle không có link cập nhật / URL
