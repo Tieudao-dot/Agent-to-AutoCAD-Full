@@ -92,6 +92,8 @@ namespace ClaudeCAD.Plugin.Core
         public const double MinRiser = 100, MaxRiser = 250, MinTread = 150, MaxTread = 500;
         public const double MinWidth = 500, MaxWidth = 5000, MinHeight = 200, MaxHeight = 20000;
         public const double MinWaist = 50, MaxWaist = 500, MaxGap = 5000;
+        /// <summary>Landing depth limits (kiểm tra độc lập KT2-09: the same in the schema of the assistant).</summary>
+        public const double MinLanding = 600, MaxLanding = 10000;
         /// <summary>The top step reaches the upper floor: the stair runs this far onto it (its last riser is built).</summary>
         public const double TopLedge = 100;
         /// <summary>Flights reach this far into a landing so the pieces overlap and unite.</summary>
@@ -202,7 +204,7 @@ namespace ClaudeCAD.Plugin.Core
             Range(o.Width, MinWidth, MaxWidth, "width", tool, DefaultWidth);
             Range(o.Waist, MinWaist, MaxWaist, "waist", tool, DefaultWaist);
             if (!(o.Gap >= 0 && o.Gap <= MaxGap)) throw ToolException.Invalid($"{tool}: gap must be 0–{MaxGap} mm (got {o.Gap}).");
-            if (o.Landing.HasValue) Range(o.Landing.Value, Math.Min(o.Width, 600), 10000, "landing", tool);
+            if (o.Landing.HasValue) Range(o.Landing.Value, MinLanding, MaxLanding, "landing", tool);
         }
 
         /// <summary>The whole number of risers whose height is nearest the wanted riser (at least 2).</summary>
@@ -448,9 +450,33 @@ namespace ClaudeCAD.Plugin.Core
                     var a = cs[i]; var b = cs[(i + 1) % 4];
                     for (int k = 0; k < 4; k++) probe.Add(new[] { a[0] + (b[0] - a[0]) * k / 4, a[1] + (b[1] - a[1]) * k / 4 });
                 }
-                if (probe.Any(p => !InsideOrOn(well, p, tol))) bad.Add(part);
+                if (probe.Any(p => !InsideOrOn(well, p, tol)) || WellCutsInto(cs, well, tol)) bad.Add(part);
             }
             return bad;
+        }
+
+        /// <summary>
+        /// Kiểm tra độc lập KT2-05: a notch of the well (a column, a wall corner) inside a part of the stair, missed by
+        /// the probes on the part's edges: a well corner strictly inside the part, or a well edge crossing the part
+        /// (both against the part shrunk by tol, so a well edge on the part's edge still fits).
+        /// </summary>
+        public static bool WellCutsInto(double[][] cs, IList<double[]> well, double tol)
+        {
+            double ux = cs[1][0] - cs[0][0], uy = cs[1][1] - cs[0][1], vx = cs[3][0] - cs[0][0], vy = cs[3][1] - cs[0][1];
+            double lu = Math.Sqrt(ux * ux + uy * uy), lv = Math.Sqrt(vx * vx + vy * vy);
+            if (lu <= 2 * tol || lv <= 2 * tol) return false;
+            ux /= lu; uy /= lu; vx /= lv; vy /= lv;
+            foreach (var q in well)
+            {
+                double u = (q[0] - cs[0][0]) * ux + (q[1] - cs[0][1]) * uy, v = (q[0] - cs[0][0]) * vx + (q[1] - cs[0][1]) * vy;
+                if (u > tol && u < lu - tol && v > tol && v < lv - tol) return true;
+            }
+            double[] At(double u, double v) => new[] { cs[0][0] + ux * u + vx * v, cs[0][1] + uy * u + vy * v };
+            var inner = new[] { At(tol, tol), At(lu - tol, tol), At(lu - tol, lv - tol), At(tol, lv - tol) };
+            for (int i = 0; i < well.Count; i++)
+                for (int k = 0; k < 4; k++)
+                    if (RoofLogic.SegCross(well[i], well[(i + 1) % well.Count], inner[k], inner[(k + 1) % 4])) return true;
+            return false;
         }
 
         private static bool InsideOrOn(IList<double[]> poly, double[] p, double tol)
@@ -746,9 +772,9 @@ namespace ClaudeCAD.Plugin.Core
             double oh = o.Overhang ?? (o.Type == "flat" ? 0 : DefaultOverhang);
             var lay = new Layout { Type = o.Type, Overhang = oh, Rectangle = IsRectangle(pts) };
             if (o.Type == "hip" && !IsConvex(pts))
-                throw ToolException.Invalid($"{tool}: a hip roof (4 dốc) is only built over a convex outline (a rectangle or a polygon with no inward corner); this outline has inward corners (an L / T / U house). Nothing was built. Split the outline into rectangles and build a roof on each, or use type gable / flat.");
+                throw ToolException.Invalid($"{tool}: a hip roof (4 dốc) is only built over a convex outline (a rectangle or a polygon with no inward corner); this outline has inward corners (an L / T / U house). Nothing was built. Tell the user; options: type flat (any outline), or split the outline into rectangles and build a roof on each (before building, tell the user the roofs will overlap at the joint and need fixing by hand, and that volume_schedule counts the overlap twice). Type gable needs a rectangle too.");
             if (o.Type == "gable" && !lay.Rectangle)
-                throw ToolException.Invalid($"{tool}: a gable roof (2 dốc) is only built over a rectangle; this outline has {pts.Count} corners or is not square. Nothing was built. Split it into rectangles, or use type hip (convex outline) / flat.");
+                throw ToolException.Invalid($"{tool}: a gable roof (2 dốc) is only built over a rectangle; this outline has {pts.Count} corners or is not square. Nothing was built. Tell the user; options: type flat, type hip (convex outline), or split it into rectangles and build a roof on each (before building, tell the user the roofs will overlap at the joint and need fixing by hand, and that volume_schedule counts the overlap twice).");
             var eave = Offset(pts, oh);
             if (SelfIntersects(eave)) throw ToolException.Invalid($"{tool}: with an overhang of {oh} mm the roof edge crosses itself (narrow inward corners). Nothing was built. Use a smaller overhang.");
             lay.Eave = eave;
@@ -814,7 +840,7 @@ namespace ClaudeCAD.Plugin.Core
             return false;
         }
 
-        private static bool SegCross(double[] a, double[] b, double[] c, double[] d)
+        public static bool SegCross(double[] a, double[] b, double[] c, double[] d)
         {
             double O(double[] p, double[] q, double[] r) => (q[0] - p[0]) * (r[1] - p[1]) - (q[1] - p[1]) * (r[0] - p[0]);
             double d1 = O(a, b, c), d2 = O(a, b, d), d3 = O(c, d, a), d4 = O(c, d, b);

@@ -55,6 +55,8 @@ describe('nâng cấp đợt E: stairs and roofs', () => {
     assert.ok(!sch('build_stair').safeParse({ type: 'u', start: [0, 0] }).success, 'height is required');
     assert.ok(!sch('build_stair').safeParse({ type: 'spiral', height: 3300, start: [0, 0] }).success);
     assert.ok(!sch('build_stair').safeParse({ height: 3300, start: [0, 0], riser: 400 }).success);
+    assert.ok(!sch('build_stair').safeParse({ type: 'u', height: 3300, start: [0, 0], landing: 550 }).success, 'KT2-09: landing under 600 is refused by the plugin too');
+    assert.ok(sch('build_stair').safeParse({ type: 'u', height: 3300, start: [0, 0], landing: 600 }).success);
     for (const type of ['flat', 'gable', 'hip']) assert.ok(sch('build_roof').safeParse({ type, from_walls: true }).success, type);
     assert.ok(sch('build_roof').safeParse({ type: 'hip', outline_handle: '1F', slope: 35, overhang: 800, thickness: 120, wall_top_z: 6600 }).success);
     assert.ok(!sch('build_roof').safeParse({ type: 'hip', from_walls: true, slope: 75 }).success);
@@ -69,6 +71,8 @@ describe('nâng cấp đợt E: stairs and roofs', () => {
     assert.match(src, new RegExp(`MinRiser = ${E.MinRiser}, MaxRiser = ${E.MaxRiser}, MinTread = ${E.MinTread}, MaxTread = ${E.MaxTread};`));
     assert.match(src, new RegExp(`MinWidth = ${E.MinWidth}, MaxWidth = ${E.MaxWidth}, MinHeight = ${E.MinHeight}, MaxHeight = ${E.MaxHeight};`));
     assert.match(src, new RegExp(`RailHeight = ${E.RailHeight},`));
+    // kiểm tra độc lập KT2-09: the landing limits are the same on both sides
+    assert.match(src, new RegExp(`MinLanding = ${E.MinLanding}, MaxLanding = ${E.MaxLanding};`));
     assert.match(src, new RegExp(`Layer3d = "${E.StairLayer}";`));
     assert.match(src, new RegExp(`DefaultThickness = ${E.DefaultRoofThickness}, DefaultSlopeDeg = ${E.DefaultSlopeDeg}, DefaultOverhang = ${E.DefaultOverhang};`));
     assert.match(src, new RegExp(`MinThickness = ${E.MinRoofThickness}, MaxThickness = ${E.MaxRoofThickness}, MinSlopeDeg = ${E.MinSlopeDeg}, MaxSlopeDeg = ${E.MaxSlopeDeg}, MaxOverhang = ${E.MaxOverhang};`));
