@@ -40,7 +40,13 @@ dự án gốc), `bo-cai/README.md`.
   - đọc lại một lượt như người không biết code trước khi gửi. Cậu còn hỏi lại "là sao" nghĩa là câu hỏi chưa đạt:
     giải thích lại đơn giản hơn rồi mới hỏi tiếp;
   - sub-thread nêu điểm cần chốt cũng theo quy tắc này; luồng chính viết lại cho dễ hiểu trước khi hỏi cậu.
-- Hiện mọi tác vụ đang chạy / chạy nền trong task list.
+- **Tác vụ đang chạy hiện ở thanh bên phải (task list) (chủ dự án yêu cầu 13/11/2026):**
+  - luồng chính giữ trên thanh bên phải của thread chính mỗi việc đang chạy là 1 task: tên thread / đợt + việc
+    (vd "Đợt A › Test & sửa"), dòng trạng thái là bước hiện tại (vd "CI đang chạy, run …");
+  - cập nhật task mỗi khi nhận tin cập nhật / báo cáo; xong thì đánh dấu xong; việc đã lên lịch (các đợt sau, kiểm tra
+    cuối, báo cáo) để "chờ"; việc chờ chủ dự án (thử tay, máy chủ kích hoạt…) là task riêng;
+  - sub-thread cũng hiện tác vụ của mình ở thanh bên phải của thread đó, kể cả tác vụ chạy nền (chờ CI). Tin giao việc
+    và prompt mở thread mới ghi sẵn quy tắc này.
 - Push noti khi xong một việc hoặc phải dừng chờ cậu quyết; không push cho từng bước nhỏ.
 
 ## Token và thời gian
