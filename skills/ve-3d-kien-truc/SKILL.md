@@ -146,8 +146,9 @@ cạnh dài, `ridge` `short` để đổi) / `hip` (4 dốc, đường bao lồi
 bao = mặt ngoài tường: `outline_handle` (polyline kín), `outline_points`, hoặc `from_walls: true` (hình chữ nhật bao
 các khối tường). Mái đặt trên đỉnh tường: mặc định đỉnh cao nhất của khối tường `A-WALL-3D` dưới đường bao (tầng trên
 cùng; có sàn mái `roof_slab` nằm trên đỉnh tường thì mái đặt trên mặt sàn mái), hoặc `wall_top_z`. Đã có sàn
-mái thì không dựng thêm mái bằng (thành hai lớp sàn). Nhà chữ L / T: 4 dốc và 2 dốc báo lỗi → chia đường bao thành các hình chữ nhật rồi dựng
-từng mái, hoặc mái bằng. Đầu hồi mái 2 dốc để hở (tường hồi: `extrude` / `presspull`). Báo `top_z_mm`,
+mái thì không dựng thêm mái bằng (thành hai lớp sàn). Nhà chữ L / T: 4 dốc và 2 dốc báo lỗi → mái bằng, hoặc chia đường bao thành các hình chữ nhật rồi
+dựng từng mái: **báo trước** khách là hai mái sẽ chồng nhau ở chỗ nối (mỗi mái đua qua đường chia), cần sửa tay, và
+bảng khối lượng (`volume_schedule`) tính phần chồng hai lần (mái liền cho nhà chữ L để đợt sau). Đầu hồi mái 2 dốc để hở (tường hồi: `extrude` / `presspull`). Báo `top_z_mm`,
 `roof_area_m2` (diện tích mặt mái nghiêng, để tính tôn / ngói).
 
 Khối lượng: `volume_schedule` (theo layer; cột lồng trong tường / dầm chỉ tính một lần, vào cột). Va chạm:
@@ -180,7 +181,7 @@ Khối lượng: `volume_schedule` (theo layer; cột lồng trong tường / d�
 | Cột theo mặt bằng | `build_3d_from_plan` | Hình kín trên `A-COLS` / `A-COL`, cao bằng tường. Tường đã dựng từ trước, chỉ thêm cột: `extrude` các hình cột (`profile_handles`) lên chiều cao tường, layer `A-COLS-3D` |
 | Dầm theo trục | `build_beam` | Thẳng hoặc cong, góc tự khép |
 | Cầu thang 1 vế / chữ L / chữ U | `build_stair` | Chia bậc theo cao tầng; bậc lẻ, thang xoắn: `draw_solid` `box` mỗi bậc hoặc `extrude` biên dạng răng cưa |
-| Mái bằng / 2 dốc / 4 dốc | `build_roof` | Trên đỉnh tường tầng trên cùng; nhà chữ L / T chia thành các hình chữ nhật |
+| Mái bằng / 2 dốc / 4 dốc | `build_roof` | Trên đỉnh tường tầng trên cùng; nhà chữ L / T: mái bằng, hoặc chia hình chữ nhật (báo trước mái chồng ở chỗ nối) |
 | Cột vuông | `draw_solid` `box` | |
 | Lan can | `build_railing` | Theo polyline, mặc định 1100 |
 | Dốc, mái dốc một phía | `draw_solid` `wedge` | Mặt cao ở phía `corner`, `rotation` để đổi hướng dốc |

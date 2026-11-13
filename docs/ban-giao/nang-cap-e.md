@@ -84,3 +84,18 @@ tầng / không có tường, `from_walls` với tường + cột; nêm quá l�
 ## Commit
 
 `f4a4780` (code 2 lệnh + test + tài liệu, CI 43461186495 xanh), sau đó một commit ghi kết quả CI vào file này (chỉ tài liệu; CI của thread con phủ nó).
+
+## Sửa sau kiểm tra độc lập nâng cấp
+
+*13/11/2026 · lỗi từ [`kiem-tra-doc-lap-nang-cap.md`](kiem-tra-doc-lap-nang-cap.md) (nhánh `full/kiem-tra-doc-lap-2` @
+`8e6fede`); đã gộp nhánh tích hợp `full/nang-cap-tong-the` @ `f1e7123` trước khi sửa. Không chạy CI (thread "Test tổng thể
+nâng cấp" gộp và chạy CI chung).*
+
+| Lỗi | Mức | Sửa | Ở đâu | Test |
+| --- | --- | --- | --- | --- |
+| KT2-05 | vừa | Kiểm "cầu thang vừa ô" chỉ thử 16 điểm trên cạnh mỗi vế / chiếu nghỉ, bỏ sót chỗ lõm (cột, góc tường) nằm giữa hai điểm thử → dựng xuyên cột. Thêm `WellCutsInto`: đỉnh ô nằm hẳn trong một phần của thang, hoặc cạnh ô cắt cạnh phần đó (so với phần thu nhỏ 1 mm, nên ô trùng mép thang vẫn vừa) → không vừa. Dùng chung cho đặt theo `start` và tự đặt vừa ô | `Core/StairRoof.cs` (`Outside`, `WellCutsInto`; `RoofLogic.SegCross` thành public) | `NangCapEKiemTraTests` (ô có chỗ lõm 200 × 200 giữa hai điểm thử: không vừa; dời ra: vừa; tự đặt không xuyên chỗ lõm; đỉnh trong / trùng mép / lệch 0,5 mm) |
+| KT2-08 | nhẹ | Theo lựa chọn của luồng chính (cách 1): không làm mái liền; lời lỗi mái 4 dốc / 2 dốc trên nhà chữ L / T, mô tả lệnh `build_roof` và skill dặn Claude **báo trước** khách: chia hình chữ nhật thì hai mái chồng nhau ở chỗ nối, cần sửa tay, bảng khối lượng tính phần chồng hai lần. Mái liền để đợt F | `Core/StairRoof.cs` (`RoofLogic.Build`), `agent/src/tools/solids3.ts`, `skills/ve-3d-kien-truc/SKILL.md` | `NangCapEKiemTraTests` (lời lỗi cả hai kiểu, skill, mô tả) |
+| KT2-09 | nhẹ | (a) Lỗi mái 4 dốc đường bao lõm không còn gợi ý "type gable" (gable cũng đòi chữ nhật): gợi ý mái bằng / chia hình chữ nhật. (b) `landing` thống nhất 600–10000 mm ở plugin (`MinLanding`, `MaxLanding`) và schema trợ lý (trước: schema 500, plugin min(vế, 600)) | `Core/StairRoof.cs`, `agent/src/tools/solids3.ts` | `NangCapEKiemTraTests`; trợ lý `nangcape.test.ts` (550 bị chặn, 600 qua, hằng số khớp) |
+
+Test: lõi **865** (861 sau khi gộp + 4), trợ lý **291**, build net48 / net8.0-windows / net10.0-windows 0 cảnh báo. Token: mô
+tả `build_roof` thêm ~70 ký tự (gói 3D / Full).

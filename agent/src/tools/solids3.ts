@@ -26,6 +26,8 @@ export const STAIR_ROOF = {
   MaxWidth: 5000,
   MinHeight: 200,
   MaxHeight: 20000,
+  MinLanding: 600,
+  MaxLanding: 10000,
   RailHeight: 900,
   StairLayer: 'A-STAIR-3D',
   DefaultRoofThickness: 150,
@@ -150,7 +152,7 @@ export function solid3Tools(b: ToolBridge): AnyTool[] {
         riser: z.number().min(E.MinRiser).max(E.MaxRiser).optional(),
         tread: z.number().min(E.MinTread).max(E.MaxTread).optional(),
         width: z.number().min(E.MinWidth).max(E.MaxWidth).optional(),
-        landing: z.number().min(500).max(10000).optional().describe('Landing depth (mm, default = width).'),
+        landing: z.number().min(E.MinLanding).max(E.MaxLanding).optional().describe('Landing depth (mm, default = width).'),
         first_flight_risers: z.number().int().min(2).optional(),
         waist: z.number().min(50).max(500).optional(),
         gap: z.number().min(0).max(5000).optional(),
@@ -165,7 +167,7 @@ export function solid3Tools(b: ToolBridge): AnyTool[] {
         `or hip (4 dốc, convex outline only). Sloped: slope default ${E.DefaultSlopeDeg}°, slab ${E.DefaultRoofThickness} mm, overhang (eave past the walls) default ${E.DefaultOverhang} mm (flat: 0); ` +
         "use the user's numbers when given. Outline = outer face of the walls: outline_handle (closed polyline), outline_points, or from_walls: true (box around the wall solids). " +
         'It sits on the wall top: wall_top_z (mm) or, by default, the top of the wall solids under it (wall_layers, default A-WALL-3D: the top storey; a roof slab on A-SLAB-3D lying on them: its top). An L / T house cannot take a hip ' +
-        'or gable roof: the error says so; tell the user (split it into rectangles, or flat). Gable ends are left open. Returns handle, eave_z_mm, top_z_mm, ridge_length_m, plan_area_m2, roof_area_m2, volume_m3, wall_top_from.',
+        'or gable roof: the error says so; tell the user (flat, or split it into rectangles: then say first that the roofs overlap at the joint, to fix by hand, and the volume schedule counts it twice). Gable ends are left open. Returns handle, eave_z_mm, top_z_mm, ridge_length_m, plan_area_m2, roof_area_m2, volume_m3, wall_top_from.',
       {
         type: z.enum(['flat', 'gable', 'hip']).describe('flat = mái bằng, gable = 2 dốc, hip = 4 dốc.'),
         outline_handle: handle.optional(),
