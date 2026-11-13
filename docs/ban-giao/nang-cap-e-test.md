@@ -32,7 +32,7 @@ INSUNITS; `base_z`, `wall_top_z` và mọi số đo là mm như các lệnh 3D k
 - Trợ lý: `cd agent && npm ci && npm test` — **287** test (286 trước). `test/nangcapetest.test.ts` (1): mô tả nói giữ hướng
   khi đặt vào ô, schema nhận `well_handle` + `direction`.
 - Build net48 / net8.0-windows / net10.0-windows (Linux, `-p:EnableWindowsTargeting=true`): xanh, 0 cảnh báo.
-- CI: _đang chạy_ (`release: "false"`).
+- CI: run **43465289107 xanh** ở `e7e8544` (`release: "false"`, Windows: trợ lý, test lõi, UI test WPF, build 3 bản, gói + Setup.exe; bước phát hành bỏ qua đúng).
 
 Token: thêm ~35 ký tự vào mô tả `build_stair` (gói 3D / Full, ~10 token); system prompt không đổi.
 
@@ -52,4 +52,4 @@ lật), hợp khối các vế + chiếu nghỉ (một khối), giao / trừ cá
 
 ## Commit
 
-_(điền sau khi push)_
+`e7e8544` (sửa NE-1…NE-3 + test + tài liệu, CI 43465289107 xanh), sau đó một commit ghi kết quả CI vào file này (chỉ tài liệu).
