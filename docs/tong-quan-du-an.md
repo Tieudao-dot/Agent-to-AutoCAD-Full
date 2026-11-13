@@ -33,7 +33,7 @@ quy tắc làm việc và danh bạ thread: [`../CLAUDE.md`](../CLAUDE.md).
    chính URL web app + 2 dòng khóa công khai (không gửi khóa riêng / SECRET).
 2. Sau bước 1: luồng chính giao gắn URL / khóa, build **bộ cài thử**; chủ dự án thử theo checklist tổng, gửi lỗi.
 3. **Thử phần 3D** bằng bộ cài thử nội bộ (`checklist-tong-the.md` phần 0, 2, 3, 4, 5, ~54 phút), song song với chuỗi
-   nâng cấp; lỗi gửi luồng chính (thread "Test tổng thể" sửa). Chốt kiểu cầu thang / mái cho đợt E.
+   nâng cấp; lỗi gửi luồng chính (thread "Test tổng thể" sửa).
 4. Trước khi phát hành: số phiên bản (plugin / trợ lý vẫn ghi 0.9.4), secret CI của repo Full, đồng ý merge `main`,
    các chỗ còn trỏ về dự án gốc ([`cho-tro-ve-repo-goc.md`](cho-tro-ve-repo-goc.md)).
 
@@ -52,6 +52,7 @@ quy tắc làm việc và danh bạ thread: [`../CLAUDE.md`](../CLAUDE.md).
 | 13/11 | 9 quyết định luồng chính đưa ra đêm 12/11 (chủ dự án **đồng ý** sáng 13/11) | Xem [`bao-cao-sang-13-11.md`](bao-cao-sang-13-11.md) mục 3: nút "Tiếp tục / Hủy"; xóa khối 3D cũ luôn hỏi; chỉ nút Đồng ý trên thẻ mở khóa sửa khối 3D cũ; chặn thuộc tính block ở gói 3D; máy offline chỉ nhận dòng gói / trạng thái mới hơn; giữ phương án A; thêm ô dán mã ở thẻ 🔒 và ⚙; chấp nhận chữ mặc định khi chèn block ở gói 3D |
 | 13/11 | 2 commit đầu có tên model | Để nguyên trên các nhánh làm việc; khi phát hành gộp vào `main` thành một commit gọn (squash) để lịch sử `main` sạch |
 | 13/11 | Kế hoạch nâng cấp lệnh vẽ | Gộp 6 lệnh dựng khối (đợt A); nâng cấp xong mới phát hành; gói lệnh mới theo phương án A (GROUP / MATCHPROP mọi gói); thứ tự A → B → C → D → E, F sau phát hành; sau đó đổi sang chạy liền A → E, bắt đầu ngay, dừng trước phát hành. Xem [`ke-hoach-nang-cap-lenh.md`](ke-hoach-nang-cap-lenh.md) |
+| 13/11 | Đợt E: cầu thang / mái | 3 kiểu cầu thang + 3 kiểu mái; mặc định cao bậc 160, rộng bậc 280, vế 1000, mái bằng dày 150, mái dốc 30°, đua 600 (mm) |
 | 12/11 | Cách làm việc | Luồng chính điều phối; mỗi đợt một thread, thread đợt tự mở thread con "Test & sửa" |
 
 ## 4. Đã làm

@@ -2,7 +2,7 @@
 
 *13/11/2026 · thread QnA soạn theo yêu cầu của chủ dự án, luồng chính lưu lại. **Chủ dự án đã chốt 5 điểm (13/11, cuối
 file).** Sau đó (13/11, qua QnA, luồng chính xác nhận lại) chủ dự án cho **chạy liền A → E, bắt đầu ngay**, không duyệt
-từng đợt; dừng hỏi ở đợt E (kiểu cầu thang / mái) và trước phát hành.*
+từng đợt; kiểu cầu thang / mái đợt E đã chốt; chỉ dừng hỏi trước phát hành.*
 
 ## Hiện trạng
 
@@ -27,7 +27,7 @@ từng đợt; dừng hỏi ở đợt E (kiểu cầu thang / mái) và trướ
 | B (sửa hình 2D) | Lệnh mới: STRETCH, BREAK, LENGTHEN, DIVIDE / MEASURE, GROUP. Nâng cấp: bo / vát góc cho polyline và cung (hiện chỉ cho 2 đoạn thẳng), offset hai phía, MATCHPROP, nối đường có dung sai | GROUP, MATCHPROP: mọi gói. Còn lại: 2D / Full |
 | C (2D) | Hatch bấm một điểm; tự ghi kích thước cả mặt bằng; thống kê block ra bảng, đếm theo thuộc tính; tổng diện tích phòng / layer ra bảng; tìm & thay chữ (có thẻ xác nhận); in nhiều layout vào một PDF | 2D / Full |
 | D (3D) | Dầm; tường cong; PRESSPULL; xuất STL; bảng khối lượng theo layer; va chạm ra bảng | 3D / Full |
-| E (lớn) | Cầu thang (1 vế / chữ L / chữ U); mái bằng / 2 mái / 4 mái. Cần chốt kiểu và số mặc định | 3D / Full |
+| E (lớn) | Cầu thang (1 vế / chữ L / chữ U); mái bằng / 2 mái / 4 mái. Số mặc định: điểm 6 | 3D / Full |
 | F (sau phát hành) | Mọi lệnh hiểu UCS (hiện theo WCS); vật liệu / render; block từ thư viện; bộ layout khung tên; layer state; lưu góc nhìn; bộ style chuẩn Việt Nam | — |
 
 ## Chi phí ước
@@ -63,7 +63,10 @@ Kiểm tra độc lập $22; test tổng thể $65 (gồm bộ cài, 3 vòng g�
    án thử 3D (thử song song bằng bộ cài thử nội bộ; lỗi thử thật do thread "Test tổng thể" sửa trên `full/test-tong-the`,
    các đợt gộp bản sửa vào). Xong mỗi đợt luồng chính báo thời gian + chi phí, không chờ duyệt. Cả chuỗi ước $150–230.
    Cuối chuỗi: kiểm tra độc lập, test tổng thể. **Dừng trước phát hành** (merge `main`, CI `release: true`, nâng
-   phiên bản hỏi riêng). Còn hỏi chủ dự án: kiểu cầu thang / mái và số mặc định (đợt E).
+   phiên bản hỏi riêng).
+6. **Đợt E (chốt 13/11):** đủ 3 kiểu cầu thang (1 vế thẳng, chữ L, chữ U) và 3 kiểu mái (bằng, 2 mái, 4 mái). Số mặc
+   định khi khách không nói số: cao bậc 160 mm, rộng bậc 280 mm, vế rộng 1000 mm, chiếu nghỉ rộng bằng vế; mái bằng dày
+   150 mm; mái dốc nghiêng 30°, đua ra khỏi tường 600 mm. Khách nói số thì theo số của khách.
 
 ## Tiến độ chuỗi nâng cấp
 
@@ -73,7 +76,7 @@ Kiểm tra độc lập $22; test tổng thể $65 (gồm bộ cài, 3 vòng g�
 | B | | | | Chờ A xong |
 | C | | | | |
 | D | | | | |
-| E | | | | Cần chủ dự án chốt kiểu cầu thang / mái |
+| E | | | | Đã chốt kiểu + số mặc định (điểm 6) |
 | Kiểm tra độc lập, test tổng thể | | | | Cuối chuỗi |
 
 Lịch sử duyệt: 13/11 chủ dự án duyệt đợt A, ban đầu chờ thử 3D thật; cùng ngày đổi sang chạy liền A → E, bắt đầu ngay.
