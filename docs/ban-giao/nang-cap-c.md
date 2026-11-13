@@ -54,7 +54,7 @@ Kèm theo:
   `batch_execute`; `user_confirmed` chỉ là handle trên thẻ, Claude đặt thì bị bỏ; kích thước / hatch / bảng là đối tượng mới.
 - Build net48 / net8.0-windows / net10.0-windows (Linux, `-p:EnableWindowsTargeting=true`, .NET SDK 10 từ kho Ubuntu): xanh,
   0 cảnh báo.
-- CI: xem mục "CI" cuối file.
+- CI: run **43429577551 xanh** ở `0f62082` (`release: "false"`, Windows: trợ lý, test lõi, UI test WPF, build 3 bản, gói + Setup.exe; bước phát hành bỏ qua đúng). ~10 phút.
 
 ## Token mô tả lệnh + system prompt (cùng cách đo với đợt A / B, ~3,5 ký tự / token)
 
@@ -93,6 +93,7 @@ block lồng; diện tích hatch nhiều vùng, phòng hình L với chữ ở g
 handle của block thay vì thuộc tính, layer khóa, thay xong số chỗ khác xem trước; in "all" khi chỉ có Model, tên layout có ký
 tự lạ, `output` tương đối; token (rút gọn mô tả nếu đáng).
 
-## CI
+## Commit
 
-(điền sau khi chạy)
+`0f62082` (code 6 việc + test + tài liệu, CI xanh), sau đó một commit ghi kết quả CI vào file này (chỉ tài liệu; CI của
+thread con phủ nó).
