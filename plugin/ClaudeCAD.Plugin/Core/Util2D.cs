@@ -177,8 +177,54 @@ namespace ClaudeCAD.Plugin.Core
         }
 
         /// <summary>Default distance of the first row from the walls: 8 mm on paper (DIMSCALE), at least 5 % of the plan size.</summary>
-        public static double DefaultDimOffset(double dimscale, double planSize) =>
-            Math.Max((dimscale > 0 ? dimscale : 1) * 8, planSize * 0.05);
+        /// <remarks>KT2-04: planSize is in drawing units; the paper part is converted with mmPerUnit (INSUNITS, as the 3D tools).</remarks>
+        public static double DefaultDimOffset(double dimscale, double planSize, double mmPerUnit = 1) =>
+            Math.Max((dimscale > 0 ? dimscale : 1) * 8 / (mmPerUnit > 0 ? mmPerUnit : 1), planSize * 0.05);
+
+        /// <summary>Schedule tables: 2.5 mm × DIMSCALE (at least 1) on paper, in drawing units (KT2-04).</summary>
+        public static double DefaultTableTextHeight(double dimscale, double mmPerUnit = 1) =>
+            Math.Max(dimscale > 0 ? dimscale : 1, 1) * 2.5 / (mmPerUnit > 0 ? mmPerUnit : 1);
+
+        /// <summary>Drawing units² → m² (KT2-04).</summary>
+        public static double ToM2(double area, double mmPerUnit = 1) => area * mmPerUnit * mmPerUnit / 1e6;
+
+        /// <summary>m² → drawing units² (min_area, KT2-04).</summary>
+        public static double FromM2(double m2, double mmPerUnit = 1) => m2 * 1e6 / (mmPerUnit * mmPerUnit);
+
+        /// <summary>
+        /// KT2-17: the paper of one page: the one asked for; else the layout's own when the device lists it (case-insensitive);
+        /// else the fallback (A3).
+        /// </summary>
+        public static string PickMedia(string requested, string layoutMedia, IList<string> deviceMedia, string fallback)
+        {
+            if (!string.IsNullOrWhiteSpace(requested)) return requested;
+            if (!string.IsNullOrWhiteSpace(layoutMedia) && deviceMedia != null)
+            {
+                var hit = deviceMedia.FirstOrDefault(m => string.Equals(m, layoutMedia, StringComparison.OrdinalIgnoreCase));
+                if (hit != null) return hit;
+            }
+            return fallback;
+        }
+
+        /// <summary>KT2-16: the plot wrote the file: it exists now and is new, or newer than before the plot.</summary>
+        public static bool PdfWritten(bool existedBefore, DateTime? before, bool existsAfter, DateTime? after) =>
+            existsAfter && (!existedBefore || (before.HasValue && after.HasValue && after.Value > before.Value));
+
+        public static string PdfLockedMessage(string path) =>
+            $"plot_pdf: '{path}' is open in another program (a PDF viewer?) and cannot be replaced. Nothing was plotted. " +
+            "Ask the user to close it, or plot to another file name.";
+
+        public static string PdfNotWrittenMessage(bool existedBefore) =>
+            existedBefore
+                ? "The PDF file was not updated by this plot (it still has its old date). Tell the user the plot did not write the file; check the device / paper, or plot to another name."
+                : "No PDF file was written. Tell the user the plot produced no file; check the device / paper and the folder.";
+
+        /// <summary>KT2-02: why a replace was refused before any change: the texts on locked layers, by handle and layer.</summary>
+        public static string LockedTextMessage(IList<(string handle, string layer)> locked) =>
+            $"find_replace_text: nothing was replaced: {locked.Count} of the approved object(s) are on locked layers (" +
+            string.Join(", ", locked.Take(20).Select(x => $"{x.handle} on {x.layer}")) + (locked.Count > 20 ? ", …" : "") +
+            "). Tell the user which layers are locked. Either they unlock them and you replace again, or you replace the others: " +
+            "preview again (locked texts are left out) and ask with a new card.";
 
         // ================================================================== block schedule
 

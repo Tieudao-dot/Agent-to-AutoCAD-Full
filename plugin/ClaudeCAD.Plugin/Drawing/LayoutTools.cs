@@ -291,7 +291,18 @@ namespace ClaudeCAD.Plugin.Drawing
             output = full;
 
             string device = p.Str("device", DefaultPdfDevice);
-            string media = p.Str("media", DefaultPdfMedia);
+            // KT2-17: without 'media' each page keeps its layout's own paper when the PDF device has it (A1 and A3 layouts stay A1 and A3)
+            string media = p.Str("media", null);
+            var pageMedia = new List<string>();
+            // KT2-16: remember the file before plotting, so an old PDF (or one open in a viewer) is not reported as the new plot
+            bool existedBefore = File.Exists(output);
+            DateTime? before = existedBefore ? File.GetLastWriteTimeUtc(output) : (DateTime?)null;
+            if (existedBefore)
+            {
+                try { using (new FileStream(output, FileMode.Open, FileAccess.ReadWrite, FileShare.None)) { } }
+                catch (IOException) { throw ToolException.Invalid(Util2DLogic.PdfLockedMessage(output)); }
+                catch (UnauthorizedAccessException) { throw ToolException.Invalid(Util2DLogic.PdfLockedMessage(output)); }
+            }
             string styleSheet = p.Str("plot_style", "monochrome.ctb");
             string scaleText = p.Str("scale", "fit");
 
@@ -316,7 +327,7 @@ namespace ClaudeCAD.Plugin.Drawing
                             string area = p.Str("area", lo.ModelType ? "extents" : "layout").ToLowerInvariant();
                             var ps = new PlotSettings(lo.ModelType);
                             settings.Add(ps);
-                            ConfigurePlot(p, lo, ps, device, media, styleSheet, area, scaleText);
+                            pageMedia.Add(ConfigurePlot(p, lo, ps, device, media, styleSheet, area, scaleText));
                             var pi = new PlotInfo { Layout = lo.ObjectId, OverrideSettings = ps };
                             var piv = new PlotInfoValidator { MediaMatchingPolicy = MatchingPolicy.MatchEnabled };
                             piv.Validate(pi);
@@ -353,13 +364,16 @@ namespace ClaudeCAD.Plugin.Drawing
                     try { if (!lm.CurrentLayout.Equals(previousLayout, StringComparison.OrdinalIgnoreCase)) lm.CurrentLayout = previousLayout; } catch { }
                 }
             }
+            bool existsAfter = File.Exists(output);
+            bool written = Util2DLogic.PdfWritten(existedBefore, before, existsAfter, existsAfter ? File.GetLastWriteTimeUtc(output) : (DateTime?)null);
             var res = new Dictionary<string, object>
             {
                 ["output"] = output,
-                ["exists"] = File.Exists(output),
-                ["media"] = media,
+                ["exists"] = written,
+                ["media"] = pageMedia.Distinct().Count() == 1 ? (object)pageMedia[0] : pageMedia.Cast<object>().ToList(),
                 ["scale"] = scaleText,
             };
+            if (!written) res["warning"] = Util2DLogic.PdfNotWrittenMessage(existedBefore);
             if (multi) { res["layouts"] = layouts.Cast<object>().ToList(); res["pages"] = layouts.Count; }
             else res["layout"] = layouts[0];
             return res;
@@ -384,10 +398,23 @@ namespace ClaudeCAD.Plugin.Drawing
         }
 
         /// <summary>Device, paper, area, scale, centring, plot style and rotation of one page (from the layout's own settings).</summary>
-        private static void ConfigurePlot(Params p, Layout lo, PlotSettings ps, string device, string media, string styleSheet, string area, string scaleText)
+        /// <returns>The paper used: 'media' when given, else the layout's own when the device has it (KT2-17), else A3.</returns>
+        private static string ConfigurePlot(Params p, Layout lo, PlotSettings ps, string device, string media, string styleSheet, string area, string scaleText)
         {
             ps.CopyFrom(lo);
             var psv = PlotSettingsValidator.Current;
+            if (media == null)
+            {
+                List<string> deviceMedia;
+                try
+                {
+                    psv.SetPlotConfigurationName(ps, device, null);
+                    psv.RefreshLists(ps);
+                    deviceMedia = psv.GetCanonicalMediaNameList(ps).Cast<string>().ToList();
+                }
+                catch (Autodesk.AutoCAD.Runtime.Exception) { deviceMedia = new List<string>(); }
+                media = Util2DLogic.PickMedia(null, lo.CanonicalMediaName, deviceMedia, DefaultPdfMedia);
+            }
             psv.SetPlotConfigurationName(ps, device, media);
             psv.SetPlotPaperUnits(ps, PlotPaperUnit.Millimeters);
             psv.RefreshLists(ps);
@@ -419,6 +446,7 @@ namespace ClaudeCAD.Plugin.Drawing
             try { psv.SetCurrentStyleSheet(ps, styleSheet); }
             catch (Autodesk.AutoCAD.Runtime.Exception) { throw ToolException.Invalid($"plot_pdf: plot style '{styleSheet}' not found. Use list_plot_media to see the available .ctb/.stb files."); }
             if (p.Has("landscape")) psv.SetPlotRotation(ps, p.Bool("landscape", true) ? PlotRotation.Degrees090 : PlotRotation.Degrees000);
+            return media;
         }
     }
 }
