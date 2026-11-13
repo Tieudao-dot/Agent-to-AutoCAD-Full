@@ -1,7 +1,8 @@
 # Kế hoạch nâng cấp lệnh vẽ (2D + 3D)
 
 *13/11/2026 · thread QnA soạn theo yêu cầu của chủ dự án, luồng chính lưu lại. **Chủ dự án đã chốt 5 điểm (13/11, cuối
-file).** Mỗi đợt chỉ bắt đầu khi chủ dự án duyệt nội dung + chi phí ước của đợt đó.*
+file).** Sau đó (13/11, qua QnA, luồng chính xác nhận lại) chủ dự án cho **chạy liền A → E, bắt đầu ngay**, không duyệt
+từng đợt; dừng hỏi ở đợt E (kiểu cầu thang / mái) và trước phát hành.*
 
 ## Hiện trạng
 
@@ -58,11 +59,21 @@ Kiểm tra độc lập $22; test tổng thể $65 (gồm bộ cài, 3 vòng g�
    - chữ / kích thước / bảng / hatch / in: 2D / Full;
    - cột, dầm, cầu thang, mái, STL: 3D / Full.
 4. **Thứ tự** A → B → C → D → E. F để sau phát hành.
-5. **Duyệt chi theo từng đợt:** trước mỗi đợt luồng chính báo nội dung + chi phí ước, chủ dự án đồng ý mới làm; xong
-   đợt báo thời gian và phần tốn nhất.
+5. ~~Duyệt chi theo từng đợt~~ → **thay bằng (13/11): chạy liền A → B → C → D → E, bắt đầu ngay**, không chờ chủ dự
+   án thử 3D (thử song song bằng bộ cài thử nội bộ; lỗi thử thật do thread "Test tổng thể" sửa trên `full/test-tong-the`,
+   các đợt gộp bản sửa vào). Xong mỗi đợt luồng chính báo thời gian + chi phí, không chờ duyệt. Cả chuỗi ước $150–230.
+   Cuối chuỗi: kiểm tra độc lập, test tổng thể. **Dừng trước phát hành** (merge `main`, CI `release: true`, nâng
+   phiên bản hỏi riêng). Còn hỏi chủ dự án: kiểu cầu thang / mái và số mặc định (đợt E).
 
-## Duyệt từng đợt
+## Tiến độ chuỗi nâng cấp
 
-| Ngày | Đợt | Chủ dự án duyệt | Chi phí ước | Trạng thái |
+| Đợt | Thread viết | Thread con Test & sửa | Nhánh | Trạng thái |
 | --- | --- | --- | --- | --- |
-| 13/11 | A | Đồng ý, **chờ chủ dự án thử phần 3D trên AutoCAD thật trước** (bộ cài thử nội bộ, `checklist-tong-the.md` phần 0, 2, 3, 4, 5, ~54 phút; quan trọng nhất phần 0 và 5). Lỗi tìm được sửa trước, rồi mới mở thread đợt A | $15–30 (theo số thật các đợt 3D: $17–27), 1 thread viết + 1 thread con test & sửa, 2 lượt CI | Chờ kết quả thử 3D |
+| A | `session_01D56HmEZnPtpeS5RWXPVPYD` (mở 13/11 14h28) | (thread đợt tự mở) | `full/nang-cap-a` → `full/nang-cap-a-test` | Đang viết |
+| B | | | | Chờ A xong |
+| C | | | | |
+| D | | | | |
+| E | | | | Cần chủ dự án chốt kiểu cầu thang / mái |
+| Kiểm tra độc lập, test tổng thể | | | | Cuối chuỗi |
+
+Lịch sử duyệt: 13/11 chủ dự án duyệt đợt A, ban đầu chờ thử 3D thật; cùng ngày đổi sang chạy liền A → E, bắt đầu ngay.

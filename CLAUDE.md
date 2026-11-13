@@ -146,6 +146,7 @@ dự án gốc), `bo-cai/README.md`.
 | Kiểm tra độc lập | `session_01D56HmF7CGr1nonkGWUKkGr` | Nhánh `full/kiem-tra-doc-lap` (tách từ `full/test-tong-the` @ `9ef9db9`): agent mới test lại toàn bộ một lượt, chỉ ghi lỗi (không sửa), phân theo phần phụ trách; 1 lượt CI; sau đó soát lại các lỗi đã sửa. Báo cáo: `docs/ban-giao/kiem-tra-doc-lap.md` **Đã đóng (lưu trữ) 13/11/2026.** |
 | Bộ cài thử nội bộ | `session_01D56HmEzAMRB7RXVJqoQPnD` | Nhánh `full/ban-thu-noi-bo` (tách từ `full/test-tong-the`, **không bao giờ gộp**): bộ cài thử chỉ cho chủ dự án, bỏ qua kích hoạt, gói Full, hết hạn 10/12/2026, nhãn "BẢN THỬ NỘI BỘ"; 1 lượt CI. Bàn giao: `docs/ban-giao/ban-thu-noi-bo.md` |
 | QnA | `session_01D56HmJBDC5zZsEvTcJ4Jbt` | Hỏi đáp về plugin cho chủ dự án, đọc code / tài liệu mới nhất (`full/test-tong-the`). Không sửa code, không commit. Lỗi hoặc việc cần quyết thì chuyển về luồng chính |
+| Nâng cấp đợt A | `session_01D56HmEZnPtpeS5RWXPVPYD` | Nhánh `full/nang-cap-a` (tách từ `full/test-tong-the` @ `19944df`): gộp 6 lệnh dựng khối, `build_3d_from_plan` nhận layer tên khác, cột, nhiều tầng, lan can, `array_rect` thêm tầng. Viết xong tự mở thread con Test & sửa (`full/nang-cap-a-test`). Bàn giao: `docs/ban-giao/nang-cap-a.md`. Kế hoạch: `docs/ke-hoach-nang-cap-lenh.md` |
 
 Link mở thread: `https://claude.ai/code/<session id>`.
 
