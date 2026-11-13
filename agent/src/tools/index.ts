@@ -1,4 +1,5 @@
 import { createSdkMcpServer } from '@anthropic-ai/claude-agent-sdk';
+import { z } from 'zod';
 import type { SidecarToPlugin } from '../ipc/protocol.js';
 import { interactionTools } from './interaction.js';
 import type { AnyTool, ToolBridge } from './common.js';
@@ -11,7 +12,7 @@ import { captureTools } from './capture.js';
 import { drawTools } from './draw.js';
 import { layerTools } from './layers.js';
 import { layoutTools } from './layouts.js';
-import { modifyTools } from './modify.js';
+import { MATCH_PROPS_GENERAL, MATCH_PROPS_TEXT_DESC, modifyTools } from './modify.js';
 import { queryTools } from './query.js';
 import { solidTools } from './solids.js';
 import { styleTools } from './styles.js';
@@ -63,6 +64,12 @@ export const PLAN_HIDDEN_PARAMS: Record<string, { needs: '2d' | '3d'; params: st
 };
 
 function trimForPlan(t: AnyTool, plan: string): AnyTool {
+  // KT2-14 (kiểm tra độc lập nâng cấp): without 2D, match_properties offers only the general properties (the plugin
+  // refuses text / dimension there: PlanLogic.TextValues), so Claude is not invited to a call that is sure to fail
+  if (t.name === 'match_properties' && plan !== '2d' && plan !== '2d3d') {
+    const shape = { ...(t.inputSchema as Record<string, unknown>), properties: z.array(z.enum(MATCH_PROPS_GENERAL)).optional() };
+    return { ...t, description: t.description.replace(MATCH_PROPS_TEXT_DESC, '. Default: all.'), inputSchema: shape } as AnyTool;
+  }
   const h = PLAN_HIDDEN_PARAMS[t.name];
   const has = h && (plan === '2d3d' || plan === h.needs);
   if (!h || has) return t;

@@ -146,7 +146,9 @@ namespace ClaudeCAD.Plugin.Drawing
             int levels = p.Int("levels", 1, 1, 1000);
             double rs = p.Num("row_spacing", 0);
             double cs = p.Num("col_spacing", 0);
-            double ls = p.Num("level_spacing", 0);
+            // level_spacing is mm like the heights of the 3D tools, scaled by INSUNITS (KT2-10: a metres drawing got
+            // copies 3300 units apart); row / col spacing are drawing units like every 2D tool
+            double ls = FloorPlanLogic.ToDrawingUnits(p.Num("level_spacing", 0), Convert.ToInt32(ctx.Db.Insunits));
             if (levels > 1 && Math.Abs(ls) < Geometry.Eps)
                 throw ToolException.Invalid("array_rect: levels > 1 needs 'level_spacing' (the distance between levels along Z, mm; negative = downwards).");
             double ang = Geometry.DegToRad(p.Num("angle", 0));
@@ -172,7 +174,7 @@ namespace ClaudeCAD.Plugin.Drawing
                     ? "The originals are item [level 0, row 0, col 0]; returned handles are the new copies, level by level."
                     : "The originals are item [row 0, col 0]; returned handles are the new copies.",
             };
-            if (levels > 1) res["levels"] = levels;
+            if (levels > 1) { res["levels"] = levels; res["level_step"] = Acad.R(ls); } // the step in drawing units, to check
             return res;
         }
 

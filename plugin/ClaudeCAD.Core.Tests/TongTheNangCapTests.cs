@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using ClaudeCAD.Plugin.Core;
 using Xunit;
 
@@ -80,6 +81,89 @@ namespace ClaudeCAD.Core.Tests
             Assert.Contains("const double bx = 40000;", t); // đợt B, 40000–40300
             Assert.Contains("const double dx = 50000;", t); // đợt D, 50000–71000
             Assert.Contains("const double dx = 90000;", t); // đợt E, 89500–110600
+        }
+
+        // ---------------------------------------------------------------- kiểm tra độc lập nâng cấp (KT2)
+
+        private static MacroCall Call(string tool, Dictionary<string, object> p, params string[] result) =>
+            new MacroCall { Tool = tool, Params = p, ResultHandles = new List<string>(result) };
+
+        // KT2-01: a window stretch lists the existing objects it caught; they are not "made by the macro", so a later
+        // slice of the user's solid S is still refused (KT-10) and the stretch maps nothing on replay.
+        [Fact]
+        public void Macro_stretch_by_window_does_not_make_the_users_solid_its_own()
+        {
+            var m = new Macro
+            {
+                Name = "x",
+                Calls = new List<MacroCall>
+                {
+                    Call("stretch_entities", new Dictionary<string, object> { ["corner1"] = new List<object> { 0.0, 0.0 }, ["corner2"] = new List<object> { 10.0, 10.0 } }, "S1"),
+                    Call("slice_solid", new Dictionary<string, object> { ["handle"] = "S1" }, "S1", "N2"),
+                },
+            };
+            var edits = MacroLogic.ExternalSolidEdits(m);
+            Assert.Single(edits);
+            Assert.Contains("slice_solid (S1)", edits[0]);
+            Assert.DoesNotContain("S1", MacroLogic.CreatedHandles(m));
+            Assert.Contains("N2", MacroLogic.CreatedHandles(m));
+            Assert.Contains("S1", MacroLogic.ExternalHandles(m));
+            var map = new Dictionary<string, string>();
+            MacroLogic.Learn(map, m.Calls[0], new List<string> { "OTHER" });
+            Assert.Empty(map);
+        }
+
+        [Fact]
+        public void Macro_maps_only_created_handles_of_a_call_that_also_returns_its_inputs()
+        {
+            // fillet of two lines returns them plus the new arc: only the arc is the macro's
+            var c = Call("fillet_entities", new Dictionary<string, object> { ["handle1"] = "L1", ["handle2"] = "L2" }, "L1", "L2", "A3");
+            Assert.Equal(new[] { "A3" }, MacroLogic.NewHandles(c));
+            var map = new Dictionary<string, string>();
+            MacroLogic.Learn(map, c, new List<string> { "L1", "L2", "B3" });
+            Assert.Equal("B3", map["A3"]);
+            Assert.False(map.ContainsKey("L1"));
+            // a drawing call keeps working as before
+            var d = Call("draw_solid", new Dictionary<string, object> { ["shape"] = "box" }, "B9");
+            MacroLogic.Learn(map, d, new List<string> { "C9" });
+            Assert.Equal("C9", map["B9"]);
+            // match_properties / lengthen / move: in place
+            foreach (var t in new[] { "match_properties", "lengthen_entity", "move_entities", "stretch_entities" })
+                Assert.Empty(MacroLogic.NewHandles(Call(t, new Dictionary<string, object>(), "Z1")));
+        }
+
+        [Fact]
+        public void Macro_built_solid_then_stretched_and_sliced_still_runs()
+        {
+            var m = new Macro
+            {
+                Name = "y",
+                Calls = new List<MacroCall>
+                {
+                    Call("draw_solid", new Dictionary<string, object> { ["shape"] = "box" }, "B1"),
+                    Call("stretch_entities", new Dictionary<string, object> { ["handles"] = new List<object> { "B1" } }, "B1"),
+                    Call("slice_solid", new Dictionary<string, object> { ["handle"] = "B1" }, "B1", "B2"),
+                },
+            };
+            Assert.Empty(MacroLogic.ExternalSolidEdits(m));
+        }
+
+        // KT2-20: every labelled tool has a Vietnamese label in the status line
+        [Fact]
+        public void Every_plan_labelled_tool_has_a_vietnamese_status_label()
+        {
+            var labels = Src("UI", "ToolLabels.cs");
+            var missing = PlanLogic.Groups.Keys.Where(t => !labels.Contains($"[\"{t}\"] = ")).ToList();
+            Assert.Empty(missing);
+        }
+
+        // KT2-29: the draw_solid saving is the measured 1.1k, not the 2k guess
+        [Fact]
+        public void Draw_solid_saving_is_the_measured_one()
+        {
+            var t = File.ReadAllText(Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "..", "agent", "src", "tools", "solids.ts")));
+            Assert.Contains("about 1.1k", t);
+            Assert.DoesNotContain("about 2k", t);
         }
     }
 }

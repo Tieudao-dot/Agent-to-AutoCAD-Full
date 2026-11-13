@@ -161,6 +161,8 @@ namespace ClaudeCAD.Plugin.Drawing
             double? topZ = p.NumOpt("top_z"), slab = p.NumOpt("slab_thickness");
             if (slab.HasValue && (slab.Value < 0 || slab.Value > FloorPlanLogic.MaxSlabThickness))
                 throw ToolException.Invalid($"{tool}: slab_thickness must be 0–{FloorPlanLogic.MaxSlabThickness} mm.");
+            // KT2-19: a total limit before any layout or extrusion (500 paths × 2000 segments would hang AutoCAD)
+            Solid3Logic.CheckBeamTotal(paths.Sum(bp => Math.Max(1, bp.Points.Count - (bp.Closed ? 0 : 1))), tool);
             // every layout first (a bad path stops the call before anything is built)
             var layouts = paths.Select(bp => Solid3Logic.Beam(bp.Points, bp.Bulges, bp.Closed, wmm / f, bp.From, tool)).ToList();
             string layer = p.Str("layer", Solid3Logic.BeamLayer);
@@ -214,7 +216,9 @@ namespace ClaudeCAD.Plugin.Drawing
             bool faceMode = p.Has("handle"), profileMode = p.Has("profile_points") || p.Has("profile_handles");
             if (faceMode == profileMode)
                 throw ToolException.Invalid($"{tool}: pass either 'handle' + faces / face_filter (pull faces of a solid) or a profile (profile_points / profile_handles: a closed area, optionally with 'target'), not both.");
-            double dist = p.Num("distance");
+            // KT2-13: distance is mm like build_beam (a drawing in metres pulls 0.2 for "200")
+            double fmm = FloorPlanLogic.MmPerUnit(Convert.ToInt32(ctx.Db.Insunits), out _);
+            double dist = p.Num("distance") / fmm;
             if (Math.Abs(dist) < 1e-9) throw ToolException.Invalid($"{tool}: distance must not be 0 (positive = out of the face / up, negative = in / down).");
             if (faceMode)
             {
@@ -363,7 +367,7 @@ namespace ClaudeCAD.Plugin.Drawing
                 if (!all.HasValue) throw ToolException.Invalid($"{tool}: the solids have no extents (empty).");
                 // STL has no units: write mm; slicers expect the model in the positive octant
                 var min = all.Value.MinPoint; var max = all.Value.MaxPoint;
-                shift = Solid3Logic.PositiveShift(new[] { min.X * f, min.Y * f, min.Z * f });
+                shift = Solid3Logic.StlShift(new[] { min.X * f, min.Y * f, min.Z * f }, new[] { max.X * f, max.Y * f, max.Z * f });
                 size = new[] { (max.X - min.X) * f, (max.Y - min.Y) * f, (max.Z - min.Z) * f };
                 bool move = Math.Abs(f - 1) > 1e-12 || shift.Any(v => v != 0);
                 var m = Matrix3d.Displacement(new Vector3d(shift[0], shift[1], shift[2])) * Matrix3d.Scaling(f, Point3d.Origin);
@@ -422,7 +426,7 @@ namespace ClaudeCAD.Plugin.Drawing
             if (shift.Any(v => v != 0)) r["moved_by_mm"] = shift.Select(v => (object)Acad.R(v)).ToList();
             if (Math.Abs(f - 1) > 1e-12) r["scaled"] = $"drawing units ({unitName}) × {f} → mm";
             r["note"] = "The drawing was not changed. STL has no units: tell the user the file is in mm" +
-                        (shift.Any(v => v != 0) ? " and the model was moved into the positive octant (moved_by_mm)." : ".");
+                        (shift.Any(v => v != 0) ? " and the model was moved so it starts at 0 (negative or survey-size coordinates; moved_by_mm)." : ".");
             return r;
         }
 

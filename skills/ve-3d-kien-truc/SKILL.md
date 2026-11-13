@@ -78,8 +78,9 @@ dày sàn, sàn tầng trên không chồng vào tường tầng dưới. Ngư�
 | `A-SECT-BACK` | nét nhìn thấy sau mặt cắt | 9 |
 | `A-ELEV` | mặt đứng 2D | 7 |
 
-`build_3d_from_plan`, `section_view`, `projection_view` tự tạo layer của mình khi thiếu. Cột, cầu thang, mái: tạo
-layer bằng `create_layer` (đúng màu ở bảng) trước khi dựng. Không dựng gì trên layer `0`. Lệnh dựng khối chỉ nhận
+`build_3d_from_plan` (cả cột), `build_railing`, `build_beam`, `build_stair`, `build_roof`, `section_view`,
+`projection_view` tự tạo layer của mình khi thiếu. Chỉ khối tự dựng bằng `draw_solid` / `extrude`… mới cần tạo layer
+bằng `create_layer` (đúng màu ở bảng) trước khi dựng. Không dựng gì trên layer `0`. Lệnh dựng khối chỉ nhận
 `layer`: khối lấy màu của layer; muốn màu / nét riêng cho vài khối thì `set_entity_props` với handle vừa dựng.
 
 ## 3. Quy trình chuẩn bị và dựng 3D từ mặt bằng
@@ -130,7 +131,8 @@ có ký hiệu cửa, ký hiệu cửa sổ đè lên tường, hoặc `openings
 `curved_walls`.
 
 Dầm: `build_beam` theo đường (`path_handles`: line / cung / polyline, mỗi đường một dầm), mặc định 220 × 400, đỉnh dầm
-ở `top_z`; dầm dưới sàn: `top_z` = cao độ mặt sàn + `slab_thickness` (vd tầng 2: `top_z` 3300, `slab_thickness` 120).
+ở `top_z`; dầm dưới sàn: `top_z` = cao độ mặt sàn tầng trên, `slab_thickness` = dày sàn, đỉnh dầm = `top_z` − `slab_thickness`
+(vd dưới sàn tầng 2: `top_z` 3300, `slab_thickness` 120 → đỉnh dầm 3180, chạm đáy sàn).
 
 Cầu thang: `build_stair`, `type` `straight` (1 vế) / `l` (chữ L) / `u` (chữ U), `height` = cao tầng (sàn tới sàn, bắt
 buộc). Mặc định (khách nói số thì theo số của khách): cao bậc 160 (chia đều thành số bậc nguyên gần nhất, vd 3300 → 21
@@ -146,8 +148,9 @@ cạnh dài, `ridge` `short` để đổi) / `hip` (4 dốc, đường bao lồi
 bao = mặt ngoài tường: `outline_handle` (polyline kín), `outline_points`, hoặc `from_walls: true` (hình chữ nhật bao
 các khối tường). Mái đặt trên đỉnh tường: mặc định đỉnh cao nhất của khối tường `A-WALL-3D` dưới đường bao (tầng trên
 cùng; có sàn mái `roof_slab` nằm trên đỉnh tường thì mái đặt trên mặt sàn mái), hoặc `wall_top_z`. Đã có sàn
-mái thì không dựng thêm mái bằng (thành hai lớp sàn). Nhà chữ L / T: 4 dốc và 2 dốc báo lỗi → chia đường bao thành các hình chữ nhật rồi dựng
-từng mái, hoặc mái bằng. Đầu hồi mái 2 dốc để hở (tường hồi: `extrude` / `presspull`). Báo `top_z_mm`,
+mái thì không dựng thêm mái bằng (thành hai lớp sàn). Nhà chữ L / T: 4 dốc và 2 dốc báo lỗi → mái bằng, hoặc chia đường bao thành các hình chữ nhật rồi
+dựng từng mái: **báo trước** khách là hai mái sẽ chồng nhau ở chỗ nối (mỗi mái đua qua đường chia), cần sửa tay, và
+bảng khối lượng (`volume_schedule`) tính phần chồng hai lần (mái liền cho nhà chữ L để đợt sau). Đầu hồi mái 2 dốc để hở (tường hồi: `extrude` / `presspull`). Báo `top_z_mm`,
 `roof_area_m2` (diện tích mặt mái nghiêng, để tính tôn / ngói).
 
 Khối lượng: `volume_schedule` (theo layer; cột lồng trong tường / dầm chỉ tính một lần, vào cột). Va chạm:
@@ -180,7 +183,7 @@ Khối lượng: `volume_schedule` (theo layer; cột lồng trong tường / d�
 | Cột theo mặt bằng | `build_3d_from_plan` | Hình kín trên `A-COLS` / `A-COL`, cao bằng tường. Tường đã dựng từ trước, chỉ thêm cột: `extrude` các hình cột (`profile_handles`) lên chiều cao tường, layer `A-COLS-3D` |
 | Dầm theo trục | `build_beam` | Thẳng hoặc cong, góc tự khép |
 | Cầu thang 1 vế / chữ L / chữ U | `build_stair` | Chia bậc theo cao tầng; bậc lẻ, thang xoắn: `draw_solid` `box` mỗi bậc hoặc `extrude` biên dạng răng cưa |
-| Mái bằng / 2 dốc / 4 dốc | `build_roof` | Trên đỉnh tường tầng trên cùng; nhà chữ L / T chia thành các hình chữ nhật |
+| Mái bằng / 2 dốc / 4 dốc | `build_roof` | Trên đỉnh tường tầng trên cùng; nhà chữ L / T: mái bằng, hoặc chia hình chữ nhật (báo trước mái chồng ở chỗ nối) |
 | Cột vuông | `draw_solid` `box` | |
 | Lan can | `build_railing` | Theo polyline, mặc định 1100 |
 | Dốc, mái dốc một phía | `draw_solid` `wedge` | Mặt cao ở phía `corner`, `rotation` để đổi hướng dốc |

@@ -359,6 +359,44 @@ namespace ClaudeCAD.Plugin.Core
                    "(one slab under the walls' bounding box per storey), slab_handles (the slab outline), or slab \"none\" (no slabs: the walls fill the whole storey height).";
         }
 
+        /// <summary>
+        /// One storey whose wall height comes from storey_height (storey − slab) with slab "auto" but no slab outline on
+        /// the plan (KT2-21): the walls would be slab_thickness lower with no slab on them, and the next storey would stand
+        /// that much above them. Asked before building, like StoreysWithoutSlab: the message, or null.
+        /// </summary>
+        public static string StoreyWithoutSlab(bool wallFromStoreyHeight, string slabMode, int slabOutlines, double slabMm, string tool = "build_3d_from_plan")
+        {
+            if (!wallFromStoreyHeight || slabMode != "auto" || slabOutlines > 0 || !(slabMm > 0)) return null;
+            return $"{tool}: storey_height is given (walls = storey_height − slab_thickness), but there is no closed slab outline on the slab layers and no slab_handles: " +
+                   $"the walls would stop {slabMm} mm below the next storey with no slab on them. Ask the user, then call again with slab \"bbox\" " +
+                   "(one slab under the walls' bounding box), slab_handles (the slab outline), or slab \"none\" (no slab: the walls fill the whole storey height).";
+        }
+
+        /// <summary>mm → drawing units by INSUNITS, like the heights of the 3D tools (KT2-10: the level spacing of array_rect).</summary>
+        public static double ToDrawingUnits(double mm, int insunits) => mm / MmPerUnit(insunits, out _);
+
+        /// <summary>
+        /// The same closed outline drawn twice (KT2-11, columns): the same box in plan (within tol, drawing units) and the
+        /// same area, like SameRegion of the slabs. An area that could not be read (≤ 0) never matches.
+        /// </summary>
+        public static bool SameOutline(double[] minA, double[] maxA, double areaA, double[] minB, double[] maxB, double areaB, double tol)
+        {
+            if (minA == null || maxA == null || minB == null || maxB == null) return false;
+            if (!(areaA > 0) || !(areaB > 0) || Math.Abs(areaA - areaB) > 1e-6 * Math.Max(areaA, areaB)) return false;
+            return Math.Abs(minA[0] - minB[0]) <= tol && Math.Abs(minA[1] - minB[1]) <= tol &&
+                   Math.Abs(maxA[0] - maxB[0]) <= tol && Math.Abs(maxA[1] - maxB[1]) <= tol;
+        }
+
+        /// <summary>
+        /// How a guessed layer may be used, for the report (KT2-22): the plan layers go into their *_layers parameter after
+        /// the user's yes (the assistant refuses the build before); a layer guessed as a railing has no such gate, so the
+        /// hint itself says to ask first.
+        /// </summary>
+        public static string GuessUse(string kind) =>
+            kind == "railing"
+                ? "ask the user first (request_confirmation naming this layer); build_railing along its lines only after their yes"
+                : kind + "_layers";
+
         // ------------------------------------------------------------------ heights
 
         public sealed class Heights

@@ -32,6 +32,33 @@ namespace ClaudeCAD.Plugin.Core
         /// turn may still change without asking (20 minus those already changed). Claude cannot set it (not in the schema,
         /// replaced by the assistant) and macros do not record it.
         /// </summary>
+        /// <summary>What a crossing window does with an object, by its layer (kiểm tra độc lập nâng cấp KT2-03).</summary>
+        public enum WindowLayer { Take, Hidden, Locked }
+
+        /// <summary>
+        /// Like AutoCAD's crossing window: objects on a frozen or turned-off layer are not selected (the user cannot see them),
+        /// those on a locked layer are not changed (counted, so the result can say so); the rest is taken.
+        /// </summary>
+        public static WindowLayer WindowLayerRule(bool frozen, bool off, bool locked) =>
+            frozen || off ? WindowLayer.Hidden : locked ? WindowLayer.Locked : WindowLayer.Take;
+
+        /// <summary>
+        /// The objects of a window that count towards the 20-object limit: objects created in this turn (drawn a moment ago,
+        /// KT2-15) are new, not existing objects the user has to be asked about.
+        /// </summary>
+        public static int CountedForLimit(IEnumerable<string> handles, Func<string, bool> createdThisTurn) =>
+            handles.Count(h => createdThisTurn == null || !createdThisTurn(h));
+
+        /// <summary>
+        /// group_entities ungroup by handles (KT2-23): one group is removed; objects in several groups need the group named,
+        /// so one call never removes groups the user did not mean. Returns the refusal, or null.
+        /// </summary>
+        public static string UngroupRefusal(IList<string> groupNames) =>
+            groupNames != null && groupNames.Count > 1
+                ? $"group_entities: these objects are in {groupNames.Count} groups ({string.Join(", ", groupNames.Take(20))}{(groupNames.Count > 20 ? ", …" : "")}). " +
+                  "Ask the user which group to remove and call again with 'name' (one group per call)."
+                : null;
+
         public const string WindowLimitParam = "max_unasked";
 
         /// <summary>The window limit: the assistant's value clamped to 0–20; none (macro replay, older assistant) = 20.</summary>
@@ -172,13 +199,16 @@ namespace ClaudeCAD.Plugin.Core
         /// <summary>A straight segment s → e with the end (atEnd) or the start moved by d along it (d &lt; 0 shortens).</summary>
         public static (double[] s, double[] e) LengthenSegment(double[] s, double[] e, double d, bool atEnd, string tool = "lengthen_entity")
         {
-            double l = Dist(s, e);
+            // kiểm tra độc lập nâng cấp KT2-24: along the segment in 3D (a sloped or vertical LINE keeps its direction and
+            // gets exactly the asked length); a polyline's 2D segment has z 0 at both ends, so it is unchanged
+            double dx = e[0] - s[0], dy = e[1] - s[1], dz = Z(e) - Z(s);
+            double l = Math.Sqrt(dx * dx + dy * dy + dz * dz);
             if (l < Eps) throw ToolException.Invalid($"{tool}: the end segment has no length.");
             if (l + d <= Eps * Math.Max(1, l))
                 throw ToolException.Invalid($"{tool}: shortening by {-d:0.###} is more than the end segment ({l:0.###}); shorten less, or edit the polyline vertices.");
-            double ux = (e[0] - s[0]) / l, uy = (e[1] - s[1]) / l;
-            if (atEnd) return (s, P(e[0] + ux * d, e[1] + uy * d, Z(e)));
-            return (P(s[0] - ux * d, s[1] - uy * d, Z(s)), e);
+            double ux = dx / l, uy = dy / l, uz = dz / l;
+            if (atEnd) return (s, P(e[0] + ux * d, e[1] + uy * d, Z(e) + uz * d));
+            return (P(s[0] - ux * d, s[1] - uy * d, Z(s) - uz * d), e);
         }
 
         /// <summary>An arc (CCW start → end) lengthened by d along the circle at its end or start; the sweep stays in (0, 2π).</summary>
