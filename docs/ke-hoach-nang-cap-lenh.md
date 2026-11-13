@@ -46,6 +46,8 @@ Kiểm tra độc lập $22; test tổng thể $65 (gồm bộ cài, 3 vòng g�
 - mỗi đợt (viết + test & sửa): khoảng $15–30;
 - cả chuỗi A–E, kèm kiểm tra độc lập và test tổng thể cuối chuỗi: khoảng $150–230 (QnA ước cũ $50–120 là thấp);
 - thử tay trên AutoCAD: thêm 20–40 phút mỗi đợt.
+- Số thật đợt A: $35,7 (cao hơn ước vì lượt tự rà chạy ở mức suy nghĩ cao nhất). Nếu các đợt sau cũng vậy thì ~$35–45
+  mỗi đợt; ở mức thường thì giữ được $15–30.
 
 ## Chủ dự án đã chốt (13/11/2026)
 
@@ -72,8 +74,8 @@ Kiểm tra độc lập $22; test tổng thể $65 (gồm bộ cài, 3 vòng g�
 
 | Đợt | Thread viết | Thread con Test & sửa | Nhánh | Trạng thái |
 | --- | --- | --- | --- | --- |
-| A | `session_01D56HmEZnPtpeS5RWXPVPYD` (mở 13/11 14h28; viết + tự rà xong 15h48 @ `fc68469`, CI 43390204331 xanh) | `session_01D56HmExJjYYvbztLiiRbdx` (mở 15h48) | `full/nang-cap-a` → `full/nang-cap-a-test` | Đang test & sửa |
-| B | | | | Chờ A xong |
+| A | `session_01D56HmEZnPtpeS5RWXPVPYD` (14h28 → 16h17) | `session_01D56HmExJjYYvbztLiiRbdx` (4 lỗi sửa) | `full/nang-cap-a` @ `fc68469` → `full/nang-cap-a-test` @ `33acb5f`, CI 43390204331 + 43398072331 xanh | **Xong** ~1 giờ 50 phút, $35,7 (viết $27,6, vượt mềm $2,6 do lượt tự rà chạy ở mức suy nghĩ cao nhất ~$19; test $8,1) |
+| B | `session_01D56HmERJAiGtKizUeoMK7s` (mở 16h18) | (thread đợt tự mở) | `full/nang-cap-b` → `full/nang-cap-b-test` | Đang viết |
 | C | | | | |
 | D | | | | |
 | E | | | | Đã chốt kiểu + số mặc định (điểm 6) |
