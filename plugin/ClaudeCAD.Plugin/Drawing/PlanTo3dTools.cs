@@ -139,6 +139,9 @@ namespace ClaudeCAD.Plugin.Drawing
         {
             public List<PlanSeg> Faces = new List<PlanSeg>();
             public List<PlanSeg> Centers = new List<PlanSeg>();
+            /// <summary>Curved wall lines (nâng cấp đợt D): face arcs, and centreline arcs with a thickness.</summary>
+            public List<PlanArc> FaceArcs = new List<PlanArc>();
+            public List<PlanArc> CenterArcs = new List<PlanArc>();
             public List<PlanSymbol> Symbols = new List<PlanSymbol>();
             public List<(ObjectId id, string handle)> Slabs = new List<(ObjectId, string)>();
             public List<PlanSkip> Skipped = new List<PlanSkip>();
@@ -173,6 +176,14 @@ namespace ClaudeCAD.Plugin.Drawing
                 var s = new PlanSeg(a.X, a.Y, b.X, b.Y, h) { Thickness = t };
                 if (t > 0) input.Centers.Add(s); else input.Faces.Add(s);
             }
+            // nâng cấp đợt D: curved walls (arcs, circles, polyline arc segments)
+            void AddArc(PlanArc arc, double t)
+            {
+                if (arc == null) return;
+                arc.Thickness = t;
+                arc.Sources.Add(h);
+                if (t > 0) input.CenterArcs.Add(arc); else input.FaceArcs.Add(arc);
+            }
             switch (e)
             {
                 case Line l:
@@ -202,13 +213,15 @@ namespace ClaudeCAD.Plugin.Drawing
                     }
                     int n = pl.NumberOfVertices;
                     int segs = pl.Closed ? n : n - 1;
-                    bool curved = false;
+                    double sign = pl.Normal.Z < 0 ? -1 : 1;
                     for (int i = 0; i < segs; i++)
                     {
-                        if (Math.Abs(pl.GetBulgeAt(i)) > 1e-9) { curved = true; continue; }
-                        Add(pl.GetPoint3dAt(i), pl.GetPoint3dAt((i + 1) % n), t);
+                        Point3d a = pl.GetPoint3dAt(i), b = pl.GetPoint3dAt((i + 1) % n);
+                        double bulge = pl.GetBulgeAt(i);
+                        // an arc segment is a curved wall (face line, or centreline with the width / thickness)
+                        if (Math.Abs(bulge) > 1e-9) AddArc(Solid3Logic.ArcFromBulge(new[] { a.X, a.Y }, new[] { b.X, b.Y }, bulge * sign), t);
+                        else Add(a, b, t);
                     }
-                    if (curved) input.Skipped.Add(new PlanSkip(h, "LWPOLYLINE", "has arc segments (curved wall): those segments are not built; build curved walls with extrude / sweep"));
                     return;
                 }
                 case Polyline2d p2:
@@ -231,11 +244,18 @@ namespace ClaudeCAD.Plugin.Drawing
                     if (p2.Closed && pts.Count > 2) Add(pts[pts.Count - 1], pts[0], centerThickness);
                     return;
                 }
-                case Arc _:
-                case Circle _:
+                case Arc arcE:
+                {
+                    var mid = arcE.GetPointAtParameter((arcE.StartParam + arcE.EndParam) / 2);
+                    AddArc(Solid3Logic.ArcFrom3Points(new[] { arcE.StartPoint.X, arcE.StartPoint.Y }, new[] { mid.X, mid.Y }, new[] { arcE.EndPoint.X, arcE.EndPoint.Y }), centerThickness);
+                    return;
+                }
+                case Circle ci:
+                    AddArc(new PlanArc { Cx = ci.Center.X, Cy = ci.Center.Y, R = ci.Radius, A0 = 0, Sweep = 2 * Math.PI }, centerThickness);
+                    return;
                 case Ellipse _:
                 case Spline _:
-                    input.Skipped.Add(new PlanSkip(h, Acad.TypeName(e), "curved wall: not built (only straight walls are recognised); build it with extrude or sweep"));
+                    input.Skipped.Add(new PlanSkip(h, Acad.TypeName(e), "ellipse / spline wall: not built (straight walls and circular arcs are recognised); build it with extrude or sweep"));
                     return;
                 case BlockReference br:
                     input.Skipped.Add(new PlanSkip(h, "INSERT", "a block / xref on a wall layer: lines inside blocks are not read; pass the wall lines with wall_handles, or explode a copy of the block"));
@@ -469,8 +489,14 @@ namespace ClaudeCAD.Plugin.Drawing
 
             var input = new PlanInput { Options = opt };
             ReadPlan(ctx, p, input, f, wall3d, slab3d, col3d, colMode == "auto");
-            var res = FloorPlanLogic.Recognize(input.Faces, input.Centers, input.Symbols, opt);
+            // nâng cấp đợt D: curved walls first (their door / window symbols are theirs), then the straight walls
+            var symbols = FloorPlanLogic.ClusterSymbols(input.Symbols, opt.JoinTol);
+            var curved = Solid3Logic.CurvedWalls(input.FaceArcs, input.CenterArcs, symbols, opt);
+            int curvedCaps = Solid3Logic.DropCurvedCaps(input.Faces, curved.Walls, opt);
+            var res = FloorPlanLogic.Recognize(input.Faces, input.Centers, symbols.Where(x => !curved.UsedSymbols.Contains(x)).ToList(), opt);
+            res.Caps += curvedCaps;
             res.Skipped.InsertRange(0, input.Skipped);
+            res.Skipped.AddRange(curved.Skipped);
 
             // openings the caller gives (after reading the report)
             var givenErrors = new List<string>();
@@ -499,6 +525,11 @@ namespace ClaudeCAD.Plugin.Drawing
                         if (height <= 0 || height > hmm.Wall) throw ToolException.Invalid($"{tool}: openings[{i}].height must be > 0 and at most the wall height {hmm.Wall}.");
                         bottom = 0; top = height / f;
                     }
+                    if (Solid3Logic.AddGivenArcOpening(curved.Walls, kind, at, w, bottom, top, opt, out var arcErr))
+                    {
+                        if (arcErr != null) givenErrors.Add($"openings[{i}]: {arcErr}");
+                        continue;
+                    }
                     var err = FloorPlanLogic.AddGivenOpening(res, kind, at, w, bottom, top, opt);
                     if (err != null) givenErrors.Add($"openings[{i}]: {err}");
                 }
@@ -506,7 +537,9 @@ namespace ClaudeCAD.Plugin.Drawing
             }
             FloorPlanLogic.ResolveHeights(res, hu);
 
+            var arcPieces = Solid3Logic.ArcPieces(curved.Walls, hu);
             var report = Report(res, input, f, unitName, hmm, baseZmm);
+            if (curved.Walls.Count > 0) report["curved_walls"] = CurvedReport(curved.Walls, f);
             var notes = new List<string>();
             // nâng cấp đợt A: layers whose names look like walls / doors / windows... but were not read
             var guesses = LayerGuesses(p, input, colMode == "auto");
@@ -519,7 +552,7 @@ namespace ClaudeCAD.Plugin.Drawing
             }
             if (input.ThinWidePolylines > 0)
                 notes.Add($"{input.ThinWidePolylines} polyline(s) with a width below min_thickness were read as plain wall face lines (the width taken as a print line weight, not a wall thickness).");
-            if (res.Walls.Count == 0 && input.Slabs.Count == 0 && input.Columns.Count == 0 && slabMode != "bbox")
+            if (res.Walls.Count == 0 && curved.Walls.Count == 0 && input.Slabs.Count == 0 && input.Columns.Count == 0 && slabMode != "bbox")
             {
                 throw ToolException.Invalid($"{tool}: no wall recognised. Nothing was built. Read: {input.Read} objects on the wall / door / window / slab / column layers " +
                     $"({string.Join(", ", LayerList(p, "wall_layers", FloorPlanLogic.DefaultWallLayers))} for walls). " +
@@ -541,7 +574,7 @@ namespace ClaudeCAD.Plugin.Drawing
             var boxes = FloorPlanLogic.Boxes(res, hu);
             if (boxes.Count > FloorPlanLogic.MaxBoxes)
                 throw ToolException.Invalid($"{tool}: {boxes.Count} wall pieces (more than {FloorPlanLogic.MaxBoxes}). Nothing was built. Pass area_min / area_max.");
-            report["pieces"] = boxes.Count;
+            report["pieces"] = boxes.Count + arcPieces.Count;
 
             // nâng cấp đợt A: the column outlines in plan (drawing units) and their sizes (mm)
             var colOutlines = new List<(double[] min, double[] max)>();
@@ -562,14 +595,17 @@ namespace ClaudeCAD.Plugin.Drawing
             }
 
             // rerun check of every storey BEFORE anything is built: solids of an earlier run on the result layers at that level
-            var fp = FloorPlanLogic.Footprint(res);
+            var fp = WithArcs(FloorPlanLogic.Footprint(res), arcPieces);
+            if (fp.HasValue && arcPieces.Count > 0) { report["plan_min"] = P2(fp.Value.min, f); report["plan_max"] = P2(fp.Value.max, f); }
+            // the rerun check compares boxes: the curved pieces by their bounding boxes
+            var rerunBoxes = boxes.Concat(arcPieces.Select(Solid3Logic.PieceBox)).ToList();
             var dup = new List<string>();
             var dupLevels = new List<string>(); // the storeys of this call that are already there
             var noBoxes = new List<PlanBox>();
             foreach (var lv in levels)
             {
                 double bz = lv.BaseZ / f;
-                var rerun = ExistingOver(ctx, input, lv.RoofOnly ? noBoxes : boxes, fp, slabMode, bz, hu);
+                var rerun = ExistingOver(ctx, input, lv.RoofOnly ? noBoxes : rerunBoxes, fp, slabMode, bz, hu);
                 var again = new List<string>(rerun.Rerun);
                 if (!lv.RoofOnly) again.AddRange(FloorPlanLogic.ColumnRerun(input.Existing, colOutlines, bz, hu.Wall, opt.JoinTol));
                 if (again.Count > 0) dupLevels.Add(lv.RoofOnly ? "roof slab" : lv.Number.ToString(System.Globalization.CultureInfo.InvariantCulture));
@@ -620,7 +656,7 @@ namespace ClaudeCAD.Plugin.Drawing
                     // the first storey is built from the plan
                     double bz = lv.BaseZ / f;
                     parts = first = new LevelParts();
-                    BuildWalls(ctx, tool, boxes, bz, f, wall3d, parts, created, layersCreated, notes);
+                    BuildWalls(ctx, tool, boxes, arcPieces, bz, f, wall3d, parts, created, layersCreated, notes);
                     BuildColumns(ctx, tool, input, bz, hu.Wall, f, col3d, parts, created, layersCreated, res.Skipped);
                     if (slabMode != "none" && hmm.Slab > 0)
                     {
@@ -718,10 +754,10 @@ namespace ClaudeCAD.Plugin.Drawing
         }
 
         /// <summary>The wall boxes of the first storey united into one solid (pieces AutoCAD cannot unite stay separate).</summary>
-        private static void BuildWalls(ToolContext ctx, string tool, List<PlanBox> boxes, double baseZ, double f, string wall3d, LevelParts parts,
+        private static void BuildWalls(ToolContext ctx, string tool, List<PlanBox> boxes, List<ArcPiece> arcPieces, double baseZ, double f, string wall3d, LevelParts parts,
             List<string> created, List<string> layersCreated, List<string> notes)
         {
-            if (boxes.Count == 0) return;
+            if (boxes.Count == 0 && arcPieces.Count == 0) return;
             var wallP = LayerParams(tool, wall3d);
             if (EnsureLayer(ctx, wall3d, 7)) layersCreated.Add(wall3d);
             double piecesVolume = 0;
@@ -729,15 +765,34 @@ namespace ClaudeCAD.Plugin.Drawing
             ObjectId wallsId = ObjectId.Null;
             int unionFailed = 0;
             var extra = new List<ObjectId>();
-            foreach (var b in boxes)
+            // the straight boxes, then the curved pieces (annular sectors, nâng cấp đợt D)
+            IEnumerable<(Func<Solid3d> make, double volume)> Pieces()
             {
-                Solid3d s;
-                try { s = MakeBox(b.Length, b.Width, b.Height, null, new[] { b.Center[0], b.Center[1], baseZ + b.Center[2] }, b.RotationDeg); }
-                catch (Autodesk.AutoCAD.Runtime.Exception ex)
-                {
-                    throw ToolException.Invalid($"{tool}: AutoCAD could not build a wall piece of wall {b.Wall} ({Acad.R(b.Length * f)} × {Acad.R(b.Width * f)} × {Acad.R(b.Height * f)} mm, {ex.ErrorStatus}). Nothing was built.");
-                }
-                piecesVolume += b.Volume;
+                foreach (var b in boxes)
+                    yield return (() =>
+                    {
+                        try { return MakeBox(b.Length, b.Width, b.Height, null, new[] { b.Center[0], b.Center[1], baseZ + b.Center[2] }, b.RotationDeg); }
+                        catch (Autodesk.AutoCAD.Runtime.Exception ex)
+                        {
+                            throw ToolException.Invalid($"{tool}: AutoCAD could not build a wall piece of wall {b.Wall} ({Acad.R(b.Length * f)} × {Acad.R(b.Width * f)} × {Acad.R(b.Height * f)} mm, {ex.ErrorStatus}). Nothing was built.");
+                        }
+                    }, b.Volume);
+                foreach (var a in arcPieces)
+                    foreach (var o in Solid3Logic.SectorOutlines(a.Cx, a.Cy, a.Ri, a.Ro, a.A0, a.Sweep))
+                    {
+                        var oo = o;
+                        string what = $"curved wall {a.Wall + 1}";
+                        yield return (() =>
+                        {
+                            using (var reg = OutlineRegion(oo, 0, tool, what))
+                                return ExtrudeFlat(tool, reg, a.Z1 - a.Z0, baseZ + a.Z0, false, what, "wall");
+                        }, Math.Abs(oo.Area) * (a.Z1 - a.Z0));
+                    }
+            }
+            foreach (var (make, pieceVolume) in Pieces())
+            {
+                Solid3d s = make();
+                piecesVolume += pieceVolume;
                 if (walls == null)
                 {
                     wallsId = AddSolid(ctx, s, wallP);
@@ -772,6 +827,46 @@ namespace ClaudeCAD.Plugin.Drawing
             }
             parts.WallInfo = wr;
         }
+
+        /// <summary>The walls' footprint grown by the curved pieces.</summary>
+        private static (double[] min, double[] max)? WithArcs((double[] min, double[] max)? fp, List<ArcPiece> pieces)
+        {
+            foreach (var a in pieces)
+            {
+                var (mn, mx) = Solid3Logic.SectorBox(a.Cx, a.Cy, a.Ri, a.Ro, a.A0, a.Sweep);
+                fp = fp == null ? (mn, mx)
+                    : (new[] { Math.Min(fp.Value.min[0], mn[0]), Math.Min(fp.Value.min[1], mn[1]) }, new[] { Math.Max(fp.Value.max[0], mx[0]), Math.Max(fp.Value.max[1], mx[1]) });
+            }
+            return fp;
+        }
+
+        private static List<object> CurvedReport(List<PlanArcWall> walls, double f) =>
+            walls.Take(FloorPlanLogic.MaxReportItems).Select((w, i) =>
+            {
+                double Deg(double a) => Math.Round(a * 180 / Math.PI, 2);
+                var d = new Dictionary<string, object>
+                {
+                    ["wall"] = i + 1,
+                    ["center"] = new List<object> { Acad.R(w.Cx), Acad.R(w.Cy) },
+                    ["radius_mm"] = Acad.R(w.R * f),
+                    ["thickness_mm"] = Acad.R(w.Thickness * f),
+                    ["length_m"] = Math.Round(w.SolidSweep * w.R * f / 1000, 3),
+                    ["parts_deg"] = w.Solid.Select(x => (object)new List<object> { Deg(x[0]), Deg(x[1]) }).ToList(),
+                    ["mode"] = w.Mode,
+                    ["sources"] = w.Sources.Distinct().Take(20).Cast<object>().ToList(),
+                };
+                if (w.Openings.Count > 0)
+                    d["openings"] = w.Openings.Select(o => (object)new Dictionary<string, object>
+                    {
+                        ["kind"] = o.Kind, ["from"] = o.From, ["start_deg"] = Deg(o.A0), ["sweep_deg"] = Deg(o.Sweep),
+                        ["width_mm"] = Acad.R(o.Sweep * w.R * f),
+                        ["bottom_mm"] = double.IsNaN(o.Bottom) ? (object)null : Acad.R(o.Bottom * f),
+                        ["top_mm"] = double.IsNaN(o.Top) ? (object)null : Acad.R(o.Top * f),
+                    }).ToList();
+                if (w.OpenGaps.Count > 0)
+                    d["open_gaps"] = w.OpenGaps.Select(g => (object)new Dictionary<string, object> { ["start_deg"] = Deg(g[0]), ["sweep_deg"] = Deg(g[1]), ["width_mm"] = Acad.R(g[1] * w.R * f) }).ToList();
+                return (object)d;
+            }).ToList();
 
         private static void SkipOnce(List<PlanSkip> skipped, PlanSkip s)
         {

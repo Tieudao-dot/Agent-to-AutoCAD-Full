@@ -272,8 +272,8 @@ namespace ClaudeCAD.Core.Tests
         public void Every_storey_is_checked_before_anything_is_built()
         {
             var s = PlanTools;
-            int check = s.IndexOf("var rerun = ExistingOver(ctx, input, lv.RoofOnly ? noBoxes : boxes", StringComparison.Ordinal);
-            int build = s.IndexOf("BuildWalls(ctx, tool, boxes, bz, f, wall3d, parts", StringComparison.Ordinal);
+            int check = s.IndexOf("var rerun = ExistingOver(ctx, input, lv.RoofOnly ? noBoxes : rerunBoxes", StringComparison.Ordinal);
+            int build = s.IndexOf("BuildWalls(ctx, tool, boxes, arcPieces, bz, f, wall3d, parts", StringComparison.Ordinal);
             Assert.True(check > 0 && build > check);
             // the storeys above are copies of the first storey's solids moved up, not built and united again
             Assert.Contains("parts = CopyLevel(ctx, tool, first, (lv.BaseZ - levels[0].BaseZ) / f, lv.RoofOnly", s);

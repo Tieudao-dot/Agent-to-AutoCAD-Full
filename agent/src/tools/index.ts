@@ -57,6 +57,9 @@ export const PLAN_HIDDEN_PARAMS: Record<string, { needs: '2d' | '3d'; params: st
   capture_view: { needs: '3d', params: ['view', 'direction', 'visual_style'], note: '' },
   // nâng cấp đợt A: levels along Z are 3D (the plugin refuses levels > 1 without 3D: PlanLogic.ThreeDParams)
   array_rect: { needs: '3d', params: ['levels', 'level_spacing'], note: '' },
+  // nâng cấp đợt D: a table in the drawing is text (2D); on the 3D plan the 3D schedules only return their numbers
+  volume_schedule: { needs: '2d', params: ['table_position', 'title', 'text_height'], note: ' This machine\'s plan has no tables in the drawing: show the numbers to the user in the chat.' },
+  check_interference: { needs: '2d', params: ['table_position', 'title', 'text_height', 'decimals'], note: ' No clash table in the drawing on this plan: list the pairs in the chat.' },
 };
 
 function trimForPlan(t: AnyTool, plan: string): AnyTool {
@@ -67,7 +70,8 @@ function trimForPlan(t: AnyTool, plan: string): AnyTool {
   for (const k of h.params) delete shape[k];
   let description = t.description;
   if (t.name === 'capture_view') description = description.replace(/ 3D: [\s\S]*$/, '');
-  else description = description.replace(/ Optional attribute definitions: [\s\S]*?\]\. /, ' ').replace(/ and attribute values \{TAG: value\}/, '') + h.note;
+  else description = description.replace(/ Optional attribute definitions: [\s\S]*?\]\. /, ' ').replace(/ and attribute values \{TAG: value\}/, '')
+    .replace(/ Read-only unless table_position \([^)]*\)\./, ' Read-only.') + h.note;
   return { ...t, description, inputSchema: shape } as AnyTool;
 }
 

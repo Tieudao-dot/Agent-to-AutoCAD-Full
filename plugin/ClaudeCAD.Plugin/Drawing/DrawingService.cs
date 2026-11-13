@@ -75,6 +75,8 @@ namespace ClaudeCAD.Plugin.Drawing
             RegisterSolids2(d);
             RegisterPlanTo3d(d);
             RegisterSections(d);
+            // nâng cấp đợt D (ToolGroup.ThreeD): beams, PRESSPULL, STL, volume schedule
+            RegisterSolids3(d);
         }
 
         private static void RegisterSystem(ToolDispatcher d, ITurnHost host)

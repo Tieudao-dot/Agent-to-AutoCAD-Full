@@ -50,6 +50,8 @@ const DESTRUCTIVE: Record<string, (p: Record<string, unknown>) => number> = {
   fillet_edges: (p) => (typeof p.handle === 'string' ? 1 : 0),
   chamfer_edges: (p) => (typeof p.handle === 'string' ? 1 : 0),
   shell_solid: (p) => (typeof p.handle === 'string' ? 1 : 0),
+  // nâng cấp đợt D: PRESSPULL changes the solid whose faces it pulls (handle) or the solid it adds to / cuts from (target)
+  presspull: (p) => (typeof p.handle === 'string' ? 1 : 0) + (typeof p.target === 'string' && p.mode !== 'new' ? 1 : 0) + (p.erase_profile === true ? len(p.profile_handles) : 0),
   // 3D transforms: the same rule as move / rotate / mirror (more than 20 existing objects)
   rotate_3d: (p) => len(p.handles),
   align: (p) => len(p.handles),
@@ -73,13 +75,15 @@ export const ALWAYS_CONFIRM = new Set([
   'solid_union', 'solid_subtract', 'solid_intersect',
   // 3D phase 2: slicing, filleting, chamfering or shelling an existing solid (decided 12/11/2026)
   'slice_solid', 'fillet_edges', 'chamfer_edges', 'shell_solid',
+  // nâng cấp đợt D (luật 3D): PRESSPULL on an existing solid
+  'presspull',
 ]);
 
 /**
  * Tools that create new objects even when they also change existing ones (extrude / revolve / sweep / loft with
  * erase_profile; slice_solid keeping both halves). Their result handles minus the handles they change are "created".
  */
-const CREATES_TOO = new Set(['extrude', 'revolve', 'sweep', 'loft', 'slice_solid', 'fillet_entities', 'chamfer_entities', 'define_block']);
+const CREATES_TOO = new Set(['extrude', 'revolve', 'sweep', 'loft', 'slice_solid', 'fillet_entities', 'chamfer_entities', 'define_block', 'presspull']);
 
 /** The handles a destructive call names, for the tools whose handles are not in 'handles' / 'handle'. */
 function namedHandles(tool: string, params: Record<string, unknown>): string[] | undefined {
@@ -89,6 +93,13 @@ function namedHandles(tool: string, params: Record<string, unknown>): string[] |
   }
   if (tool === 'extrude' || tool === 'revolve' || tool === 'sweep') return params.erase_profile === true ? strs(params.profile_handles) : [];
   if (tool === 'loft') return params.erase_profile === true ? strs(params.section_handles) : [];
+  if (tool === 'presspull') {
+    return [
+      ...(typeof params.handle === 'string' ? [params.handle] : []),
+      ...(typeof params.target === 'string' && params.mode !== 'new' ? [params.target] : []),
+      ...(params.erase_profile === true ? strs(params.profile_handles) : []),
+    ];
+  }
   if (tool === 'fillet_entities' || tool === 'chamfer_entities') return [params.handle1, params.handle2].filter((h): h is string => typeof h === 'string');
   if (tool === 'define_block') return params.replace_with_insert === false ? [] : strs(params.entity_handles);
   return undefined;
@@ -309,7 +320,11 @@ export function existingSolidsChanged(tool: string, params: Record<string, unkno
     return [...new Set(out)];
   }
   if (!ALWAYS_CONFIRM.has(tool)) return [];
-  return [...new Set(affectedHandles(tool, params).filter((h) => !h.startsWith('#') && !g.created?.has(h)))];
+  // presspull: only the solids (handle, target) need the card; erased profile curves follow the usual count rule
+  const hs = tool === 'presspull'
+    ? [params.handle, params.mode !== 'new' ? params.target : undefined].filter((h): h is string => typeof h === 'string').map((h) => h.toUpperCase())
+    : affectedHandles(tool, params);
+  return [...new Set(hs.filter((h) => !h.startsWith('#') && !g.created?.has(h)))];
 }
 
 /**

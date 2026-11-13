@@ -103,7 +103,9 @@ namespace ClaudeCAD.Plugin.Core
                 // 3D phase 3 (Drawing/PlanTo3dTools.cs, SectionTools.cs): their 2D lines / hatch are results of a 3D tool
                 "build_3d_from_plan section_view projection_view " +
                 // nâng cấp đợt A (Drawing/PlanTo3dTools.cs): railing along a path
-                "build_railing");
+                "build_railing " +
+                // nâng cấp đợt D (Drawing/Solid3Tools.cs): beams, PRESSPULL, STL export, volume schedule by layer
+                "build_beam presspull export_stl volume_schedule");
             return d;
         }
 
@@ -134,6 +136,10 @@ namespace ClaudeCAD.Plugin.Core
         {
             ["define_block"] = "attributes",
             ["insert_block"] = "attributes",
+            // nâng cấp đợt D (phương án A, 13/11/2026): a TABLE in the drawing is text, so 2D; on the 3D plan the 3D
+            // schedules only return their numbers to Claude (shown in the chat), the table is inserted on Full only
+            ["volume_schedule"] = "table_position",
+            ["check_interference"] = "table_position",
         };
 
         /// <summary>
@@ -202,6 +208,10 @@ namespace ClaudeCAD.Plugin.Core
                 ? $"{tool}: this machine's plan is \"{Label(plan)}\", which has no 3D, and '{param}' (copies stacked along Z) belongs to the 3D group. " +
                   "Leave levels out (one level), or tell the user in Vietnamese that this machine uses the " +
                   $"\"{Label(plan)}\" plan and that the plugin owner can open the 3D group" + (string.IsNullOrWhiteSpace(contact) ? "." : $" ({contact}).")
+                : param == "table_position"
+                ? $"{tool}: this machine's plan is \"{Label(plan)}\", which has no text, and '{param}' inserts a table (text, 2D group) into the drawing. " +
+                  "Call it without table_position (the numbers come back to you) and show them to the user in the chat, or tell the user in Vietnamese that a table in the drawing needs the " +
+                  $"\"Full\" plan and that the plugin owner can open the 2D group" + (string.IsNullOrWhiteSpace(contact) ? "." : $" ({contact}).")
                 : $"{tool}: this machine's plan is \"{Label(plan)}\", which has no text, and '{param}' (block attributes) is text from the 2D group. " +
             "Define or insert the block without attributes, or tell the user in Vietnamese that this machine uses the " +
             $"\"{Label(plan)}\" plan and that the plugin owner can open the 2D group" +
@@ -215,7 +225,8 @@ namespace ClaudeCAD.Plugin.Core
             {
                 var bp = Allowed(plan, tool) ? BlockedParam(plan, tool, p) : null;
                 string what = !Allowed(plan, tool) ? tool : bp == null ? null
-                    : tool + (Blocked3dParam(plan, tool, p) != null ? " (số tầng)" : BlockedTextValue(plan, tool, p) != null ? " (thuộc tính chữ / kích thước)" : " (thuộc tính block)");
+                    : tool + (Blocked3dParam(plan, tool, p) != null ? " (số tầng)" : BlockedTextValue(plan, tool, p) != null ? " (thuộc tính chữ / kích thước)"
+                        : TextParams.TryGetValue(tool, out var tp) && tp == "table_position" ? " (bảng trong bản vẽ)" : " (thuộc tính block)");
                 if (what != null && !list.Contains(what)) list.Add(what);
             }
             return list;

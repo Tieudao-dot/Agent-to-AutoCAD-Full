@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { angle, cadTool, entityProps, handle, handles, point, points, type AnyTool, type ToolBridge } from './common.js';
 import { PLAN3D_TOOL_NAMES, plan3dTools } from './plan3d.js';
+import { SOLID3_TOOL_NAMES, solid3Tools, solidTable } from './solids3.js';
 
 /** The 3D tools: only machines on the 3D or Full plan load them (the plugin labels them ToolGroup.ThreeD). */
 export const SOLID_TOOL_NAMES = [
@@ -11,6 +12,8 @@ export const SOLID_TOOL_NAMES = [
   'set_ucs', 'reset_ucs', 'check_interference',
   // phase 3 (plan3d.ts)
   ...PLAN3D_TOOL_NAMES,
+  // nâng cấp đợt D (solids3.ts)
+  ...SOLID3_TOOL_NAMES,
 ] as const;
 
 /**
@@ -184,6 +187,7 @@ export function solidTools(b: ToolBridge): AnyTool[] {
 
     ...solidTools2(b),
     ...plan3dTools(b),
+    ...solid3Tools(b),
   ];
 }
 
@@ -337,11 +341,12 @@ function solidTools2(b: ToolBridge): AnyTool[] {
 
     cadTool(b, 'check_interference',
       'CHECK INTERFERENCE (clashes) between 3D solids: every pair of handles, or each of handles against each of other_handles (e.g. beams against ducts). ' +
-        `Returns interfere, the clashing pairs with their overlap volume (volume null = AutoCAD saw a clash but could not measure it: still a clash), touching_pairs (only touching), unconfirmed_count / unconfirmed_pairs / unconfirmed_note for flagged pairs past the measuring limit (they may only touch: not clashes and not safe; say so and check a smaller list), truncated + truncated_note when more than ${SOLID2_LIMITS.MaxInterferenceCandidates} pairs with touching bounding boxes had to be cut (tell the user; check smaller groups), at most ${SOLID2_LIMITS.MaxInterferenceSolids} solids per list; each pair is checked once even when the lists overlap. Read-only: nothing is changed.`,
+        `Returns interfere, the clashing pairs with their overlap volume (volume null = AutoCAD saw a clash but could not measure it: still a clash), touching_pairs (only touching), unconfirmed_count / unconfirmed_pairs / unconfirmed_note for flagged pairs past the measuring limit (they may only touch: not clashes and not safe; say so and check a smaller list), truncated + truncated_note when more than ${SOLID2_LIMITS.MaxInterferenceCandidates} pairs with touching bounding boxes had to be cut (tell the user; check smaller groups), at most ${SOLID2_LIMITS.MaxInterferenceSolids} solids per list; each pair is checked once even when the lists overlap; each clash has layer_a / layer_b. Read-only unless table_position (a clash table: pair, layers, overlap m³).`,
       {
         handles: handles.max(SOLID2_LIMITS.MaxInterferenceSolids),
         other_handles: handles.max(SOLID2_LIMITS.MaxInterferenceSolids).optional(),
-      },
-      { readOnly: true }),
+        ...solidTable,
+        decimals: z.number().int().min(0).max(6).optional(),
+      }),
   ];
 }

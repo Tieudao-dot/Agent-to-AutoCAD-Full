@@ -70,6 +70,7 @@ dày sàn, sàn tầng trên không chồng vào tường tầng dưới. Ngư�
 | `A-SLAB-3D` | sàn | 8 |
 | `A-COLS-3D` | cột (`build_3d_from_plan` từ `A-COLS` / `A-COL`, hoặc `draw_solid`) | 1 |
 | `A-RAIL-3D` | lan can (`build_railing`) | 3 |
+| `A-BEAM-3D` | dầm (`build_beam`) | 4 |
 | `A-STAIR-3D` | cầu thang | 6 |
 | `A-ROOF-3D` | mái | 30 |
 | `A-SECT` | đường bao vết cắt của mặt cắt 2D | 7 |
@@ -123,6 +124,17 @@ Lan can theo một polyline (ban công, hành lang): `build_railing` với `path
 50 × 50, trụ 50 × 50 cách ≤ 1500, song 20 × 20 khe ≤ 100 (`infill: "panel"` = tấm kính 20, `"none"` = chỉ trụ + tay
 vịn); `base_z` = cao độ sàn (mm).
 
+Tường cong: `build_3d_from_plan` đọc hai cung đồng tâm cách nhau đúng bề dày (cung, đường tròn, đoạn cung của
+polyline), polyline có bề rộng có đoạn cung, hoặc `centerline_handles` là cung + `thickness`. Cửa trên tường cong: khe
+có ký hiệu cửa, ký hiệu cửa sổ đè lên tường, hoặc `openings` theo điểm (cần `width` khi tường liền). Kết quả có
+`curved_walls`.
+
+Dầm: `build_beam` theo đường (`path_handles`: line / cung / polyline, mỗi đường một dầm), mặc định 220 × 400, đỉnh dầm
+ở `top_z`; dầm dưới sàn: `top_z` = cao độ mặt sàn + `slab_thickness` (vd tầng 2: `top_z` 3300, `slab_thickness` 120).
+
+Khối lượng: `volume_schedule` (theo layer; cột lồng trong tường / dầm chỉ tính một lần, vào cột). Va chạm:
+`check_interference`.
+
 ## 4. Tự kiểm tra trước khi báo xong
 
 - Mỗi lệnh dựng khối (`draw_solid`, `extrude`, `revolve`, `sweep`, `loft`…) trả `volume_m3`, `min`, `max`: so ngay với
@@ -148,7 +160,8 @@ vịn); `base_z` = cao độ sàn (mm).
 | Tay vịn, ống, gờ chỉ, máng xối, thép uốn | `sweep` | Tiết diện kín + đường dẫn; tiết diện rộng hơn bán kính cong thì AutoCAD từ chối |
 | Móng vuông lên cột tròn, ống khói thon, thân tàu | `loft` | Các tiết diện kín theo thứ tự từ dưới lên |
 | Cột theo mặt bằng | `build_3d_from_plan` | Hình kín trên `A-COLS` / `A-COL`, cao bằng tường. Tường đã dựng từ trước, chỉ thêm cột: `extrude` các hình cột (`profile_handles`) lên chiều cao tường, layer `A-COLS-3D` |
-| Cột vuông, dầm, bậc thang | `draw_solid` `box` | Bậc: một hộp mỗi bậc, hoặc `extrude` biên dạng răng cưa |
+| Dầm theo trục | `build_beam` | Thẳng hoặc cong, góc tự khép |
+| Cột vuông, bậc thang | `draw_solid` `box` | Bậc: một hộp mỗi bậc, hoặc `extrude` biên dạng răng cưa |
 | Lan can | `build_railing` | Theo polyline, mặc định 1100 |
 | Dốc, mái dốc một phía | `draw_solid` `wedge` | Mặt cao ở phía `corner`, `rotation` để đổi hướng dốc |
 

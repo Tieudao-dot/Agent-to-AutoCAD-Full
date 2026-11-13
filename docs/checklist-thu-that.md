@@ -374,6 +374,29 @@ P7, P9, P10, P14, P17.** P14–P20: các lỗi Test & sửa đợt C đã sửa 
 Còn chỉ thấy trên AutoCAD thật: dò đường bao khi điểm nằm ngoài màn hình (cần phóng tới vùng đó), in nhiều trang (khổ
 giấy từng layout), thay chữ trong MTEXT có định dạng, thuộc tính nhiều dòng, ô bảng.
 
+## Q. Nâng cấp đợt D — 3D (bản Full, gói 3D hoặc Full, ~35 phút)
+
+*13/11/2026 · từ [`ban-giao/nang-cap-d.md`](ban-giao/nang-cap-d.md). Máy ở gói `3D` hoặc `Full` (Q11: so hai gói), bản vẽ
+mm. Sau mỗi dòng gõ U một lần: mọi thay đổi của lượt đó mất hết. **Quan trọng nhất: Q1, Q3, Q5, Q6, Q8, Q9, Q10.***
+
+| # | | Làm gì | Kết quả mong đợi | Đạt | Lỗi | Mã gốc |
+| --- | --- | --- | --- | --- | --- | --- |
+| Q1 | ★ | Vẽ polyline chữ L (4 m rồi rẽ 3 m). "dựng dầm 220 × 400 theo đường này, dưới sàn tầng 2 cao 3300, sàn dày 120" | Một khối trên `A-BEAM-3D`, đỉnh ở 3180, đáy 2780; góc chữ L kín (không khuyết, không gai). Thể tích ≈ 0,22 × 0,4 × 7 = 0,616 m³ | ☐ | ☐ | D1 |
+| Q2 | ○ | Polyline có một đoạn cung (bán kính ≥ 1 m): "dựng dầm theo đường này" | Dầm cong đều theo cung, nối liền đoạn thẳng | ☐ | ☐ | D1 |
+| Q3 | ★ | Mặt bằng có một tường cong: hai cung đồng tâm cách nhau 220 trên `A-WALL` (nối với tường thẳng). "dựng 3D mặt bằng này" | Tường cong được dựng liền với tường thẳng, không còn báo "curved wall: not built". Báo cáo có `curved_walls` (bán kính, dày, dài) | ☐ | ☐ | D2 |
+| Q4 | ★ | Như Q3, tường cong có khe cửa (hai cung cùng ngắt) và ký hiệu cửa đi ở khe; một ký hiệu cửa sổ đè lên đoạn cong liền | Khe cửa đi: có lanh tô phía trên (cao 2200 → 3300); cửa sổ: còn bậu dưới (0 → 900) và lanh tô (2400 → 3300). Khe không có ký hiệu thì để trống cả chiều cao và Claude hỏi | ☐ | ☐ | D2 |
+| Q5 | ★ | Hộp 1000 × 1000 × 1000 dựng **từ lượt trước**. "kéo mặt trên lên 500" | Claude hiện **thẻ xác nhận** có handle của hộp. Bấm Đồng ý: hộp cao 1500 (1,5 m³). Gõ "ok" thay vì bấm: không làm, hiện lại thẻ | ☐ | ☐ | D3 |
+| Q6 | ★ | Vẽ hình chữ nhật nhỏ nằm trên mặt trên của hộp, "ấn hình này xuống 300 vào khối" (PRESSPULL) | Qua thẻ (khối có từ trước), bấm Đồng ý: khối bị khoét lỗ sâu 300; `mode` = subtract. Kéo lên thì khối thêm phần nhô | ☐ | ☐ | D3 |
+| Q7 | ○ | Hình kín đứng riêng (không có khối nào): "kéo hình này lên 1000" | Ra khối mới, không hỏi thẻ | ☐ | ☐ | D3 |
+| Q8 | ★ | Có vài khối (tường, cột). "xuất các khối ra file STL" | File `<bản vẽ>-3d.stl` cạnh bản vẽ; mở được bằng phần mềm xem STL (Windows 3D Viewer, slicer); kích thước đúng mm. Bản vẽ không đổi (không có bước hoàn tác). Gọi lại cùng tên: Claude hỏi trước khi ghi đè | ☐ | ☐ | D4 |
+| Q9 | ★ | Dựng mặt bằng có cột lồng trong tường (đợt A). "lập bảng khối lượng theo layer" | Số theo layer (`A-WALL-3D`, `A-COLS-3D`, `A-SLAB-3D`…): thể tích, phần giao đã trừ, thể tích thực, diện tích mặt; cột giữ đủ, **tường bị trừ phần cột lồng** (tổng thực không tính chồng). Gói Full: chèn được bảng vào bản vẽ khi yêu cầu | ☐ | ☐ | D5 |
+| Q10 | ★ | Dầm đâm vào ống (hai khối giao nhau). "kiểm tra va chạm và lập bảng" | Liệt kê cặp khối, layer, thể tích giao. Gói Full: chèn bảng "BẢNG VA CHẠM KHỐI 3D" | ☐ | ☐ | D6 |
+| Q11 | ★ | Máy gói `3D`: lặp Q9, Q10 kèm "chèn bảng vào bản vẽ" | Claude **không chèn bảng** (bảng là chữ, thuộc gói 2D / Full), nói số liệu trong khung chat và báo cần gói Full để có bảng | ☐ | ☐ | gói |
+| Q12 | ○ | Máy gói `2D`: "dựng dầm", "xuất STL" | Claude báo các việc này thuộc gói 3D, không làm gì | ☐ | ☐ | gói |
+
+Còn chỉ thấy trên AutoCAD thật: hướng kéo mặt của PRESSPULL (dương = ra ngoài), khối giao không đo được thể tích (báo
+"chưa đo được"), STL của bản vẽ đơn vị mét (phải ra mm), tường cong đi vào tường thẳng ở góc.
+
 ## Gửi lại gì khi lỗi
 
 1. **Mã bước** bị lỗi (ví dụ `D2`) + một dòng: đã làm gì, thấy gì khác với "kết quả mong đợi".
