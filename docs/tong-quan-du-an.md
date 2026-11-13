@@ -91,4 +91,6 @@ Cách giảm thêm còn lại: gộp 6 lệnh khối cơ bản thành 1 lệnh (
 - **13/11/2026:**
   - chủ dự án đồng ý 9 quyết định đêm qua, chốt squash khi phát hành;
   - bộ cài thử nội bộ (`full/ban-thu-noi-bo`), thread QnA;
-  - kế hoạch nâng cấp lệnh vẽ, chốt 5 điểm; duyệt đợt A, chờ thử 3D thật.
+  - kế hoạch nâng cấp lệnh vẽ, chốt 5 điểm; duyệt đợt A, chờ thử 3D thật;
+  - chủ dự án cho đóng các thread đã xong việc: 3D đợt 1, 2, 3 + 3 thread con Test & sửa, Kiểm tra độc lập. Còn mở:
+    Gói dịch vụ, Test tổng thể (nhận lỗi 3D khi thử thật), Bộ cài thử nội bộ, QnA.
