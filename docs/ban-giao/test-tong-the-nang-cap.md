@@ -32,7 +32,7 @@ Test: lõi 866 (+5: `TongTheNangCapTests` KT2-01 ×3, KT2-20, KT2-29), trợ lý
 
 Gộp vào `full/nang-cap-tong-the` (không xung đột) theo thứ tự A `75344e0`, B `7cf2873`, C `d14e8fc`, D `345c9ad`, E
 `4a43452`. Sau gộp: lõi **908**, trợ lý **298** xanh; build 3 bản xanh 0 cảnh báo; CI run **43475785808 xanh** ở
-`0153a1f` (`release: "false"`). Cả 31 lỗi:
+`0153a1f` (`release: "false"`). Cả 31 lỗi + KT2-32 của lượt 2:
 
 | Mã | Mức | Lỗi (tóm tắt) | Thread sửa | Commit |
 | --- | --- | --- | --- | --- |
@@ -46,7 +46,7 @@ Gộp vào `full/nang-cap-tong-the` (không xung đột) theo thứ tự A `7534
 | KT2-08 | nhẹ | hai mái chồng nhau | Đợt E | `4a43452` |
 | KT2-09 | nhẹ | (a) Lỗi mái 4 dốc trên đường bao lõm gợi ý "dùng type gable", nhưng gable cũng đòi hình chữ nhật nên bị từ chố… | Đợt E | `4a43452` |
 | KT2-10 | nhẹ | `array_rect` `level_spacing` mô tả là mm nhưng plugin dùng thẳng đơn vị bản vẽ: bản vẽ mét, "3 tầng cột, cách … | Đợt A | `75344e0` |
-| KT2-11 | nhẹ | Đường bao cột vẽ trùng hai lần → hai khối cột trùng nhau (khối lượng cột gấp đôi, nhấp nháy màn hình). Sàn có … (phần "cân nhắc" chưa làm, xem `nang-cap-a.md`) | Đợt A | `75344e0` |
+| KT2-11 | nhẹ | Đường bao cột vẽ trùng hai lần → hai khối cột trùng nhau (khối lượng cột gấp đôi, nhấp nháy màn hình). Sàn có … (**chấp nhận**: phần "cân nhắc" — cột lồng trong cột khác — chưa làm, xem `nang-cap-a.md`) | Đợt A | `75344e0` |
 | KT2-12 | nhẹ | mở | Đợt D | `345c9ad` |
 | KT2-13 | nhẹ | PRESSPULL `distance` là đơn vị bản vẽ trong khi schema ghi mm; `build_beam` cùng đợt thì quy đổi. Bản vẽ mét: … | Đợt D | `345c9ad` |
 | KT2-14 | nhẹ | Gói 3D: trợ lý vẫn chào `match_properties` `properties` "text" / "dimension" (plugin từ chối đúng) → Claude đư… | Đợt B | `7cf2873` |
@@ -57,7 +57,7 @@ Gộp vào `full/nang-cap-tong-the` (không xung đột) theo thứ tự A `7534
 | KT2-19 | nhẹ | `build_beam` không có giới hạn tổng: 500 đường × 2000 đoạn → ~10⁶ phép extrude + cộng khối trên luồng chính, A… | Đợt D | `345c9ad` |
 | KT2-20 | nhẹ | Dòng trạng thái khung chat hiện tên lệnh tiếng Anh thô cho các lệnh mới đợt B, C, D: `stretch_entities`, `brea… | Test tổng thể nâng cấp | `b9f7136` |
 | KT2-21 | nhẹ | 1 tầng + `storey_height` + không có đường bao sàn: tường thấp đi 150 mm (3300 − 150) mà không có sàn ở trên; l… | Đợt A | `75344e0` |
-| KT2-22 | nhẹ | đoán | Đợt A | `75344e0` |
+| KT2-22 | nhẹ | Layer đoán là lan can: gợi ý dựng lan can ngay thay vì hỏi người dùng trước (**chấp nhận**: sửa ở mức lời dặn, trợ lý không chặn được bằng code) | Đợt A | `75344e0` |
 | KT2-23 | nhẹ | mọi | Đợt B | `7cf2873` |
 | KT2-24 | nhẹ | `lengthen_entity` trên LINE nghiêng / 3D chỉ tính trong mặt XY: đường nghiêng ra độ dài khác yêu cầu (kết quả … | Đợt B | `7cf2873` |
 | KT2-25 | nhẹ | Schema `stretch_entities` `polygon` không có `.max(1000)` trong khi plugin giới hạn 1000 đỉnh | Đợt B | `7cf2873` |
@@ -67,6 +67,12 @@ Gộp vào `full/nang-cap-tong-the` (không xung đột) theo thứ tự A `7534
 | KT2-29 | nhẹ | Mô tả `draw_solid` và tổng quan ghi gộp 6 lệnh "bớt ~2k token", số đo thật ~1,1k (`nang-cap-a.md:93`, `bo-cai/… | Test tổng thể nâng cấp | `b9f7136` |
 | KT2-30 | nhẹ | Tài liệu tình hình cũ: `tong-quan-du-an.md:11, 14` còn nhánh tích hợp `full/test-tong-the` @ `19944df`, test 3… | Luồng chính | `69bf71c` (claude/inspiring-cray-58xsmt) |
 | KT2-31 | nhẹ | Checklist tổng: đầu file (`:3-4`) và tổng quan `:22` chỉ nêu thời gian phần I–M, X (~97 / ~157 phút), không nê… | Test tổng thể nâng cấp (checklist) + luồng chính (tổng quan) | `b9f7136` + 69bf71c |
+| KT2-32 | nhẹ | *(lượt 2 kiểm tra độc lập)* Tìm & thay chỉ kiểm layer khóa ở thuộc tính đầu của block; báo lỗi thiếu tên thuộc tính / layer | Đợt C | `5c244af` |
+
+### Lượt 2 kiểm tra độc lập
+
+29 lỗi sửa đúng, 2 chấp nhận (KT2-11 phần "cân nhắc", KT2-22 chỉ lời dặn), 1 lỗi mới nhẹ KT2-32 (đợt C, `5c244af`). Gộp
+`full/nang-cap-c` @ `5c244af` vào `full/nang-cap-tong-the`; kết quả test / CI: (ghi sau khi chạy).
 
 ## Đã rà theo chiều ngang, không phải lỗi
 

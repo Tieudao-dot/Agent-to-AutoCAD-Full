@@ -6,7 +6,7 @@
 | Khối | Phần | Lượt rút gọn | Lượt đủ |
 | --- | --- | --- | --- |
 | Gói + 3D đợt 1–3 | 0–8 (mục I–M, X của `checklist-thu-that.md`) | ~97 phút (phần 0–5) | ~157 phút |
-| Chuỗi nâng cấp A → E | 9–16 (mục N–R của `checklist-thu-that.md`, V1–V12) | ~105 phút (phần 9–15) | ~3 giờ |
+| Chuỗi nâng cấp A → E | 9–16 (mục N–R của `checklist-thu-that.md`, V1–V13) | ~105 phút (phần 9–15) | ~3 giờ |
 
 *Cả hai khối, lượt rút gọn: ~3 giờ 25 phút; lượt đủ: ~5 giờ 50 phút. Chi tiết từng mục (bước, kết quả đúng đầy đủ):
 [`checklist-thu-that.md`](checklist-thu-that.md). File này chỉ xếp thứ tự và ghi phần cần nhìn kỹ.*
@@ -156,7 +156,7 @@ nhìn kỹ. Cách ghi kết quả / báo lỗi như phần đầu file.*
 
 | Lượt | Gồm | Thời gian ước |
 | --- | --- | --- |
-| **Rút gọn** (làm trước) | S3 + V1–V12 + **một số** mục ★ chọn lọc của N–R ghi ở phần 11–15 (không phải mọi mục ★) | **~105 phút** |
+| **Rút gọn** (làm trước) | S3 + V1–V13 + **một số** mục ★ chọn lọc của N–R ghi ở phần 11–15 (không phải mọi mục ★) | **~105 phút** |
 | Đủ | Rút gọn + mọi mục ○ của N–R | ~3 giờ (N 34, O 30, P 30, Q 35, R 30 phút + V 25 phút) |
 
 ## Ưu tiên cao nhất (hỏng thì báo ngay, chưa cần làm tiếp)
@@ -207,6 +207,7 @@ nhìn kỹ. Cách ghi kết quả / báo lỗi như phần đầu file.*
 | V10 | *(KT2-11)* Vẽ một hình chữ nhật cột trên `A-COL` **hai lần chồng khít** rồi "dựng 3D mặt bằng" | Một khối cột; báo cáo có dòng "the same outline as …: one column built" |
 | V11 | *(KT2-21)* Mặt bằng **không có đường bao sàn**: "dựng tầng 1, tầng cao 3,3 m" | Claude **hỏi chọn sàn** (theo khung bao tường / không sàn) trước khi dựng, chưa dựng gì |
 | V12 | *(KT2-22)* Polyline trên layer `LAN CAN`: "dựng 3D mặt bằng" | Claude hỏi bằng thẻ có ghi tên layer `LAN CAN` trước khi dựng lan can; Đồng ý rồi mới dựng |
+| V13 | *(KT2-17, lượt 2)* Đang ở Model, đã đặt khổ giấy cho Model là A4 (Page Setup). "in bản vẽ ra PDF" (không nói khổ giấy) | PDF ra **khổ A4** như đã đặt cho Model, không còn mặc định A3 |
 
 Đợt B thêm O21 (kéo giãn không đụng layer đang tắt), O22 (25 đoạn kéo giãn theo khung qua thẻ) trong
 `checklist-thu-that.md`: làm ở phần 16. Các sửa khác của KT2 (đơn vị mét ở tiện ích 2D, mái chữ L báo trước chỗ chồng,
