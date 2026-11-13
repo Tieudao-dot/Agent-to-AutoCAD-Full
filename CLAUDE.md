@@ -110,6 +110,10 @@ dự án gốc), `bo-cai/README.md`.
   người dùng.
 - Không bỏ / tắt test để CI xanh. Luôn cập nhật `bo-cai/README.md` và tài liệu trong `docs/` cùng với thay đổi.
 - Không đưa tên hay ID model vào commit, PR, code.
+- **Gộp bản Full vào `main` (chốt 13/11/2026):** khi chủ dự án đồng ý phát hành, gộp nhánh tích hợp vào `main` thành
+  **một commit gọn** (squash), không giữ từng commit. Lý do: 2 commit đầu của dự án (`d8b1b58`, `f570344`, ngày 12/11)
+  có tên model trong dòng ghi công; squash giữ lịch sử `main` sạch. Không viết lại lịch sử các nhánh làm việc; lịch sử
+  chi tiết xem ở các nhánh đó.
 
 ## Bí mật
 
