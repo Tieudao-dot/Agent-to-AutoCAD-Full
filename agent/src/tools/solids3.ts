@@ -136,7 +136,7 @@ export function solid3Tools(b: ToolBridge): AnyTool[] {
         `it is split into whole equal risers nearest riser (default ${E.DefaultRiser}); tell the user the risers / riser_mm returned. Defaults (use the user's numbers when given): ` +
         `tread ${E.DefaultTread}, width ${E.DefaultWidth} (flight width), landing = width (L / U, at mid height), waist ${E.DefaultWaist}, gap ${E.DefaultGap} between the U flights. ` +
         'Place it by start (middle of the bottom edge of the first step) + direction (degrees, walking up the first flight) + turn (left / right, L / U), or by the stair well ' +
-        '(well_handle: closed polyline / well_points): without start it is fitted into the well; it does not fit = an error with the size needed (tell the user, never build it outside). ' +
+        '(well_handle: closed polyline / well_points): without start it is fitted into the well (keeping direction when given); it does not fit = an error with the size needed (tell the user, never build it outside). ' +
         `base_z = lower floor level (mm). railing left / right / both (walking up): handrail ${E.RailHeight} mm + posts along the flights, on A-RAIL-3D. ` +
         'Returns handle, risers, riser_mm, flights, landing_z_mm, footprint_mm, start, direction_deg, turn, warnings.',
       {

@@ -99,6 +99,8 @@ namespace ClaudeCAD.Plugin.Core
         public const int MaxRisersPerFlightHint = 18;
         public const double RailHeight = 900, RailSize = 50, PostSize = 50, MaxPostSpacing = 1500;
         public const string Layer3d = "A-STAIR-3D";
+        /// <summary>A corner counts as square when the cosine of its angle is below this (about 0.1°: hand-drawn outlines).</summary>
+        public const double SquareTol = 2e-3;
         public static readonly string[] Types = { "straight", "l", "u" };
         public static readonly string[] Railings = { "none", "left", "right", "both" };
 
@@ -120,7 +122,9 @@ namespace ClaudeCAD.Plugin.Core
             public double BaseZ;    // level it starts from
         }
 
-        public sealed class Rect { public double X0, Y0, X1, Y1; public string Part; }
+        /// <summary>A plan rectangle of the stair. OnUpperFloor: the top step's ledge resting on the upper floor slab
+        /// (past the last riser, outside the stair well): not counted when the stair is fitted into a well.</summary>
+        public sealed class Rect { public double X0, Y0, X1, Y1; public string Part; public bool OnUpperFloor; }
 
         /// <summary>
         /// The stair in its own frame (mm): x = walking direction of the first flight, y = the turn side (left for a
@@ -136,6 +140,7 @@ namespace ClaudeCAD.Plugin.Core
             public List<Prism3> Rail = new List<Prism3>();
             public List<Rect> Footprint = new List<Rect>();
             public List<string> Warnings = new List<string>();
+            /// <summary>The plan box of the stair in its well (the top ledge on the upper floor not included).</summary>
             public double MinX, MaxX, MinY, MaxY;
             public double Length => MaxX - MinX;
             public double Breadth => MaxY - MinY;
@@ -275,7 +280,8 @@ namespace ClaudeCAD.Plugin.Core
                 var prof = FlightProfile(m, r, t, o.Waist, lt, false, 0, TopLedge);
                 lay.Pieces.Add(FlightPrism(prof, new[] { 0.0, 0 }, X, Y, w, 0, "flight 1"));
                 lay.Flights.Add(new Flight { Risers = n, Run = m * t + TopLedge, BaseZ = 0 });
-                lay.Footprint.Add(new Rect { X0 = 0, Y0 = 0, X1 = m * t + TopLedge, Y1 = w, Part = "flight 1" });
+                lay.Footprint.Add(new Rect { X0 = 0, Y0 = 0, X1 = m * t, Y1 = w, Part = "flight 1" });
+                lay.Footprint.Add(new Rect { X0 = m * t, Y0 = 0, X1 = m * t + TopLedge, Y1 = w, Part = "top ledge", OnUpperFloor = true });
                 if (n > MaxRisersPerFlightHint)
                     lay.Warnings.Add($"One flight of {n} risers (more than {MaxRisersPerFlightHint} in a row is tiring and many codes ask for a landing): consider an L or U stair.");
                 AddRail(lay, o, 0, m, r, t, new[] { 0.0, 0 }, X, Y, w, 0);
@@ -300,7 +306,8 @@ namespace ClaudeCAD.Plugin.Core
                     lay.Footprint.Add(new Rect { X0 = R1, Y0 = 0, X1 = R1 + ld, Y1 = w, Part = "landing" });
                     // second flight walks +y from the landing's far side, its side edge at x = R1 + ld - w
                     lay.Pieces.Add(FlightPrism(prof2, new[] { R1 + ld - w, w }, Y, X, w, L1, "flight 2"));
-                    lay.Footprint.Add(new Rect { X0 = R1 + ld - w, Y0 = w, X1 = R1 + ld, Y1 = w + R2, Part = "flight 2" });
+                    lay.Footprint.Add(new Rect { X0 = R1 + ld - w, Y0 = w, X1 = R1 + ld, Y1 = w + m2 * t, Part = "flight 2" });
+                    lay.Footprint.Add(new Rect { X0 = R1 + ld - w, Y0 = w + m2 * t, X1 = R1 + ld, Y1 = w + R2, Part = "top ledge", OnUpperFloor = true });
                     AddRail(lay, o, 0, m1, r, t, new[] { 0.0, 0 }, X, Y, w, 0);
                     AddRail(lay, o, 1, m2, r, t, new[] { R1 + ld - w, w }, Y, X, w, L1);
                 }
@@ -311,7 +318,8 @@ namespace ClaudeCAD.Plugin.Core
                     lay.Footprint.Add(new Rect { X0 = R1, Y0 = 0, X1 = R1 + ld, Y1 = span, Part = "landing" });
                     // second flight walks -x from x = R1, beside the first one past the gap
                     lay.Pieces.Add(FlightPrism(prof2, new[] { R1, w + o.Gap }, nX, Y, w, L1, "flight 2"));
-                    lay.Footprint.Add(new Rect { X0 = R1 - R2, Y0 = w + o.Gap, X1 = R1, Y1 = span, Part = "flight 2" });
+                    lay.Footprint.Add(new Rect { X0 = R1 - m2 * t, Y0 = w + o.Gap, X1 = R1, Y1 = span, Part = "flight 2" });
+                    lay.Footprint.Add(new Rect { X0 = R1 - R2, Y0 = w + o.Gap, X1 = R1 - m2 * t, Y1 = span, Part = "top ledge", OnUpperFloor = true });
                     AddRail(lay, o, 0, m1, r, t, new[] { 0.0, 0 }, X, Y, w, 0);
                     AddRail(lay, o, 1, m2, r, t, new[] { R1, w + o.Gap }, nX, Y, w, L1);
                 }
@@ -319,8 +327,10 @@ namespace ClaudeCAD.Plugin.Core
                 if (n1 > MaxRisersPerFlightHint || n2 > MaxRisersPerFlightHint)
                     lay.Warnings.Add($"A flight has more than {MaxRisersPerFlightHint} risers ({n1} + {n2}).");
             }
-            lay.MinX = lay.Footprint.Min(q => q.X0); lay.MaxX = lay.Footprint.Max(q => q.X1);
-            lay.MinY = lay.Footprint.Min(q => q.Y0); lay.MaxY = lay.Footprint.Max(q => q.Y1);
+            // the plan size in the stair well: the top ledge rests on the upper floor, past the well edge
+            var inWell = lay.Footprint.Where(q => !q.OnUpperFloor).ToList();
+            lay.MinX = inWell.Min(q => q.X0); lay.MaxX = inWell.Max(q => q.X1);
+            lay.MinY = inWell.Min(q => q.Y0); lay.MaxY = inWell.Max(q => q.Y1);
             return lay;
         }
 
@@ -422,14 +432,15 @@ namespace ClaudeCAD.Plugin.Core
         }
 
         /// <summary>The plan corners (mm) of the footprint rectangles, placed with the frame.</summary>
-        public static List<(string part, double[][] corners)> PlacedFootprint(Layout lay, Frame f) =>
-            lay.Footprint.Select(r => (r.Part, new[] { f.Map(r.X0, r.Y0), f.Map(r.X1, r.Y0), f.Map(r.X1, r.Y1), f.Map(r.X0, r.Y1) })).ToList();
+        public static List<(string part, double[][] corners)> PlacedFootprint(Layout lay, Frame f, bool inWellOnly = false) =>
+            lay.Footprint.Where(r => !inWellOnly || !r.OnUpperFloor).Select(r => (r.Part, new[] { f.Map(r.X0, r.Y0), f.Map(r.X1, r.Y0), f.Map(r.X1, r.Y1), f.Map(r.X0, r.Y1) })).ToList();
 
-        /// <summary>The parts of the stair that stick out of the well outline (mm), empty when it fits.</summary>
+        /// <summary>The parts of the stair that stick out of the well outline (mm), empty when it fits. The top ledge resting
+        /// on the upper floor may pass the well edge.</summary>
         public static List<string> Outside(Layout lay, Frame f, IList<double[]> well, double tol = 1)
         {
             var bad = new List<string>();
-            foreach (var (part, cs) in PlacedFootprint(lay, f))
+            foreach (var (part, cs) in PlacedFootprint(lay, f, true))
             {
                 var probe = new List<double[]>();
                 for (int i = 0; i < 4; i++)
@@ -458,9 +469,10 @@ namespace ClaudeCAD.Plugin.Core
 
         /// <summary>
         /// Fits the stair into a well outline (mm) with no start point given: tries each corner with the stair running
-        /// along either side from it (longer sides first), keeping the turn the user asked for. Null when nothing fits.
+        /// along either side from it (longer sides first), keeping the turn the user asked for and, when given, the walking
+        /// direction of the first flight (degrees in plan, within 1°). Null when nothing fits.
         /// </summary>
-        public static Frame FitInWell(Layout lay, IList<double[]> well, Options o, bool turnGiven)
+        public static Frame FitInWell(Layout lay, IList<double[]> well, Options o, bool turnGiven, double? dirDeg = null)
         {
             var pts = RoofLogic.Clean(well);
             if (Prism3.Area2d(pts) < 0) pts.Reverse();
@@ -474,7 +486,12 @@ namespace ClaudeCAD.Plugin.Core
                     double bx = b[0] - c[0], by = b[1] - c[1], bl = Math.Sqrt(bx * bx + by * by);
                     if (al < 1e-9 || bl < 1e-9) continue;
                     var x = new[] { ax / al, ay / al }; var y = new[] { bx / bl, by / bl };
-                    if (Math.Abs(x[0] * y[0] + x[1] * y[1]) > 1e-3) continue; // only square corners
+                    if (Math.Abs(x[0] * y[0] + x[1] * y[1]) > SquareTol) continue; // only square corners
+                    if (dirDeg.HasValue)
+                    {
+                        double rad = dirDeg.Value * Math.PI / 180;
+                        if (x[0] * Math.Cos(rad) + x[1] * Math.Sin(rad) < Math.Cos(Math.PI / 180)) continue;
+                    }
                     bool yLeft = x[0] * y[1] - x[1] * y[0] > 0;
                     if (o.Type == "straight" ? !yLeft : turnGiven && (o.Turn == "left") != yLeft) continue;
                     var org = new[] { c[0] - x[0] * lay.MinX - y[0] * lay.MinY, c[1] - x[1] * lay.MinX - y[1] * lay.MinY };
@@ -540,7 +557,11 @@ namespace ClaudeCAD.Plugin.Core
             throw ToolException.Invalid($"{tool}: type must be one of flat (mái bằng), gable (2 dốc), hip (4 dốc) (got '{type}').");
         }
 
-        /// <summary>Drops repeated points, a closing point equal to the first and points on a straight line.</summary>
+        /// <summary>A corner closer than this (mm) to the line through its neighbours is dropped: a drafting jog of a
+        /// millimetre in a straight wall is not a corner (it would make a rectangle look like an L house).</summary>
+        public const double JogTol = 1.0;
+
+        /// <summary>Drops repeated points, a closing point equal to the first and points on (or within JogTol mm of) a straight line.</summary>
         public static List<double[]> Clean(IList<double[]> pts, double tol = 1e-6)
         {
             var res = new List<double[]>();
@@ -556,7 +577,7 @@ namespace ClaudeCAD.Plugin.Core
                     var a = res[(i - 1 + res.Count) % res.Count]; var b = res[i]; var c = res[(i + 1) % res.Count];
                     double cr = (b[0] - a[0]) * (c[1] - b[1]) - (b[1] - a[1]) * (c[0] - b[0]);
                     double l = Math.Sqrt((c[0] - a[0]) * (c[0] - a[0]) + (c[1] - a[1]) * (c[1] - a[1]));
-                    if (Math.Abs(cr) <= 1e-9 * Math.Max(1, l * l))
+                    if (Math.Abs(cr) <= 1e-9 * Math.Max(1, l * l) || (l > 1e-9 && Math.Abs(cr) / l <= JogTol && Dot2(b, a, c) <= 0))
                     {
                         res.RemoveAt(i);
                         changed = true;
@@ -566,6 +587,9 @@ namespace ClaudeCAD.Plugin.Core
             }
             return res;
         }
+
+        /// <summary>(a − b)·(c − b): not positive when b lies between a and c (a jog), positive for a spike.</summary>
+        private static double Dot2(double[] b, double[] a, double[] c) => (a[0] - b[0]) * (c[0] - b[0]) + (a[1] - b[1]) * (c[1] - b[1]);
 
         public static bool IsConvex(IList<double[]> pts)
         {
@@ -590,7 +614,7 @@ namespace ClaudeCAD.Plugin.Core
                 var a = pts[i]; var b = pts[(i + 1) % 4]; var c = pts[(i + 2) % 4];
                 double ux = b[0] - a[0], uy = b[1] - a[1], vx = c[0] - b[0], vy = c[1] - b[1];
                 double lu = Math.Sqrt(ux * ux + uy * uy), lv = Math.Sqrt(vx * vx + vy * vy);
-                if (lu < 1e-9 || lv < 1e-9 || Math.Abs(ux * vx + uy * vy) > 1e-4 * lu * lv) return false;
+                if (lu < 1e-9 || lv < 1e-9 || Math.Abs(ux * vx + uy * vy) > StairLogic.SquareTol * lu * lv) return false;
             }
             return true;
         }

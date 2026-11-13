@@ -118,7 +118,7 @@ namespace ClaudeCAD.Core.Tests
             Assert.Equal(21, l.Risers);
             double r = l.RiserHeight, t = 280;
             Assert.Single(l.Pieces);
-            Assert.Equal(20 * t + StairLogic.TopLedge, l.Length, 6);
+            Assert.Equal(20 * t, l.Length, 6); // in the well; the top ledge rests on the upper floor (Test & sửa đợt E, NE-3)
             Assert.Equal(1000, l.Breadth, 6);
             for (int k = 1; k <= 20; k++)
             {
@@ -147,7 +147,7 @@ namespace ClaudeCAD.Core.Tests
             double r = l.RiserHeight, t = 280, R1 = (n1 - 1) * t, L1 = n1 * r;
             Assert.Equal(L1, l.Flights[1].BaseZ, 6);
             Assert.Equal(R1 + 1000, l.Length, 6);
-            Assert.Equal(1000 + (n2 - 1) * t + StairLogic.TopLedge, l.Breadth, 6);
+            Assert.Equal(1000 + (n2 - 1) * t, l.Breadth, 6);
             // landing top at L1, 150 thick
             Assert.True(InStair(l, R1 + 500, 500, L1 - 1));
             Assert.False(InStair(l, R1 + 500, 500, L1 + 1));
@@ -171,9 +171,10 @@ namespace ClaudeCAD.Core.Tests
             Assert.True(InStair(l, R1 - 140, 1100 + 500, L1 + r - 1));
             Assert.False(InStair(l, R1 - 140, 1050, L1 + r - 1), "the gap between the flights is empty");
             Assert.True(InStair(l, R1 + 500, 1050, L1 - 1), "the landing spans both flights and the gap");
-            // flight 2 has 9 treads + the top ledge: it ends 180 mm short of the start of flight 1
+            // flight 2 has 9 treads (+ the top ledge on the upper floor): it ends 280 (180) mm short of the start of flight 1
             Assert.Equal(0, l.MinX, 6);
-            Assert.Equal(R1 - (9 * t + StairLogic.TopLedge), l.Footprint.Single(q => q.Part == "flight 2").X0, 6);
+            Assert.Equal(R1 - 9 * t, l.Footprint.Single(q => q.Part == "flight 2").X0, 6);
+            Assert.Equal(R1 - (9 * t + StairLogic.TopLedge), l.Footprint.Single(q => q.Part == "top ledge").X0, 6);
         }
 
         [Fact]

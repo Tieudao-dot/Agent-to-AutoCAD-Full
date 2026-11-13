@@ -151,7 +151,10 @@ namespace ClaudeCAD.Plugin.Drawing
             }
             else
             {
-                frame = StairLogic.FitInWell(lay, well, o, p.Has("turn"));
+                double? dir = p.Has("direction") ? p.Num("direction") : (double?)null;
+                frame = StairLogic.FitInWell(lay, well, o, p.Has("turn"), dir);
+                if (frame == null && dir.HasValue && StairLogic.FitInWell(lay, well, o, p.Has("turn")) != null)
+                    throw ToolException.Invalid($"{tool}: the stair fits the well {wellFrom}, but not walking up towards {dir.Value}° (it is fitted along the well sides from a square corner). Nothing was built. Leave 'direction' out to let the well decide, or give 'start' + 'direction'.");
                 if (frame == null)
                 {
                     var c = RoofLogic.Clean(well);
@@ -190,6 +193,7 @@ namespace ClaudeCAD.Plugin.Drawing
                 r["landing_mm"] = o.Landing ?? o.Width;
                 r["landing_z_mm"] = Math.Round(baseMm + lay.Flights[1].BaseZ, 1);
             }
+            // the plan size in the well; the top step runs TopLedge mm further onto the upper floor
             r["footprint_mm"] = new List<object> { Math.Round(lay.Length), Math.Round(lay.Breadth) };
             var startPt = new[] { frame.Origin[0] + frame.Y[0] * o.Width / 2, frame.Origin[1] + frame.Y[1] * o.Width / 2 };
             r["start"] = new List<object> { Acad.R(startPt[0] / f), Acad.R(startPt[1] / f), Acad.R(baseMm / f) };
@@ -215,7 +219,7 @@ namespace ClaudeCAD.Plugin.Drawing
             }
             if (lay.Warnings.Count > 0) r["warnings"] = lay.Warnings;
             r["note"] = $"{lay.Risers} risers of {Math.Round(lay.RiserHeight, 1)} mm (the height split evenly), tread {o.Tread} mm, waist {o.Waist} mm; " +
-                        $"the top step reaches the upper floor ({StairLogic.TopLedge} mm onto it)." +
+                        $"the top step reaches the upper floor ({StairLogic.TopLedge} mm onto it, past footprint_mm / the well edge)." +
                         (lay.Rail.Count > 0 ? " Railing: handrail + posts along the flights (not around the landing)." : "") +
                         " Tell the user the riser count and height. Check with capture_view (sw_iso, conceptual).";
             if (layersCreated.Count > 0) r["layers_created"] = layersCreated;

@@ -406,7 +406,8 @@ Còn chỉ thấy trên AutoCAD thật: hướng kéo mặt của PRESSPULL (dư
 ## R. Nâng cấp đợt E — cầu thang, mái (bản Full, gói 3D hoặc Full, ~30 phút)
 
 *13/11/2026 · từ [`ban-giao/nang-cap-e.md`](ban-giao/nang-cap-e.md). Máy ở gói `3D` hoặc `Full`, bản vẽ mm. Sau mỗi dòng
-gõ U một lần: mọi thay đổi của lượt đó mất hết. **Quan trọng nhất: R1, R2, R3, R5, R7, R8, R10.***
+gõ U một lần: mọi thay đổi của lượt đó mất hết. **Quan trọng nhất: R1, R2, R3, R5, R7, R8, R10.** R14–R16: các lỗi Test & sửa đợt E
+đã sửa ([`ban-giao/nang-cap-e-test.md`](ban-giao/nang-cap-e-test.md)).*
 
 | # | | Làm gì | Kết quả mong đợi | Đạt | Lỗi | Mã gốc |
 | --- | --- | --- | --- | --- | --- | --- |
@@ -423,6 +424,9 @@ gõ U một lần: mọi thay đổi của lượt đó mất hết. **Quan tr�
 | R11 | ○ | "mái 4 dốc dốc 35 độ, đua 800" | Theo số của cậu (35°, đua 800) | ☐ | ☐ | E2 |
 | R12 | ○ | Máy gói `2D`: "dựng cầu thang", "lợp mái" | Claude báo các việc này thuộc gói 3D, không làm gì | ☐ | ☐ | gói |
 | R13 | ★ | `CLAUDECHATSELFTEST` | Có dòng ✓ "Nâng cấp đợt E: cầu thang 1 vế + chữ U (chia bậc theo cao tầng), mái 4 dốc" | ☐ | ☐ | E-test |
+| R14 | ★ | Vẽ hình chữ nhật 1000 × 5040 (đúng bằng 18 bậc × 280) làm ô cầu thang. "dựng cầu thang 1 vế cao 3000 trong ô này" | **Dựng được** (trước bản sửa báo không vừa, đòi 5140): 19 bậc nằm gọn trong ô; bậc trên cùng gác thêm 100 lên sàn tầng trên, ra ngoài mép ô 100 (đúng: phần này nằm trên sàn) | ☐ | ☐ | NE-3 |
+| R15 | ★ | Ô cầu thang 2600 (theo X) × 5000 (theo Y). "dựng cầu thang chữ U trong ô này, đi lên theo trục Y" | Vế 1 đi theo +Y (Claude báo `direction_deg` 90). Lặp lại "đi lên theo trục X": Claude **không dựng**, báo cầu thang vừa ô nhưng không đi theo hướng đó, gợi ý bỏ hướng hoặc đưa điểm bắt đầu | ☐ | ☐ | NE-1 |
+| R16 | ○ | Vẽ polyline chữ nhật 10000 × 6000 có thêm một đỉnh giữa cạnh dưới lệch lên 0,5 mm (như nét vẽ tay lệch). "lợp mái 4 dốc theo đường bao này", rồi "mái 2 dốc" | Cả hai dựng được (trước bản sửa báo "nhà chữ L"). Đường bao lệch thật 300 mm vẫn báo không làm được mái 4 dốc | ☐ | ☐ | NE-2 |
 
 Còn chỉ thấy trên AutoCAD thật: hình bậc / bản thang sau khi xoay vào đúng hướng (dựng từ biên dạng đứng), mái cắt bằng
 các nêm (giao / trừ khối), mái trên bản vẽ đơn vị mét.
