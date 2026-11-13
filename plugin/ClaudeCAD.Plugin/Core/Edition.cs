@@ -11,7 +11,12 @@ namespace ClaudeCAD.Plugin.Core
     /// </summary>
     public static class ProductInfo
     {
+#if BAN_THU_NOI_BO
+        /// <summary>Bản thử nội bộ (branch full/ban-thu-noi-bo only): the name says so everywhere people read it.</summary>
+        public const string DisplayName = InternalBuild.Label;
+#else
         public const string DisplayName = "Agent to AutoCAD Full";
+#endif
         /// <summary>Contents\edition.json (bundle/edition.json): tells this edition apart without the update link.</summary>
         public const string Edition = "full";
         public const string Repo = "Tieudao-dot/Agent-to-AutoCAD-Full";

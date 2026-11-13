@@ -1,0 +1,117 @@
+# Bộ cài thử nội bộ (BẢN THỬ NỘI BỘ)
+
+> **Nhánh `full/ban-thu-noi-bo` KHÔNG BAO GIỜ được gộp** vào `full/test-tong-the`, `main` hay bất kỳ nhánh nào khác.
+> Bộ cài này **chỉ chủ dự án dùng, không gửi cho ai**. Bộ cài thật làm sau, từ nhánh tích hợp, khi đã có máy chủ
+> kích hoạt riêng.
+
+*13/11/2026 · thread "Bộ cài thử nội bộ" · xuất phát từ `full/test-tong-the` @ `19944df`. Chủ dự án chốt 13/11/2026.*
+
+## Bản này là gì
+
+Một bộ cài để cậu thử ngay 2D + 3D trên AutoCAD trong lúc bản Full **chưa có máy chủ kích hoạt riêng**.
+
+| | Bản thử nội bộ | Bản thật (sau này) |
+| --- | --- | --- |
+| Kích hoạt | Không có. Bộ cài không có trang Kích hoạt, không hỏi key, không gửi gì đi đâu | Có: xin key, chủ plugin duyệt trong Sheet "Thiết bị" |
+| Gói | Luôn **Full** (đủ 2D + 3D) | Theo Sheet: 2D / 3D / Full |
+| Hết hạn | Dùng được tới **hết ngày 10/12/2026** (giờ Việt Nam). Từ 00:00 ngày 11/12/2026 khung chat không mở trợ lý nữa, hiện: "Bản thử nội bộ đã hết hạn ngày 10/12/2026. Cài bản chính thức để dùng tiếp." | Không hết hạn |
+| Cập nhật tự động | Tắt (không tải, không cài đè gì). `CLAUDECHATUPDATE` chỉ báo "Bản thử nội bộ không tự cập nhật" | Có |
+| Tên hiện ra | "Agent to AutoCAD Full: BẢN THỬ NỘI BỘ (hết hạn 10/12/2026)": thanh trên cùng khung chat, ⚙, dòng đầu báo cáo `CLAUDECHATSELFTEST`, danh sách ứng dụng Windows, trang đầu bộ cài | "Agent to AutoCAD Full" |
+| File bộ cài | `AgentToAutoCADFull-ThuNoiBo-Setup.exe` | `ClaudeCAD-Setup.exe` |
+
+Vặn lùi đồng hồ Windows **không** kéo dài được hạn: plugin nhớ thời điểm muộn nhất máy từng chỉ (cùng cách chống vặn
+đồng hồ của bản thật) và tính hạn theo thời điểm đó.
+
+## Cài lên máy đang có ClaudeCAD
+
+Bản này giữ nguyên "danh tính" kỹ thuật của bản Full (cùng mã ứng dụng, cùng thư mục, cùng lệnh `CLAUDECHAT` / `CC`,
+cùng thư mục dữ liệu). Nghĩa là:
+
+- máy đang có ClaudeCAD (bản gốc hay bản Full) thì **bản thử sẽ thay nó**. Bộ cài hỏi trước (hai nút **Tiếp tục** /
+  **Hủy**); bấm Hủy thì máy giữ nguyên bản đang có;
+- **lịch sử chat, cài đặt, skill, macro và đăng nhập Claude được giữ**;
+- sau này chạy bộ cài thật là cài đè lên bản thử được, không phải gỡ. Bộ cài thật sẽ hỏi kích hoạt như bình thường.
+
+Gỡ bản thử: Windows ▸ Settings ▸ Apps ▸ "Agent to AutoCAD Full: BẢN THỬ NỘI BỘ (hết hạn 10/12/2026)" ▸ Uninstall.
+
+## Cách tải và cài
+
+1. Mở trang lượt chạy CI: **(link ghi ở mục "Lượt CI" cuối file)**. Cần đăng nhập GitHub bằng tài khoản có quyền vào repo.
+2. Kéo xuống cuối trang, mục **Artifacts**, bấm **`AgentToAutoCADFull-ThuNoiBo-0.9.4`** để tải về file `.zip`.
+3. Giải nén zip (chuột phải ▸ Extract All), ra file `AgentToAutoCADFull-ThuNoiBo-Setup.exe`.
+4. Đóng AutoCAD, chạy file đó. Trang đầu ghi rõ "ĐÂY LÀ BẢN THỬ NỘI BỘ". Bấm Next tới hết. Windows có thể cảnh báo
+   "Windows protected your PC" (file chưa ký): bấm **More info ▸ Run anyway**.
+5. Giữ ô **Đăng nhập Claude ngay** rồi bấm Finish (đăng nhập tài khoản Claude Pro/Max một lần).
+6. Mở AutoCAD, gõ `CLAUDECHAT`. Thanh trên cùng khung chat có chữ "BẢN THỬ NỘI BỘ"; ⚙ ▸ dòng Kích hoạt ghi "bản thử
+   nội bộ — bỏ qua kích hoạt, gói Full, … (còn N ngày)".
+
+GitHub chỉ giữ artifact khoảng 90 ngày: đủ tới 10/12/2026.
+
+## Thử được gì trong `docs/checklist-tong-the.md`
+
+**Thử được** (máy luôn là gói Full):
+
+- **Phần 0** tự kiểm tra (S1, S2);
+- **Phần 2–5** (L9, L11; J10–J16; K17–K25; L17–L28);
+- **Phần 6** một lượt dùng lệnh cả 3 đợt (X1–X5);
+- **Phần 7** J1–J9, K1–K16, L1–L8, L10, L12–L16 (**trừ** J8, K15, L13: cần máy gói 2D);
+- **Phần 8** M3–M9;
+- toàn bộ phần 2D có sẵn từ bản gốc.
+
+**Không thử được** (cần máy chủ kích hoạt và Sheet "Thiết bị"):
+
+- **Phần 1** gói dịch vụ: I1–I6, I5b–I5d, T1–T5, M1–M2, M10–M12;
+- J8, K15, L13 (máy gói 2D);
+- mọi bước có trang Kích hoạt, thẻ 🔒 Kích hoạt, "Kiểm tra lại", đổi gói trong Sheet.
+
+Riêng T5 / I6 (cài đè lên bản gốc): hộp thoại hỏi thay bản gốc vẫn hiện như bản thật, nhưng phần kích hoạt sau đó
+không có, nên chưa tính là đã thử T5.
+
+## Đã làm gì (cho thread kỹ thuật)
+
+Hằng biên dịch `BAN_THU_NOI_BO` chỉ đặt ở `plugin/ClaudeCAD.Plugin/ClaudeCAD.Plugin.csproj` trên nhánh này. **Không có**
+đường tắt lúc chạy (file, registry, biến môi trường): bản build không có hằng này không thể bị biến thành bản thử.
+
+- `Core/InternalBuild.cs` (mới, hàm thuần, có test): nhãn, câu hết hạn, `ExpiresUtc` = 17:00 UTC ngày 10/12/2026
+  (= 00:00 ngày 11/12 giờ Việt Nam), `IsExpired` / `EffectiveUtc` dùng `LicenseLogic.ClockRolledBack` + thời điểm
+  muộn nhất đã thấy, `DaysLeft`, `StatusText`.
+- `Core/Edition.cs`: `ProductInfo.DisplayName` = nhãn bản thử khi có hằng (mọi chỗ đang dùng tên đều đổi theo).
+- `Sidecar/Activation.cs` khi có hằng:
+  - `IsActivated` = true; `Plan` = Full; `ServiceUrl` = null;
+  - không đọc `license.txt`, `status.txt`, `plan.txt`, không đọc `CLAUDECAD_ACTIVATION_URL`;
+  - `DeviceAllowed` = chưa hết hạn (`InternalExpired`: đọc / ghi dấu đồng hồ `clock.txt` + registry như bản thật, đọc
+    lại mỗi phút nên để AutoCAD mở qua nửa đêm cũng khóa);
+  - `BlockedMessage` = câu hết hạn; `StatusText` = dòng bản thử; `ActivateAsync` không làm gì;
+  - `RequestAsync` / `CheckStatusAsync` dừng ngay vì không có `ServiceUrl`: không gọi `?action=` nào.
+
+  Hết hạn thì khung chat hiện thẻ 🔒 với câu hết hạn và không khởi động trợ lý (cùng đường với máy bị khóa ở bản thật).
+- `ChatController.cs`: ô "Gói" luôn hiện `Full`.
+- `UI/ChatControl.cs`: tên ở ⚙ xuống dòng (tên dài).
+- `Sidecar/UpdateService.cs`: `ManifestUrl` = null, `DownloadAndStageAsync` chỉ trả câu "không tự cập nhật".
+- `activation/activation.json`: `url` trống.
+- `installer/ClaudeCAD.iss` (`#define BanThuNoiBo`):
+  - tên hiện ra là nhãn bản thử; file `AgentToAutoCADFull-ThuNoiBo-Setup.exe`;
+  - trang đầu có lời dặn (`WelcomeLabel2`); luôn bỏ qua trang Kích hoạt; không có URL máy chủ dù `activation.json` ghi
+    gì; cài ngầm `/KEY=` bị bỏ qua;
+  - hộp thoại thay bản gốc ghi "không cần kích hoạt, hết hạn sau 10/12/2026";
+  - giữ `AppId`, thư mục, lệnh, phát hiện bản gốc.
+- `.github/workflows/build.yml`:
+  - bundle không có link cập nhật (không `--update-url`, không zip / `latest.json`), kiểm bundle không có
+    `update-config.json` và URL kích hoạt;
+  - artifact `AgentToAutoCADFull-ThuNoiBo-<phiên bản>` chỉ có file Setup;
+  - bước **"Refuse to publish the bản thử nội bộ"** báo lỗi khi có tag, `release: true` hay push mà csproj có
+    `BAN_THU_NOI_BO` hoặc chạy trên nhánh này; bước Release còn điều kiện `github.ref_name != 'full/ban-thu-noi-bo'`.
+
+## Test
+
+- Lõi `dotnet test plugin/ClaudeCAD.Core.Tests`: **379/379** (thêm `InternalBuildTests`: 10 test hết hạn, nhãn, vặn
+  đồng hồ, số ngày còn lại, kiểm mã nguồn plugin / bộ cài / CI).
+- Trợ lý `cd agent && npm ci && npm test`: **215/215**.
+- Build plugin 3 target trên Linux (`net48`, `net8.0-windows`, `net10.0-windows`): xanh, 0 cảnh báo.
+- **Không loại trừ test nào.** Test lõi biên dịch phần Core không có `BAN_THU_NOI_BO` (như nhánh tích hợp), nên các
+  test kích hoạt / gói vẫn chạy và vẫn đúng; các kiểm tra mã nguồn của `EditionTests` vẫn khớp vì bộ cài giữ nhánh
+  `#else` với tên thật.
+
+## Lượt CI
+
+(điền sau lượt chạy)

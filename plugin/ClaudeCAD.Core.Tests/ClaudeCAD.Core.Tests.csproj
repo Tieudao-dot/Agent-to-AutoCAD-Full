@@ -32,6 +32,7 @@
     <Compile Include="..\ClaudeCAD.Plugin\Core\Solids2.cs" Link="Core\Solids2.cs" />
     <Compile Include="..\ClaudeCAD.Plugin\Core\FloorPlan.cs" Link="Core\FloorPlan.cs" />
     <Compile Include="..\ClaudeCAD.Plugin\Core\SelfTestRules.cs" Link="Core\SelfTestRules.cs" />
+    <Compile Include="..\ClaudeCAD.Plugin\Core\InternalBuild.cs" Link="Core\InternalBuild.cs" />
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.11.1" />

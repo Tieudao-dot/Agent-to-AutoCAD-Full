@@ -73,7 +73,39 @@ namespace ClaudeCAD.Plugin.Sidecar
             }
         }
 
+#if BAN_THU_NOI_BO
+        // ---- BẢN THỬ NỘI BỘ: no licence, no device list, plan Full, no activation service; locked once expired
+
+        private static bool? _expired;
+        private static DateTime _expiredAt;
+
+        /// <summary>
+        /// Past 00:00 on 11/12/2026 Vietnam time (InternalBuild.IsExpired), judged against the latest time this machine
+        /// already showed (clock.txt + registry, the same anti set-back mark as the device status). Re-read once a minute,
+        /// so a session left open over midnight locks too.
+        /// </summary>
+        public static bool InternalExpired
+        {
+            get
+            {
+                var now = DateTime.UtcNow;
+                if (_expired.HasValue && (now - _expiredAt).Duration() < TimeSpan.FromMinutes(1)) return _expired.Value;
+                var seen = LatestSeenUtc();
+                var expired = InternalBuild.IsExpired(now, seen);
+                if (LicenseLogic.ClockRolledBack(now, seen)) Logger.Warn($"clock set back: now {now:o}, already seen {seen:o}");
+                else RememberSeen(now, reset: false);
+                if (expired && _expired != true) Logger.Info("internal test build expired (" + InternalBuild.LastDayText + ")");
+                _expired = expired;
+                _expiredAt = now;
+                return expired;
+            }
+        }
+
+        /// <summary>Always "activated": the palette shows the 🔒 card with the expiry sentence instead of the key card.</summary>
+        public static bool IsActivated => true;
+#else
         public static bool IsActivated => Check.Ok;
+#endif
 
         /// <summary>The last signed status from the owner's device list (status.txt), checked against today.</summary>
         public static StatusCheck DeviceStatus
@@ -114,7 +146,11 @@ namespace ClaudeCAD.Plugin.Sidecar
         /// Service plan of this machine: "2d", "3d" or "2d3d" (PlanLogic). The dispatcher refuses every tool outside
         /// it. A build without an activation service has no device list: every tool, like before plans existed.
         /// </summary>
+#if BAN_THU_NOI_BO
+        public static string Plan => PlanLogic.PlanFull;
+#else
         public static string Plan => ServiceUrl == null ? PlanLogic.PlanFull : LicenseLogic.EffectivePlan(PlanLine, DeviceStatus);
+#endif
 
         public static string PlanLabel => PlanLogic.Label(Plan);
 
@@ -158,9 +194,13 @@ namespace ClaudeCAD.Plugin.Sidecar
         {
             get
             {
+#if BAN_THU_NOI_BO
+                return !InternalExpired;
+#else
                 if (ServiceUrl == null) return true;
                 var st = DeviceStatus;
                 return st.Ok && st.Fresh && (st.Status == "active" || st.Status == "offline");
+#endif
             }
         }
 
@@ -172,12 +212,16 @@ namespace ClaudeCAD.Plugin.Sidecar
         {
             get
             {
+#if BAN_THU_NOI_BO
+                return InternalBuild.ExpiredMessage;
+#else
                 var st = DeviceStatus;
                 if (st.Ok && st.Status == "disabled") return "Máy này đã bị chủ plugin tạm khóa. " + Contact + ".";
                 if (st.Ok && st.Status == "pending") return "Máy này đang chờ chủ plugin duyệt lại. " + Contact + " nếu chờ lâu.";
                 if (st.Ok && st.ClockBack) return "Đồng hồ máy đang chậm hơn lần dùng trước. Chỉnh lại ngày giờ Windows cho đúng, kết nối mạng rồi bấm \"Kiểm tra lại\".";
                 if (st.Ok && !st.Fresh) return $"Plugin đã quá {LicenseLogic.StatusMaxAgeDays} ngày không kiểm tra được với chủ plugin ({st.Reason}). Kết nối mạng rồi bấm \"Kiểm tra lại\".";
                 return $"Chưa xác nhận được máy này với chủ plugin ({st.Reason}). Kết nối mạng rồi bấm \"Kiểm tra lại\".";
+#endif
             }
         }
 
@@ -185,12 +229,16 @@ namespace ClaudeCAD.Plugin.Sidecar
         {
             get
             {
+#if BAN_THU_NOI_BO
+                return InternalBuild.StatusText(DateTime.UtcNow, LatestSeenUtc());
+#else
                 if (!IsActivated) return $"chưa kích hoạt — {Check.Reason} (mã máy {MachineCode})";
                 if (!DeviceAllowed) return $"bị tạm khóa (mã máy {MachineCode}) — {BlockedMessage}";
                 var st = DeviceStatus;
                 var device = ServiceUrl == null ? "" : st.Status == "offline" ? " · miễn kiểm tra từ xa" : $" · được phép dùng (kiểm tra {st.Date})";
                 var plan = ServiceUrl == null ? "" : $" · gói {PlanLabel}";
                 return $"đã kích hoạt (mã máy {MachineCode}, từ {Check.Issued}){device}{plan}";
+#endif
             }
         }
 
@@ -234,7 +282,12 @@ namespace ClaudeCAD.Plugin.Sidecar
             }
         }
 
+#if BAN_THU_NOI_BO
+        /// <summary>No activation service at all: neither the built-in json, Contents\activation.json nor CLAUDECAD_ACTIVATION_URL is read.</summary>
+        public static string ServiceUrl => null;
+#else
         public static string ServiceUrl => Config.url;
+#endif
         public static string Contact => Config.contact;
         public static string DeviceName => Environment.MachineName;
 
@@ -428,6 +481,10 @@ namespace ClaudeCAD.Plugin.Sidecar
         /// <summary>Key (online) or offline activation code → saved licence. Returns a sentence for the palette.</summary>
         public static async Task<(bool ok, string message)> ActivateAsync(string input)
         {
+#if BAN_THU_NOI_BO
+            await Task.CompletedTask.ConfigureAwait(false);
+            return (true, "Bản thử nội bộ không cần kích hoạt.");
+#else
             input = (input ?? "").Trim();
             string license;
             if (LicenseLogic.IsLicenseText(input) || LicenseLogic.IsStatusText(input) || LicenseLogic.IsPlanText(input))
@@ -508,6 +565,7 @@ namespace ClaudeCAD.Plugin.Sidecar
             _check = check;
             Logger.Info("activated " + MachineCode);
             return (true, "Đã kích hoạt ClaudeCAD cho máy này (vĩnh viễn). Cập nhật bản mới không cần nhập lại key.");
+#endif
         }
     }
 }

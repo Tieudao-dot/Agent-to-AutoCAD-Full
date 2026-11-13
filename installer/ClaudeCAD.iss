@@ -8,7 +8,14 @@
 #define BundleDir "..\bundle\out\ClaudeCAD.bundle"
 ; the name people see (decided 12/11/2026). The technical identity stays ClaudeCAD's (AppId, ClaudeCAD.bundle, the
 ; commands, %LocalAppData%\ClaudeCAD) so this edition installs over the original ClaudeCAD like an upgrade.
+; BẢN THỬ NỘI BỘ (branch full/ban-thu-noi-bo only, decided 13/11/2026, never merged): no activation page, nothing
+; sent anywhere, plan Full, expires after 10/12/2026 (the plugin is built with BAN_THU_NOI_BO). Same AppId / folders.
+#define BanThuNoiBo
+#ifdef BanThuNoiBo
+  #define AppDisplayName "Agent to AutoCAD Full: BẢN THỬ NỘI BỘ (hết hạn 10/12/2026)"
+#else
 #define AppDisplayName "Agent to AutoCAD Full"
+#endif
 ; one installer for AutoCAD 2022-2027: refuse to build it without all three plugin builds
 #if !FileExists(AddBackslash(SourcePath) + BundleDir + "\Contents\ClaudeCAD.Plugin.dll")
   #error ClaudeCAD.bundle has no AutoCAD 2022-2024 build (Contents\ClaudeCAD.Plugin.dll)
@@ -22,6 +29,12 @@
 ; activation service url + owner contact (make-bundle writes it from activation/activation.json)
 #if FileExists(AddBackslash(SourcePath) + "..\bundle\out\activation.iss")
   #include "..\bundle\out\activation.iss"
+#endif
+#ifdef BanThuNoiBo
+  ; never an activation service in the bản thử nội bộ, whatever activation.json says
+  #ifdef ActivationUrl
+    #undef ActivationUrl
+  #endif
 #endif
 #ifndef ActivationUrl
   #define ActivationUrl ""
@@ -45,7 +58,12 @@ DisableProgramGroupPage=yes
 PrivilegesRequired=lowest
 OutputDir=..\bundle\out
 ; fixed name: https://github.com/<owner>/<repo>/releases/latest/download/ClaudeCAD-Setup.exe always points to the newest release
+#ifdef BanThuNoiBo
+; a name nobody takes for the real installer (and that no release link points to)
+OutputBaseFilename=AgentToAutoCADFull-ThuNoiBo-Setup
+#else
 OutputBaseFilename=ClaudeCAD-Setup
+#endif
 Compression=lzma2/max
 SolidCompression=yes
 ArchitecturesAllowed=x64compatible
@@ -78,6 +96,9 @@ Source: "{#BundleDir}\Contents\skills\*"; DestDir: "{app}\Contents\skills"; Flag
 Filename: "{#ClaudeExe}"; Parameters: "auth login --claudeai"; Description: "Đăng nhập Claude ngay (trình duyệt mở ra, bấm đồng ý một lần — không cần mở AutoCAD)"; Flags: postinstall runasoriginaluser skipifsilent nowait; Check: NeedsLogin
 
 [Messages]
+#ifdef BanThuNoiBo
+WelcomeLabel2=ĐÂY LÀ BẢN THỬ NỘI BỘ, chỉ dành cho chủ dự án, không gửi cho ai.%n%n- Không cần kích hoạt, mở sẵn đủ 2D + 3D (gói Full).%n- Dùng được tới hết ngày 10/12/2026; từ 11/12/2026 khung chat không mở trợ lý nữa.%n- Không tự cập nhật.%n- Nếu máy đang có ClaudeCAD, bản này sẽ thay nó (giữ lịch sử chat, cài đặt và đăng nhập Claude). Bộ cài chính thức sau này cài đè lên được.%n%nBấm Next để cài tiếp.
+#endif
 FinishedLabel={#AppDisplayName} đã được cài (lệnh mở khung chat: CLAUDECHAT).%n%nĐể dùng ngay: giữ ô "Đăng nhập Claude ngay" rồi bấm Finish — trình duyệt mở trang cấp quyền, cậu bấm đồng ý bằng tài khoản Claude Pro/Max (một cửa sổ đen hiện lên trong lúc đăng nhập và tự đóng khi xong). Sau đó mở AutoCAD 2022–2027 là dùng được.%n%nNếu bỏ qua bước này, lần đầu mở AutoCAD plugin sẽ tự mở trang đăng nhập.
 
 [Code]
@@ -360,7 +381,11 @@ begin
     language, whose MsgBox buttons are OK / Cancel. Hủy (or closing the dialog) leaves Setup before anything changed. }
   Result := TaskDialogMsgBox('Máy này đang có ' + What + '.',
                              'Cài {#AppDisplayName} sẽ thay bản này. Lịch sử chat, cài đặt và đăng nhập Claude được giữ.' + #13#10 +
+#ifdef BanThuNoiBo
+                             'Bản thử nội bộ không cần kích hoạt và hết hạn sau ngày 10/12/2026.' + #13#10#13#10 +
+#else
                              'Key cũ không dùng được: máy sẽ xin kích hoạt lại, chủ plugin duyệt và chọn gói cho máy.' + #13#10#13#10 +
+#endif
                              'Bấm Tiếp tục để cài, Hủy để thoát (máy giữ nguyên bản đang có).',
                              mbConfirmation, MB_OKCANCEL, ['Tiếp tục', 'Hủy'], 0) = IDOK;
   if Result then Log('the user agreed to replace ' + What)
@@ -787,7 +812,12 @@ end;
   CurStepChanged, and without it the plugin asks for the key inside AutoCAD. }
 function ShouldSkipPage(PageID: Integer): Boolean;
 begin
+#ifdef BanThuNoiBo
+  { bản thử nội bộ: no activation page at all (nothing is requested or sent) }
+  Result := (KeyPage <> nil) and (PageID = KeyPage.ID);
+#else
   Result := (KeyPage <> nil) and (PageID = KeyPage.ID) and (HasLicense() or WizardSilent());
+#endif
 end;
 
 procedure CurPageChanged(CurPageID: Integer);
@@ -830,12 +860,14 @@ var
   Err: String;
 begin
   { silent installs: /KEY=... (without it the plugin asks for the key inside AutoCAD) }
+#ifndef BanThuNoiBo
   if (CurStep = ssInstall) and WizardSilent() and not HasLicense() then
     if ExpandConstant('{param:KEY|}') <> '' then
     begin
       if Activate(ExpandConstant('{param:KEY|}'), Err) then Log('activation: activated') else Log('activation: ' + Err);
     end
     else Log('activation: silent install without /KEY= — the plugin will ask for the key');
+#endif
   { sign-in now happens inside AutoCAD ("Đăng nhập Claude" button) — nothing to type in a terminal }
   if CurStep = ssPostInstall then TrustBundle();
 end;

@@ -78,6 +78,9 @@ namespace ClaudeCAD.Plugin.Sidecar
         {
             get
             {
+#if BAN_THU_NOI_BO
+                return null; // bản thử nội bộ: no automatic update, nothing downloaded or installed over it
+#else
                 var env = Environment.GetEnvironmentVariable("CLAUDECAD_UPDATE_URL");
                 if (!string.IsNullOrWhiteSpace(env)) return env.Trim();
                 var bundle = InstalledBundle;
@@ -94,6 +97,7 @@ namespace ClaudeCAD.Plugin.Sidecar
                     Logger.Warn("update-config.json unreadable: " + ex.Message);
                     return null;
                 }
+#endif
             }
         }
 
@@ -153,6 +157,10 @@ namespace ClaudeCAD.Plugin.Sidecar
         /// <summary>CLAUDECHATUPDATE: download, verify, stage and schedule the update.</summary>
         public static async Task<string> DownloadAndStageAsync()
         {
+#if BAN_THU_NOI_BO
+            await Task.CompletedTask.ConfigureAwait(false);
+            return "Bản thử nội bộ không tự cập nhật. Khi có bản chính thức, chạy bộ cài của bản đó (cài đè lên, giữ lịch sử chat và cài đặt).";
+#else
             var bundle = InstalledBundle;
             if (bundle == null) return "Plugin đang chạy từ bản build dev (NETLOAD), không có bundle để cập nhật. Dùng git pull + build lại.";
             var url = ManifestUrl;
@@ -195,6 +203,7 @@ namespace ClaudeCAD.Plugin.Sidecar
                 Logger.Info($"update {m.Version} staged at {staged}; applier waiting for AutoCAD to exit");
                 return $"Đã tải ClaudeCAD {m.Version}. Đóng AutoCAD để cài; lần mở sau sẽ dùng bản mới (skill cậu đã sửa được giữ nguyên).";
             }
+#endif
         }
     }
 }

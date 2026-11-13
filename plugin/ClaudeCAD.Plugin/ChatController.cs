@@ -2091,7 +2091,11 @@ namespace ClaudeCAD.Plugin
         }
 
         /// <summary>"Gói: …" in the palette; hidden for a build without an activation service (every tool, no plans).</summary>
+#if BAN_THU_NOI_BO
+        private void ShowPlan() => Ui.SetPlan(Activation.PlanLabel); // bản thử nội bộ: always Full
+#else
         private void ShowPlan() => Ui.SetPlan(Activation.ServiceUrl == null || !Activation.IsActivated ? null : Activation.PlanLabel);
+#endif
 
         /// <summary>
         /// After a status check: the owner may have changed the plan in the device list. The palette shows it and the

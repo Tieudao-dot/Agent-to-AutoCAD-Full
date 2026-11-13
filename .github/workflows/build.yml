@@ -91,11 +91,13 @@ jobs:
           Expand-Archive node.zip -DestinationPath node-dist
           "NODE_DIR=$(Resolve-Path "node-dist/node-$nv-win-x64")" >> $env:GITHUB_ENV
 
-      - name: Bundle + zip + update manifest
+      # BẢN THỬ NỘI BỘ (branch full/ban-thu-noi-bo only): no zip, no update manifest, no update link in the bundle
+      - name: Bundle (bản thử nội bộ, no update link)
         run: |
-          $v = '${{ steps.ver.outputs.version }}'
-          $url = "https://github.com/${{ github.repository }}/releases/download/v$v/ClaudeCAD-$v.zip"
-          node bundle/make-bundle.mjs --zip --node-dir $env:NODE_DIR --download-url $url --update-url "https://github.com/${{ github.repository }}/releases/latest/download/latest.json"
+          node bundle/make-bundle.mjs --node-dir $env:NODE_DIR
+          if (Test-Path bundle/out/ClaudeCAD.bundle/Contents/update-config.json) { Write-Error "the bản thử nội bộ must not carry an update link"; exit 1 }
+          $act = Get-Content bundle/out/ClaudeCAD.bundle/Contents/activation.json -Raw | ConvertFrom-Json
+          if (-not [string]::IsNullOrWhiteSpace($act.url)) { Write-Error "the bản thử nội bộ must not carry an activation service url"; exit 1 }
 
       # each folder of the bundle must hold the build PackageContents.xml expects there: the right .NET and the
       # right AutoCAD libraries (24.x = 2022-2024, 25.x = 2025-2026, 26.x = 2027). Catches a dll copied to the wrong place.
@@ -151,13 +153,21 @@ jobs:
 
       - uses: actions/upload-artifact@v4
         with:
-          name: ClaudeCAD-${{ steps.ver.outputs.version }}
+          name: AgentToAutoCADFull-ThuNoiBo-${{ steps.ver.outputs.version }}
           path: |
-            bundle/out/ClaudeCAD-*.zip
-            bundle/out/ClaudeCAD-Setup.exe
-            bundle/out/latest.json
-            bundle/out/install.ps1
+            bundle/out/AgentToAutoCADFull-ThuNoiBo-Setup.exe
           if-no-files-found: error
+
+      # BẢN THỬ NỘI BỘ: never published. A tag, a manual run with "release" or a new version on main stops here
+      # whenever the plugin is built with BAN_THU_NOI_BO or the run is on full/ban-thu-noi-bo.
+      - name: Refuse to publish the bản thử nội bộ
+        if: startsWith(github.ref, 'refs/tags/v') || inputs.release || github.event_name == 'push'
+        run: |
+          $csproj = Get-Content plugin/ClaudeCAD.Plugin/ClaudeCAD.Plugin.csproj -Raw
+          if ($csproj -match 'BAN_THU_NOI_BO' -or '${{ github.ref_name }}' -eq 'full/ban-thu-noi-bo') {
+            Write-Error "Bản thử nội bộ (BAN_THU_NOI_BO / branch full/ban-thu-noi-bo): never published as a release."
+            exit 1
+          }
 
       # main: a new version number in agent/package.json publishes a release automatically, so the
       # download link (releases/latest/download/ClaudeCAD-Setup.exe) always serves the newest installer
@@ -173,7 +183,7 @@ jobs:
 
       - name: Release notes (SHA-256 to check the download)
         run: |
-          $f = Get-Item bundle/out/ClaudeCAD-Setup.exe
+          $f = Get-Item bundle/out/AgentToAutoCADFull-ThuNoiBo-Setup.exe
           $h = (Get-FileHash $f.FullName -Algorithm SHA256).Hash
           $v = '${{ steps.ver.outputs.version }}'
           @(
@@ -197,7 +207,7 @@ jobs:
           Write-Host "activation service: $url"
 
       - name: Release (tags, a manual run with "release", or a new version on main)
-        if: startsWith(github.ref, 'refs/tags/v') || inputs.release || steps.rel.outputs.new == 'true'
+        if: (startsWith(github.ref, 'refs/tags/v') || inputs.release || steps.rel.outputs.new == 'true') && github.ref_name != 'full/ban-thu-noi-bo'
         uses: softprops/action-gh-release@v2
         with:
           tag_name: v${{ steps.ver.outputs.version }}

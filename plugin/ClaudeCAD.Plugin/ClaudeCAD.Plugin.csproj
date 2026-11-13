@@ -42,6 +42,9 @@
     <IntermediateOutputPath>obj\$(Configuration)\$(TargetFramework)\</IntermediateOutputPath>
     <!-- Allow building the Windows-only targets from Linux/macOS. -->
     <EnableWindowsTargeting>true</EnableWindowsTargeting>
+    <!-- BẢN THỬ NỘI BỘ (branch full/ban-thu-noi-bo only, never merged): no activation, plan Full, no update, expires
+         after 10/12/2026 (Core/InternalBuild.cs). A compile-time constant only: nothing at run time can switch it on. -->
+    <DefineConstants>$(DefineConstants);BAN_THU_NOI_BO</DefineConstants>
     <AcadDir Condition="'$(AcadDir)' == ''">C:\Program Files\Autodesk\AutoCAD 2022</AcadDir>
     <AcadDir2025 Condition="'$(AcadDir2025)' == ''">C:\Program Files\Autodesk\AutoCAD 2025</AcadDir2025>
     <AcadDir2027 Condition="'$(AcadDir2027)' == ''">C:\Program Files\Autodesk\AutoCAD 2027</AcadDir2027>

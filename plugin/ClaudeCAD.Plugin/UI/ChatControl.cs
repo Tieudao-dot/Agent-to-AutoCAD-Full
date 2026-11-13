@@ -723,6 +723,7 @@ namespace ClaudeCAD.Plugin.UI
                 Text = ProductInfo.WithVersion(ProductInfo.ShortVersion(typeof(ChatControl).Assembly.GetName().Version)),
                 FontWeight = FontWeights.SemiBold,
                 FontSize = 12,
+                TextWrapping = TextWrapping.Wrap, // the name of the bản thử nội bộ is long
                 Margin = new Thickness(8, 6, 8, 2),
                 ToolTip = "Tên bản cài và phiên bản (lệnh trong AutoCAD vẫn là CLAUDECHAT / CC)",
             };
