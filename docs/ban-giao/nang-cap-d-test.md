@@ -40,7 +40,7 @@ không trừ quá thể tích khối, cặp không đo được cảnh báo. Đ�
 - Trợ lý: `cd agent && npm ci && npm test` — **281** test (279 trước). `test/nangcapdtest.test.ts` (2): mô tả nói add /
   subtract cần target; `mode` "new" có target không hỏi thẻ, add / subtract / auto có hỏi.
 - Build net48 / net8.0-windows / net10.0-windows (Linux, `-p:EnableWindowsTargeting=true`): xanh, 0 cảnh báo.
-- CI: (ghi sau khi chạy).
+- CI: run **43454839792 xanh** ở `37f590c` (`release: "false"`, Windows: trợ lý, test lõi, UI test WPF, build 3 bản, gói + Setup.exe; bước phát hành bỏ qua đúng).
 
 Token: chỉ thêm ~25 ký tự vào mô tả `presspull` (gói 3D / Full); system prompt không đổi.
 
@@ -59,4 +59,4 @@ Q13), `Solid3d.Area`, region từ polyline có bulge, hợp khối các mảnh d
 
 ## Commit
 
-(ghi sau khi push).
+`37f590c` (sửa ND-1…ND-6 + bước tự kiểm tra + test + tài liệu, CI 43454839792 xanh), sau đó một commit ghi kết quả CI vào file này (chỉ tài liệu).
