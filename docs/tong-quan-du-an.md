@@ -1,6 +1,6 @@
 # Tổng quan dự án Agent to AutoCAD Full
 
-*Cập nhật: 12/11/2026 (giờ Việt Nam). Luồng chính giữ file này. Bản tổng quan chép từ dự án gốc ClaudeCAD nằm trong
+*Cập nhật: 13/11/2026 (giờ Việt Nam). Luồng chính giữ file này. Bản tổng quan chép từ dự án gốc ClaudeCAD nằm trong
 lịch sử git của file này (bản ngay trước commit `ed0753a`) và ở nhánh `luu-tru/2d-base`.*
 
 Bản Full = plugin ClaudeCAD (2D) + **gói dịch vụ theo máy (2D / 3D / Full)** + **vẽ 3D**. Độc lập với dự án gốc;
@@ -8,7 +8,7 @@ quy tắc làm việc và danh bạ thread: [`../CLAUDE.md`](../CLAUDE.md).
 
 ## 1. Tình hình
 
-- **Nhánh tích hợp mới nhất:** `full/test-tong-the`, commit `860101b`. Gồm gói dịch vụ, 3D đợt 1, 2, 3, test tổng thể,
+- **Nhánh tích hợp mới nhất:** `full/test-tong-the`, commit `19944df` (mã như `860101b`, thêm tài liệu luồng chính). Gồm gói dịch vụ, 3D đợt 1, 2, 3, test tổng thể,
   bộ cài thay bản gốc + cảnh báo, và bản sửa sau **4 lượt kiểm tra độc lập** (43 lỗi: 39 đã sửa đúng, 4 chấp nhận,
   0 mở).
   - Test lõi 369/369, trợ lý 215/215, build net48 / net8 / net10 sạch, CI Windows run 43272295317 xanh.
@@ -23,13 +23,16 @@ quy tắc làm việc và danh bạ thread: [`../CLAUDE.md`](../CLAUDE.md).
   [`checklist-thu-that.md`](checklist-thu-that.md) phần I, J, K, L, M, X). Bản dùng thử AutoCAD hết khoảng 10/12/2026.
 - **Báo cáo sáng 13/11:** [`bao-cao-sang-13-11.md`](bao-cao-sang-13-11.md). Chủ dự án đã đồng ý cả 9 quyết định
   luồng chính đưa ra trong đêm (13/11).
+- **Kế hoạch nâng cấp lệnh vẽ (13/11):** [`ke-hoach-nang-cap-lenh.md`](ke-hoach-nang-cap-lenh.md), 5 điểm đã chốt.
+  Đợt A → B → C → D → E, mỗi đợt chủ dự án duyệt trước; nâng cấp xong mới phát hành.
 
 ## 2. Việc chờ chủ dự án
 
 1. **Dựng máy chủ kích hoạt riêng** theo [`dung-may-chu-kich-hoat-full.md`](dung-may-chu-kich-hoat-full.md), gửi luồng
    chính URL web app + 2 dòng khóa công khai (không gửi khóa riêng / SECRET).
 2. Sau bước 1: luồng chính giao gắn URL / khóa, build **bộ cài thử**; chủ dự án thử theo checklist tổng, gửi lỗi.
-3. Trước khi phát hành: số phiên bản (plugin / trợ lý vẫn ghi 0.9.4), secret CI của repo Full, đồng ý merge `main`,
+3. Duyệt từng đợt nâng cấp (bắt đầu từ đợt A) theo [`ke-hoach-nang-cap-lenh.md`](ke-hoach-nang-cap-lenh.md).
+4. Trước khi phát hành: số phiên bản (plugin / trợ lý vẫn ghi 0.9.4), secret CI của repo Full, đồng ý merge `main`,
    các chỗ còn trỏ về dự án gốc ([`cho-tro-ve-repo-goc.md`](cho-tro-ve-repo-goc.md)).
 
 ## 3. Đã chốt
@@ -46,6 +49,7 @@ quy tắc làm việc và danh bạ thread: [`../CLAUDE.md`](../CLAUDE.md).
 | 12/11 | Máy đã có ClaudeCAD gốc | Bản Full **thay thế** bản gốc như nâng cấp (giữ dữ liệu, kích hoạt lại ở Sheet mới); bộ cài tự nhận ra bản gốc và hỏi "Tiếp tục / Hủy"; tên hiển thị "Agent to AutoCAD Full" |
 | 13/11 | 9 quyết định luồng chính đưa ra đêm 12/11 (chủ dự án **đồng ý** sáng 13/11) | Xem [`bao-cao-sang-13-11.md`](bao-cao-sang-13-11.md) mục 3: nút "Tiếp tục / Hủy"; xóa khối 3D cũ luôn hỏi; chỉ nút Đồng ý trên thẻ mở khóa sửa khối 3D cũ; chặn thuộc tính block ở gói 3D; máy offline chỉ nhận dòng gói / trạng thái mới hơn; giữ phương án A; thêm ô dán mã ở thẻ 🔒 và ⚙; chấp nhận chữ mặc định khi chèn block ở gói 3D |
 | 13/11 | 2 commit đầu có tên model | Để nguyên trên các nhánh làm việc; khi phát hành gộp vào `main` thành một commit gọn (squash) để lịch sử `main` sạch |
+| 13/11 | Kế hoạch nâng cấp lệnh vẽ | Gộp 6 lệnh dựng khối (đợt A); nâng cấp xong mới phát hành; gói lệnh mới theo phương án A (GROUP / MATCHPROP mọi gói); thứ tự A → B → C → D → E, F sau phát hành; duyệt chi từng đợt. Xem [`ke-hoach-nang-cap-lenh.md`](ke-hoach-nang-cap-lenh.md) |
 | 12/11 | Cách làm việc | Luồng chính điều phối; mỗi đợt một thread, thread đợt tự mở thread con "Test & sửa" |
 
 ## 4. Đã làm
@@ -69,7 +73,7 @@ Mỗi nhánh tách từ commit cuối của nhánh trước, nên `full/test-ton
 | Full | ~51k |
 
 Riêng phần 3D ~15k (kế hoạch ước 5–6k). Phần này nằm trong prefix được cache: các lượt sau trong 5 phút chỉ tốn ~10%.
-Cách giảm thêm còn lại: gộp 6 lệnh khối cơ bản thành 1 lệnh (~−2k, đổi tên lệnh); chưa làm.
+Cách giảm thêm còn lại: gộp 6 lệnh khối cơ bản thành 1 lệnh (~−2k, đổi tên lệnh); đã chốt làm trong đợt A nâng cấp.
 
 ## 6. Nhật ký
 
@@ -82,3 +86,7 @@ Cách giảm thêm còn lại: gộp 6 lệnh khối cơ bản thành 1 lệnh (
   - bộ cài thay bản gốc + cảnh báo;
   - kiểm tra độc lập 4 lượt bằng agent mới, lỗi chuyển về thread phụ trách sửa;
   - 3 vòng gộp + CI, kết thúc ở `860101b`.
+- **13/11/2026:**
+  - chủ dự án đồng ý 9 quyết định đêm qua, chốt squash khi phát hành;
+  - bộ cài thử nội bộ (`full/ban-thu-noi-bo`), thread QnA;
+  - kế hoạch nâng cấp lệnh vẽ, chốt 5 điểm.
