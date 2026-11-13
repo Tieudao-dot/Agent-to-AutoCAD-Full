@@ -1,6 +1,7 @@
 # Dựng máy chủ kích hoạt riêng cho bản Full
 
-*12/11/2026. Chủ dự án tự dựng; luồng chính chuẩn bị mẫu và gắn kết quả vào repo.*
+*12/11/2026, sửa 13/11/2026 (tải nhánh `full/test-tong-the`). Chủ dự án tự dựng; luồng chính chuẩn bị mẫu và gắn kết
+quả vào repo.*
 
 Bản Full dùng **Google Sheet mới, Apps Script mới và cặp khóa mới**, tách hẳn khỏi dự án gốc. Hệ quả: key và giấy
 phép của dự án gốc không dùng được trên bản Full và ngược lại; máy đang dùng bản gốc muốn chuyển sang bản Full phải
@@ -22,12 +23,20 @@ Cho tới khi xong bước 6, repo vẫn chứa URL và khóa công khai của d
 
 Khóa riêng (`*.pem`), SECRET và file `Code.gs` đã điền **không gửi cho tớ, không dán vào chat, không đưa lên GitHub**.
 
+## Chuẩn bị (cho bước 1–2)
+
+- **Node.js 20 trở lên**: tải bản LTS ở <https://nodejs.org>, cài như bình thường.
+- **OpenSSL**: có sẵn trong **Git Bash** của Git for Windows (<https://git-scm.com/download/win>).
+- Chạy **mọi lệnh ở bước 1–2 trong Git Bash** (chuột phải trong thư mục → *Open Git Bash here*, hoặc mở Git Bash rồi
+  `cd`). Đường dẫn viết kiểu `D:/…` (dấu `/`) như các ví dụ dưới.
+- Làm trong một thư mục **ngoài** mọi repo, ví dụ `D:/claudecad-full-khoa/`. Khóa riêng và `Code.gs` đã điền nằm ở đây,
+  không bao giờ đưa lên GitHub.
+
 ## Bước 1 — Tạo cặp khóa mới
 
-Cần máy có Node.js 20 trở lên và OpenSSL (Git for Windows có sẵn trong Git Bash). Làm trong một thư mục **ngoài**
-repo, ví dụ `D:\claudecad-full-khoa`.
-
 ```bash
+mkdir -p D:/claudecad-full-khoa
+cd D:/claudecad-full-khoa
 openssl genrsa -out full-private.pem 2048
 ```
 
@@ -35,11 +44,18 @@ Giữ file `full-private.pem` ở nơi an toàn (và một bản sao lưu). Mấ
 
 ## Bước 2 — Tạo `Code.gs` đã điền
 
-Tải repo về (nhánh `claude/inspiring-cray-58xsmt`), rồi từ thư mục repo chạy:
+Tải repo về ở nhánh **`full/test-tong-the`** (mẫu Apps Script mới nhất: cột Gói 2D / 3D / Full, các bản sửa sau
+kiểm tra độc lập): <https://github.com/Tieudao-dot/Agent-to-AutoCAD-Full/archive/refs/heads/full/test-tong-the.zip>
+(repo riêng tư thì đăng nhập GitHub trước). **Đừng** dùng nhánh `claude/inspiring-cray-58xsmt`: nhánh đó còn mẫu cũ,
+chưa có gói Full. Giải nén vào `D:/claudecad-full-khoa/`, được thư mục `Agent-to-AutoCAD-Full-full-test-tong-the` (tên có thể
+hơi khác: là thư mục có `activation` bên trong), rồi trong Git Bash:
 
 ```bash
+cd D:/claudecad-full-khoa/Agent-to-AutoCAD-Full-full-test-tong-the
 node activation/make-apps-script.mjs --private-key D:/claudecad-full-khoa/full-private.pem --email <gmail nhận thông báo> --out D:/claudecad-full-khoa/Code.gs
 ```
+
+`--out` phải nằm **ngoài** thư mục repo (lệnh từ chối ghi vào trong repo, vì file có SECRET và khóa riêng).
 
 Lệnh tự sinh SECRET mới và ghi vào `Code.gs`. Lấy khóa công khai để gửi tớ ở bước 5:
 
@@ -85,8 +101,14 @@ Lệnh in ra 2 dòng `PublicModulus = "…"` và `PublicExponent = "…"`. Hai d
 - Đổi ô **Gói** của một máy: có hiệu lực ở lần máy đó kiểm tra kế tiếp (mở AutoCAD, ~6 giờ một lần, hoặc bấm
   "Kiểm tra lại").
 - Ô trống hoặc gõ sai tính là gói mặc định, nên lỗi gõ không mở nhầm 3D.
-- Máy không có mạng: chọn gói trong Sheet trước, rồi chạy `taoKeyThuCong`; email có thêm dòng `CCF1|…`. Đổi gói cho
-  máy đó thì chạy lại hàm và gửi dòng mới.
+- Máy không có mạng: chọn gói trong Sheet trước (máy chưa có dòng thì thêm dòng với mã máy, chọn Gói; không thì gói là
+  `GOI_MAC_DINH`). Trong Apps Script sửa dòng `var MAY_THU_CONG = 'CC-…';` thành mã máy, chọn hàm **`taoKeyThuCong`**,
+  bấm ▶ **Chạy**. Email gửi về có **KEY** (máy có mạng) và **ba dòng** cho máy không có mạng: `CCL1|…` (giấy phép),
+  `CCS1|…|offline|…` (mã miễn kiểm tra), `CCF1|…` (gói). Khách dán **đủ ba dòng** vào một ô. Đổi gói cho máy đó thì
+  chạy lại hàm và gửi dòng `CCF1` mới (plugin chỉ nhận dòng gói mới hơn hoặc cùng ngày).
+- Đã khóa máy (`Disabled`) rồi cấp lại mã không cần mạng **trong cùng ngày** (giờ UTC: ngày mới bắt đầu lúc 7h sáng giờ
+  Việt Nam) thì máy từ chối mã mới (KT-43): đợi sang ngày rồi chạy lại `taoKeyThuCong`, hoặc máy có mạng thì đổi về
+  `Active`. Chi tiết: [`activation/README.md`](../activation/README.md).
 
 **Lưu ý (sửa 12/11/2026, KT-31):** plugin bản Full **đã đọc** dòng `CCF1` và chặn lệnh theo gói: máy chỉ dùng được
 lệnh của gói ghi trong Sheet. **Chọn ô Gói cho từng máy** (2D / 3D / Full). Ô trống thì máy dùng gói mặc định 2D, tức
