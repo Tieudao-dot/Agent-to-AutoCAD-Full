@@ -95,6 +95,10 @@ namespace ClaudeCAD.Plugin.Core
         public const double DefaultBeamWidth = 220, DefaultBeamHeight = 400; // mm
         public const double MinBeamSize = 50, MaxBeamWidth = 3000, MaxBeamHeight = 5000;
         public const int MaxBeamPaths = 500, MaxBeamSegments = 2000;
+        /// <summary>KT2-19: segments of every path of one build_beam call together (each is an extrusion + a union on AutoCAD's main thread).</summary>
+        public const int MaxBeamPieces = 5000;
+        /// <summary>KT2-06: STL stores 32-bit floats; a model farther than this (mm) from 0 is moved to 0 or its vertices snap to a coarse grid.</summary>
+        public const double StlFarCoordinate = 1e6;
         public const string BeamLayer = "A-BEAM-3D";
         public const int MaxScheduleSolids = 2000;
         public const int MaxScheduleOverlapPairs = 2000;
@@ -209,6 +213,17 @@ namespace ClaudeCAD.Plugin.Core
                     if (Math.Abs(pts[i][0] - last[0]) < 1e-9 && Math.Abs(pts[i][1] - last[1]) < 1e-9) { cb[cb.Count - 1] = b; continue; }
                 }
                 clean.Add(pts[i]); cb.Add(b);
+            }
+            // KT2-12: an open path whose last point is its first one (PLINE drawn back to the start without Close) is a loop
+            if (!closed && clean.Count > 2)
+            {
+                double scale = clean.Max(q => Math.Max(Math.Abs(q[0]), Math.Abs(q[1])));
+                double tol = 1e-6 * Math.Max(1, scale);
+                if (Math.Abs(clean[0][0] - clean[clean.Count - 1][0]) <= tol && Math.Abs(clean[0][1] - clean[clean.Count - 1][1]) <= tol)
+                {
+                    clean[clean.Count - 1] = (double[])clean[0].Clone();
+                    closed = true;
+                }
             }
             if (closed && clean.Count > 2 && Math.Abs(clean[0][0] - clean[clean.Count - 1][0]) < 1e-9 && Math.Abs(clean[0][1] - clean[clean.Count - 1][1]) < 1e-9)
             {
@@ -740,6 +755,24 @@ namespace ClaudeCAD.Plugin.Core
         /// <summary>The shift that moves a model into the positive octant (STL readers / slicers expect it), or zero when it is there.</summary>
         public static double[] PositiveShift(double[] min) =>
             new[] { min[0] < 0 ? -min[0] : 0, min[1] < 0 ? -min[1] : 0, min[2] < 0 ? -min[2] : 0 };
+
+        /// <summary>
+        /// The shift of an STL export (mm): a model with a negative coordinate, or one far from 0 (survey / VN-2000
+        /// coordinates, KT2-06: 32-bit floats would snap its vertices to a 64–256 mm grid), is moved so its bounding box
+        /// starts at 0; a small model in the positive octant keeps its coordinates.
+        /// </summary>
+        public static double[] StlShift(double[] min, double[] max)
+        {
+            bool far = min.Concat(max).Any(v => Math.Abs(v) > StlFarCoordinate);
+            return far ? new[] { -min[0], -min[1], -min[2] } : PositiveShift(min);
+        }
+
+        /// <summary>KT2-19: refuse a build_beam call with too many segments in all before anything is built.</summary>
+        public static void CheckBeamTotal(int segments, string tool = "build_beam")
+        {
+            if (segments > MaxBeamPieces)
+                throw ToolException.Invalid($"{tool}: {segments} beam segments in one call; at most {MaxBeamPieces}. Nothing was built. Build the beams in several calls (fewer paths each).");
+        }
 
         // ================================================================== volume schedule
 

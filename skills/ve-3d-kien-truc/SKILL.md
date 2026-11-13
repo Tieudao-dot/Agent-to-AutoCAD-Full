@@ -131,7 +131,8 @@ có ký hiệu cửa, ký hiệu cửa sổ đè lên tường, hoặc `openings
 `curved_walls`.
 
 Dầm: `build_beam` theo đường (`path_handles`: line / cung / polyline, mỗi đường một dầm), mặc định 220 × 400, đỉnh dầm
-ở `top_z`; dầm dưới sàn: `top_z` = cao độ mặt sàn + `slab_thickness` (vd tầng 2: `top_z` 3300, `slab_thickness` 120).
+ở `top_z`; dầm dưới sàn: `top_z` = cao độ mặt sàn tầng trên, `slab_thickness` = dày sàn, đỉnh dầm = `top_z` − `slab_thickness`
+(vd dưới sàn tầng 2: `top_z` 3300, `slab_thickness` 120 → đỉnh dầm 3180, chạm đáy sàn).
 
 Cầu thang: `build_stair`, `type` `straight` (1 vế) / `l` (chữ L) / `u` (chữ U), `height` = cao tầng (sàn tới sàn, bắt
 buộc). Mặc định (khách nói số thì theo số của khách): cao bậc 160 (chia đều thành số bậc nguyên gần nhất, vd 3300 → 21
