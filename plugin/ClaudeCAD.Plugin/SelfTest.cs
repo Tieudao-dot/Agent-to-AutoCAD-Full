@@ -328,6 +328,7 @@ namespace ClaudeCAD.Plugin
 
             // 3D phase 3: the same code paths as build_3d_from_plan and section_view (handlers called directly)
             string planWalls = null;
+            List<object> planWallLines = null, planDoorLines = null; // the plan of the room, read again by the đợt A step
             const double px = 20000; // a 4000 × 3000 room by its axes, wall 200, a 900 door gap in the bottom wall
             Check("3D đợt 3: dựng 3D phòng 4×3 m có cửa đi, kiểm thể tích tường", () =>
             {
@@ -357,6 +358,8 @@ namespace ClaudeCAD.Plugin
                         Add(new Line(new Point3d(px + 1550, 100, 0), new Point3d(px + 1550, 1000, 0))),
                         Add(new Arc(new Point3d(px + 1550, 100, 0), 900, 0, Math.PI / 2)),
                     };
+                    planWallLines = walls;
+                    planDoorLines = door;
                     var ctx = new ToolContext(doc, tr, true, null);
                     var p = new Params("build_3d_from_plan", new Dictionary<string, object>
                     {
@@ -394,6 +397,75 @@ namespace ClaudeCAD.Plugin
                 double area = Convert.ToDouble(r["cut_area_m2"]), want = (4200.0 * 3200 - 3800.0 * 2800 - 200 * 900) / 1e6;
                 var detail = string.Format(CultureInfo.InvariantCulture, "{0} đường bao, {1} hatch, diện tích cắt {2:0.####} m² (cần {3:0.####} m²)", outline, hatch, area, want);
                 return new SelfTestRules.Verdict(outline > 0 && hatch == 1 && Math.Abs(area - want) <= 1e-3 * want, detail);
+            });
+
+            // nâng cấp đợt A: the same code paths as build_3d_from_plan with storeys + columns (the storeys above are copies
+            // of the first one moved up) and build_railing
+            Check("Nâng cấp đợt A: dựng 2 tầng + sàn mái + 2 cột từ mặt bằng, kiểm cao độ và thể tích", () =>
+            {
+                if (planWallLines == null) return new SelfTestRules.Verdict(false, "bước dựng 3D từ mặt bằng chưa chạy được");
+                Dictionary<string, object> r;
+                using (doc.LockDocument())
+                using (var tr = doc.TransactionManager.StartTransaction())
+                {
+                    var db = doc.Database;
+                    var ms = (BlockTableRecord)tr.GetObject(SymbolUtilityServices.GetBlockModelSpaceId(db), OpenMode.ForWrite);
+                    string Add(Entity e) { e.SetDatabaseDefaults(db); ms.AppendEntity(e); tr.AddNewlyCreatedDBObject(e, true); return e.Handle.ToString(); }
+                    // a 300 × 300 column and a round D300 column inside the room
+                    var sq = new Polyline();
+                    sq.AddVertexAt(0, new Point2d(px + 1000, 1000), 0, 0, 0);
+                    sq.AddVertexAt(1, new Point2d(px + 1300, 1000), 0, 0, 0);
+                    sq.AddVertexAt(2, new Point2d(px + 1300, 1300), 0, 0, 0);
+                    sq.AddVertexAt(3, new Point2d(px + 1000, 1300), 0, 0, 0);
+                    sq.Closed = true;
+                    var cols = new List<object> { Add(sq), Add(new Circle(new Point3d(px + 3000, 2000, 0), Vector3d.ZAxis, 150)) };
+                    var ctx = new ToolContext(doc, tr, true, null);
+                    var p = new Params("build_3d_from_plan", new Dictionary<string, object>
+                    {
+                        ["wall_handles"] = planWallLines, ["door_handles"] = planDoorLines, ["column_handles"] = cols,
+                        ["storeys"] = 2.0, ["storey_height"] = 3000.0, ["slab_thickness"] = 150.0, ["door_height"] = 2100.0, ["roof_slab"] = true,
+                        ["slab"] = "bbox", ["base_z"] = 10000.0,
+                        ["wall_layer_3d"] = "0", ["slab_layer_3d"] = "0", ["column_layer_3d"] = "0", ["on_existing"] = "add",
+                    });
+                    r = (Dictionary<string, object>)DrawingService.Build3dFromPlan(ctx, p);
+                    tr.Commit();
+                }
+                var levels = (List<object>)r["levels"];
+                if (levels.Count != 3) return new SelfTestRules.Verdict(false, $"{levels.Count} mức (cần 3: tầng 1, tầng 2, sàn mái)");
+                var wall2 = (Dictionary<string, object>)((Dictionary<string, object>)levels[1])["wall_solid"];
+                double z2 = Convert.ToDouble(((List<object>)wall2["min"])[2]), top2 = Convert.ToDouble(((List<object>)wall2["max"])[2]);
+                // storey 2 starts 3000 above storey 1 (base 10000); its walls are storey height − slab = 2850 high
+                if (Math.Abs(z2 - 13000) > 0.01 || Math.Abs(top2 - 15850) > 0.01)
+                    return new SelfTestRules.Verdict(false, string.Format(CultureInfo.InvariantCulture, "tường tầng 2 từ z {0:0.###} tới {1:0.###} (cần 13000 tới 15850)", z2, top2));
+                var total = (Dictionary<string, object>)r["total_volume_m3"];
+                double wallOne = (4200.0 * 3200 - 3800.0 * 2800 - 200 * 900) * 2850 + 200.0 * 900 * 750; // lintel 2850 − 2100
+                double colOne = (300.0 * 300 + Math.PI * 150 * 150) * 2850;
+                double slabOne = 4200.0 * 3200 * 150;
+                var vw = SelfTestRules.CheckVolume("tường 2 tầng", Convert.ToDouble(total["walls"]) * 1e9, 2 * wallOne);
+                var vc = SelfTestRules.CheckVolume("2 cột × 2 tầng", Convert.ToDouble(total["columns"]) * 1e9, 2 * colOne);
+                var vs = SelfTestRules.CheckVolume("2 sàn + sàn mái", Convert.ToDouble(total["slabs"]) * 1e9, 3 * slabOne);
+                return new SelfTestRules.Verdict(vw.Ok && vc.Ok && vs.Ok, vw.Detail + "; " + vc.Detail + "; " + vs.Detail);
+            });
+
+            Check("Nâng cấp đợt A: lan can thẳng 3 m, kiểm số trụ và thể tích", () =>
+            {
+                Dictionary<string, object> r;
+                using (doc.LockDocument())
+                using (var tr = doc.TransactionManager.StartTransaction())
+                {
+                    var ctx = new ToolContext(doc, tr, true, null);
+                    var p = new Params("build_railing", new Dictionary<string, object>
+                    {
+                        ["path_points"] = new List<object> { new List<object> { px + 6000.0, 0.0 }, new List<object> { px + 9000.0, 0.0 } },
+                        ["layer"] = "0",
+                    });
+                    r = (Dictionary<string, object>)DrawingService.BuildRailing(ctx, p);
+                    tr.Commit();
+                }
+                if (Convert.ToInt32(r["posts"]) != 3) return new SelfTestRules.Verdict(false, $"{r["posts"]} trụ (cần 3: hai đầu và giữa)");
+                // a straight railing: its pieces only touch, so the united solid's volume is the sum of the pieces
+                var lay = RailingLogic.Build(new List<double[]> { new[] { 0.0, 0.0 }, new[] { 3000.0, 0.0 } }, false, new RailingLogic.Options());
+                return SelfTestRules.CheckVolume("lan can 3 m cao 1100, song đứng", Convert.ToDouble(r["volume_m3"]) * 1e9, lay.Boxes.Sum(b => b.Volume));
             });
 
             string versionFile = Path.Combine(dir, "version-copy.dwg");

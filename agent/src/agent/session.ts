@@ -6,7 +6,7 @@ import {
   type SDKUserMessage,
 } from '@anthropic-ai/claude-agent-sdk';
 import type { ServicePlan, SidecarToPlugin, UserMessage } from '../ipc/protocol.js';
-import { applyUserConfirmation, confirmationError, createdHandles, newlyAffected, refusedForConfirmation, type GateState } from './confirmation.js';
+import { applyUserConfirmation, confirmationError, createdHandles, newlyAffected, planLayersOf, refusedForConfirmation, type GateState } from './confirmation.js';
 import { toSdkUserMessage } from './content.js';
 import type { ToolBridge } from '../tools/common.js';
 import { MCP_SERVER_NAME, createCadServer } from '../tools/index.js';
@@ -78,6 +78,16 @@ export class AgentSession {
   private readonly cards = new Map<string, string[]>();
   private lastCardId?: string;
   private cardConfirmed?: Set<string>;
+  /**
+   * Nâng cấp đợt A, layer names of build_3d_from_plan (confirmation.ts, unconfirmedPlanLayers), all per conversation:
+   * the texts of the cards shown (by id, and those of the running turn), the text the current message answers, the
+   * user's messages, and the layers the user already approved (upper case).
+   */
+  private readonly cardTexts = new Map<string, string>();
+  private askTextThisTurn: string[] = [];
+  private askedText = '';
+  private userTexts: string[] = [];
+  private planLayersOk = new Set<string>();
   /** Message of the running turn, re-sent once if resuming an old session fails. */
   private pending?: UserMessage;
   private resuming = false;
@@ -145,6 +155,8 @@ export class AgentSession {
       return err;
     }
     for (const h of newlyAffected(tool, params, g)) this.touchedThisTurn.add(h);
+    // layers the user named or approved for this build stay approved in this conversation (storey 2 does not ask again)
+    for (const l of planLayersOf(tool, params)) this.planLayersOk.add(l.toUpperCase());
     return undefined;
   }
 
@@ -156,14 +168,35 @@ export class AgentSession {
       cardConfirmed: this.cardConfirmed,
       touched: this.touchedThisTurn,
       created: this.createdThisTurn,
+      askedText: this.askedText,
+      userTexts: this.userTexts,
+      planLayersOk: this.planLayersOk,
     };
   }
 
-  /** A card shown by request_confirmation (called from the tool's palette message): its handles, for its Đồng ý button. */
-  cardShown(id: string, handles?: readonly string[]): void {
+  /** A card shown by request_confirmation (called from the tool's palette message): its handles and text, for its Đồng ý button. */
+  cardShown(id: string, handles?: readonly string[], text?: string): void {
     this.cards.set(id, (handles ?? []).filter((h) => typeof h === 'string').map((h) => h.toUpperCase()));
     this.lastCardId = id;
     while (this.cards.size > 50) this.cards.delete(this.cards.keys().next().value as string);
+    if (typeof text === 'string' && text) {
+      this.cardTexts.set(id, text);
+      while (this.cardTexts.size > 50) this.cardTexts.delete(this.cardTexts.keys().next().value as string);
+      this.askShown(text);
+    }
+  }
+
+  /** What a card of the running turn asks (confirmation card or plan card): the user's next yes is a yes to this text. */
+  askShown(text: string): void {
+    if (text) this.askTextThisTurn.push(text.slice(0, 8000));
+  }
+
+  /** Another conversation: nothing asked, said or approved there carries over. */
+  private forgetConversation(): void {
+    this.askTextThisTurn = [];
+    this.askedText = '';
+    this.userTexts = [];
+    this.planLayersOk = new Set();
   }
 
   /**
@@ -187,7 +220,8 @@ export class AgentSession {
     const server = createCadServer(this.cfg.bridge, this.cfg.version, (req) => {
       if (req.type === 'suggestions') this.toolSuggested = true;
       if (req.type === 'confirm_request' || req.type === 'plan_request') this.turnAsked = true; // a card asks too
-      if (req.type === 'confirm_request') this.cardShown(req.id, req.handles);
+      if (req.type === 'confirm_request') this.cardShown(req.id, req.handles, req.text);
+      if (req.type === 'plan_request') this.askShown([req.summary, ...req.steps].join('\n'));
       this.cfg.emit(req);
     }, this.planTools, this.servicePlan);
     this.loadedPlanKey = planKey(this.servicePlan, this.planTools);
@@ -305,6 +339,9 @@ export class AgentSession {
     this.cancelRequested = false;
     // this message answers what the previous turn asked; a previous turn that produced nothing (usage limit,
     // error) asked nothing new: what it answered (e.g. a resent "đồng ý") still stands
+    // what the previous turn's cards asked (an empty turn keeps what the earlier one asked, like answersQuestion below)
+    if (this.turnAsked || this.turnHadText) this.askedText = this.askTextThisTurn.join('\n');
+    this.askTextThisTurn = [];
     this.answersQuestion = this.turnAsked || (!this.turnHadText && this.answersQuestion);
     this.turnAsked = false;
     this.turnHadText = false;
@@ -319,6 +356,10 @@ export class AgentSession {
     // the Đồng ý button of a card: exactly its handles are approved (an older plugin sends no id: the last card shown)
     const cardId = msg.confirm === 'yes' ? (msg.confirm_id ?? this.lastCardId) : undefined;
     this.cardConfirmed = cardId && this.cards.has(cardId) ? new Set(this.cards.get(cardId)) : undefined;
+    // the Đồng ý button of a card approves that card's text (also an older card's); other turns answer the previous turn's cards
+    if (cardId && this.cardTexts.has(cardId)) this.askedText = this.cardTexts.get(cardId)!;
+    this.userTexts.push((msg.text ?? '').slice(0, 4000));
+    while (this.userTexts.length > 40) this.userTexts.shift();
     this.turnId = msg.turn_id;
     this.pending = msg;
     this.input!.push(toSdkUserMessage({
@@ -370,6 +411,7 @@ export class AgentSession {
     this.turnActive = false;
     this.turnAsked = false;
     this.answersQuestion = false; // another conversation: nothing asked there carries over
+    this.forgetConversation();
     this.turnHadText = true;
     // the list that conversation was last sent (its "−" / "+" note stays right); unknown → no note
     this.lastSentSkills = sessionId ? this.skillsBySession.get(sessionId) : undefined;
@@ -408,6 +450,7 @@ export class AgentSession {
     this.turnActive = false;
     this.turnAsked = false;
     this.answersQuestion = false; // another conversation: nothing asked there carries over
+    this.forgetConversation();
     this.turnHadText = true;
     this.lastSentSkills = undefined;
     this.cfg.emit({ type: 'session_reset' });

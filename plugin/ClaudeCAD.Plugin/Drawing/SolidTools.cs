@@ -70,9 +70,9 @@ namespace ClaudeCAD.Plugin.Drawing
         }
 
         /// <summary>Box with its corner (min x, y, z before rotation) at corner, or centred on center; rotation about Z (degrees).</summary>
-        internal static Solid3d MakeBox(double length, double width, double height, double[] corner, double[] center, double rotationDeg)
+        internal static Solid3d MakeBox(double length, double width, double height, double[] corner, double[] center, double rotationDeg, string tool = "draw_box")
         {
-            SolidLogic.CheckBox(length, width, height);
+            SolidLogic.CheckBox(length, width, height, tool);
             var c = center ?? SolidLogic.BoxCenter(corner, length, width, height, rotationDeg);
             return Build(s =>
             {
@@ -119,10 +119,10 @@ namespace ClaudeCAD.Plugin.Drawing
             return (b, axis);
         }
 
-        internal static Solid3d MakeFrustum(double[] basePt, Vector3d axis, double radius, double topRadius)
+        internal static Solid3d MakeFrustum(double[] basePt, Vector3d axis, double radius, double topRadius, string tool = "draw_cylinder")
         {
             double h = axis.Length;
-            SolidLogic.CheckFrustum(radius, topRadius, h);
+            SolidLogic.CheckFrustum(radius, topRadius, h, tool);
             return Build(s =>
             {
                 s.CreateFrustum(h, radius, radius, topRadius);
@@ -154,7 +154,7 @@ namespace ClaudeCAD.Plugin.Drawing
             if (corner != null && center != null) throw ToolException.Invalid($"{p.Tool}: pass either 'corner' or 'center', not both.");
             // a negative height builds the box downwards from the corner
             if (h < 0 && corner != null) { corner = new[] { corner[0], corner[1], SolidLogic.Z3(corner) + h }; h = -h; }
-            var s = MakeBox(l, w, h, corner, center, p.Num("rotation", 0));
+            var s = MakeBox(l, w, h, corner, center, p.Num("rotation", 0), p.Tool);
             return SolidResult(ctx, s, p);
         }
 
@@ -163,7 +163,7 @@ namespace ClaudeCAD.Plugin.Drawing
             var (b, axis) = AxisOf(p);
             double r = RadiusOf(p);
             double top = p.Has("top_radius") ? p.Num("top_radius") : r;
-            return SolidResult(ctx, MakeFrustum(b, axis, r, top), p);
+            return SolidResult(ctx, MakeFrustum(b, axis, r, top, p.Tool), p);
         }
 
         private static object DrawSphere(ToolContext ctx, Params p)
@@ -219,7 +219,7 @@ namespace ClaudeCAD.Plugin.Drawing
         {
             var c = p.Point("center");
             double R = p.Positive("radius"), r = p.Positive("tube_radius");
-            SolidLogic.CheckTorus(R, r);
+            SolidLogic.CheckTorus(R, r, p.Tool);
             var s = Build(x =>
             {
                 x.CreateTorus(R, r);
@@ -235,7 +235,7 @@ namespace ClaudeCAD.Plugin.Drawing
             double r = p.Positive("radius");
             double top = p.Num("top_radius", 0);
             double h = axis.Length;
-            SolidLogic.CheckPyramid(sides, r, top, h);
+            SolidLogic.CheckPyramid(sides, r, top, h, p.Tool);
             double rot = p.Num("rotation", 0);
             var s = Build(x =>
             {

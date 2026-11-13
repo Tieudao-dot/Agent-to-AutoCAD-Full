@@ -91,9 +91,10 @@ export function plan3dTools(b: ToolBridge): AnyTool[] {
         'The plan objects are only read, never changed. dry_run: true builds nothing and returns walls, openings, open_gaps (gaps with no symbol, left open), ' +
         'skipped and existing_solids (solids of an earlier run over this plan); it only reads (no undo step, allowed in read-only mode). ' +
         'Refuses (nothing built) when this plan was already built at the same level, unless on_existing "add"; the storey below or a part beside only touching it is not a rerun. ' +
-        'Columns: closed outlines on A-COLS / A-COL or column_handles → solids on A-COLS-3D, as high as the walls. storeys + storey_height: several storeys at once. ' +
-        'layer_guess: layers named like plan parts (TUONG, CUA…) that were not read; ask the user (request_confirmation) before building with them. ' +
-        'Returns handles, wall_solid {volume_m3, pieces_volume_m3, min, max}, slabs, columns, levels (several storeys), walls / openings / skipped, thickness_summary.',
+        'Columns: closed outlines on A-COLS / A-COL or column_handles → solids on A-COLS-3D, as high as the walls. ' +
+        'layer_guess: unread layers named like plan parts (TUONG, CUA…); a build with layers the user did not name is refused until they approve a request_confirmation card naming them. ' +
+        'Returns handles, wall_solid {volume_m3, pieces_volume_m3, min, max}, slabs, columns; several storeys: levels [{storey, base_z_mm, wall_solid, columns, slabs}] and total_volume_m3; ' +
+        'walls / openings / skipped, thickness_summary.',
       {
         wall_height: z.number().min(L.MinWallHeight).max(L.MaxWallHeight).optional().describe(`Wall height (mm, default ${L.DefaultWallHeight}).`),
         door_height: z.number().positive().optional().describe(`Door opening height (mm, default ${L.DefaultDoorHeight}).`),

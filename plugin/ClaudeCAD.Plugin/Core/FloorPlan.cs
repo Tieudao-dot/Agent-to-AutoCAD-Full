@@ -120,6 +120,8 @@ namespace ClaudeCAD.Plugin.Core
     {
         public string Handle;
         public bool IsSlab;
+        /// <summary>A solid on the column layer (nâng cấp đợt A): only compared with this run's columns.</summary>
+        public bool IsColumn;
         public double[] Min, Max; // 3D box
     }
 
@@ -249,16 +251,20 @@ namespace ClaudeCAD.Plugin.Core
             var tokens = System.Text.RegularExpressions.Regex.Split(f, "[^A-Z0-9]+").Where(t => t.Length > 0).ToList();
             var joined = string.Concat(tokens);
             bool Tok(params string[] w) => tokens.Any(t => w.Contains(t));
-            bool Has(params string[] w) => w.Any(x => joined.Contains(x));
-            // results of a 3D tool, text, dimensions, hatch patterns: not plan geometry
-            if (Tok("3D") || joined.EndsWith("3D", StringComparison.Ordinal) || Tok("TEXT", "TXT", "DIM", "CHU", "HATCH", "PATT", "PAT", "HAT", "SECT", "ELEV", "ANNO", "IDEN", "TAG"))
+            // a word of the name starts with one of these (WALLS, TUONG220, DOORS…): "SIDEWALK" is not a wall, "OUTDOOR" not a door
+            bool Starts(params string[] w) => tokens.Any(t => w.Any(x => t.StartsWith(x, StringComparison.Ordinal)));
+            // words written apart or together (CUA SO, CUA_SO, CUASO)
+            bool Joined(params string[] w) => w.Any(x => joined.Contains(x));
+            // results of a 3D tool, text, dimensions, hatch patterns, axis / centre lines: not the outlines the tool reads
+            if (Tok("3D") || joined.EndsWith("3D", StringComparison.Ordinal) ||
+                Tok("TEXT", "TXT", "DIM", "DIMS", "CHU", "HATCH", "PATT", "PAT", "HAT", "SECT", "ELEV", "ANNO", "IDEN", "TAG", "TRUC", "TIM", "AXIS", "GRID", "CEN", "CENTER", "CL"))
                 return null;
-            if (Has("LANCAN", "RAIL", "HANDRAIL", "GUARD")) return "railing";
-            if (Has("CUASO", "WIND", "GLAZ") || (Tok("CUA") && Tok("SO")) || Tok("WIN", "WD")) return "window";
-            if (Has("CUADI", "DOOR") || Tok("CUA", "DR", "DOORS")) return "door";
-            if (Has("COLUMN") || Tok("COT", "COL", "COLS")) return "column";
-            if (Has("SLAB", "FLOR", "FLOOR") || Tok("SAN")) return "slab";
-            if (Has("WALL", "TUONG") || Tok("XAY", "TG")) return "wall";
+            if (Joined("LANCAN") || Tok("RAIL", "RAILS", "RAILING", "RAILINGS", "HANDRAIL", "HANDRAILS", "GUARDRAIL")) return "railing";
+            if (Joined("CUASO") || Starts("WIND", "GLAZ") || Tok("WIN")) return "window";
+            if (Joined("CUADI") || Starts("DOOR") || Tok("CUA", "DR")) return "door";
+            if (Starts("COLUMN") || Tok("COT", "COL", "COLS")) return "column";
+            if (Starts("SLAB", "FLOR", "FLOOR") || Tok("SAN")) return "slab";
+            if (Starts("WALL", "TUONG") || Tok("XAY", "TG")) return "wall";
             return null;
         }
 
@@ -269,6 +275,36 @@ namespace ClaudeCAD.Plugin.Core
             if (dxMm > MaxColumnSize || dyMm > MaxColumnSize)
                 return $"{Math.Round(dxMm)} × {Math.Round(dyMm)} mm is larger than a column ({MaxColumnSize} mm per side): not built; pass it in column_handles only if it really is one column";
             return null;
+        }
+
+        /// <summary>Column sizes in plan (mm, bounding box, smaller side first) with their counts, most frequent first: for the report.</summary>
+        public static List<(double a, double b, int count)> ColumnSizeSummary(IEnumerable<(double dx, double dy)> sizesMm, int max = 20) =>
+            sizesMm
+                .Select(x => (a: Math.Round(Math.Min(x.dx, x.dy)), b: Math.Round(Math.Max(x.dx, x.dy))))
+                .GroupBy(x => x)
+                .Select(g => (g.Key.a, g.Key.b, count: g.Count()))
+                .OrderByDescending(x => x.count).ThenBy(x => x.a).ThenBy(x => x.b)
+                .Take(max)
+                .ToList();
+
+        /// <summary>
+        /// Rerun check of the columns (all in drawing units): an earlier solid on the column layer that really overlaps one
+        /// of this run's column outlines in plan and covers more than half of the column height [baseZ, baseZ + height]
+        /// is the same column built again. Columns are only compared with columns: a column the user built inside a wall
+        /// (same place in plan as the wall) is not a rerun of the wall, and the storey below never counts.
+        /// </summary>
+        public static List<string> ColumnRerun(IEnumerable<Existing3d> existing, IList<(double[] min, double[] max)> columns, double baseZ, double height, double tol)
+        {
+            var list = new List<string>();
+            if (columns.Count == 0 || !(height > 0)) return list;
+            foreach (var e in existing)
+            {
+                if (!e.IsColumn) continue;
+                var emin = new[] { e.Min[0], e.Min[1] }; var emax = new[] { e.Max[0], e.Max[1] };
+                if (!columns.Any(c => BoxesOverlapStrict(emin, emax, c.min, c.max, tol))) continue;
+                if (ZOverlap(e.Min[2], e.Max[2], baseZ, baseZ + height) > 0.5 * height) list.Add(e.Handle);
+            }
+            return list;
         }
 
         /// <summary>One storey of a multi-storey build: its floor level (slab top) and wall height (mm).</summary>
@@ -1244,6 +1280,7 @@ namespace ClaudeCAD.Plugin.Core
             var wallBoxes = boxes.Select(BoxXY).ToList();
             foreach (var e in existing)
             {
+                if (e.IsColumn) continue; // columns are compared with columns only (ColumnRerun)
                 var emin = new[] { e.Min[0], e.Min[1] }; var emax = new[] { e.Max[0], e.Max[1] };
                 double ez0 = e.Min[2], ez1 = e.Max[2];
                 if (e.IsSlab)

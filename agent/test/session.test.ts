@@ -404,6 +404,66 @@ describe('v0.9.4 review fixes', () => {
     assert.deepEqual(s.paramsToSend('explode_entities', { handles: ['2F4C'] }), { handles: ['2F4C'] });
   });
 
+  it('nâng cấp đợt A: build_3d_from_plan on guessed layers waits for the card that names them; approved layers stay approved in the conversation', async () => {
+    const { fn } = fakeQuery(async (input, push) => {
+      for await (const _m of input) {
+        push(init);
+        push(textDelta('Tớ cần cậu xác nhận.'));
+        push(result());
+      }
+    });
+    const { s } = makeSession(fn);
+    const build = { wall_layers: ['TUONG'], door_layers: ['CUA'], wall_height: 3300 };
+    s.sendMessage({ type: 'user_message', text: 'dựng 3D mặt bằng này' });
+    assert.equal(s.gate('build_3d_from_plan', { ...build, dry_run: true }), undefined); // reading is free
+    assert.match(s.gate('build_3d_from_plan', build) ?? '', /Confirmation required[\s\S]*TUONG, CUA/);
+    s.cardShown('confirm-1', [], 'Dựng 3D với: tường = TUONG, cửa đi = CUA?');
+    await tick();
+    // Hủy on the card: nothing is approved
+    s.sendMessage({ type: 'user_message', text: 'Hủy', confirm: 'no', confirm_id: 'confirm-1' });
+    assert.match(s.gate('build_3d_from_plan', build) ?? '', /Confirmation required/);
+    s.cardShown('confirm-2', [], 'Dựng 3D với: tường = TUONG, cửa đi = CUA?');
+    await tick();
+    // Đồng ý on the card: exactly the layers it names
+    s.sendMessage({ type: 'user_message', text: 'Đồng ý', confirm: 'yes', confirm_id: 'confirm-2' });
+    assert.match(s.gate('build_3d_from_plan', { ...build, window_layers: ['CUASO'] }) ?? '', /\(CUASO\)/);
+    assert.equal(s.gate('build_3d_from_plan', build), undefined);
+    await tick();
+    // a later turn of the same conversation (storey 2): the approved layers are remembered, a new one is not
+    s.sendMessage({ type: 'user_message', text: 'dựng tầng 2 cùng mặt bằng này' });
+    assert.equal(s.gate('build_3d_from_plan', { ...build, base_z: 3300 }), undefined);
+    assert.equal(s.gate('batch_execute', { calls: [{ tool: 'build_3d_from_plan', params: { ...build, base_z: 6600 } }] }), undefined);
+    assert.match(s.gate('build_3d_from_plan', { ...build, slab_layers: ['SAN'] }) ?? '', /\(SAN\)/);
+    await tick();
+    // the user names a layer themselves: no card needed, and it is remembered too
+    s.sendMessage({ type: 'user_message', text: 'sàn ở layer SAN nhé' });
+    await tick();
+    s.sendMessage({ type: 'user_message', text: 'dựng lại có sàn' });
+    assert.equal(s.gate('build_3d_from_plan', { ...build, slab_layers: ['SAN'] }), undefined);
+    await tick();
+    // another drawing's conversation: nothing carries over
+    s.switchTo(undefined);
+    s.sendMessage({ type: 'user_message', text: 'dựng 3D mặt bằng này' });
+    assert.match(s.gate('build_3d_from_plan', build) ?? '', /Confirmation required/);
+    // a typed yes to the card works like its button; a typed yes to a plain question does not
+    s.cardShown('confirm-3', [], 'Dựng 3D với: tường = TUONG, cửa đi = CUA?');
+    await tick();
+    s.sendMessage({ type: 'user_message', text: 'ok' });
+    assert.equal(s.gate('build_3d_from_plan', build), undefined);
+    await tick();
+    s.reset();
+    s.sendMessage({ type: 'user_message', text: 'dựng 3D mặt bằng này' });
+    assert.match(s.gate('build_3d_from_plan', build) ?? '', /Confirmation required/); // the refusal asks, but shows no card
+    await tick();
+    s.sendMessage({ type: 'user_message', text: 'ok' });
+    assert.match(s.gate('build_3d_from_plan', build) ?? '', /Confirmation required/);
+    // the plan card's Làm button approves the layers its steps name
+    s.askShown('Dựng 3D nhà 2 tầng\nĐọc tường trên layer TUONG, cửa đi trên layer CUA\nDựng 2 tầng cao 3,3 m');
+    await tick();
+    s.sendMessage({ type: 'user_message', text: 'Làm theo kế hoạch.', plan: 'approved' });
+    assert.equal(s.gate('build_3d_from_plan', build), undefined);
+  });
+
   it('a batch whose explode call the plugin refused also makes the turn ask', async () => {
     const { fn } = fakeQuery(async (input, push) => {
       for await (const _m of input) {

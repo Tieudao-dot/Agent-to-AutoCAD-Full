@@ -210,6 +210,14 @@ export interface GateState {
   created?: ReadonlySet<string>;
   /** Older callers: a plain count instead of the two sets. */
   alreadyAffected?: number;
+  /**
+   * Nâng cấp đợt A, layer names of build_3d_from_plan (see unconfirmedPlanLayers): the text of the confirmation card /
+   * plan card this turn answers, the user's messages of this conversation (the current one included; without it only
+   * userText is read), and the layers approved earlier in this conversation (upper case).
+   */
+  askedText?: string;
+  userTexts?: readonly string[];
+  planLayersOk?: ReadonlySet<string>;
 }
 
 /** True when the user's message counts as a "yes" to a question Claude asked. */
@@ -299,49 +307,82 @@ export function refusedForConfirmation(resp: { ok: boolean; error?: { message?: 
 /**
  * Nâng cấp đợt A (13/11/2026): build_3d_from_plan on layers with other names (TUONG, CUA, A-WALL-NEW…). Claude may
  * GUESS which layer is a wall / door / window / slab / column (the plugin reports layer_guess), but must ask the user
- * before building from the guess. A build (not a dry_run) naming layers that are not the default ones and that the
- * user's message does not mention is refused until the user said yes (the card's Đồng ý, the plan card's Làm, or a
- * typed yes to the question). Reading (dry_run) is always allowed.
+ * before building from the guess. A build (not a dry_run) with a layer that is not a default one is refused unless
+ *  - the user wrote that layer name in a message of this conversation that talks about layers ("tường ở layer TUONG"), or
+ *  - this turn answers a confirmation card / plan card whose text names the layer (its Đồng ý / Làm button, or a typed
+ *    yes to it), or
+ *  - the layer was approved that way earlier in this conversation (storey 2 does not ask again).
+ * So the question is always asked with the palette's own card, and the yes is a yes to these very layers.
+ * Reading (dry_run) is always allowed.
  */
 export const PLAN_LAYER_PARAMS = ['wall_layers', 'door_layers', 'window_layers', 'slab_layers', 'column_layers'] as const;
 export const PLAN_DEFAULT_LAYERS: ReadonlySet<string> = new Set(['A-WALL', 'A-DOOR', 'A-WIND', 'A-SLAB', 'A-FLOR', 'A-COLS', 'A-COL']);
 
-/** The layers of a build_3d_from_plan call (or of a batch) that are neither default nor named in the user's message. */
-export function unconfirmedPlanLayers(tool: string, params: Record<string, unknown>, g: GateState): string[] {
+/** The layer names (or patterns) of a build_3d_from_plan call, or of the builds in a batch, that are not default ones. */
+export function planLayersOf(tool: string, params: Record<string, unknown>): string[] {
   if (tool === 'batch_execute' && Array.isArray(params.calls)) {
     const out: string[] = [];
     for (const c of params.calls as Array<{ tool?: unknown; params?: unknown }>) {
-      if (c && typeof c.tool === 'string' && c.tool !== 'batch_execute') out.push(...unconfirmedPlanLayers(c.tool, (c.params as Record<string, unknown>) ?? {}, g));
+      if (c && typeof c.tool === 'string' && c.tool !== 'batch_execute') out.push(...planLayersOf(c.tool, (c.params as Record<string, unknown>) ?? {}));
     }
     return [...new Set(out)];
   }
   if (tool !== 'build_3d_from_plan' || params.dry_run === true) return [];
-  const said = (g.userText ?? '').toLowerCase().normalize('NFC');
   const out: string[] = [];
   for (const k of PLAN_LAYER_PARAMS) {
     const v = params[k];
     if (!Array.isArray(v)) continue;
     for (const x of v) {
       if (typeof x !== 'string' || !x.trim()) continue;
-      const name = x.trim();
-      if (PLAN_DEFAULT_LAYERS.has(name.toUpperCase())) continue;
-      // a wildcard pattern counts as named when its fixed part is in the message ("TUONG*" ← "layer TUONG")
-      const core = name.replace(/[*?]+/g, ' ').trim().toLowerCase().normalize('NFC');
-      if (core && core.split(/\s+/).every((part) => said.includes(part))) continue;
-      out.push(name);
+      if (!PLAN_DEFAULT_LAYERS.has(x.trim().toUpperCase())) out.push(x.trim());
     }
   }
   return [...new Set(out)];
 }
 
+/** Characters of a layer name: a name is matched as a whole token ("CUA" is not named by "CUA-SO" or "cuadi"). */
+const LAYER_CHAR = '[\\p{L}\\p{N}_$-]';
+/** A message that talks about layers: only there a word like "tuong" can be the layer TUONG and not the word "tường" typed without marks. */
+const LAYER_WORD = /(?<![\p{L}\p{N}])(?:layers?|lớp)(?![\p{L}\p{N}])/iu;
+
+/**
+ * Matches a layer name written out in a text, in any letter case. A pattern ("KT_TUONG*") matches the pattern itself or a
+ * name it covers; a pattern with fewer than 3 fixed characters ("*", "T*") is never taken as written.
+ */
+export function layerNameRegex(layer: string): RegExp | undefined {
+  const name = layer.normalize('NFC').trim();
+  const wild = /[*?]/.test(name);
+  if (name.replace(/[*?\s]/g, '').length < (wild ? 3 : 1)) return undefined;
+  const body = name
+    .split(/([*?])/)
+    .map((part) => (part === '*' ? `${LAYER_CHAR}*` : part === '?' ? LAYER_CHAR : part.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')))
+    .join('');
+  return new RegExp(`(?<!${LAYER_CHAR})${body}(?!${LAYER_CHAR})`, 'iu');
+}
+
+/** The layers of a build_3d_from_plan call (or of a batch) that the user has neither named nor approved on a card. */
+export function unconfirmedPlanLayers(tool: string, params: Record<string, unknown>, g: GateState): string[] {
+  const layers = planLayersOf(tool, params);
+  if (layers.length === 0) return [];
+  const texts = (g.userTexts ?? (g.userText ? [g.userText] : [])).map((t) => t.normalize('NFC')).filter((t) => LAYER_WORD.test(t));
+  const asked = userConfirmed(g) ? (g.askedText ?? '').normalize('NFC') : '';
+  return layers.filter((name) => {
+    if (g.planLayersOk?.has(name.toUpperCase())) return false;
+    const rx = layerNameRegex(name);
+    if (!rx) return true;
+    return !(texts.some((t) => rx.test(t)) || (asked !== '' && rx.test(asked)));
+  });
+}
+
 export function confirmationError(tool: string, params: Record<string, unknown>, g: GateState): string | undefined {
   const guessed = unconfirmedPlanLayers(tool, params, g);
-  if (guessed.length > 0 && !userConfirmed(g)) {
+  if (guessed.length > 0) {
     return (
-      `Confirmation required: this ${tool} call builds from layers the user has not named (${guessed.slice(0, 20).join(', ')}). ` +
-      'A layer mapping you guessed must be confirmed first. Do not retry now and do not work around it (no wall_handles from those layers either). ' +
-      'Call request_confirmation with one Vietnamese sentence giving the mapping (e.g. "Dựng 3D với: tường = TUONG, cửa đi = CUA, cửa sổ = CUASO?") and end your turn. ' +
-      'Build only after the user agrees, with exactly the layers they confirmed.'
+      `Confirmation required: this ${tool} call builds from layers the user has not confirmed (${guessed.slice(0, 20).join(', ')}). ` +
+      'A layer mapping you worked out yourself must be approved on a card first. Do not retry now and do not work around it (no wall_handles collected from those layers either). ' +
+      'Call request_confirmation with one Vietnamese sentence that writes every layer name exactly as in the drawing and what it is ' +
+      '(e.g. "Dựng 3D với: tường = TUONG, cửa đi = CUA, cửa sổ = CUASO?"), and end your turn. ' +
+      'Build after the user presses Đồng ý, with exactly the layers named on that card.'
     );
   }
   // C2 (12/11/2026): only the Đồng ý button of a card that listed these solids unlocks them, not a typed yes

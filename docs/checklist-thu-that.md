@@ -273,32 +273,35 @@ AutoCAD thật", và các lỗi đã sửa cần thử thật. M1–M2 và M10�
 | M8 | ○ | Khóa layer của một khối, "xoay khối 90 độ quanh trục X" và "đối xứng khối qua mặt YZ" | Câu báo dễ hiểu (layer bị khóa, hỏi mở khóa); ghi lại câu Claude nói | ☐ | ☐ | KT (khóa layer) |
 | M9 | ○ | Sau L9 / L11: gõ `PURGE` | Không có đối tượng lạ (không còn `SectionSettings` / đối tượng tạm của mặt cắt) | ☐ | ☐ | KT (Section) |
 
-## N. Nâng cấp đợt A (bản Full, gói 3D hoặc Full, ~25 phút)
+## N. Nâng cấp đợt A (bản Full, gói 3D hoặc Full, ~28 phút)
 
 *13/11/2026 · từ [`ban-giao/nang-cap-a.md`](ban-giao/nang-cap-a.md). Máy ở gói `3D` hoặc `Full`, bản vẽ mới
-(acadiso.dwt), tab Model. N1–N3: 6 lệnh dựng khối gộp thành `draw_solid`; N4–N6: layer tên khác; N7–N8: cột;
-N9–N11: nhiều tầng; N12–N13: lan can; N14–N15: mảng nhiều tầng.*
+(acadiso.dwt), tab Model. N0: tự kiểm tra; N1–N3: 6 lệnh dựng khối gộp thành một; N4–N7: layer tên khác; N8–N9: cột;
+N10–N12: nhiều tầng; N13–N14: lan can; N15–N16: mảng nhiều tầng. **Quan trọng nhất: N0, N4, N5, N10.***
 
 | # | | Làm gì | Kết quả mong đợi | Đạt | Lỗi | Mã gốc |
 | --- | --- | --- | --- | --- | --- | --- |
+| N0 | ★ | Gõ `CLAUDECHATSELFTEST` | Hai dòng mới ✓: "Nâng cấp đợt A: dựng 2 tầng + sàn mái + 2 cột từ mặt bằng…" (tường 2 tầng ≈ 15,204 m³, 2 cột × 2 tầng ≈ 0,9159 m³, 2 sàn + sàn mái = 6,048 m³) và "Nâng cấp đợt A: lan can thẳng 3 m…" (≈ 0,03139 m³). Dòng ✗ thì gửi file báo cáo | ☐ | ☐ | A3–A5 |
 | N1 | ★ | "dựng hộp 1000x500x300, trụ D400 cao 3,3 m, cầu D600, nêm 3000x1200x450, xuyến R500 ống 50, chóp 4 cạnh đáy 1000" | Dòng trạng thái ghi "Dựng khối 3D" (không còn "Dựng khối hộp"…); đủ 6 khối đúng hình ở góc iso; thể tích từng khối đúng (hộp 0,15 m³, trụ ≈ 0,415 m³) | ☐ | ☐ | A1 |
-| N2 | ★ | Macro ghi **trước** đợt A có `draw_box` (hoặc ghi một macro trên bản cũ): chạy lại trên bản mới | Macro chạy, hộp dựng như cũ (tên cũ vẫn chạy trong plugin) | ☐ | ☐ | A1 |
+| N2 | ★ | Macro ghi **trước** đợt A có `draw_box` (ghi trên bản thử cũ, hoặc sửa tay một file macro đổi `draw_solid` thành `draw_box` và bỏ `shape`): chạy trên bản mới | Macro chạy, hộp dựng như cũ (tên cũ vẫn chạy trong plugin) | ☐ | ☐ | A1 |
 | N3 | ○ | Gói `2D`: chạy macro N2 | Thẻ "Không chạy macro… gói 2D… (draw_box)"; bản vẽ không đổi | ☐ | ☐ | A1 |
-| N4 | ★ | Vẽ phòng L2 nhưng tường trên layer `TUONG`, cửa đi trên `CUA`, cửa sổ trên `CUA SO`. "dựng 3D mặt bằng này" | Claude chạy thử, nói ánh xạ đoán được (tường = TUONG, cửa đi = CUA, cửa sổ = CUA SO) và hiện **thẻ xác nhận**; **chưa dựng gì** | ☐ | ☐ | A2 |
-| N5 | ★ | Sau N4 bấm **Đồng ý** | Dựng đúng như L2 (tường có lỗ cửa); khối trên `A-WALL-3D` | ☐ | ☐ | A2 |
-| N6 | ○ | Làm lại N4 rồi bấm **Hủy** (hoặc gõ "không, tường là layer KHAC") | Không dựng; với câu gõ có tên layer, Claude dựng theo đúng layer người dùng nêu (không hỏi lại) | ☐ | ☐ | A2 |
-| N7 | ★ | Thêm 4 cột 220x220 (`draw_rectangle`) và 1 cột tròn D300 trên layer `A-COL` ở góc phòng L2 (chưa dựng). "dựng 3D, tầng cao 3,3 m, sàn 120" | Có 5 khối cột trên `A-COLS-3D` cao 3180 (bằng tường), đáy ở z 0; hatch trên `A-COL` không gây lỗi; báo cáo có `columns` | ☐ | ☐ | A3 |
-| N8 | ○ | Vẽ một hình chữ nhật 5000x4000 trên `A-COL`, "chạy thử dựng 3D" | Hình đó bị bỏ qua với lý do "larger than a column"; không thành khối cột khổng lồ | ☐ | ☐ | A3 |
-| N9 | ★ | Phòng L2 chưa dựng: "dựng 3 tầng, mỗi tầng cao 3,3 m, sàn 120" | Một lượt dựng 3 tầng: tường mỗi tầng cao 3180 ở z 0 / 3300 / 6600; sàn tầng 2, 3 nằm trên đỉnh tường tầng dưới (z 3180–3300, 6480–6600), không chồng vào tường; **không hỏi xóa gì**; gõ U một lần mất cả 3 tầng | ☐ | ☐ | A4, L24 |
-| N10 | ○ | Sau N9: "dựng thêm tầng 4" (base_z 9900) | Dựng ngay, không báo "already built", không hỏi xóa tầng dưới. Chạy lại N9 → Claude báo đã dựng và hỏi, không gợi ý xóa tầng khác | ☐ | ☐ | A4, L24 |
-| N11 | ○ | Bản vẽ đơn vị mét (L8): "dựng 2 tầng, mỗi tầng 3,3 m, có sàn mái" | Tầng 2 ở cao 3,3 (đơn vị bản vẽ), sàn mái trên cùng ở 6,6; không có số 3300 | ☐ | ☐ | A4, L27 |
-| N12 | ★ | Vẽ polyline ban công 3 cạnh (3000 + 1200 + 3000). "dựng lan can theo đường này" | Một khối trên `A-RAIL-3D` cao **1100**: tay vịn trên cùng, trụ ở mỗi góc và cách ≤ 1500, song đứng khe ≤ 100; polyline vẫn nguyên | ☐ | ☐ | A5 |
-| N13 | ○ | "lan can kính cao 1200 trên sàn tầng 2" (cùng polyline) | `infill` panel, cao 1200, đáy ở z 3300 | ☐ | ☐ | A5 |
-| N14 | ★ | Dựng một cột 400x400 cao 3300, "lặp cột này 3 hàng x 4 cột cách 6 m x 4 m, 3 tầng cách 3,3 m" | 36 cột (35 bản sao mới), tầng trên đặt đúng cao 3300 / 6600 | ☐ | ☐ | A6 |
-| N15 | ○ | Gói `2D`: "lặp hình chữ nhật này 2 hàng x 2 cột, 3 tầng cách 3000" | Claude nói số tầng thuộc gói 3D (mảng 2D thường vẫn làm được nếu cậu bỏ số tầng) | ☐ | ☐ | A6 |
+| N4 | ★ | Vẽ phòng L2 nhưng tường trên layer `TUONG`, cửa đi trên `CUA`, cửa sổ trên `CUA SO`. Gõ "dựng 3D mặt bằng này" (không nhắc tên layer) | Claude chạy thử, nói ánh xạ đoán được và hiện **thẻ xác nhận có ghi đủ tên layer** (tường = TUONG, cửa đi = CUA, cửa sổ = CUA SO); **chưa dựng gì** | ☐ | ☐ | A2 |
+| N5 | ★ | Sau N4 bấm **Đồng ý** | Dựng đúng như L2 (tường có lỗ cửa); khối trên `A-WALL-3D`. Lượt sau "dựng tầng 2 cùng mặt bằng": dựng ngay, **không hỏi lại layer** | ☐ | ☐ | A2 |
+| N6 | ○ | Làm lại N4 (bản vẽ khác hoặc chat mới) rồi bấm **Hủy** | Không dựng gì. Gõ tiếp "tường ở layer TUONG, cửa ở layer CUA, dựng đi": Claude dựng theo đúng layer cậu nêu, không cần thẻ | ☐ | ☐ | A2 |
+| N7 | ○ | Chat mới, cùng bản vẽ N4, gõ không dấu "dung 3d mat bang nay, tuong cao 3m" | Vẫn hiện thẻ hỏi layer (chữ "tuong" trong câu không được coi là tên layer `TUONG`) | ☐ | ☐ | A2 |
+| N8 | ★ | Thêm 4 cột 220x220 (`draw_rectangle`) và 1 cột tròn D300 trên layer `A-COL` ở góc phòng L2 (chưa dựng). "dựng 3D, tầng cao 3,3 m, sàn 120" | Có 5 khối cột trên `A-COLS-3D` cao 3180 (bằng tường), đáy ở z 0; hatch trên `A-COL` không gây lỗi; Claude báo số cột và kích thước | ☐ | ☐ | A3 |
+| N9 | ○ | Vẽ một hình chữ nhật 5000x4000 trên `A-COL`, "chạy thử dựng 3D" | Hình đó bị bỏ qua với lý do "larger than a column"; không thành khối cột khổng lồ | ☐ | ☐ | A3 |
+| N10 | ★ | Phòng L2 chưa dựng: "dựng 3 tầng, mỗi tầng cao 3,3 m, sàn 120" | Một lượt dựng 3 tầng: tường mỗi tầng cao 3180 ở z 0 / 3300 / 6600; sàn tầng 2, 3 nằm trên đỉnh tường tầng dưới (z 3180–3300, 6480–6600), không chồng vào tường; **không hỏi xóa gì**; không chờ lâu hơn hẳn dựng 1 tầng; gõ U một lần mất cả 3 tầng | ☐ | ☐ | A4, L24 |
+| N11 | ○ | Sau N10: "dựng thêm tầng 4" | Dựng ngay ở z 9900, không báo "already built", không hỏi xóa tầng dưới. Gõ lại câu N10 → Claude báo các tầng đã dựng và hỏi, không gợi ý xóa tầng khác | ☐ | ☐ | A4, L24 |
+| N12 | ○ | Bản vẽ đơn vị mét (L8): "dựng 2 tầng, mỗi tầng 3,3 m, có sàn mái" | Tầng 2 ở cao 3,3 (đơn vị bản vẽ), sàn mái trên cùng ở 6,6; không có số 3300 | ☐ | ☐ | A4, L27 |
+| N13 | ★ | Vẽ polyline ban công 3 cạnh (3000 + 1200 + 3000). "dựng lan can theo đường này" | Một khối trên `A-RAIL-3D` cao **1100**: tay vịn trên cùng, trụ ở mỗi góc và cách ≤ 1500, song đứng khe ≤ 100; polyline vẫn nguyên | ☐ | ☐ | A5 |
+| N14 | ○ | "lan can kính cao 1200 trên sàn tầng 2" (cùng polyline) | Tấm kính (không song), cao 1200, đáy ở z 3300 | ☐ | ☐ | A5 |
+| N15 | ★ | Dựng một cột 400x400 cao 3300, "lặp cột này 3 hàng x 4 cột cách 6 m x 4 m, 3 tầng cách 3,3 m" | 36 cột (35 bản sao mới), tầng trên đặt đúng cao 3300 / 6600 | ☐ | ☐ | A6 |
+| N16 | ○ | Gói `2D`: "lặp hình chữ nhật này 2 hàng x 2 cột, 3 tầng cách 3000" | Claude nói số tầng thuộc gói 3D (mảng 2D thường vẫn làm được nếu cậu bỏ số tầng) | ☐ | ☐ | A6 |
 
-Còn chỉ thấy trên AutoCAD thật: cộng hàng trăm hộp của lan can dài (N12 với đường rất dài: thời gian; mảnh không cộng
-được để riêng, báo `separate_pieces`); cột hình tròn / polyline có cung (đùn từ region).
+Còn chỉ thấy trên AutoCAD thật: sao chép khối tầng 1 lên các tầng trên (N0, N10); cộng hàng trăm hộp của lan can dài
+(N13 với đường rất dài: thời gian; mảnh không cộng được để riêng, báo `separate_pieces`); cột hình tròn / polyline có
+cung (đùn từ region).
 
 ## Gửi lại gì khi lỗi
 

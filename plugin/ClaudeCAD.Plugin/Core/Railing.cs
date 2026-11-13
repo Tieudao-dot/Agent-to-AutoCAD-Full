@@ -23,7 +23,8 @@ namespace ClaudeCAD.Plugin.Core
         public const double BottomGap = 100;           // bottom rail / panel starts 100 mm above the floor
         public const double PanelThickness = 20;
         public const int MaxPoints = 2000;
-        public const int MaxBoxes = 5000;
+        /// <summary>Every piece is united into one solid, one by one: more pieces than this take AutoCAD too long.</summary>
+        public const int MaxBoxes = 2000;
         public const string Layer3d = "A-RAIL-3D";
         public static readonly string[] Infills = { "bars", "panel", "none" };
 
@@ -105,7 +106,7 @@ namespace ClaudeCAD.Plugin.Core
                 for (int k = 0; k < n; k++)
                 {
                     double s0 = step * k + PostSize / 2, s1 = step * (k + 1) - PostSize / 2, clear = s1 - s0;
-                    if (clear <= 1e-6) continue;
+                    if (clear < BarSize) continue; // posts (almost) touching: nothing fits between them
                     if (o.Infill == "panel")
                     {
                         res.Boxes.Add(Box(a, u, (s0 + s1) / 2, clear, PanelThickness, BottomGap, railBottom, rot));
@@ -126,7 +127,7 @@ namespace ClaudeCAD.Plugin.Core
             }
             if (res.Length <= 0) throw ToolException.Invalid($"{tool}: every path segment is shorter than a post ({PostSize} mm); nothing was built.");
             if (res.Boxes.Count > MaxBoxes)
-                throw new ToolException(ErrorCodes.TooManyEntities, $"{tool}: {res.Boxes.Count} railing pieces (more than {MaxBoxes}). Nothing was built. Build a shorter path, or use infill \"panel\".");
+                throw new ToolException(ErrorCodes.TooManyEntities, $"{tool}: {res.Boxes.Count} railing pieces (more than {MaxBoxes}). Nothing was built. Build the path in shorter parts, or use infill \"panel\" / \"none\".");
             return res;
         }
 

@@ -125,6 +125,12 @@ namespace ClaudeCAD.Core.Tests
         [InlineData("TUONG-HATCH")] // a hatch
         [InlineData("KT_DIM")]
         [InlineData("SANH")]        // sảnh (lobby) is not sàn
+        [InlineData("C-SIDEWALK")]  // not a wall
+        [InlineData("A-OUTDOOR")]   // not a door
+        [InlineData("C-TRAIL")]     // not a railing
+        [InlineData("TRUC TUONG")]  // wall axis lines are not face lines
+        [InlineData("TIM-TUONG")]
+        [InlineData("A-WALL-CEN")]
         [InlineData("A-FURN")]
         [InlineData("CHU")]
         [InlineData(null)]
@@ -160,9 +166,52 @@ namespace ClaudeCAD.Core.Tests
         {
             var s = PlanTools;
             Assert.Contains("BuildColumns(ctx, tool, input, bz, hu.Wall, f, col3d", s);
-            Assert.Contains("boxes.Concat(colBoxes)", s);
+            Assert.Contains("FloorPlanLogic.ColumnRerun(input.Existing, colOutlines, bz, hu.Wall", s);
             // existing column solids are read for the rerun check, never as plan
             Assert.Contains("string.Equals(layer, column3d, StringComparison.OrdinalIgnoreCase)", s);
+        }
+
+        private static Existing3d Old(string h, bool column, double x0, double y0, double x1, double y1, double z0, double z1) =>
+            new Existing3d { Handle = h, IsColumn = column, Min = new[] { x0, y0, z0 }, Max = new[] { x1, y1, z1 } };
+
+        [Fact]
+        public void A_column_built_again_is_a_rerun_only_against_columns_at_the_same_level()
+        {
+            var outlines = new List<(double[] min, double[] max)> { (new[] { 0.0, 0.0 }, new[] { 300.0, 300.0 }) };
+            var same = Old("C1", true, 0, 0, 300, 300, 0, 3150);
+            var below = Old("C0", true, 0, 0, 300, 300, -3300, -150);
+            var beside = Old("C2", true, 300, 0, 600, 300, 0, 3150); // only touching
+            var wallThere = Old("W1", false, 0, 0, 300, 300, 0, 3150); // a wall solid is not a column
+            Assert.Equal(new[] { "C1" }, FloorPlanLogic.ColumnRerun(new[] { same, below, beside, wallThere }, outlines, 0, 3150, 5));
+            // storey 2 over the same outline: the column of storey 1 does not count
+            Assert.Empty(FloorPlanLogic.ColumnRerun(new[] { same }, outlines, 3300, 3150, 5));
+            Assert.Empty(FloorPlanLogic.ColumnRerun(new[] { same }, new List<(double[] min, double[] max)>(), 0, 3150, 5));
+        }
+
+        [Fact]
+        public void A_column_the_user_built_inside_a_wall_is_not_a_rerun_of_the_wall()
+        {
+            // a 4000 × 220 wall along X and an existing column solid at its corner, same height
+            var wall = new PlanBox { Center = new[] { 2000.0, 110, 1650 }, Length = 4000, Width = 220, Height = 3300, RotationDeg = 0 };
+            var column = Old("C1", true, 0, 0, 220, 220, 0, 3300);
+            var none = new List<(double[] min, double[] max)>();
+            Assert.Empty(FloorPlanLogic.CheckRerun(new[] { column }, new[] { wall }, none, 0, 3300, 0, 5).Rerun);
+            // the same solid on the wall layer is the wall built again (unchanged, KT-14)
+            var oldWall = Old("W1", false, 0, 0, 4000, 220, 0, 3300);
+            Assert.Equal(new[] { "W1" }, FloorPlanLogic.CheckRerun(new[] { oldWall, column }, new[] { wall }, none, 0, 3300, 0, 5).Rerun);
+        }
+
+        [Fact]
+        public void Column_sizes_are_summarised_for_the_report()
+        {
+            var sizes = new List<(double dx, double dy)> { (220, 220), (220.2, 219.9), (400, 220), (220, 400), (300, 300) };
+            var sum = FloorPlanLogic.ColumnSizeSummary(sizes);
+            Assert.Equal(3, sum.Count);
+            // 220 × 400 and 400 × 220 are the same size; the most frequent first, ties by size
+            Assert.Equal((220.0, 220.0, 2), sum[0]);
+            Assert.Equal((220.0, 400.0, 2), sum[1]);
+            Assert.Equal((300.0, 300.0, 1), sum[2]);
+            Assert.Equal(2, FloorPlanLogic.ColumnSizeSummary(sizes, 2).Count);
         }
 
         // ------------------------------------------------------------ storeys
@@ -223,9 +272,12 @@ namespace ClaudeCAD.Core.Tests
         public void Every_storey_is_checked_before_anything_is_built()
         {
             var s = PlanTools;
-            int check = s.IndexOf("var rerun = ExistingOver(ctx, input, levelBoxes", StringComparison.Ordinal);
-            int build = s.IndexOf("var wr = BuildWalls(", StringComparison.Ordinal);
+            int check = s.IndexOf("var rerun = ExistingOver(ctx, input, lv.RoofOnly ? noBoxes : boxes", StringComparison.Ordinal);
+            int build = s.IndexOf("BuildWalls(ctx, tool, boxes, bz, f, wall3d, parts", StringComparison.Ordinal);
             Assert.True(check > 0 && build > check);
+            // the storeys above are copies of the first storey's solids moved up, not built and united again
+            Assert.Contains("parts = CopyLevel(ctx, tool, first, (lv.BaseZ - levels[0].BaseZ) / f, lv.RoofOnly", s);
+            Assert.Contains("c.TransformBy(up);", s);
             // the storey below is never proposed for erasing (L27 / KT-14 kept)
             Assert.Contains("Never erase other storeys", s);
             Assert.Contains("Never erase the storey below for this", s);
@@ -284,14 +336,48 @@ namespace ClaudeCAD.Core.Tests
             Assert.Throws<ToolException>(() => RailingLogic.Build(new List<double[]> { new double[] { 0, 0 }, new double[] { 10, 0 } }, false, new RailingLogic.Options()));
             Assert.Throws<ToolException>(() => RailingLogic.Build(new List<double[]> { new double[] { 0, 0 }, new double[] { 1000, 0 } }, false, new RailingLogic.Options { Height = 100 }));
             Assert.Throws<ToolException>(() => RailingLogic.NormalizeInfill("wood"));
+            // more pieces than AutoCAD unites in reasonable time: refused (a 300 m railing with bars)
+            var far = Assert.Throws<ToolException>(() => RailingLogic.Build(new List<double[]> { new double[] { 0, 0 }, new double[] { 300000, 0 } }, false, new RailingLogic.Options()));
+            Assert.Contains("more than 2000", far.Message);
+            // posts 70 apart leave no room for a bar: only posts and the top rail
+            var tight = RailingLogic.Build(new List<double[]> { new double[] { 0, 0 }, new double[] { 60, 0 } }, false, new RailingLogic.Options());
+            Assert.Equal(3, tight.Boxes.Count);
             Assert.Equal("panel", RailingLogic.NormalizeInfill("kính"));
             Assert.Equal("bars", RailingLogic.NormalizeInfill(null));
+        }
+
+        [Fact]
+        public void The_self_test_has_the_dot_A_steps()
+        {
+            var s = Src("plugin", "ClaudeCAD.Plugin", "SelfTest.cs");
+            Assert.Contains("Nâng cấp đợt A: dựng 2 tầng + sàn mái + 2 cột", s);
+            Assert.Contains("Nâng cấp đợt A: lan can thẳng 3 m", s);
+            // what the storeys step expects: walls of storey height − slab, storey 2 one storey height up
+            Assert.Equal(2850, FloorPlanLogic.Storeys(2, 3000, null, 150, 10000, true)[1].WallHeight);
+            Assert.Equal(new[] { 10000.0, 13000, 16000 }, FloorPlanLogic.Storeys(2, 3000, null, 150, 10000, true).Select(x => x.BaseZ));
+            // what the railing step expects: 3 posts, and pieces that only touch (volume of the union = their sum)
+            var lay = RailingLogic.Build(new List<double[]> { new[] { 0.0, 0.0 }, new[] { 3000.0, 0.0 } }, false, new RailingLogic.Options());
+            Assert.Equal(3, lay.Posts);
+            Assert.Equal(31390000, lay.Boxes.Sum(b => b.Volume), 3);
+            for (int i = 0; i < lay.Boxes.Count; i++)
+                for (int j = i + 1; j < lay.Boxes.Count; j++)
+                    Assert.False(Overlap(lay.Boxes[i], lay.Boxes[j]), $"pieces {i} and {j} overlap");
+        }
+
+        /// <summary>Two axis-aligned railing pieces (rotation 0) share volume.</summary>
+        private static bool Overlap(PlanBox a, PlanBox b)
+        {
+            double[] ha = { a.Length / 2, a.Width / 2, a.Height / 2 }, hb = { b.Length / 2, b.Width / 2, b.Height / 2 };
+            for (int k = 0; k < 3; k++)
+                if (Math.Min(a.Center[k] + ha[k], b.Center[k] + hb[k]) - Math.Max(a.Center[k] - ha[k], b.Center[k] - hb[k]) <= 1e-9) return false;
+            return true;
         }
 
         [Fact]
         public void Railing_reads_its_path_only_and_scales_by_insunits()
         {
             var s = PlanTools;
+            Assert.Contains("Level(path.Select(q => q.Z), from);", s);
             Assert.Contains("var e = Acad.GetEntity(ctx, from, false);", s);
             Assert.Contains("q[0] * f, q[1] * f", s);
             Assert.Contains("b.Length / f", s);

@@ -86,6 +86,13 @@ export function errorResponse(id: string, code: string, message: string): ToolRe
 /** Calls that legitimately take long on a big drawing (render, plot, save, purge). */
 const SLOW_TOOLS = new Set(['plot_pdf', 'save_drawing', 'purge_unused', 'regen', 'attach_xref', 'reload_xref', 'bind_xref', 'zoom_extents']);
 const CAPTURE_TOOLS = new Set(['capture_view']);
+/**
+ * 3D builds that unite many boxes in one call (the walls of a plan, several storeys, a railing; nâng cấp đợt A): a
+ * time-out while AutoCAD is still uniting would make Claude start the same build again. A dry run only reads.
+ */
+const BUILD_TOOLS = new Set(['build_3d_from_plan', 'build_railing']);
+const slowBuild = (tool: unknown, params: unknown): boolean =>
+  typeof tool === 'string' && BUILD_TOOLS.has(tool) && (params as { dry_run?: unknown } | undefined)?.dry_run !== true;
 const MAX_TIMEOUT_MS = 5 * 60_000;
 
 /**
@@ -95,10 +102,10 @@ const MAX_TIMEOUT_MS = 5 * 60_000;
 export function timeoutFor(tool: string, params: Record<string, unknown>, base = DEFAULT_TOOL_TIMEOUT_MS): number {
   let ms = base;
   if (tool === 'batch_execute') {
-    const calls = Array.isArray(params.calls) ? (params.calls as Array<{ tool?: unknown }>) : [];
+    const calls = Array.isArray(params.calls) ? (params.calls as Array<{ tool?: unknown; params?: unknown }>) : [];
     ms = base + calls.length * 100;
-    if (calls.some((c) => typeof c?.tool === 'string' && (SLOW_TOOLS.has(c.tool) || CAPTURE_TOOLS.has(c.tool)))) ms = Math.max(ms, 120_000);
-  } else if (SLOW_TOOLS.has(tool) || CAPTURE_TOOLS.has(tool)) {
+    if (calls.some((c) => (typeof c?.tool === 'string' && (SLOW_TOOLS.has(c.tool) || CAPTURE_TOOLS.has(c.tool))) || slowBuild(c?.tool, c?.params))) ms = Math.max(ms, 120_000);
+  } else if (SLOW_TOOLS.has(tool) || CAPTURE_TOOLS.has(tool) || slowBuild(tool, params)) {
     ms = Math.max(base, 120_000);
   }
   return Math.min(ms, Math.max(MAX_TIMEOUT_MS, base)); // a longer CLAUDECAD_TOOL_TIMEOUT_MS is respected

@@ -26,10 +26,11 @@ Quy ước: đơn vị mm, WCS, Z hướng lên. Cốt ±0.000 (sàn tầng 1) �
 - Tường vẽ bằng **một polyline có bề rộng** = chiều dày được đọc là tường theo đường tim; bề rộng nhỏ hơn `min_thickness`
   chỉ là nét in, đọc như nét mặt tường. Tường vẽ bằng đường trục: truyền `centerline_handles` + `thickness`.
 - Mặt bằng của người dùng dùng tên layer khác (`TUONG`, `CUA`, `A-WALL-NEW`…): báo cáo `dry_run` có `layer_guess`
-  (layer → loại đoán theo tên). **Không tự dựng theo đoán**: nói ánh xạ cho người dùng và hỏi bằng
-  `request_confirmation` (ví dụ "Dựng 3D với: tường = TUONG, cửa đi = CUA, cửa sổ = CUASO?"), dừng lượt; người dùng
-  đồng ý mới dựng với `wall_layers` / `door_layers` / `window_layers` / `slab_layers` / `column_layers` (có `*`, ví dụ
-  `KT_TUONG*`). Trợ lý từ chối lệnh dựng dùng layer người dùng chưa nêu / chưa đồng ý.
+  (layer → loại đoán theo tên). **Không tự dựng theo đoán**: chạy thử với các layer đó, nói ánh xạ cho người dùng và
+  hỏi bằng `request_confirmation`, **ghi đủ từng tên layer trên thẻ** (ví dụ "Dựng 3D với: tường = TUONG, cửa đi =
+  CUA, cửa sổ = CUASO?"), dừng lượt; người dùng bấm Đồng ý mới dựng với `wall_layers` / `door_layers` /
+  `window_layers` / `slab_layers` / `column_layers` (có `*`, ví dụ `KT_TUONG*`). Trợ lý từ chối lệnh dựng dùng layer
+  người dùng chưa nêu / chưa đồng ý; layer đã đồng ý thì các lần dựng sau trong cùng cuộc chat không hỏi lại.
 
 Máy gói 3D cần vẽ mặt bằng để dựng (chỉ có đường cơ bản, không có kích thước / chữ): phòng 4 × 6 m theo trục
 [0,0]–[4000,6000], tường 220, cửa đi 900 ở cạnh phải (lỗ y = 2550…3450), một `batch_execute`:
@@ -114,7 +115,9 @@ Tầng 2 cùng mặt bằng: thêm `"base_z": 3300`.
 
 Nhiều tầng một lần ("3 tầng, mỗi tầng cao 3,3 m"): `{"storeys": 3, "storey_height": 3300, "slab_thickness": 120}`
 (tường mỗi tầng tự = 3300 − 120 = 3180, sàn tầng trên nằm trên đỉnh tường tầng dưới; `"roof_slab": true` thêm sàn mái
-khi người dùng muốn). Kết quả có `levels` (mỗi tầng: `base_z`, `wall_solid`, `slabs`, `columns`).
+khi người dùng muốn). Kết quả có `levels` (mỗi tầng: `base_z_mm`, `wall_solid`, `columns`, `slabs`) và
+`total_volume_m3` (tường / cột / sàn của mọi tầng); đã có sẵn một số tầng thì chỉ dựng các tầng còn thiếu (`base_z`
+của tầng thiếu đầu tiên + số tầng còn lại).
 
 Lan can theo một polyline (ban công, hành lang): `build_railing` với `path_handle`; mặc định cao **1100**, tay vịn
 50 × 50, trụ 50 × 50 cách ≤ 1500, song 20 × 20 khe ≤ 100 (`infill: "panel"` = tấm kính 20, `"none"` = chỉ trụ + tay
@@ -144,7 +147,7 @@ vịn); `base_z` = cao độ sàn (mm).
 | Cột tròn có đầu cột, chậu, bể tròn, ống ngắn | `revolve` | Biên dạng nửa mặt cắt vẽ cạnh trục, trục không cắt biên dạng |
 | Tay vịn, ống, gờ chỉ, máng xối, thép uốn | `sweep` | Tiết diện kín + đường dẫn; tiết diện rộng hơn bán kính cong thì AutoCAD từ chối |
 | Móng vuông lên cột tròn, ống khói thon, thân tàu | `loft` | Các tiết diện kín theo thứ tự từ dưới lên |
-| Cột theo mặt bằng | `build_3d_from_plan` | Hình kín trên `A-COLS` / `A-COL`, cao bằng tường |
+| Cột theo mặt bằng | `build_3d_from_plan` | Hình kín trên `A-COLS` / `A-COL`, cao bằng tường. Tường đã dựng từ trước, chỉ thêm cột: `extrude` các hình cột (`profile_handles`) lên chiều cao tường, layer `A-COLS-3D` |
 | Cột vuông, dầm, bậc thang | `draw_solid` `box` | Bậc: một hộp mỗi bậc, hoặc `extrude` biên dạng răng cưa |
 | Lan can | `build_railing` | Theo polyline, mặc định 1100 |
 | Dốc, mái dốc một phía | `draw_solid` `wedge` | Mặt cao ở phía `corner`, `rotation` để đổi hướng dốc |
