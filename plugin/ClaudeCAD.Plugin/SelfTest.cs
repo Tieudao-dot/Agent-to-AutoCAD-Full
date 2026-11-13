@@ -533,6 +533,82 @@ namespace ClaudeCAD.Plugin
                                        : new SelfTestRules.Verdict(false, string.Join("; ", errs));
             });
 
+            // Test & sửa đợt D: the same code paths as build_beam, build_3d_from_plan (curved wall), presspull and export_stl
+            Check("Nâng cấp đợt D: dầm chữ L, tường cong, kéo mặt trên (PRESSPULL), xuất STL", () =>
+            {
+                const double dx = 50000;
+                var errs = new List<string>();
+                var db = doc.Database;
+                T Run<T>(Func<ToolContext, Transaction, T> f)
+                {
+                    using (doc.LockDocument())
+                    using (var tr = doc.TransactionManager.StartTransaction())
+                    {
+                        var r = f(new ToolContext(doc, tr, true, null), tr);
+                        tr.Commit();
+                        return r;
+                    }
+                }
+                List<object> Pt(double x, double y) => new List<object> { x, y };
+                void Vol(string what, double actual, double expected)
+                {
+                    var v = SelfTestRules.CheckVolume(what, actual, expected);
+                    if (!v.Ok) errs.Add(v.Detail);
+                }
+
+                // L beam 4000 + 3000 on its axis, 220 × 400: mitred corner = axis length × width × height
+                var beam = Run((ctx, tr) => (Dictionary<string, object>)DrawingService.BuildBeam(ctx, new Params("build_beam", new Dictionary<string, object>
+                {
+                    ["path_points"] = new List<object> { Pt(dx, 0), Pt(dx + 4000, 0), Pt(dx + 4000, 3000) }, ["top_z"] = 3000.0, ["layer"] = "0",
+                })));
+                Vol("dầm chữ L 220×400", Convert.ToDouble(beam["total_volume_m3"]) * 1e9, 7000.0 * 220 * 400);
+                string beamHandle = (string)((List<object>)beam["handles"])[0];
+
+                // a quarter of a curved wall: arcs R3000 and R3200, wall 3000 high
+                var wall = Run((ctx, tr) =>
+                {
+                    var ms = (BlockTableRecord)tr.GetObject(SymbolUtilityServices.GetBlockModelSpaceId(db), OpenMode.ForWrite);
+                    string Add(Entity e) { e.SetDatabaseDefaults(db); ms.AppendEntity(e); tr.AddNewlyCreatedDBObject(e, true); return e.Handle.ToString(); }
+                    var arcs = new List<object>
+                    {
+                        Add(new Arc(new Point3d(dx + 10000, 0, 0), 3000, 0, Math.PI / 2)),
+                        Add(new Arc(new Point3d(dx + 10000, 0, 0), 3200, 0, Math.PI / 2)),
+                    };
+                    return (Dictionary<string, object>)DrawingService.Build3dFromPlan(ctx, new Params("build_3d_from_plan", new Dictionary<string, object>
+                    {
+                        ["wall_handles"] = arcs, ["wall_height"] = 3000.0, ["slab"] = "none", ["wall_layer_3d"] = "0", ["on_existing"] = "add",
+                    }));
+                });
+                if (!wall.ContainsKey("curved_walls") || !wall.ContainsKey("wall_solid")) errs.Add("tường cong: không nhận được hai cung đồng tâm");
+                else Vol("¼ tường cong R3000–3200 cao 3000", Convert.ToDouble(((Dictionary<string, object>)wall["wall_solid"])["volume_m3"]) * 1e9,
+                    Math.PI / 4 * (3200.0 * 3200 - 3000.0 * 3000) * 3000);
+
+                // PRESSPULL: the top face of a 1000 box out by 200 (positive = out, the solid grows)
+                string box = Run((ctx, tr) =>
+                {
+                    var b = AddBox(tr, 1000, 1000, 1000, new double[] { dx + 20000, 0, 0 });
+                    return b.Handle.ToString();
+                });
+                Run((ctx, tr) => DrawingService.Presspull(ctx, new Params("presspull", new Dictionary<string, object>
+                {
+                    ["handle"] = box, ["face_filter"] = new List<object> { "top" }, ["distance"] = 200.0,
+                })));
+                double pulled = Run((ctx, tr) => ((Solid3d)tr.GetObject(Acad.IdFromHandle(db, box), OpenMode.ForRead)).MassProperties.Volume);
+                Vol("hộp 1000 kéo mặt trên +200", pulled, 1000.0 * 1000 * 1200);
+
+                // STL of the beam: a file with triangles, the drawing unchanged
+                string stl = Path.Combine(dir, "selftest-dam.stl");
+                var st = Run((ctx, tr) => (Dictionary<string, object>)DrawingService.ExportStl(ctx, new Params("export_stl", new Dictionary<string, object>
+                {
+                    ["handles"] = new List<object> { beamHandle }, ["output"] = stl, ["overwrite"] = true,
+                })));
+                int tris = File.Exists(stl) ? Solid3Logic.ReadStl(File.ReadAllBytes(stl)).Count : 0;
+                if (tris == 0 || tris != Convert.ToInt32(st["triangles"])) errs.Add($"STL: {tris} tam giác trong file, lệnh báo {st["triangles"]}");
+                return errs.Count == 0
+                    ? new SelfTestRules.Verdict(true, $"dầm, tường cong, PRESSPULL đúng thể tích; STL {tris} tam giác (selftest-dam.stl trong thư mục thử)")
+                    : new SelfTestRules.Verdict(false, string.Join("; ", errs));
+            });
+
             string versionFile = Path.Combine(dir, "version-copy.dwg");
             Do("Bản sao phiên bản (Wblock + SaveAs)", () =>
             {

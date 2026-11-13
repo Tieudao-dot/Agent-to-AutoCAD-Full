@@ -393,9 +393,15 @@ mm. Sau mỗi dòng gõ U một lần: mọi thay đổi của lượt đó mấ
 | Q10 | ★ | Dầm đâm vào ống (hai khối giao nhau). "kiểm tra va chạm và lập bảng" | Liệt kê cặp khối, layer, thể tích giao. Gói Full: chèn bảng "BẢNG VA CHẠM KHỐI 3D" | ☐ | ☐ | D6 |
 | Q11 | ★ | Máy gói `3D`: lặp Q9, Q10 kèm "chèn bảng vào bản vẽ" | Claude **không chèn bảng** (bảng là chữ, thuộc gói 2D / Full), nói số liệu trong khung chat và báo cần gói Full để có bảng | ☐ | ☐ | gói |
 | Q12 | ○ | Máy gói `2D`: "dựng dầm", "xuất STL" | Claude báo các việc này thuộc gói 3D, không làm gì | ☐ | ☐ | gói |
+| Q13 | ★ | `CLAUDECHATSELFTEST` | Có dòng ✓ "Nâng cấp đợt D: dầm chữ L, tường cong, kéo mặt trên (PRESSPULL), xuất STL" (dầm 0,616 m³, ¼ tường cong, hộp kéo lên 1,2 m³, file `selftest-dam.stl` mở được) | ☐ | ☐ | ND-test |
+| Q14 | ○ | Đường dầm đi tới rồi quay ngược lại trên cùng một nét (polyline 0 → 4000 → 1000). "dựng dầm theo đường này" | Dựng được (trước đây AutoCAD từ chối vì góc quay 180°) | ☐ | ☐ | ND-1 |
+| Q15 | ○ | Hình kín đứng riêng, không có khối: "khoét hình này vào khối" mà không nói khối nào | Claude không dựng khối mới thay; hỏi lại khối nào (hoặc báo cần chỉ khối) | ☐ | ☐ | ND-2 |
+| Q16 | ○ | Ghi macro có "kéo mặt trên của hộp **có từ trước** lên 500", lưu macro, chạy lại macro | Macro **không chạy** (báo "Macro này sửa khối 3D có sẵn…"), hộp không đổi. Macro tự dựng hộp rồi kéo thì chạy được | ☐ | ☐ | ND-3 |
+| Q17 | ○ | Bản vẽ đơn vị **mét** (INSUNITS = m): hai khối chồng nhau, "kiểm tra va chạm" | Thể tích giao ra đúng m³ (không còn ra số nhỏ 10⁹ lần); gói Full chèn bảng đúng số | ☐ | ☐ | ND-4 |
 
 Còn chỉ thấy trên AutoCAD thật: hướng kéo mặt của PRESSPULL (dương = ra ngoài), khối giao không đo được thể tích (báo
-"chưa đo được"), STL của bản vẽ đơn vị mét (phải ra mm), tường cong đi vào tường thẳng ở góc.
+"chưa đo được"), STL của bản vẽ đơn vị mét (phải ra mm), tường cong đi vào tường thẳng ở góc. Q13–Q17 là các lỗi của Test & sửa đợt D
+([`ban-giao/nang-cap-d-test.md`](ban-giao/nang-cap-d-test.md)); Q13 kiểm luôn hướng kéo mặt của PRESSPULL.
 
 ## Gửi lại gì khi lỗi
 

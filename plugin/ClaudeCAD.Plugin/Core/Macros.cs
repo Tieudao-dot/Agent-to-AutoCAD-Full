@@ -177,7 +177,23 @@ namespace ClaudeCAD.Plugin.Core
         public static readonly HashSet<string> AlwaysConfirmTools = new HashSet<string>(StringComparer.Ordinal)
         {
             "solid_union", "solid_subtract", "solid_intersect", "slice_solid", "fillet_edges", "chamfer_edges", "shell_solid",
+            // Test & sửa đợt D (ND-3): PRESSPULL on a solid that existed before (handle, target)
+            "presspull",
         };
+
+        /// <summary>
+        /// The solids a call of an AlwaysConfirmTools tool changes. presspull: the solid whose faces it pulls (handle) and the
+        /// target unless mode "new" (its profile curves are only read, or erased by the usual count rule); others: every handle param.
+        /// </summary>
+        public static IEnumerable<string> SolidEditHandles(string tool, Dictionary<string, object> p)
+        {
+            if (tool != "presspull") return HandleParams(p);
+            var hs = new List<string>();
+            if (p.TryGetValue("handle", out var h) && h is string hh) hs.Add(hh);
+            bool isNew = p.TryGetValue("mode", out var m) && m is string ms && ms.Trim().Equals("new", StringComparison.OrdinalIgnoreCase);
+            if (!isNew && p.TryGetValue("target", out var t) && t is string th) hs.Add(th);
+            return hs;
+        }
 
         /// <summary>
         /// KT-10: calls of the macro that change the shape of solids the macro did not build itself ("tool (handles)"). A macro
@@ -193,7 +209,7 @@ namespace ClaudeCAD.Plugin.Core
             {
                 if (AlwaysConfirmTools.Contains(c.Tool ?? ""))
                 {
-                    var ext = HandleParams(c.Params ?? new Dictionary<string, object>()).Where(h => !created.Contains(h)).Distinct(StringComparer.OrdinalIgnoreCase).ToList();
+                    var ext = SolidEditHandles(c.Tool, c.Params ?? new Dictionary<string, object>()).Where(h => !created.Contains(h)).Distinct(StringComparer.OrdinalIgnoreCase).ToList();
                     if (ext.Count > 0) found.Add($"{c.Tool} ({string.Join(", ", ext.Take(5))}{(ext.Count > 5 ? ", …" : "")})");
                 }
                 foreach (var h in c.ResultHandles ?? new List<string>()) created.Add(h);

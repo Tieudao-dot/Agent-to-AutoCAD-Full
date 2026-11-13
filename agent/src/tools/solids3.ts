@@ -53,7 +53,7 @@ export function solid3Tools(b: ToolBridge): AnyTool[] {
     cadTool(b, 'presspull',
       'PRESSPULL: (1) handle + faces / face_filter (+ topology_id from get_solid_info faces: true): move those faces of a solid by distance along their outward normal ' +
         '(positive = out, the solid grows; negative = in). (2) a closed area (profile_points [+ profile_bulges] or profile_handles) pulled by distance along its normal ' +
-        '(XY profiles: positive = up): a new solid, or with target added to / cut from that solid (mode auto: a pull into the solid cuts, out of it adds; add; subtract; new). ' +
+        '(XY profiles: positive = up): a new solid, or with target added to / cut from that solid (mode auto: a pull into the solid cuts, out of it adds; add; subtract; new; add / subtract need target). ' +
         'Changing an existing solid (handle, target): when it existed before this turn, first call request_confirmation with its handle and end the turn; run it after the user agrees. ' +
         'Returns handle(s), volume_before and the new volume / min / max, mode.',
       {

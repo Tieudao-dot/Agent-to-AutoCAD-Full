@@ -208,7 +208,7 @@ namespace ClaudeCAD.Plugin.Drawing
 
         // ================================================================= PRESSPULL
 
-        private static object Presspull(ToolContext ctx, Params p)
+        internal static object Presspull(ToolContext ctx, Params p)
         {
             const string tool = "presspull";
             bool faceMode = p.Has("handle"), profileMode = p.Has("profile_points") || p.Has("profile_handles");
@@ -241,7 +241,11 @@ namespace ClaudeCAD.Plugin.Drawing
 
             string mode = Solid3Logic.NormalizePresspullMode(p.Str("mode", "auto"), tool);
             string target = p.Has("target") ? p.Handle("target").ToUpperInvariant() : null;
-            Solid3d ts = target != null ? SolidForWrite(ctx, target, tool) : null;
+            // Test & sửa đợt D (ND-2): "add" / "subtract" without a target used to become a new solid without a word; refuse
+            // before anything is built. mode "new" never changes the target (the assistant does not ask the card for it), so
+            // it is not opened for write either.
+            if (target == null) Solid3Logic.ResolvePresspull(mode, false, null, 0, tool);
+            Solid3d ts = target != null && mode != "new" ? SolidForWrite(ctx, target, tool) : null;
             var regions = ProfileRegions(ctx, p, out var sources, out _);
             var pieces = new List<Solid3d>();
             try
@@ -264,6 +268,7 @@ namespace ClaudeCAD.Plugin.Drawing
                 EraseProfiles(ctx, p, sources);
                 var res = (Dictionary<string, object>)SolidsResult(ids, pieces);
                 res["mode"] = "new";
+                if (target != null) res["note"] = $"mode \"new\": a separate solid; {target} was not changed.";
                 return res;
             }
             double before2 = VolumeOf(ts);
@@ -314,7 +319,7 @@ namespace ClaudeCAD.Plugin.Drawing
             return list;
         }
 
-        private static object ExportStl(ToolContext ctx, Params p)
+        internal static object ExportStl(ToolContext ctx, Params p)
         {
             const string tool = "export_stl";
             double f = FloorPlanLogic.MmPerUnit(Convert.ToInt32(ctx.Db.Insunits), out var unitName);
@@ -326,7 +331,8 @@ namespace ClaudeCAD.Plugin.Drawing
             string full;
             try { full = Path.GetFullPath(Path.IsPathRooted(output) ? output : Path.Combine(drawingDir, output)); }
             catch (Exception) { throw ToolException.Invalid($"{tool}: '{output}' is not a valid file path."); }
-            var badName = Util2DLogic.BadFileName(Path.GetFileName(full));
+            // Test & sửa đợt D (ND-6): ".stl" alone would make a file with no name
+            var badName = string.IsNullOrWhiteSpace(Path.GetFileNameWithoutExtension(full)) ? "the file has no name before .stl" : Util2DLogic.BadFileName(Path.GetFileName(full));
             if (badName != null) throw ToolException.Invalid($"{tool}: '{output}': {badName}. Give another file name ending in .stl.");
             if (Directory.Exists(full)) throw ToolException.Invalid($"{tool}: '{output}' is a folder; give a file name ending in .stl.");
             var outDir = Path.GetDirectoryName(full);

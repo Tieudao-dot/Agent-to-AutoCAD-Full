@@ -478,7 +478,7 @@ namespace ClaudeCAD.Core.Tests
             Assert.Contains("OverlapVolume(solids[i], solids[j])", s);
             Assert.Contains("Solid3Logic.MaxScheduleOverlapPairs", s);
             var s2 = Solid2Src;
-            Assert.Contains("Solid3Logic.ClashTable(clashRows, dec)", s2);
+            Assert.Contains("Solid3Logic.ClashTable(clashRows, dec, mmPerUnit)", s2); // Test & sửa đợt D (ND-4): drawing units
             Assert.Contains("[\"layer_a\"] = sa.Layer", s2);
         }
     }

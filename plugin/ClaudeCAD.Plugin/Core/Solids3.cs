@@ -103,6 +103,11 @@ namespace ClaudeCAD.Plugin.Core
         public const double JointTolDeg = 0.5;
         /// <summary>Joints turning more than this (degrees) get a bevel instead of a mitre (no long spike).</summary>
         public const double MaxMitreDeg = 120;
+        /// <summary>
+        /// Test &amp; sửa đợt D (ND-1): a path that doubles back (turn of about 180°) needs no filler: the square ends of the two
+        /// segments lie on each other, and the filler would be a flat triangle (no area) that AutoCAD cannot make a region of.
+        /// </summary>
+        public const double MaxFillerDeg = 179.5;
 
         // ================================================================== arcs
 
@@ -263,7 +268,7 @@ namespace ClaudeCAD.Plugin.Core
                 var ta = endT[i]; var tb = startT[(i + 1) % segs];
                 double cross = ta[0] * tb[1] - ta[1] * tb[0], dot = ta[0] * tb[0] + ta[1] * tb[1];
                 double turn = Math.Atan2(cross, dot);
-                if (Math.Abs(turn) * 180 / Math.PI < JointTolDeg) continue;
+                if (Math.Abs(turn) * 180 / Math.PI < JointTolDeg || Math.Abs(turn) * 180 / Math.PI >= MaxFillerDeg) continue;
                 // the outside of the corner is on the right of a left turn
                 double side = turn > 0 ? -1 : 1;
                 var na = new[] { -ta[1] * side * h, ta[0] * side * h };
@@ -781,8 +786,13 @@ namespace ClaudeCAD.Plugin.Core
         {
             var f = FloorPlanLogic.Fold(layer ?? "");
             var words = f.Split(new[] { '-', '_', ' ', '.', '$', '|' }, StringSplitOptions.RemoveEmptyEntries);
-            bool Has(params string[] keys) => words.Any(w => keys.Any(k => w == k || w.StartsWith(k, StringComparison.Ordinal) && k.Length >= 3));
-            if (Has("COL", "COLS", "COLUMN", "COT")) return 0;
+            // Test & sửa đợt D (ND-5): a short key (COL, COT, DAM, SAN) is the whole word or the word plus digits / an S (COT1,
+            // COLS); only the long keys match as a prefix (COLUMNS, BEAMS, TUONGXAY). Before, "SANH" (lobby), "COLOR",
+            // "DAMPER" were taken for slab / column / beam.
+            bool Has(params string[] keys) => words.Any(w => keys.Any(k =>
+                w == k || (k.Length >= 4 ? w.StartsWith(k, StringComparison.Ordinal)
+                                         : w.StartsWith(k, StringComparison.Ordinal) && (w.Substring(k.Length) == "S" || w.Substring(k.Length).All(char.IsDigit)))));
+            if (Has("COL", "COLUMN", "COT")) return 0;
             if (Has("BEAM", "DAM")) return 1;
             if (Has("WALL", "TUONG")) return 2;
             if (Has("SLAB", "SAN", "FLOR", "FLOOR")) return 3;
@@ -871,18 +881,18 @@ namespace ClaudeCAD.Plugin.Core
         public sealed class ClashRow
         {
             public string A, LayerA, B, LayerB;
-            public double? Volume; // mm³ (null = not measured)
+            public double? Volume; // drawing units³ (null = not measured); ClashTable converts with mmPerUnit
         }
 
         /// <summary>The clash table (check_interference with table_position): a row per pair and the total.</summary>
-        public static List<List<object>> ClashTable(IList<ClashRow> rows, int decimals)
+        public static List<List<object>> ClashTable(IList<ClashRow> rows, int decimals, double mmPerUnit = 1)
         {
             var data = new List<List<object>> { new List<object> { "STT", "Khối 1", "Layer 1", "Khối 2", "Layer 2", "Thể tích giao (m³)" } };
             int i = 0;
             foreach (var r in rows)
                 data.Add(new List<object> { (++i).ToString(CultureInfo.InvariantCulture), r.A, r.LayerA ?? "", r.B, r.LayerB ?? "",
-                    r.Volume == null ? "chưa đo được" : Num(r.Volume.Value / 1e9, decimals) });
-            data.Add(new List<object> { "", "Tổng", "", rows.Count.ToString(CultureInfo.InvariantCulture) + " cặp", "", Num(rows.Where(r => r.Volume != null).Sum(r => r.Volume.Value) / 1e9, decimals) });
+                    r.Volume == null ? "chưa đo được" : Num(M3(r.Volume.Value, mmPerUnit), decimals) });
+            data.Add(new List<object> { "", "Tổng", "", rows.Count.ToString(CultureInfo.InvariantCulture) + " cặp", "", Num(M3(rows.Where(r => r.Volume != null).Sum(r => r.Volume.Value), mmPerUnit), decimals) });
             return data;
         }
 
