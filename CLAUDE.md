@@ -145,5 +145,6 @@ dự án gốc), `bo-cai/README.md`.
 | Test tổng thể | `session_01D56HmGjmEKBFmZETiignkt` | Nhánh `full/test-tong-the` (tách từ `full/ve-3d-test-3` @ `4bf5cce`, gộp tài liệu luồng chính): rà theo chiều ngang gói + 3 đợt 3D, sửa lỗi, đo token theo gói, checklist tổng `docs/checklist-tong-the.md`; 1 lượt CI. Bàn giao: `docs/ban-giao/test-tong-the.md` |
 | Kiểm tra độc lập | `session_01D56HmF7CGr1nonkGWUKkGr` | Nhánh `full/kiem-tra-doc-lap` (tách từ `full/test-tong-the` @ `9ef9db9`): agent mới test lại toàn bộ một lượt, chỉ ghi lỗi (không sửa), phân theo phần phụ trách; 1 lượt CI; sau đó soát lại các lỗi đã sửa. Báo cáo: `docs/ban-giao/kiem-tra-doc-lap.md` |
 | Bộ cài thử nội bộ | `session_01D56HmEzAMRB7RXVJqoQPnD` | Nhánh `full/ban-thu-noi-bo` (tách từ `full/test-tong-the`, **không bao giờ gộp**): bộ cài thử chỉ cho chủ dự án, bỏ qua kích hoạt, gói Full, hết hạn 10/12/2026, nhãn "BẢN THỬ NỘI BỘ"; 1 lượt CI. Bàn giao: `docs/ban-giao/ban-thu-noi-bo.md` |
+| QnA | `session_01D56HmJBDC5zZsEvTcJ4Jbt` | Hỏi đáp về plugin cho chủ dự án, đọc code / tài liệu mới nhất (`full/test-tong-the`). Không sửa code, không commit. Lỗi hoặc việc cần quyết thì chuyển về luồng chính |
 
 Link mở thread: `https://claude.ai/code/<session id>`.
