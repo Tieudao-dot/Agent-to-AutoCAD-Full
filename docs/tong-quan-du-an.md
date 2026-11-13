@@ -28,8 +28,9 @@ quy tắc làm việc và danh bạ thread: [`../CLAUDE.md`](../CLAUDE.md).
   dừng trước phát hành. **Đợt A xong** (13/11 16h17, `full/nang-cap-a-test` @ `33acb5f`, $35,7). **Đợt B xong** (19h31,
   `full/nang-cap-b-test` @ `265b66e`, ~$21). **Đợt C xong** (21h40,
   `full/nang-cap-c-test` @ `f4f27fe`, ~$12). **Đợt D xong** (22h50,
-  `full/nang-cap-d-test` @ `db34801`, ~$15). Đợt E đang chạy: thread `session_01D56HmJ3WbDQRkUMc3aJjvF`, nhánh
-  `full/nang-cap-e`. Tiến độ: bảng trong kế hoạch.
+  `full/nang-cap-d-test` @ `db34801`, ~$15). **Đợt E xong** (23h50,
+  `full/nang-cap-e-test` @ `cdaa29b`, ~$12). Cả 5 đợt ~$96. Đang chạy test tổng thể nâng cấp (thread
+  `session_01D56HmGm85zfmxQqdNwrF2N`, nhánh `full/nang-cap-tong-the`), sau đó kiểm tra độc lập. Tiến độ: bảng trong kế hoạch.
 
 ## 2. Việc chờ chủ dự án
 
