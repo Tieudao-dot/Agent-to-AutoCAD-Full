@@ -63,7 +63,7 @@ này **giữ nhánh tích hợp** cho các bản sửa sau kiểm tra độc l�
   gói 3D / 2D nêu lệnh mới đúng phía có / không; Full không có danh sách; mô tả `build_roof` nêu sàn mái.
 - Build net48 / net8.0-windows / net10.0-windows (Linux, `-p:EnableWindowsTargeting=true`, xóa `obj` / `bin` giữa các
   lần): xanh, 0 cảnh báo.
-- CI: xem mục "CI" dưới (1 lượt, `release: "false"`).
+- CI: run **43468951145 xanh** ở `4893283` (`release: "false"`).
 
 ## Giới hạn còn lại
 
@@ -83,4 +83,5 @@ này **giữ nhánh tích hợp** cho các bản sửa sau kiểm tra độc l�
 
 ## CI
 
-(ghi sau khi chạy)
+Run **43468951145 xanh** ở `4893283` (`release: "false"`, Windows: trợ lý, test lõi, UI test WPF, build 3 bản, gói +
+Setup.exe; bước phát hành bỏ qua đúng). Sau đó một commit ghi kết quả CI vào file này (chỉ tài liệu).
