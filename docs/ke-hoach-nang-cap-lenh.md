@@ -50,3 +50,9 @@ file).** Mỗi đợt chỉ bắt đầu khi chủ dự án duyệt nội dung +
 4. **Thứ tự** A → B → C → D → E. F để sau phát hành.
 5. **Duyệt chi theo từng đợt:** trước mỗi đợt luồng chính báo nội dung + chi phí ước, chủ dự án đồng ý mới làm; xong
    đợt báo thời gian và phần tốn nhất.
+
+## Duyệt từng đợt
+
+| Ngày | Đợt | Chủ dự án duyệt | Chi phí ước | Trạng thái |
+| --- | --- | --- | --- | --- |
+| 13/11 | A | Đồng ý, **chờ chủ dự án thử phần 3D trên AutoCAD thật trước** (bộ cài thử nội bộ, `checklist-tong-the.md` phần 0, 2, 3, 4, 5, ~54 phút; quan trọng nhất phần 0 và 5). Lỗi tìm được sửa trước, rồi mới mở thread đợt A | $10–30 (đoán theo các đợt 3D trước, chưa đo), 1 thread viết + 1 thread con test & sửa, 2 lượt CI | Chờ kết quả thử 3D |

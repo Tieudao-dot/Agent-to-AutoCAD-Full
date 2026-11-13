@@ -24,14 +24,16 @@ quy tắc làm việc và danh bạ thread: [`../CLAUDE.md`](../CLAUDE.md).
 - **Báo cáo sáng 13/11:** [`bao-cao-sang-13-11.md`](bao-cao-sang-13-11.md). Chủ dự án đã đồng ý cả 9 quyết định
   luồng chính đưa ra trong đêm (13/11).
 - **Kế hoạch nâng cấp lệnh vẽ (13/11):** [`ke-hoach-nang-cap-lenh.md`](ke-hoach-nang-cap-lenh.md), 5 điểm đã chốt.
-  Đợt A → B → C → D → E, mỗi đợt chủ dự án duyệt trước; nâng cấp xong mới phát hành.
+  Đợt A → B → C → D → E, mỗi đợt chủ dự án duyệt trước; nâng cấp xong mới phát hành. **Đợt A đã duyệt (13/11)**,
+  bắt đầu sau khi chủ dự án thử phần 3D bằng bộ cài thử nội bộ và lỗi tìm được đã sửa.
 
 ## 2. Việc chờ chủ dự án
 
 1. **Dựng máy chủ kích hoạt riêng** theo [`dung-may-chu-kich-hoat-full.md`](dung-may-chu-kich-hoat-full.md), gửi luồng
    chính URL web app + 2 dòng khóa công khai (không gửi khóa riêng / SECRET).
 2. Sau bước 1: luồng chính giao gắn URL / khóa, build **bộ cài thử**; chủ dự án thử theo checklist tổng, gửi lỗi.
-3. Duyệt từng đợt nâng cấp (bắt đầu từ đợt A) theo [`ke-hoach-nang-cap-lenh.md`](ke-hoach-nang-cap-lenh.md).
+3. **Thử phần 3D** bằng bộ cài thử nội bộ (`checklist-tong-the.md` phần 0, 2, 3, 4, 5, ~54 phút), gửi lỗi. Xong thì
+   luồng chính mở thread đợt A. Các đợt B → E duyệt từng đợt theo [`ke-hoach-nang-cap-lenh.md`](ke-hoach-nang-cap-lenh.md).
 4. Trước khi phát hành: số phiên bản (plugin / trợ lý vẫn ghi 0.9.4), secret CI của repo Full, đồng ý merge `main`,
    các chỗ còn trỏ về dự án gốc ([`cho-tro-ve-repo-goc.md`](cho-tro-ve-repo-goc.md)).
 
@@ -89,4 +91,4 @@ Cách giảm thêm còn lại: gộp 6 lệnh khối cơ bản thành 1 lệnh (
 - **13/11/2026:**
   - chủ dự án đồng ý 9 quyết định đêm qua, chốt squash khi phát hành;
   - bộ cài thử nội bộ (`full/ban-thu-noi-bo`), thread QnA;
-  - kế hoạch nâng cấp lệnh vẽ, chốt 5 điểm.
+  - kế hoạch nâng cấp lệnh vẽ, chốt 5 điểm; duyệt đợt A, chờ thử 3D thật.
