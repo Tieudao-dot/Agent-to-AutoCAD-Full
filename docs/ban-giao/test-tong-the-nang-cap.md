@@ -30,7 +30,42 @@ Test: lõi 866 (+5: `TongTheNangCapTests` KT2-01 ×3, KT2-20, KT2-29), trợ lý
 
 ### Phần 2: gộp bản sửa của 5 đợt
 
-(ghi khi gộp: lỗi → thread → commit)
+Gộp vào `full/nang-cap-tong-the` (không xung đột) theo thứ tự A `75344e0`, B `7cf2873`, C `d14e8fc`, D `345c9ad`, E
+`4a43452`; kết quả test / CI ghi dưới. Cả 31 lỗi:
+
+| Mã | Mức | Lỗi (tóm tắt) | Thread sửa | Commit |
+| --- | --- | --- | --- | --- |
+| KT2-01 | vừa | Macro coi đối tượng "bị sửa" là "do macro tạo". | Test tổng thể nâng cấp | `b9f7136` |
+| KT2-02 | vừa | Tìm & thay hỏng cả lượt khi gặp chữ trên layer khóa, lỗi không nói chữ nào. | Đợt C | `d14e8fc` |
+| KT2-03 | vừa | Kéo giãn theo khung chọn sửa cả đối tượng trên layer đang tắt. | Đợt B | `7cf2873` |
+| KT2-04 | vừa | Tiện ích 2D trong bản vẽ đơn vị mét (INSUNITS = m) dùng số mm. | Đợt C | `d14e8fc` |
+| KT2-05 | vừa | Kiểm tra "cầu thang vừa ô" bỏ sót phần lồi vào ô, cầu thang dựng xuyên cột / tường. | Đợt E | `4a43452` |
+| KT2-06 | vừa | Xuất STL méo khi mô hình ở tọa độ lớn | Đợt D | `345c9ad` |
+| KT2-07 | vừa | Hướng dẫn dầm dưới sàn mâu thuẫn với code. | Đợt D | `345c9ad` |
+| KT2-08 | nhẹ | hai mái chồng nhau | Đợt E | `4a43452` |
+| KT2-09 | nhẹ | (a) Lỗi mái 4 dốc trên đường bao lõm gợi ý "dùng type gable", nhưng gable cũng đòi hình chữ nhật nên bị từ chố… | Đợt E | `4a43452` |
+| KT2-10 | nhẹ | `array_rect` `level_spacing` mô tả là mm nhưng plugin dùng thẳng đơn vị bản vẽ: bản vẽ mét, "3 tầng cột, cách … | Đợt A | `75344e0` |
+| KT2-11 | nhẹ | Đường bao cột vẽ trùng hai lần → hai khối cột trùng nhau (khối lượng cột gấp đôi, nhấp nháy màn hình). Sàn có … (phần "cân nhắc" chưa làm, xem `nang-cap-a.md`) | Đợt A | `75344e0` |
+| KT2-12 | nhẹ | mở | Đợt D | `345c9ad` |
+| KT2-13 | nhẹ | PRESSPULL `distance` là đơn vị bản vẽ trong khi schema ghi mm; `build_beam` cùng đợt thì quy đổi. Bản vẽ mét: … | Đợt D | `345c9ad` |
+| KT2-14 | nhẹ | Gói 3D: trợ lý vẫn chào `match_properties` `properties` "text" / "dimension" (plugin từ chối đúng) → Claude đư… | Đợt B | `7cf2873` |
+| KT2-15 | nhẹ | vừa tạo trong lượt | Đợt B | `7cf2873` |
+| KT2-16 | nhẹ | `plot_pdf` báo `exists: true` dù không ghi gì: file PDF cũ đang có sẵn (hoặc đang mở trong trình xem) thì kết … | Đợt C | `d14e8fc` |
+| KT2-17 | nhẹ | In nhiều layout vào một PDF ép mọi trang cùng một khổ giấy mặc định (layout A1 và A3 trộn lẫn đều ra cùng khổ,… | Đợt C | `d14e8fc` |
+| KT2-18 | nhẹ | `check_interference` với `handles: [A]`, `other_handles: [A]` (mọi cặp là tự so với mình) trả `interfere: fals… | Đợt D | `345c9ad` |
+| KT2-19 | nhẹ | `build_beam` không có giới hạn tổng: 500 đường × 2000 đoạn → ~10⁶ phép extrude + cộng khối trên luồng chính, A… | Đợt D | `345c9ad` |
+| KT2-20 | nhẹ | Dòng trạng thái khung chat hiện tên lệnh tiếng Anh thô cho các lệnh mới đợt B, C, D: `stretch_entities`, `brea… | Test tổng thể nâng cấp | `b9f7136` |
+| KT2-21 | nhẹ | 1 tầng + `storey_height` + không có đường bao sàn: tường thấp đi 150 mm (3300 − 150) mà không có sàn ở trên; l… | Đợt A | `75344e0` |
+| KT2-22 | nhẹ | đoán | Đợt A | `75344e0` |
+| KT2-23 | nhẹ | mọi | Đợt B | `7cf2873` |
+| KT2-24 | nhẹ | `lengthen_entity` trên LINE nghiêng / 3D chỉ tính trong mặt XY: đường nghiêng ra độ dài khác yêu cầu (kết quả … | Đợt B | `7cf2873` |
+| KT2-25 | nhẹ | Schema `stretch_entities` `polygon` không có `.max(1000)` trong khi plugin giới hạn 1000 đỉnh | Đợt B | `7cf2873` |
+| KT2-26 | nhẹ | System prompt 3D: tiêu đề `# 3D modelling (...)` và luật 3D chưa nhắc `build_beam`, `presspull`, `export_stl`,… | Test tổng thể nâng cấp | `b9f7136` |
+| KT2-27 | nhẹ | Câu "gói 3D không gồm" trong system prompt thiếu wipeout / revision cloud (nhãn 2D trong `Plans.cs`) | Test tổng thể nâng cấp | `b9f7136` |
+| KT2-28 | nhẹ | Mô tả `dim_floor_plan` `spacing` ghi "mặc định 8 mm × DIMSCALE" nhưng code lấy `spacing = offset` (truyền `off… | Đợt C | `d14e8fc` |
+| KT2-29 | nhẹ | Mô tả `draw_solid` và tổng quan ghi gộp 6 lệnh "bớt ~2k token", số đo thật ~1,1k (`nang-cap-a.md:93`, `bo-cai/… | Test tổng thể nâng cấp | `b9f7136` |
+| KT2-30 | nhẹ | Tài liệu tình hình cũ: `tong-quan-du-an.md:11, 14` còn nhánh tích hợp `full/test-tong-the` @ `19944df`, test 3… | Luồng chính | `69bf71c` (claude/inspiring-cray-58xsmt) |
+| KT2-31 | nhẹ | Checklist tổng: đầu file (`:3-4`) và tổng quan `:22` chỉ nêu thời gian phần I–M, X (~97 / ~157 phút), không nê… | Test tổng thể nâng cấp (checklist) + luồng chính (tổng quan) | `b9f7136` + 69bf71c |
 
 ## Đã rà theo chiều ngang, không phải lỗi
 
