@@ -72,7 +72,7 @@ Kiểm tra độc lập $22; test tổng thể $65 (gồm bộ cài, 3 vòng g�
 
 | Đợt | Thread viết | Thread con Test & sửa | Nhánh | Trạng thái |
 | --- | --- | --- | --- | --- |
-| A | `session_01D56HmEZnPtpeS5RWXPVPYD` (mở 13/11 14h28) | (thread đợt tự mở) | `full/nang-cap-a` → `full/nang-cap-a-test` | Đang viết |
+| A | `session_01D56HmEZnPtpeS5RWXPVPYD` (mở 13/11 14h28; viết + tự rà xong 15h48 @ `fc68469`, CI 43390204331 xanh) | `session_01D56HmExJjYYvbztLiiRbdx` (mở 15h48) | `full/nang-cap-a` → `full/nang-cap-a-test` | Đang test & sửa |
 | B | | | | Chờ A xong |
 | C | | | | |
 | D | | | | |
