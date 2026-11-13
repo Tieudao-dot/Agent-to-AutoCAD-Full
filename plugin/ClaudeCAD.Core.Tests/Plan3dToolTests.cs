@@ -43,7 +43,7 @@ namespace ClaudeCAD.Core.Tests
         {
             var rx = new Regex("(?:Register\\(\\s*|new\\s+ToolDef\\(\\s*)\"([a-z0-9_]+)\"");
             var names = rx.Matches(PlanTools + SectionTools).Cast<Match>().Select(m => m.Groups[1].Value).OrderBy(x => x).ToArray();
-            Assert.Equal(Phase3.OrderBy(x => x).ToArray(), names);
+            Assert.Equal(Phase3.Concat(NangCapATests.NewPlanTools).OrderBy(x => x).ToArray(), names);
             var svc = Src("plugin", "ClaudeCAD.Plugin", "Drawing", "DrawingService.cs");
             Assert.Contains("RegisterPlanTo3d(d);", svc);
             Assert.Contains("RegisterSections(d);", svc);
@@ -156,7 +156,9 @@ namespace ClaudeCAD.Core.Tests
         [Fact]
         public void KT16_base_z_is_mm_scaled_like_the_heights()
         {
-            Assert.Contains("double baseZmm = p.Num(\"base_z\", 0), baseZ = baseZmm / f;", PlanTools);
+            // nâng cấp đợt A: base_z (mm) is the first storey; every storey's level is mm scaled by INSUNITS
+            Assert.Contains("double baseZmm = p.Num(\"base_z\", 0);", PlanTools);
+            Assert.Contains("double bz = lv.BaseZ / f;", PlanTools);
             Assert.Contains("Report(res, input, f, unitName, hmm, baseZmm)", PlanTools);
         }
 

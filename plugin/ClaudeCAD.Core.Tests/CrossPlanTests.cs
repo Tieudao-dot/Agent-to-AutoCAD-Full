@@ -86,7 +86,7 @@ namespace ClaudeCAD.Core.Tests
         {
             var threeD = PlanLogic.Groups.Where(kv => kv.Value == ToolGroup.ThreeD).Select(kv => kv.Key).ToList();
             var twoD = PlanLogic.Groups.Where(kv => kv.Value == ToolGroup.TwoD).Select(kv => kv.Key).ToList();
-            Assert.Equal(29, threeD.Count); // 14 + 12 + 3 tools of the three phases
+            Assert.Equal(37, threeD.Count); // 14 + 12 + 3 tools of the three phases + draw_solid, build_railing (nâng cấp đợt A) + 4 of đợt D + build_stair, build_roof (đợt E)
             foreach (var t in threeD)
             {
                 Assert.False(PlanLogic.Allowed("2d", t), t);

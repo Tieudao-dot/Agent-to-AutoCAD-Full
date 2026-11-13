@@ -64,6 +64,9 @@ namespace ClaudeCAD.Plugin.Drawing
             RegisterLayouts(d);
             RegisterXrefs(d);
             RegisterTrimExtend(d);
+            // nâng cấp đợt B: stretch / break / lengthen / divide (2D), group / match_properties (every plan)
+            RegisterEdit2D(d);
+            RegisterUtil2D(d);
             // v0.6: Claude looks at the drawing
             RegisterCapture(d);
             // 3D phase 1 (ToolGroup.ThreeD)
@@ -72,6 +75,10 @@ namespace ClaudeCAD.Plugin.Drawing
             RegisterSolids2(d);
             RegisterPlanTo3d(d);
             RegisterSections(d);
+            // nâng cấp đợt D (ToolGroup.ThreeD): beams, PRESSPULL, STL, volume schedule
+            RegisterSolids3(d);
+            // nâng cấp đợt E (ToolGroup.ThreeD): stairs, roofs
+            RegisterStairRoof(d);
         }
 
         private static void RegisterSystem(ToolDispatcher d, ITurnHost host)

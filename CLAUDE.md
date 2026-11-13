@@ -40,7 +40,13 @@ dự án gốc), `bo-cai/README.md`.
   - đọc lại một lượt như người không biết code trước khi gửi. Cậu còn hỏi lại "là sao" nghĩa là câu hỏi chưa đạt:
     giải thích lại đơn giản hơn rồi mới hỏi tiếp;
   - sub-thread nêu điểm cần chốt cũng theo quy tắc này; luồng chính viết lại cho dễ hiểu trước khi hỏi cậu.
-- Hiện mọi tác vụ đang chạy / chạy nền trong task list.
+- **Tác vụ đang chạy hiện ở thanh bên phải (task list) (chủ dự án yêu cầu 13/11/2026):**
+  - luồng chính giữ trên thanh bên phải của thread chính mỗi việc đang chạy là 1 task: tên thread / đợt + việc
+    (vd "Đợt A › Test & sửa"), dòng trạng thái là bước hiện tại (vd "CI đang chạy, run …");
+  - cập nhật task mỗi khi nhận tin cập nhật / báo cáo; xong thì đánh dấu xong; việc đã lên lịch (các đợt sau, kiểm tra
+    cuối, báo cáo) để "chờ"; việc chờ chủ dự án (thử tay, máy chủ kích hoạt…) là task riêng;
+  - sub-thread cũng hiện tác vụ của mình ở thanh bên phải của thread đó, kể cả tác vụ chạy nền (chờ CI). Tin giao việc
+    và prompt mở thread mới ghi sẵn quy tắc này.
 - Push noti khi xong một việc hoặc phải dừng chờ cậu quyết; không push cho từng bước nhỏ.
 
 ## Token và thời gian
@@ -92,6 +98,21 @@ dự án gốc), `bo-cai/README.md`.
     việc đã xong, nhánh + commit, test / CI, việc chờ cậu, thời gian. Một lần mỗi mốc.
 - Điểm cần cậu chốt phát sinh ở sub-thread: báo ngược lên tới luồng chính, luồng chính hỏi cậu bằng
   AskUserQuestion rồi chuyển câu trả lời xuống lại.
+- **Cập nhật tình hình về luồng chính (chủ dự án yêu cầu 13/11/2026):** để chủ dự án xem tình hình mọi thread ở
+  một chỗ là thread chính.
+  - Mọi sub-thread, kể cả thread con, gửi tin ngắn về luồng chính (`session_01D56HmFT5bwapmbypmLY5nr`, qua
+    `mcp__claude-code-remote__send_message`), mở đầu `[Cập nhật từ thread <tên>]`, 1–3 dòng: vừa xong gì, nhánh +
+    commit, việc tiếp theo, chi phí tới lúc đó (`usage.cost_usd` khi gọi `get_session` không tham số).
+  - Gửi ở các mốc: nhận việc và bắt đầu; viết / sửa xong, đã push, bắt đầu CI; có kết quả CI (xanh / đỏ, số run);
+    mở thread con (kèm session id); xong việc. Bị chặn, gặp lỗi lớn hoặc phải chờ quyết thì gửi ngay.
+  - Không gửi cho từng bước nhỏ: ngoài lúc bị chặn, hai tin cách nhau ít nhất khoảng 30 phút.
+  - Thread con vẫn báo cáo đầy đủ về thread cha như cũ; tin cập nhật ngắn thì gửi thẳng luồng chính.
+  - Luồng chính: mỗi tin cập nhật thì ghi 1–3 dòng tình hình trong thread chính, không push noti (chỉ push khi xong
+    việc chủ dự án giao, bị chặn hoặc cần cậu quyết). Xong mỗi đợt thì cập nhật bảng tiến độ trong
+    `docs/ke-hoach-nang-cap-lenh.md` và `docs/tong-quan-du-an.md`. Cậu hỏi "tình hình" thì luồng chính kiểm thêm các
+    thread đang chạy bằng `get_session`.
+  - Thread đang chạy đọc bản `CLAUDE.md` trên nhánh của nó (có thể là bản cũ), nên mọi tin giao việc và prompt mở
+    thread mới, kể cả prompt cho thread con, ghi sẵn quy tắc này.
 - Mở hay đóng sub-thread: chỉ khi cậu đồng ý (chuỗi 3D: cậu đã đồng ý 12/11/2026). Sub-thread mới ghi vào danh
   bạ ở cuối file; thread con ghi kèm thread cha.
 - **Được tự mở thread (chủ dự án cho phép 12/11/2026):** luồng chính và thread mỗi đợt được tự gọi
@@ -136,13 +157,29 @@ dự án gốc), `bo-cai/README.md`.
 | --- | --- | --- |
 | Luồng chính | `session_01D56HmFT5bwapmbypmLY5nr` | Tổng quan, trao đổi với chủ dự án, điều phối sub-thread. Không tự làm việc kỹ thuật |
 | Gói dịch vụ | `session_01D56HmJEU9szFU3rjc38bwT` | Nhánh `full/goi-dich-vu`: gói 2D / 3D / Full trong plugin (đọc gói, nhãn lệnh, chặn lệnh, trợ lý, giao diện), mẫu Apps Script phần gói. Bàn giao: `docs/ban-giao/goi-dich-vu-plugin.md` |
-| Vẽ 3D đợt 1 | `session_01D56HmEKLjGrgQjCYBHyRFV` | Nhánh `full/ve-3d` (tách từ `full/goi-dich-vu`): 3D đợt 1 (khối cơ bản, extrude / revolve, cộng trừ khối, góc nhìn, kiểu hiển thị, thông tin khối, chụp ảnh 3D), nhãn gói 3D. Bàn giao: `docs/ban-giao/ve-3d-dot-1.md` |
-| ↳ Test & sửa đợt 1 (con của Vẽ 3D đợt 1) | `session_01D56HmF7xQDkumeCZ4v5kMJ` | Nhánh `full/ve-3d-test-1` (tách từ `full/ve-3d`): rà soát, thêm test tự động, sửa lỗi đợt 1; 1 lượt CI. Báo về thread đợt 1. Bàn giao: `docs/ban-giao/ve-3d-test-1.md` |
-| Vẽ 3D đợt 2 | `session_01D56HmFnBJGpH2Jp3Gz2Rps` | Nhánh `full/ve-3d-dot-2` (tách từ `full/ve-3d-test-1` @ `9332985`): sweep, loft, cắt / bo / vát / làm rỗng khối, xoay / đối xứng / căn 3D, UCS, va chạm, danh sách cạnh / mặt. Viết xong tự mở thread con Test & sửa đợt 2. Bàn giao: `docs/ban-giao/ve-3d-dot-2.md` |
-| ↳ Test & sửa đợt 2 (con của Vẽ 3D đợt 2) | `session_01D56HmFawNpHoQo4t7E9eQq` | Nhánh `full/ve-3d-test-2` (tách từ `full/ve-3d-dot-2` @ `695909e`): rà soát, thêm test tự động, sửa lỗi đợt 2; 1 lượt CI. Báo về thread đợt 2. Bàn giao: `docs/ban-giao/ve-3d-test-2.md` |
-| Vẽ 3D đợt 3 | `session_01D56HmJn6B9q2BakrVAExkg` | Nhánh `full/ve-3d-dot-3` (tách từ `full/ve-3d-test-2` @ `a51cd63`): `build_3d_from_plan` (dựng 3D từ mặt bằng 2D), mặt cắt / hình chiếu 2D từ khối 3D, skill mẫu "3D kiến trúc". Viết xong tự mở thread con Test & sửa đợt 3. Bàn giao: `docs/ban-giao/ve-3d-dot-3.md` |
-| ↳ Test & sửa đợt 3 (con của Vẽ 3D đợt 3) | `session_01D56HmJf7EpVVyCj13r68fL` | Nhánh `full/ve-3d-test-3` (tách từ `full/ve-3d-dot-3` @ `e464662`): rà soát, thêm test tự động, sửa lỗi đợt 3; 1 lượt CI. Báo về thread đợt 3. Bàn giao: `docs/ban-giao/ve-3d-test-3.md` |
-| Test tổng thể | `session_01D56HmGjmEKBFmZETiignkt` | Nhánh `full/test-tong-the` (tách từ `full/ve-3d-test-3` @ `4bf5cce`, gộp tài liệu luồng chính): rà theo chiều ngang gói + 3 đợt 3D, sửa lỗi, đo token theo gói, checklist tổng `docs/checklist-tong-the.md`; 1 lượt CI. Bàn giao: `docs/ban-giao/test-tong-the.md` |
-| Kiểm tra độc lập | `session_01D56HmF7CGr1nonkGWUKkGr` | Nhánh `full/kiem-tra-doc-lap` (tách từ `full/test-tong-the` @ `9ef9db9`): agent mới test lại toàn bộ một lượt, chỉ ghi lỗi (không sửa), phân theo phần phụ trách; 1 lượt CI; sau đó soát lại các lỗi đã sửa. Báo cáo: `docs/ban-giao/kiem-tra-doc-lap.md` |
+| Vẽ 3D đợt 1 | `session_01D56HmEKLjGrgQjCYBHyRFV` | Nhánh `full/ve-3d` (tách từ `full/goi-dich-vu`): 3D đợt 1 (khối cơ bản, extrude / revolve, cộng trừ khối, góc nhìn, kiểu hiển thị, thông tin khối, chụp ảnh 3D), nhãn gói 3D. Bàn giao: `docs/ban-giao/ve-3d-dot-1.md` **Đã đóng (lưu trữ) 13/11/2026.** |
+| ↳ Test & sửa đợt 1 (con của Vẽ 3D đợt 1) | `session_01D56HmF7xQDkumeCZ4v5kMJ` | Nhánh `full/ve-3d-test-1` (tách từ `full/ve-3d`): rà soát, thêm test tự động, sửa lỗi đợt 1; 1 lượt CI. Báo về thread đợt 1. Bàn giao: `docs/ban-giao/ve-3d-test-1.md` **Đã đóng (lưu trữ) 13/11/2026.** |
+| Vẽ 3D đợt 2 | `session_01D56HmFnBJGpH2Jp3Gz2Rps` | Nhánh `full/ve-3d-dot-2` (tách từ `full/ve-3d-test-1` @ `9332985`): sweep, loft, cắt / bo / vát / làm rỗng khối, xoay / đối xứng / căn 3D, UCS, va chạm, danh sách cạnh / mặt. Viết xong tự mở thread con Test & sửa đợt 2. Bàn giao: `docs/ban-giao/ve-3d-dot-2.md` **Đã đóng (lưu trữ) 13/11/2026.** |
+| ↳ Test & sửa đợt 2 (con của Vẽ 3D đợt 2) | `session_01D56HmFawNpHoQo4t7E9eQq` | Nhánh `full/ve-3d-test-2` (tách từ `full/ve-3d-dot-2` @ `695909e`): rà soát, thêm test tự động, sửa lỗi đợt 2; 1 lượt CI. Báo về thread đợt 2. Bàn giao: `docs/ban-giao/ve-3d-test-2.md` **Đã đóng (lưu trữ) 13/11/2026.** |
+| Vẽ 3D đợt 3 | `session_01D56HmJn6B9q2BakrVAExkg` | Nhánh `full/ve-3d-dot-3` (tách từ `full/ve-3d-test-2` @ `a51cd63`): `build_3d_from_plan` (dựng 3D từ mặt bằng 2D), mặt cắt / hình chiếu 2D từ khối 3D, skill mẫu "3D kiến trúc". Viết xong tự mở thread con Test & sửa đợt 3. Bàn giao: `docs/ban-giao/ve-3d-dot-3.md` **Đã đóng (lưu trữ) 13/11/2026.** |
+| ↳ Test & sửa đợt 3 (con của Vẽ 3D đợt 3) | `session_01D56HmJf7EpVVyCj13r68fL` | Nhánh `full/ve-3d-test-3` (tách từ `full/ve-3d-dot-3` @ `e464662`): rà soát, thêm test tự động, sửa lỗi đợt 3; 1 lượt CI. Báo về thread đợt 3. Bàn giao: `docs/ban-giao/ve-3d-test-3.md` **Đã đóng (lưu trữ) 13/11/2026.** |
+| Test tổng thể | `session_01D56HmGjmEKBFmZETiignkt` | Nhánh `full/test-tong-the` (tách từ `full/ve-3d-test-3` @ `4bf5cce`, gộp tài liệu luồng chính): rà theo chiều ngang gói + 3 đợt 3D, sửa lỗi, đo token theo gói, checklist tổng `docs/checklist-tong-the.md`; 1 lượt CI. Bàn giao: `docs/ban-giao/test-tong-the.md`. Từ 13/11 nhận sửa lỗi phần 3D chủ dự án tìm khi thử thật (các thread đợt đã đóng) |
+| Kiểm tra độc lập | `session_01D56HmF7CGr1nonkGWUKkGr` | Nhánh `full/kiem-tra-doc-lap` (tách từ `full/test-tong-the` @ `9ef9db9`): agent mới test lại toàn bộ một lượt, chỉ ghi lỗi (không sửa), phân theo phần phụ trách; 1 lượt CI; sau đó soát lại các lỗi đã sửa. Báo cáo: `docs/ban-giao/kiem-tra-doc-lap.md` **Đã đóng (lưu trữ) 13/11/2026.** |
+| Bộ cài thử nội bộ | `session_01D56HmEzAMRB7RXVJqoQPnD` | Nhánh `full/ban-thu-noi-bo` (tách từ `full/test-tong-the`, **không bao giờ gộp**): bộ cài thử chỉ cho chủ dự án, bỏ qua kích hoạt, gói Full, hết hạn 10/12/2026, nhãn "BẢN THỬ NỘI BỘ"; 1 lượt CI. Bàn giao: `docs/ban-giao/ban-thu-noi-bo.md` |
+| QnA | `session_01D56HmJBDC5zZsEvTcJ4Jbt` | Hỏi đáp về plugin cho chủ dự án, đọc code / tài liệu mới nhất (`full/test-tong-the`). Không sửa code, không commit. Lỗi hoặc việc cần quyết thì chuyển về luồng chính |
+| Nâng cấp đợt A | `session_01D56HmEZnPtpeS5RWXPVPYD` | Nhánh `full/nang-cap-a` (tách từ `full/test-tong-the` @ `19944df`): gộp 6 lệnh dựng khối, `build_3d_from_plan` nhận layer tên khác, cột, nhiều tầng, lan can, `array_rect` thêm tầng. Viết xong tự mở thread con Test & sửa (`full/nang-cap-a-test`). Bàn giao: `docs/ban-giao/nang-cap-a.md`. Kế hoạch: `docs/ke-hoach-nang-cap-lenh.md` |
+| ↳ Test & sửa đợt A (con của Nâng cấp đợt A) | `session_01D56HmExJjYYvbztLiiRbdx` | Nhánh `full/nang-cap-a-test` (tách từ `full/nang-cap-a` @ `fc68469`): rà soát, thêm test tự động, sửa lỗi đợt A; 1 lượt CI. Báo về thread đợt A, tin cập nhật ngắn gửi luồng chính. Bàn giao: `docs/ban-giao/nang-cap-a-test.md` |
+| Nâng cấp đợt B | `session_01D56HmERJAiGtKizUeoMK7s` | Nhánh `full/nang-cap-b` (tách từ `full/nang-cap-a-test` @ `33acb5f`): STRETCH, BREAK, LENGTHEN, DIVIDE / MEASURE, GROUP, MATCHPROP; bo / vát polyline + cung, offset hai phía, nối có dung sai. Viết xong tự mở thread con Test & sửa (`full/nang-cap-b-test`). Bàn giao: `docs/ban-giao/nang-cap-b.md` |
+| ↳ Test & sửa đợt B (con của Nâng cấp đợt B) | `session_01D56HmJLL8fUhKMHs8VaPJm` | Nhánh `full/nang-cap-b-test` (tách từ `full/nang-cap-b` @ `81eaf7c`): rà soát, thêm test tự động, sửa lỗi đợt B; 1 lượt CI. Báo về thread đợt B, tin cập nhật ngắn gửi luồng chính. Bàn giao: `docs/ban-giao/nang-cap-b-test.md` |
+| Nâng cấp đợt C | `session_01D56HmJra3trN7XwA1QApZ6` | Nhánh `full/nang-cap-c` (tách từ `full/nang-cap-b-test` @ `265b66e`): hatch bấm một điểm, tự ghi kích thước mặt bằng, thống kê block ra bảng, tổng diện tích phòng / layer, tìm & thay chữ (thẻ xác nhận), in nhiều layout vào một PDF. Viết xong tự mở thread con Test & sửa (`full/nang-cap-c-test`). Bàn giao: `docs/ban-giao/nang-cap-c.md` |
+| ↳ Test & sửa đợt C (con của Nâng cấp đợt C) | `session_01D56HmJVjAwoMYD2HCjBwLe` | Nhánh `full/nang-cap-c-test` (tách từ `full/nang-cap-c` @ `1305053`): rà soát, thêm test tự động, sửa lỗi đợt C; 1 lượt CI. Báo về thread đợt C, tin cập nhật ngắn gửi luồng chính. Bàn giao: `docs/ban-giao/nang-cap-c-test.md` |
+| Nâng cấp đợt D | `session_01D56HmEVecDKB1j1iGf8vNc` | Nhánh `full/nang-cap-d` (tách từ `full/nang-cap-c-test` @ `f4f27fe`): dầm, tường cong, PRESSPULL, xuất STL, bảng khối lượng theo layer, va chạm ra bảng (gói 3D chỉ trả số liệu, không vẽ table). Viết xong tự mở thread con Test & sửa (`full/nang-cap-d-test`). Bàn giao: `docs/ban-giao/nang-cap-d.md` |
+| ↳ Test & sửa đợt D (con của Nâng cấp đợt D) | `session_01D56HmFm4aVWGEgb2v8hWTB` | Nhánh `full/nang-cap-d-test` (tách từ `full/nang-cap-d` @ `809ad78`): rà soát, thêm test tự động, sửa lỗi đợt D; 1 lượt CI. Báo về thread đợt D, tin cập nhật ngắn gửi luồng chính. Bàn giao: `docs/ban-giao/nang-cap-d-test.md` |
+| Nâng cấp đợt E | `session_01D56HmJ3WbDQRkUMc3aJjvF` | Nhánh `full/nang-cap-e` (tách từ `full/nang-cap-d-test` @ `db34801`): cầu thang 1 vế / chữ L / chữ U, mái bằng / 2 dốc / 4 dốc, số mặc định theo điểm 6 kế hoạch. Viết xong tự mở thread con Test & sửa (`full/nang-cap-e-test`). Bàn giao: `docs/ban-giao/nang-cap-e.md` |
+| ↳ Test & sửa đợt E (con của Nâng cấp đợt E) | `session_01D56HmEVcsHK1xiof9qua9w` | Nhánh `full/nang-cap-e-test` (tách từ `full/nang-cap-e` @ `3e8a67c`): rà soát, thêm test tự động, sửa lỗi đợt E; 1 lượt CI. Báo về thread đợt E, tin cập nhật ngắn gửi luồng chính. Bàn giao: `docs/ban-giao/nang-cap-e-test.md` |
 
 Link mở thread: `https://claude.ai/code/<session id>`.
+
+Thread đã đóng vẫn xem lại được và mở lại được (unarchive) khi cần; nhánh và tài liệu bàn giao giữ nguyên. Lỗi thuộc phần
+của thread đã đóng chuyển cho thread "Test tổng thể". Kiểm tra độc lập cho chuỗi nâng cấp sẽ mở thread mới (agent chưa
+viết hay test phần đó).

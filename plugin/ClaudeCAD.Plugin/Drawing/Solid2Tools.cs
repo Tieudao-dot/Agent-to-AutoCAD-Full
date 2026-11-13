@@ -32,7 +32,8 @@ namespace ClaudeCAD.Plugin.Drawing
             d.Register("rotate_3d", true, Rotate3d);
             d.Register("mirror_3d", true, Mirror3d);
             d.Register("align", true, AlignTool);
-            d.Register("check_interference", false, CheckInterferenceTool);
+            // nâng cấp đợt D: with table_position (Full only, PlanLogic.TextParams) it also inserts the clash table
+            d.Register(new ToolDef("check_interference", true, CheckInterferenceTool, readsWhen: p => !p.Has("table_position")));
             // the UCS is a drawing setting, not an object: no transaction, not in a batch, not recorded in macros; U undoes it with the turn
             d.Register(new ToolDef("set_ucs", true, SetUcs, noTransaction: true));
             d.Register(new ToolDef("reset_ucs", true, ResetUcs, noTransaction: true));
@@ -831,6 +832,8 @@ namespace ClaudeCAD.Plugin.Drawing
             var hs = p.Handles("handles", Solid2Logic.MaxInterferenceSolids).Select(x => x.ToUpperInvariant()).Distinct().ToList();
             var others = p.Has("other_handles") ? p.Handles("other_handles", Solid2Logic.MaxInterferenceSolids).Select(x => x.ToUpperInvariant()).Distinct().ToList() : null;
             if (others == null && hs.Count < 2) throw ToolException.Invalid("check_interference: needs at least 2 solids in 'handles' (or 'other_handles' to check against).");
+            // Test & sửa đợt D (ND-4): m³ from the drawing units (a drawing in metres gave 10⁹ times too little)
+            double mmPerUnit = FloorPlanLogic.MmPerUnit(Convert.ToInt32(ctx.Db.Insunits), out _);
             var solids = new Dictionary<string, Solid3d>(StringComparer.OrdinalIgnoreCase);
             var boxes = new Dictionary<string, Extents3d?>(StringComparer.OrdinalIgnoreCase);
             Solid3d Get(string h)
@@ -843,6 +846,9 @@ namespace ClaudeCAD.Plugin.Drawing
                 return sd;
             }
             var pairs = Solid2Logic.InterferencePairs(hs, others);
+            // KT2-18: handles [A] against other_handles [A] gives no pair: say so instead of "no clash"
+            if (pairs.Count == 0)
+                throw ToolException.Invalid("check_interference: no pair of two different solids to compare (the same solid in handles and other_handles). Nothing was checked; pass at least two different solids.");
             // KT-25: the bounding-box test is cheap; only the pairs that pass it cost AutoCAD real work, and they are capped
             var candidates = new List<(string a, string b)>();
             foreach (var (a, b) in pairs)
@@ -853,6 +859,7 @@ namespace ClaudeCAD.Plugin.Drawing
                 candidates.Add((a, b));
             }
             var hits = new List<object>();
+            var clashRows = new List<Solid3Logic.ClashRow>();
             var unconfirmedPairs = new List<object>();
             int touching = 0, clashes = 0, measured = 0, unmeasured = 0, unconfirmed = 0;
             double total = 0;
@@ -884,8 +891,9 @@ namespace ClaudeCAD.Plugin.Drawing
                 else unmeasured++;
                 if (hits.Count < Solid2Logic.MaxInterferencePairs)
                 {
-                    var row = new Dictionary<string, object> { ["a"] = a, ["b"] = b };
-                    if (kind == "clash") { row["volume"] = Acad.R(v.Value); row["volume_m3"] = Math.Round(SolidLogic.ToCubicMetres(v.Value), 6); }
+                    var row = new Dictionary<string, object> { ["a"] = a, ["b"] = b, ["layer_a"] = sa.Layer, ["layer_b"] = sb.Layer };
+                    clashRows.Add(new Solid3Logic.ClashRow { A = a, LayerA = sa.Layer, B = b, LayerB = sb.Layer, Volume = kind == "clash" ? v : null });
+                    if (kind == "clash") { row["volume"] = Acad.R(v.Value); row["volume_m3"] = Math.Round(Solid3Logic.M3(v.Value, mmPerUnit), 6); }
                     else
                     {
                         row["volume"] = null;
@@ -900,7 +908,7 @@ namespace ClaudeCAD.Plugin.Drawing
                 ["pairs_checked"] = pairs.Count - candidates.Count + compared,
                 ["clashes"] = hits,
                 ["clash_count"] = clashes,
-                ["total_overlap_m3"] = Math.Round(SolidLogic.ToCubicMetres(total), 6),
+                ["total_overlap_m3"] = Math.Round(Solid3Logic.M3(total, mmPerUnit), 6),
             };
             if (touching > 0) r["touching_pairs"] = touching;
             if (unmeasured > 0) r["unmeasured_clashes"] = unmeasured;
@@ -915,6 +923,17 @@ namespace ClaudeCAD.Plugin.Drawing
             {
                 r["truncated"] = true;
                 r["truncated_note"] = Solid2Logic.InterferenceTruncatedNote(candidates.Count, compared);
+            }
+            if (p.Has("table_position"))
+            {
+                if (clashRows.Count == 0) r["table_note"] = "No clash: no table was inserted.";
+                else
+                {
+                    int dec = p.Int("decimals", 3, 0, 6);
+                    var t = InsertSchedule(ctx, p, Solid3Logic.ClashTable(clashRows, dec, mmPerUnit), new[] { 5.0, 9, 14, 9, 14, 13 }, "BẢNG VA CHẠM KHỐI 3D");
+                    r["handles"] = t["handles"];
+                    if (clashes > clashRows.Count) r["table_note"] = $"The table lists the first {clashRows.Count} of {clashes} clashes.";
+                }
             }
             return r;
         }

@@ -1,8 +1,15 @@
-# Checklist tổng: thử bản Full trên AutoCAD (gói dịch vụ + 3D đợt 1, 2, 3)
+# Checklist tổng: thử bản Full trên AutoCAD (gói dịch vụ + 3D đợt 1, 2, 3 + chuỗi nâng cấp A → E)
 
-*12/11/2026 · thread "Test tổng thể", nhánh `full/test-tong-the`. Một lượt đủ ~157 phút; lượt rút gọn (phần 0–5)
-~97 phút. Chi tiết từng mục (bước, kết quả đúng đầy đủ): [`checklist-thu-that.md`](checklist-thu-that.md) phần I, J, K,
-L. File này chỉ xếp thứ tự và ghi phần cần nhìn kỹ.*
+*12/11/2026 · thread "Test tổng thể", nhánh `full/test-tong-the`; 13/11/2026 thêm khối **chuỗi nâng cấp A → E** (thread
+"Test tổng thể nâng cấp", nhánh `full/nang-cap-tong-the`, cuối file). Hai khối:*
+
+| Khối | Phần | Lượt rút gọn | Lượt đủ |
+| --- | --- | --- | --- |
+| Gói + 3D đợt 1–3 | 0–8 (mục I–M, X của `checklist-thu-that.md`) | ~97 phút (phần 0–5) | ~157 phút |
+| Chuỗi nâng cấp A → E | 9–16 (mục N–R của `checklist-thu-that.md`, V1–V13) | ~105 phút (phần 9–15) | ~3 giờ |
+
+*Cả hai khối, lượt rút gọn: ~3 giờ 25 phút; lượt đủ: ~5 giờ 50 phút. Chi tiết từng mục (bước, kết quả đúng đầy đủ):
+[`checklist-thu-that.md`](checklist-thu-that.md). File này chỉ xếp thứ tự và ghi phần cần nhìn kỹ.*
 
 Bản dùng thử AutoCAD của cậu hết khoảng **10/12/2026**: làm phần 0–5 trước.
 
@@ -136,3 +143,84 @@ nhìn, khối trên layer khóa, `PURGE` sau mặt cắt.
   mặt bằng bằng đường cơ bản theo mục 0 của skill `ve-3d-kien-truc`, không ghi kích thước).
 - **Lệnh dựng khối không còn tham số màu / nét / layout** (đỡ token): khối lấy màu theo layer; "dựng hộp màu đỏ" thì
   Claude dựng rồi đổi màu bằng lệnh đổi thuộc tính. Thử nhanh khi làm J2: tường đúng layer, màu theo layer.
+
+---
+
+# Phần chuỗi nâng cấp A → E (thêm 13/11/2026)
+
+*Thread "Test tổng thể nâng cấp", nhánh `full/nang-cap-tong-the`. Chi tiết từng mục: `checklist-thu-that.md` phần
+N (đợt A), O (B), P (C), Q (D), R (E). Phần dưới chỉ xếp thứ tự, thêm các mục chéo giữa các đợt (V1–V8) và ghi chỗ cần
+nhìn kỹ. Cách ghi kết quả / báo lỗi như phần đầu file.*
+
+## Thời gian
+
+| Lượt | Gồm | Thời gian ước |
+| --- | --- | --- |
+| **Rút gọn** (làm trước) | S3 + V1–V13 + **một số** mục ★ chọn lọc của N–R ghi ở phần 11–15 (không phải mọi mục ★) | **~105 phút** |
+| Đủ | Rút gọn + mọi mục ○ của N–R | ~3 giờ (N 34, O 30, P 30, Q 35, R 30 phút + V 25 phút) |
+
+## Ưu tiên cao nhất (hỏng thì báo ngay, chưa cần làm tiếp)
+
+1. **S3** (tự kiểm tra): 6 dòng nâng cấp ✓. Đây là cách nhanh nhất biết phần chỉ AutoCAD làm được (chép tầng, cộng mảnh
+   lan can, kéo mặt khối, vế thang nghiêng đúng chiều, cắt mái) có chạy thật không.
+2. **V1–V3** (nhà nhiều tầng có cột, cầu thang, mái, rồi bảng khối lượng): kịch bản khách hay dùng nhất của bản Full.
+3. **R1, R7** (cầu thang, mái): phần mới nhất, nhiều phép cộng / trừ khối nhất.
+4. **O1, P9 + P10** (kéo giãn; tìm & thay qua thẻ): sửa đối tượng có sẵn, phải đúng luật thẻ xác nhận.
+
+## Thứ tự thử
+
+| Phần | Việc | Thời gian |
+| --- | --- | --- |
+| 9 | Tự kiểm tra S3 | ~4 phút |
+| 10 | Mục chéo V1–V8 | ~25 phút |
+| 11 | ★ của đợt A: N4, N5, N8, N10, N13, N15 | ~15 phút |
+| 12 | ★ của đợt B: O1, O3, O7, O8, O10, O14, O17 | ~15 phút |
+| 13 | ★ của đợt C: P1, P3, P7, P9, P10, P11 | ~13 phút |
+| 14 | ★ của đợt D: Q1, Q3, Q5, Q8, Q11 | ~12 phút |
+| 15 | ★ của đợt E: R1, R3, R5, R7, R14 | ~11 phút |
+| 16 | Phần còn lại của N–R: các mục ★ chưa chọn ở phần 11–15 (N0–N2, N17, O0, O4, O6, O11–O13, P5, P6, P14, P17, Q4, Q6, Q9, Q10, Q13, R2, R6, R8, R10, R13, R15; N0, O0, Q13, R13 đã phủ bởi S3) rồi các mục ○ | ~85 phút |
+
+### 9. Tự kiểm tra (~4 phút)
+
+| # | Làm gì | Kết quả đúng |
+| --- | --- | --- |
+| S3 | Gói `Full`, gõ `CLAUDECHATSELFTEST` (chạy hai lần liền) | Mọi dòng ✓ cả hai lần, trong đó 6 dòng "Nâng cấp đợt …": A (2 tầng + sàn mái + 2 cột), A (lan can 3 m), B (bo góc, kéo dài, bẻ gãy, chia, nối, kéo giãn), **C (tìm & thay chữ, bảng diện tích phòng: dòng mới của bước này)**, D (dầm, tường cong, PRESSPULL, STL), E (cầu thang, mái 4 dốc). Dòng cuối "Bản vẽ của cậu không bị đụng tới" ✓ |
+
+### 10. Mục chéo giữa các đợt (~25 phút)
+
+| # | Làm gì | Kết quả đúng |
+| --- | --- | --- |
+| V1 | Mặt bằng phòng L2 + 4 cột vuông 220 trên `A-COL` ở góc + đường bao sàn trên `A-SLAB`. Một tin: "dựng 3D 2 tầng, mỗi tầng 3300, sàn 150, có sàn mái, rồi lợp mái 4 dốc" | Tường / cột / sàn 2 tầng + sàn mái (z 6450 → 6600); **mái đặt trên mặt sàn mái** (mép dưới mái ở 6600, không cắt vào sàn mái; báo `wall_top_from` "top of the roof slab…"). U một lần bỏ cả lượt |
+| V2 | Tiếp V1 (lượt mới): "dựng cầu thang chữ U trong phòng từ sàn tầng 1 lên tầng 2" rồi "dựng dầm 220 × 400 dọc tường dưới sàn tầng 2" | Cầu thang 21 bậc, đỉnh ở 3300 (mặt sàn tầng 2), bậc trên cùng gác lên sàn; dầm đỉnh 3150, đáy 2750, chạm đáy sàn (sàn 150). Không hỏi thẻ (chỉ dựng mới) |
+| V3 | Tiếp V2: "lập bảng khối lượng theo layer, trừ phần chồng nhau" | Có dòng cột, dầm, tường, sàn, cầu thang, mái; phần chồng (cột trong tường, dầm trong tường, mép cầu thang gác lên sàn; dầm chỉ chạm đáy sàn, không chồng) **chỉ tính một lần**: cột giữ đủ, tường / sàn bị trừ. Gói `Full` chèn được bảng; gói `3D` chỉ báo số trong chat |
+| V4 | Tiếp V3: "vẽ mặt cắt đứng qua cầu thang và mái" rồi "vẽ hình chiếu mặt đứng phía trước" | Mặt cắt có đường bao + hatch của tường, sàn, vế thang (răng cưa bậc), mái dốc; hình chiếu thấy mái và lan can. Khối 3D không đổi |
+| V5 | Mặt bằng có một tường cong (hai cung, Q3) có khe cửa đi + ký hiệu cửa. "dựng 3D" rồi "vẽ mặt cắt ngang ở cao 1 m" | Tường cong có lỗ cửa đúng chỗ khe; mặt cắt ngang thấy đường cong và chỗ hở của cửa |
+| V6 | 2D (gói `2D` hoặc `Full`): mặt bằng một phòng 6000 × 4000 như P3 (tường trên `A-WALL`), trong phòng một polyline kín (layer phòng) + chữ "P.NGU", một block cửa có thuộc tính MA = "P.NGU-1". "kéo giãn tường phải và cạnh phải của phòng sang phải 1000", "bẻ gãy tường dưới ở giữa", rồi "ghi kích thước mặt bằng" và "lập bảng diện tích các phòng" | Kích thước ghi theo hình **sau** kéo giãn (7000); bảng diện tích 28 m² tên P.NGU. Cạnh bị bẻ gãy vẫn được đo kích thước |
+| V7 | Tiếp V6: "thay P.NGU bằng PHÒNG NGỦ ở mọi chỗ (cả trong block)" → bấm **Đồng ý**; rồi gõ U một lần | Thẻ liệt kê chữ + thuộc tính; Đồng ý → đổi cả TEXT / MTEXT / thuộc tính MA thành "PHÒNG NGỦ-1"; U một lần trả lại hết |
+| V8 | Có 3 layout giấy: "in tất cả layout ra một PDF" sau V6 / V7 | Một PDF nhiều trang theo thứ tự tab, chữ đã thay xuất hiện đúng |
+
+### 10b. Sau kiểm tra độc lập nâng cấp (KT2, ~10 phút, làm cùng lượt rút gọn)
+
+| # | Làm gì | Kết quả đúng |
+| --- | --- | --- |
+| V9 | *(KT2-10)* Bản vẽ đơn vị **mét**: dựng một cột 0,4 × 0,4 cao 3,3, "lặp cột này 2 hàng x 2 cột cách 6 m x 4 m, 3 tầng cách 3,3 m" | Các tầng cách nhau **3,3** đơn vị bản vẽ (không phải 3300) |
+| V10 | *(KT2-11)* Vẽ một hình chữ nhật cột trên `A-COL` **hai lần chồng khít** rồi "dựng 3D mặt bằng" | Một khối cột; báo cáo có dòng "the same outline as …: one column built" |
+| V11 | *(KT2-21)* Mặt bằng **không có đường bao sàn**: "dựng tầng 1, tầng cao 3,3 m" | Claude **hỏi chọn sàn** (theo khung bao tường / không sàn) trước khi dựng, chưa dựng gì |
+| V12 | *(KT2-22)* Polyline trên layer `LAN CAN`: "dựng 3D mặt bằng" | Claude hỏi bằng thẻ có ghi tên layer `LAN CAN` trước khi dựng lan can; Đồng ý rồi mới dựng |
+| V13 | *(KT2-17, lượt 2)* Đang ở Model, đã đặt khổ giấy cho Model là A4 (Page Setup). "in bản vẽ ra PDF" (không nói khổ giấy) | PDF ra **khổ A4** như đã đặt cho Model, không còn mặc định A3 |
+
+Đợt B thêm O21 (kéo giãn không đụng layer đang tắt), O22 (25 đoạn kéo giãn theo khung qua thẻ) trong
+`checklist-thu-that.md`: làm ở phần 16. Các sửa khác của KT2 (đơn vị mét ở tiện ích 2D, mái chữ L báo trước chỗ chồng,
+ô cầu thang có chỗ lõm…): xem bàn giao từng đợt, thử khi làm mục cùng chủ đề.
+
+## 3 số đợt E tự chọn — cậu xem có đồng ý không
+
+Đợt E dùng đúng số cậu đã chốt (bậc 160 × 280, vế 1000, chiếu nghỉ bằng vế; mái bằng 150; mái dốc 30°, đua 600). Ba số
+dưới đây cậu **chưa chốt**, thread đợt E tự chọn theo cách làm thường gặp. Khách nói số khác thì theo số của khách; nếu
+cậu muốn đổi số mặc định thì báo luồng chính:
+
+| Số | Giá trị đang dùng | Cậu thấy ở đâu |
+| --- | --- | --- |
+| Bản thang (phần bê tông dưới bậc) và chiếu nghỉ dày | **150 mm** | R1–R3: mặt cắt V4 thấy bản nghiêng dưới các bậc dày 150 |
+| Khe giữa 2 vế cầu thang chữ U | **100 mm** | R3, V2: nhìn từ trên thấy khe hở giữa hai vế |
+| Bản mái dốc dày (đo vuông góc mặt mái) | **150 mm** | R7, R8, V1: mép mái đua |

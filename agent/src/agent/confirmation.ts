@@ -50,10 +50,21 @@ const DESTRUCTIVE: Record<string, (p: Record<string, unknown>) => number> = {
   fillet_edges: (p) => (typeof p.handle === 'string' ? 1 : 0),
   chamfer_edges: (p) => (typeof p.handle === 'string' ? 1 : 0),
   shell_solid: (p) => (typeof p.handle === 'string' ? 1 : 0),
+  // nâng cấp đợt D: PRESSPULL changes the solid whose faces it pulls (handle) or the solid it adds to / cuts from (target)
+  presspull: (p) => (typeof p.handle === 'string' ? 1 : 0) + (typeof p.target === 'string' && p.mode !== 'new' ? 1 : 0) + (p.erase_profile === true ? len(p.profile_handles) : 0),
   // 3D transforms: the same rule as move / rotate / mirror (more than 20 existing objects)
   rotate_3d: (p) => len(p.handles),
   align: (p) => len(p.handles),
   mirror_3d: (p) => (p.keep_original === false ? len(p.handles) : 0),
+  // nâng cấp đợt B: the 2D rule (more than 20 existing objects). stretch_entities without handles: the plugin itself
+  // refuses a window that would change more than 20 objects and lists them, so Claude asks and calls again with handles.
+  stretch_entities: (p) => len(p.handles),
+  break_entity: (p) => (typeof p.handle === 'string' ? 1 : 0),
+  lengthen_entity: (p) => (typeof p.handle === 'string' ? 1 : 0),
+  match_properties: (p) => len(p.handles),
+  // nâng cấp đợt C: replacing text changes existing objects (step 2, with handles); the preview changes nothing.
+  // It always needs the card's Đồng ý (REPLACE_TOOLS below), whatever the count.
+  find_replace_text: (p) => len(p.handles),
 };
 
 /**
@@ -64,13 +75,15 @@ export const ALWAYS_CONFIRM = new Set([
   'solid_union', 'solid_subtract', 'solid_intersect',
   // 3D phase 2: slicing, filleting, chamfering or shelling an existing solid (decided 12/11/2026)
   'slice_solid', 'fillet_edges', 'chamfer_edges', 'shell_solid',
+  // nâng cấp đợt D (luật 3D): PRESSPULL on an existing solid
+  'presspull',
 ]);
 
 /**
  * Tools that create new objects even when they also change existing ones (extrude / revolve / sweep / loft with
  * erase_profile; slice_solid keeping both halves). Their result handles minus the handles they change are "created".
  */
-const CREATES_TOO = new Set(['extrude', 'revolve', 'sweep', 'loft', 'slice_solid', 'fillet_entities', 'chamfer_entities', 'define_block']);
+const CREATES_TOO = new Set(['extrude', 'revolve', 'sweep', 'loft', 'slice_solid', 'fillet_entities', 'chamfer_entities', 'define_block', 'presspull']);
 
 /** The handles a destructive call names, for the tools whose handles are not in 'handles' / 'handle'. */
 function namedHandles(tool: string, params: Record<string, unknown>): string[] | undefined {
@@ -80,6 +93,13 @@ function namedHandles(tool: string, params: Record<string, unknown>): string[] |
   }
   if (tool === 'extrude' || tool === 'revolve' || tool === 'sweep') return params.erase_profile === true ? strs(params.profile_handles) : [];
   if (tool === 'loft') return params.erase_profile === true ? strs(params.section_handles) : [];
+  if (tool === 'presspull') {
+    return [
+      ...(typeof params.handle === 'string' ? [params.handle] : []),
+      ...(typeof params.target === 'string' && params.mode !== 'new' ? [params.target] : []),
+      ...(params.erase_profile === true ? strs(params.profile_handles) : []),
+    ];
+  }
   if (tool === 'fillet_entities' || tool === 'chamfer_entities') return [params.handle1, params.handle2].filter((h): h is string => typeof h === 'string');
   if (tool === 'define_block') return params.replace_with_insert === false ? [] : strs(params.entity_handles);
   return undefined;
@@ -126,6 +146,57 @@ export function affectedHandles(tool: string, params: Record<string, unknown>): 
   return Array.from({ length: n }, () => `#${tool}-${++anonymous}`);
 }
 
+/**
+ * Test & sửa đợt B (NB-1): stretch_entities without handles changes whatever lies in its crossing window. The gate cannot
+ * count it before the call, so (1) the plugin refuses a window that would change more objects than the turn has left
+ * under the 20-object rule (WINDOW_LIMIT_PARAM, set by the assistant, never by Claude), and (2) after the call its result
+ * handles count as existing objects changed in this turn (never as created ones: a moved 3D solid stays "existing").
+ */
+export const WINDOW_LIMIT_PARAM = 'max_unasked';
+const WINDOW_TOOLS = new Set(['stretch_entities']);
+
+function isWindowCall(tool: string, params: Record<string, unknown>): boolean {
+  return WINDOW_TOOLS.has(tool) && !(Array.isArray(params.handles) && params.handles.length > 0);
+}
+
+/** Existing objects a successful window call changed (from its result; batch_execute: its window calls). */
+export function windowChanged(tool: string, params: Record<string, unknown>, result: unknown): string[] {
+  const out: string[] = [];
+  const take = (r: unknown) => {
+    const hs = (r as { handles?: unknown } | null | undefined)?.handles;
+    if (Array.isArray(hs)) for (const h of hs) if (typeof h === 'string') out.push(h.toUpperCase());
+  };
+  if (tool === 'batch_execute' && Array.isArray(params.calls)) {
+    const results = (result as { results?: unknown[] } | undefined)?.results;
+    if (!Array.isArray(results)) return out;
+    (params.calls as Array<{ tool?: unknown; params?: unknown }>).forEach((c, i) => {
+      const r = results[i] as { ok?: unknown; result?: unknown } | undefined;
+      const cp = (c?.params as Record<string, unknown>) ?? {};
+      if (c && typeof c.tool === 'string' && r?.ok === true && isWindowCall(c.tool, cp)) take(r.result);
+    });
+    return [...new Set(out)];
+  }
+  if (isWindowCall(tool, params)) take(result);
+  return [...new Set(out)];
+}
+
+/** The params with the window limit the assistant computed (any value Claude put there is dropped). */
+function windowLimited(params: Record<string, unknown>, limit: number | undefined): Record<string, unknown> {
+  const { [WINDOW_LIMIT_PARAM]: _ignored, ...rest } = params;
+  return limit === undefined ? rest : { ...rest, [WINDOW_LIMIT_PARAM]: limit };
+}
+
+/**
+ * How many objects a window call of this turn may still change without asking: 20 minus the existing objects the turn
+ * has already changed (the gate added this call's named handles before it is sent), shared between the window calls
+ * of one batch. undefined = the plugin's own limit (20), when the user has already said yes in this turn.
+ */
+function windowLimit(g: GateState, windowCalls: number): number | undefined {
+  if (userConfirmed(g)) return undefined;
+  const before = g.touched ? g.touched.size : g.alreadyAffected ?? 0;
+  return Math.floor(Math.max(0, CONFIRM_THRESHOLD - before) / Math.max(1, windowCalls));
+}
+
 /** Handles a successful call created (draw_*, insert_block, copy / array / offset, a batch's creating calls). */
 export function createdHandles(tool: string, params: Record<string, unknown>, result: unknown): string[] {
   const out: string[] = [];
@@ -147,11 +218,11 @@ export function createdHandles(tool: string, params: Record<string, unknown>, re
     (params.calls as Array<{ tool?: unknown; params?: unknown }>).forEach((c, i) => {
       const r = results[i] as { ok?: unknown; result?: unknown } | undefined;
       const cp = (c?.params as Record<string, unknown>) ?? {};
-      if (c && typeof c.tool === 'string' && r?.ok === true && (CREATES_TOO.has(c.tool) || affectedCount(c.tool, cp) === 0)) take(r.result, c.tool, cp);
+      if (c && typeof c.tool === 'string' && r?.ok === true && !WINDOW_TOOLS.has(c.tool) && (CREATES_TOO.has(c.tool) || affectedCount(c.tool, cp) === 0)) take(r.result, c.tool, cp);
     });
     return out;
   }
-  if (CREATES_TOO.has(tool) || affectedCount(tool, params) === 0) take(result, tool, params);
+  if (!WINDOW_TOOLS.has(tool) && (CREATES_TOO.has(tool) || affectedCount(tool, params) === 0)) take(result, tool, params);
   return [...new Set(out)];
 }
 
@@ -210,6 +281,14 @@ export interface GateState {
   created?: ReadonlySet<string>;
   /** Older callers: a plain count instead of the two sets. */
   alreadyAffected?: number;
+  /**
+   * Nâng cấp đợt A, layer names of build_3d_from_plan (see unconfirmedPlanLayers): the text of the confirmation card /
+   * plan card this turn answers, the user's messages of this conversation (the current one included; without it only
+   * userText is read), and the layers approved earlier in this conversation (upper case).
+   */
+  askedText?: string;
+  userTexts?: readonly string[];
+  planLayersOk?: ReadonlySet<string>;
 }
 
 /** True when the user's message counts as a "yes" to a question Claude asked. */
@@ -241,7 +320,11 @@ export function existingSolidsChanged(tool: string, params: Record<string, unkno
     return [...new Set(out)];
   }
   if (!ALWAYS_CONFIRM.has(tool)) return [];
-  return [...new Set(affectedHandles(tool, params).filter((h) => !h.startsWith('#') && !g.created?.has(h)))];
+  // presspull: only the solids (handle, target) need the card; erased profile curves follow the usual count rule
+  const hs = tool === 'presspull'
+    ? [params.handle, params.mode !== 'new' ? params.target : undefined].filter((h): h is string => typeof h === 'string').map((h) => h.toUpperCase())
+    : affectedHandles(tool, params);
+  return [...new Set(hs.filter((h) => !h.startsWith('#') && !g.created?.has(h)))];
 }
 
 /**
@@ -254,6 +337,29 @@ export function existingSolidsChanged(tool: string, params: Record<string, unkno
 export const USER_CONFIRMED_PARAM = 'user_confirmed';
 /** Tools whose 3D-solid confirmation the plugin checks itself (by object type), with USER_CONFIRMED_PARAM. */
 export const PLUGIN_CONFIRMED = new Set(['explode_entities', 'erase_entities']);
+
+/**
+ * Nâng cấp đợt C (13/11/2026): find_replace_text changes many existing texts at once, so replacing (a call with handles)
+ * always needs the Đồng ý button of a confirmation card that listed those handles, whatever the count; a typed yes or the
+ * plan card's "Làm" does not. The plugin checks it too (user_confirmed, added by applyUserConfirmation).
+ */
+export const REPLACE_TOOLS = new Set(['find_replace_text']);
+/** Tools that get user_confirmed (the handles on the approved card): the 3D ones above and find_replace_text. */
+const CARD_PARAM_TOOLS = new Set([...PLUGIN_CONFIRMED, ...REPLACE_TOOLS]);
+
+/** The handles of a replace call (or of the replace calls in a batch) that are not on the card the user approved. */
+export function replaceNotApproved(tool: string, params: Record<string, unknown>, g: GateState): string[] {
+  if (tool === 'batch_execute' && Array.isArray(params.calls)) {
+    const out: string[] = [];
+    for (const c of params.calls as Array<{ tool?: unknown; params?: unknown }>) {
+      if (c && typeof c.tool === 'string' && c.tool !== 'batch_execute') out.push(...replaceNotApproved(c.tool, (c.params as Record<string, unknown>) ?? {}, g));
+    }
+    return [...new Set(out)];
+  }
+  if (!REPLACE_TOOLS.has(tool) || !Array.isArray(params.handles)) return [];
+  const hs = (params.handles as unknown[]).filter((h): h is string => typeof h === 'string').map((h) => h.toUpperCase());
+  return [...new Set(hs.filter((h) => !g.cardConfirmed?.has(h)))];
+}
 
 /** The params with user_confirmed = the call's handles that are on the approved card (no parameter when none are). */
 function flagged(params: Record<string, unknown>, g: GateState): Record<string, unknown> {
@@ -268,13 +374,26 @@ function flagged(params: Record<string, unknown>, g: GateState): Record<string, 
  * user_confirmed = their handles that the user approved on the confirmation card of this turn, and nothing otherwise.
  */
 export function applyUserConfirmation(tool: string, params: Record<string, unknown>, g: GateState): Record<string, unknown> {
-  if (PLUGIN_CONFIRMED.has(tool)) return flagged(params, g);
+  if (CARD_PARAM_TOOLS.has(tool)) return flagged(params, g);
+  if (WINDOW_TOOLS.has(tool)) return windowLimited(params, isWindowCall(tool, params) ? windowLimit(g, 1) : undefined);
   if (tool === 'batch_execute' && Array.isArray(params.calls)) {
     let changed = false;
+    const paramsOf = (call: { params?: unknown }) => (call.params && typeof call.params === 'object' ? (call.params as Record<string, unknown>) : {});
+    const windows = (params.calls as unknown[]).filter((c) => {
+      const call = c as { tool?: unknown; params?: unknown } | null;
+      return !!call && typeof call === 'object' && typeof call.tool === 'string' && isWindowCall(call.tool, paramsOf(call));
+    }).length;
     const calls = (params.calls as unknown[]).map((c) => {
       const call = c as { tool?: unknown; params?: unknown } | null;
-      if (!call || typeof call !== 'object' || typeof call.tool !== 'string' || !PLUGIN_CONFIRMED.has(call.tool)) return c;
-      const p = call.params && typeof call.params === 'object' ? (call.params as Record<string, unknown>) : {};
+      if (!call || typeof call !== 'object' || typeof call.tool !== 'string') return c;
+      const p = paramsOf(call);
+      if (WINDOW_TOOLS.has(call.tool)) {
+        const next = windowLimited(p, isWindowCall(call.tool, p) ? windowLimit(g, windows) : undefined);
+        if (!(WINDOW_LIMIT_PARAM in p) && !(WINDOW_LIMIT_PARAM in next)) return c;
+        changed = true;
+        return { ...call, params: next };
+      }
+      if (!CARD_PARAM_TOOLS.has(call.tool)) return c;
       const next = flagged(p, g);
       if (!(USER_CONFIRMED_PARAM in p) && !(USER_CONFIRMED_PARAM in next)) return c;
       changed = true;
@@ -296,7 +415,97 @@ export function refusedForConfirmation(resp: { ok: boolean; error?: { message?: 
   });
 }
 
+/**
+ * Nâng cấp đợt A (13/11/2026): build_3d_from_plan on layers with other names (TUONG, CUA, A-WALL-NEW…). Claude may
+ * GUESS which layer is a wall / door / window / slab / column (the plugin reports layer_guess), but must ask the user
+ * before building from the guess. A build (not a dry_run) with a layer that is not a default one is refused unless
+ *  - the user wrote that layer name in a message of this conversation that talks about layers ("tường ở layer TUONG"), or
+ *  - this turn answers a confirmation card / plan card whose text names the layer (its Đồng ý / Làm button, or a typed
+ *    yes to it), or
+ *  - the layer was approved that way earlier in this conversation (storey 2 does not ask again).
+ * So the question is always asked with the palette's own card, and the yes is a yes to these very layers.
+ * Reading (dry_run) is always allowed.
+ */
+export const PLAN_LAYER_PARAMS = ['wall_layers', 'door_layers', 'window_layers', 'slab_layers', 'column_layers'] as const;
+export const PLAN_DEFAULT_LAYERS: ReadonlySet<string> = new Set(['A-WALL', 'A-DOOR', 'A-WIND', 'A-SLAB', 'A-FLOR', 'A-COLS', 'A-COL']);
+
+/** The layer names (or patterns) of a build_3d_from_plan call, or of the builds in a batch, that are not default ones. */
+export function planLayersOf(tool: string, params: Record<string, unknown>): string[] {
+  if (tool === 'batch_execute' && Array.isArray(params.calls)) {
+    const out: string[] = [];
+    for (const c of params.calls as Array<{ tool?: unknown; params?: unknown }>) {
+      if (c && typeof c.tool === 'string' && c.tool !== 'batch_execute') out.push(...planLayersOf(c.tool, (c.params as Record<string, unknown>) ?? {}));
+    }
+    return [...new Set(out)];
+  }
+  if (tool !== 'build_3d_from_plan' || params.dry_run === true) return [];
+  const out: string[] = [];
+  for (const k of PLAN_LAYER_PARAMS) {
+    // the plugin also reads a single string as a one-layer list (Params.Strings); inside batch_execute no schema stops it
+    const v = typeof params[k] === 'string' ? [params[k]] : params[k];
+    if (!Array.isArray(v)) continue;
+    for (const x of v) {
+      if (typeof x !== 'string' || !x.trim()) continue;
+      if (!PLAN_DEFAULT_LAYERS.has(x.trim().toUpperCase())) out.push(x.trim());
+    }
+  }
+  return [...new Set(out)];
+}
+
+/** Characters of a layer name: a name is matched as a whole token ("CUA" is not named by "CUA-SO" or "cuadi"). */
+const LAYER_CHAR = '[\\p{L}\\p{N}_$-]';
+/** A message that talks about layers: only there a word like "tuong" can be the layer TUONG and not the word "tường" typed without marks. */
+const LAYER_WORD = /(?<![\p{L}\p{N}])(?:layers?|lớp)(?![\p{L}\p{N}])/iu;
+
+/**
+ * Matches a layer name written out in a text, in any letter case. A pattern ("KT_TUONG*") matches the pattern itself or a
+ * name it covers; a pattern with fewer than 3 fixed characters ("*", "T*") is never taken as written.
+ */
+export function layerNameRegex(layer: string): RegExp | undefined {
+  const name = layer.normalize('NFC').trim();
+  const wild = /[*?]/.test(name);
+  if (name.replace(/[*?\s]/g, '').length < (wild ? 3 : 1)) return undefined;
+  const body = name
+    .split(/([*?])/)
+    .map((part) => (part === '*' ? `${LAYER_CHAR}*` : part === '?' ? LAYER_CHAR : part.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')))
+    .join('');
+  return new RegExp(`(?<!${LAYER_CHAR})${body}(?!${LAYER_CHAR})`, 'iu');
+}
+
+/** The layers of a build_3d_from_plan call (or of a batch) that the user has neither named nor approved on a card. */
+export function unconfirmedPlanLayers(tool: string, params: Record<string, unknown>, g: GateState): string[] {
+  const layers = planLayersOf(tool, params);
+  if (layers.length === 0) return [];
+  const texts = (g.userTexts ?? (g.userText ? [g.userText] : [])).map((t) => t.normalize('NFC')).filter((t) => LAYER_WORD.test(t));
+  const asked = userConfirmed(g) ? (g.askedText ?? '').normalize('NFC') : '';
+  return layers.filter((name) => {
+    if (g.planLayersOk?.has(name.toUpperCase())) return false;
+    const rx = layerNameRegex(name);
+    if (!rx) return true;
+    return !(texts.some((t) => rx.test(t)) || (asked !== '' && rx.test(asked)));
+  });
+}
+
 export function confirmationError(tool: string, params: Record<string, unknown>, g: GateState): string | undefined {
+  const guessed = unconfirmedPlanLayers(tool, params, g);
+  if (guessed.length > 0) {
+    return (
+      `Confirmation required: this ${tool} call builds from layers the user has not confirmed (${guessed.slice(0, 20).join(', ')}). ` +
+      'A layer mapping you worked out yourself must be approved on a card first. Do not retry now and do not work around it (no wall_handles collected from those layers either). ' +
+      'Call request_confirmation with one Vietnamese sentence that writes every layer name exactly as in the drawing and what it is ' +
+      '(e.g. "Dựng 3D với: tường = TUONG, cửa đi = CUA, cửa sổ = CUASO?"), and end your turn. ' +
+      'Build after the user presses Đồng ý, with exactly the layers named on that card.'
+    );
+  }
+  const texts = replaceNotApproved(tool, params, g);
+  if (texts.length > 0) {
+    return (
+      `Confirmation required: find_replace_text would change ${texts.length} existing text object(s) that are not on a confirmation card the user approved. ` +
+      'Replacing always needs the Đồng ý button of a card listing them; a typed "ok" / "đồng ý" does not count. Do not retry now and do not work around it ' +
+      '(no edit_text / set_block_attributes one by one). Run find_replace_text without handles (preview), call request_confirmation with its match_handles and ' +
+      'one Vietnamese sentence (count, find → replace, one example), and end your turn. Replace with exactly those handles after the user presses Đồng ý.'
+    );
+  }
   // C2 (12/11/2026): only the Đồng ý button of a card that listed these solids unlocks them, not a typed yes
   const solids = existingSolidsChanged(tool, params, g).filter((h) => !g.cardConfirmed?.has(h));
   if (solids.length > 0) {

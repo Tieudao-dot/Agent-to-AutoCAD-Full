@@ -13,7 +13,7 @@ import { summarizeResult } from '../src/agent/content.js';
 import { SYSTEM_PROMPT, THREE_D_RULES, systemPromptFor } from '../src/agent/systemPrompt.js';
 import type { ToolBridge } from '../src/tools/common.js';
 import { buildTools } from '../src/tools/index.js';
-import { SOLID_TOOL_NAMES, VIEW_PRESETS, VISUAL_STYLES } from '../src/tools/solids.js';
+import { SOLID_ALIASES, SOLID_TOOL_NAMES, VIEW_PRESETS, VISUAL_STYLES } from '../src/tools/solids.js';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const repo = path.resolve(here, '..', '..', '..');
@@ -42,7 +42,7 @@ function threeDLabels(): string[] {
 describe('3D tools', () => {
   it('are all declared and labelled ThreeD in the plugin', () => {
     for (const n of SOLID_TOOL_NAMES) assert.ok(byName(n), n);
-    assert.deepEqual(threeDLabels(), [...SOLID_TOOL_NAMES].sort());
+    assert.deepEqual(threeDLabels(), [...SOLID_TOOL_NAMES, ...SOLID_ALIASES].sort());
   });
 
   it('a 2D machine does not load them, a 3D machine does (with capture_view)', () => {
@@ -57,11 +57,16 @@ describe('3D tools', () => {
   });
 
   it('schemas accept typical calls and reject bad ones', () => {
-    assert.equal(schemaOf('draw_box').safeParse({ corner: [0, 0, 0], length: 4000, width: 220, height: 3300, layer: 'A-WALL-3D' }).success, true);
-    assert.equal(schemaOf('draw_box').safeParse({ length: -1, width: 220, height: 3300 }).success, false);
-    assert.equal(schemaOf('draw_cylinder').safeParse({ base: [0, 0], radius: 200, height: 3300 }).success, true);
-    assert.equal(schemaOf('draw_cylinder').safeParse({ base: [0, 0], radius: 200, top_radius: 0, top_center: [0, 1000, 500] }).success, true);
-    assert.equal(schemaOf('draw_pyramid').safeParse({ base: [0, 0], radius: 500, height: 800, sides: 2 }).success, false);
+    assert.equal(schemaOf('draw_solid').safeParse({ shape: 'box', corner: [0, 0, 0], length: 4000, width: 220, height: 3300, layer: 'A-WALL-3D' }).success, true);
+    assert.equal(schemaOf('draw_solid').safeParse({ shape: 'box', length: -1, width: 220, height: 3300 }).success, false);
+    assert.equal(schemaOf('draw_solid').safeParse({ length: 1, width: 1, height: 1 }).success, false, 'shape is required');
+    assert.equal(schemaOf('draw_solid').safeParse({ shape: 'cube', length: 1, width: 1, height: 1 }).success, false);
+    assert.equal(schemaOf('draw_solid').safeParse({ shape: 'cylinder', base: [0, 0], radius: 200, height: 3300 }).success, true);
+    assert.equal(schemaOf('draw_solid').safeParse({ shape: 'cylinder', base: [0, 0], radius: 200, top_radius: 0, top_center: [0, 1000, 500] }).success, true);
+    assert.equal(schemaOf('draw_solid').safeParse({ shape: 'pyramid', base: [0, 0], radius: 500, height: 800, sides: 2 }).success, false);
+    assert.equal(schemaOf('draw_solid').safeParse({ shape: 'torus', center: [0, 0], radius: 500, tube_radius: 50 }).success, true);
+    assert.equal(schemaOf('draw_solid').safeParse({ shape: 'wedge', length: 3000, width: 1200, height: 450, rotation: 180 }).success, true);
+    assert.equal(schemaOf('draw_solid').safeParse({ shape: 'sphere', center: [0, 0, 0], diameter: 600 }).success, true);
     assert.equal(schemaOf('extrude').safeParse({ profile_points: [[0, 0], [4000, 0], [4000, 6000], [0, 6000]], height: 200 }).success, true);
     assert.equal(schemaOf('extrude').safeParse({ profile_handles: ['2F4A'], height: 3300, taper_angle: 95 }).success, false);
     assert.equal(schemaOf('revolve').safeParse({ profile_points: [[0, 0], [300, 0], [300, 1000]], axis_start: [0, 0], axis_end: [0, 1] }).success, true);

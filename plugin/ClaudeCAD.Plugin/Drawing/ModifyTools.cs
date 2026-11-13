@@ -142,27 +142,40 @@ namespace ClaudeCAD.Plugin.Drawing
             var hs = p.Handles("handles", MaxModifyHandles);
             int rows = p.Int("rows", 1, 1, 1000);
             int cols = p.Int("cols", 1, 1, 1000);
+            // nâng cấp đợt A: levels stacked along Z (ARRAYRECT's levels); labelled 3D (PlanLogic.ThreeDParams)
+            int levels = p.Int("levels", 1, 1, 1000);
             double rs = p.Num("row_spacing", 0);
             double cs = p.Num("col_spacing", 0);
+            // level_spacing is mm like the heights of the 3D tools, scaled by INSUNITS (KT2-10: a metres drawing got
+            // copies 3300 units apart); row / col spacing are drawing units like every 2D tool
+            double ls = FloorPlanLogic.ToDrawingUnits(p.Num("level_spacing", 0), Convert.ToInt32(ctx.Db.Insunits));
+            if (levels > 1 && Math.Abs(ls) < Geometry.Eps)
+                throw ToolException.Invalid("array_rect: levels > 1 needs 'level_spacing' (the distance between levels along Z, mm; negative = downwards).");
             double ang = Geometry.DegToRad(p.Num("angle", 0));
-            if ((long)rows * cols * hs.Count > MaxArrayCopies)
-                throw new ToolException(ErrorCodes.TooManyEntities, $"array_rect would create {(long)rows * cols * hs.Count} entities; the limit is {MaxArrayCopies}.");
+            long total = (long)rows * cols * levels * hs.Count;
+            if (total > MaxArrayCopies)
+                throw new ToolException(ErrorCodes.TooManyEntities, $"array_rect would create {total} entities; the limit is {MaxArrayCopies}.");
             var ux = new Vector3d(Math.Cos(ang), Math.Sin(ang), 0);
             var uy = new Vector3d(-Math.Sin(ang), Math.Cos(ang), 0);
             var all = new List<object>();
-            for (int r = 0; r < rows; r++)
-                for (int c = 0; c < cols; c++)
-                {
-                    if (r == 0 && c == 0) continue; // the original is the first item
-                    var v = ux * (c * cs) + uy * (r * rs);
-                    all.AddRange(CloneEntities(ctx, hs, Matrix3d.Displacement(v)).Select(Acad.H));
-                }
-            return new Dictionary<string, object>
+            for (int l = 0; l < levels; l++)
+                for (int r = 0; r < rows; r++)
+                    for (int c = 0; c < cols; c++)
+                    {
+                        if (l == 0 && r == 0 && c == 0) continue; // the original is the first item
+                        var v = ux * (c * cs) + uy * (r * rs) + Vector3d.ZAxis * (l * ls);
+                        all.AddRange(CloneEntities(ctx, hs, Matrix3d.Displacement(v)).Select(Acad.H));
+                    }
+            var res = new Dictionary<string, object>
             {
                 ["handles"] = all,
-                ["items"] = rows * cols,
-                ["note"] = "The originals are item [row 0, col 0]; returned handles are the new copies.",
+                ["items"] = rows * cols * levels,
+                ["note"] = levels > 1
+                    ? "The originals are item [level 0, row 0, col 0]; returned handles are the new copies, level by level."
+                    : "The originals are item [row 0, col 0]; returned handles are the new copies.",
             };
+            if (levels > 1) { res["levels"] = levels; res["level_step"] = Acad.R(ls); } // the step in drawing units, to check
+            return res;
         }
 
         private static object ArrayPolar(ToolContext ctx, Params p)
@@ -205,65 +218,154 @@ namespace ClaudeCAD.Plugin.Drawing
         {
             var h = p.Handle("handle");
             double dist = p.Positive("distance");
-            var side = Acad.P3(p.Point("side_point"));
+            // nâng cấp đợt B: both_sides makes a copy on each side (no side_point needed)
+            bool both = p.Bool("both_sides", false);
+            Edit2DLogic.CheckOffsetSides(both, p.Has("side_point"));
             var ent = Acad.GetEntity(ctx, h, false);
             if (!(ent is Curve curve) || ent is Xline || ent is Ray)
                 throw ToolException.Invalid($"offset_entity: {Acad.TypeName(ent)} cannot be offset; use a line, polyline, arc, circle, ellipse or spline.");
 
-            DBObjectCollection best = null;
-            double bestDist = double.MaxValue;
-            foreach (var d in new[] { dist, -dist })
+            var chosen = new List<DBObjectCollection>();
+            var failed = 0;
+            if (both)
             {
-                DBObjectCollection res;
-                try { res = curve.GetOffsetCurves(d); }
-                catch (Autodesk.AutoCAD.Runtime.Exception) { continue; }
-                double dd = double.MaxValue;
-                foreach (DBObject o in res)
-                    if (o is Curve c)
-                    {
-                        try { dd = Math.Min(dd, c.GetClosestPointTo(side, false).DistanceTo(side)); } catch { }
-                    }
-                if (dd < bestDist)
+                foreach (var d in new[] { dist, -dist })
                 {
-                    if (best != null) foreach (DBObject o in best) o.Dispose();
-                    best = res;
-                    bestDist = dd;
+                    try { var res = curve.GetOffsetCurves(d); if (res.Count > 0) chosen.Add(res); else failed++; }
+                    catch (Autodesk.AutoCAD.Runtime.Exception) { failed++; }
                 }
-                else foreach (DBObject o in res) o.Dispose();
+                if (chosen.Count == 0)
+                    throw ToolException.Invalid($"offset_entity: AutoCAD could not offset {h} by {dist} on either side (distance too large for the curvature?).");
             }
-            if (best == null || best.Count == 0)
-                throw ToolException.Invalid($"offset_entity: AutoCAD could not offset {h} by {dist} (distance too large for the curvature?).");
-            var ids = new List<ObjectId>();
-            foreach (DBObject o in best)
+            else
             {
-                var e = (Entity)o;
-                e.SetPropertiesFrom(ent);
-                ids.Add(Acad.Add(ctx, e, null, defaults: false, owner: ent.BlockId));
+                var side = Acad.P3(p.Point("side_point"));
+                DBObjectCollection best = null;
+                double bestDist = double.MaxValue;
+                foreach (var d in new[] { dist, -dist })
+                {
+                    DBObjectCollection res;
+                    try { res = curve.GetOffsetCurves(d); }
+                    catch (Autodesk.AutoCAD.Runtime.Exception) { continue; }
+                    double dd = double.MaxValue;
+                    foreach (DBObject o in res)
+                        if (o is Curve c)
+                        {
+                            try { dd = Math.Min(dd, c.GetClosestPointTo(side, false).DistanceTo(side)); } catch { }
+                        }
+                    if (dd < bestDist)
+                    {
+                        if (best != null) foreach (DBObject o in best) o.Dispose();
+                        best = res;
+                        bestDist = dd;
+                    }
+                    else foreach (DBObject o in res) o.Dispose();
+                }
+                if (best == null || best.Count == 0)
+                    throw ToolException.Invalid($"offset_entity: AutoCAD could not offset {h} by {dist} (distance too large for the curvature?).");
+                chosen.Add(best);
             }
-            return Acad.Handles(ids);
+            var ids = new List<ObjectId>();
+            foreach (var set in chosen)
+                foreach (DBObject o in set)
+                {
+                    var e = (Entity)o;
+                    e.SetPropertiesFrom(ent);
+                    ids.Add(Acad.Add(ctx, e, null, defaults: false, owner: ent.BlockId));
+                }
+            var r = Acad.Handles(ids);
+            if (both)
+            {
+                r["sides"] = chosen.Count;
+                if (failed > 0) r["note"] = "Only one side could be offset (the distance is too large on the other side, e.g. inside a small circle or arc).";
+            }
+            return r;
         }
 
         // ------------------------------------------------------------------ fillet / chamfer
 
-        private static (Line, Line) TwoLines(ToolContext ctx, Params p, string tool)
-        {
-            var h1 = p.Handle("handle1");
-            var h2 = p.Handle("handle2");
-            if (h1.Equals(h2, StringComparison.OrdinalIgnoreCase)) throw ToolException.Invalid($"{tool}: handle1 and handle2 must be different lines.");
-            var e1 = Acad.GetEntity(ctx, h1, true);
-            var e2 = Acad.GetEntity(ctx, h2, true);
-            if (!(e1 is Line l1) || !(e2 is Line l2))
-                throw ToolException.Invalid($"{tool}: v1 supports two LINE entities (got {Acad.TypeName(e1)} and {Acad.TypeName(e2)}). " +
-                    "For polylines, explode_entities first or redraw the corner with draw_polyline bulges.");
-            return (l1, l2);
-        }
-
         private static double[] D(Point3d p) => new[] { p.X, p.Y, p.Z };
 
-        private static object FilletEntities(ToolContext ctx, Params p)
+        /// <summary>
+        /// The two objects of fillet / chamfer (nâng cấp đợt B): two lines (as before), a line and an arc or two arcs, or a
+        /// polyline alone (handle2 left out: every corner, or 'vertex').
+        /// </summary>
+        private static (Entity e1, Entity e2) CornerObjects(ToolContext ctx, Params p, string tool)
         {
-            var (l1, l2) = TwoLines(ctx, p, "fillet_entities");
-            var r = Geometry.FilletLines(D(l1.StartPoint), D(l1.EndPoint), D(l2.StartPoint), D(l2.EndPoint), p.Num("radius", 0));
+            var h1 = p.Handle("handle1");
+            var e1 = Acad.GetEntity(ctx, h1, true);
+            if (!p.Has("handle2"))
+            {
+                if (!(e1 is Polyline))
+                    throw ToolException.Invalid($"{tool}: give handle2 (the second line or arc); handle1 alone only works for an LWPOLYLINE (all its corners, or 'vertex').");
+                return (e1, null);
+            }
+            var h2 = p.Handle("handle2");
+            if (h1.Equals(h2, StringComparison.OrdinalIgnoreCase)) throw ToolException.Invalid($"{tool}: handle1 and handle2 must be different objects (for a polyline's corners leave handle2 out).");
+            var e2 = Acad.GetEntity(ctx, h2, true);
+            if (!(e1 is Line || e1 is Arc) || !(e2 is Line || e2 is Arc))
+                throw ToolException.Invalid($"{tool}: two objects must be LINEs or ARCs (got {Acad.TypeName(e1)} and {Acad.TypeName(e2)}). " +
+                    "For a polyline's corners give handle1 = the polyline and leave handle2 out (optionally 'vertex').");
+            foreach (var a in new[] { e1, e2 }.OfType<Arc>())
+                if (!a.Normal.IsParallelTo(Vector3d.ZAxis))
+                    throw ToolException.Invalid($"{tool}: arc {a.Handle} is not in the XY plane.");
+            return (e1, e2);
+        }
+
+        private static Edit2DLogic.Prim PrimOf(Entity e)
+        {
+            if (e is Line l) return Edit2DLogic.Prim.Line(D(l.StartPoint), D(l.EndPoint));
+            var a = (Arc)e;
+            // an arc whose normal is -Z runs clockwise in the WCS: its OCS angles are mirrored (Edit2DLogic.WcsArcAngles)
+            var (s, e2) = Edit2DLogic.WcsArcAngles(a.StartAngle, a.EndAngle, a.Normal.Z < 0);
+            return Edit2DLogic.Prim.Arc(D(a.Center), a.Radius, s, e2);
+        }
+
+        private static void ApplyPrim(Entity e, Edit2DLogic.Prim k)
+        {
+            if (e is Line l)
+            {
+                double z = l.StartPoint.Z;
+                l.StartPoint = new Point3d(k.A[0], k.A[1], z);
+                l.EndPoint = new Point3d(k.B[0], k.B[1], z);
+                return;
+            }
+            var a = (Arc)e;
+            var (s, e2) = Edit2DLogic.WcsArcAngles(k.S, k.E, a.Normal.Z < 0); // the map is its own inverse
+            a.StartAngle = s; a.EndAngle = e2;
+        }
+
+        /// <summary>Fillet / chamfer of a polyline's corners: the vertices are rewritten in place (same handle).</summary>
+        private static object PolylineCorners(Polyline pl, Params p, string tool, bool chamfer)
+        {
+            int n = pl.NumberOfVertices;
+            var v = new List<double[]>();
+            var bulges = new List<double>();
+            for (int i = 0; i < n; i++) { var q = pl.GetPoint2dAt(i); v.Add(new[] { q.X, q.Y }); bulges.Add(pl.GetBulgeAt(i)); }
+            int? vertex = p.Has("vertex") ? p.Int("vertex") : (int?)null;
+            double d1 = chamfer ? p.Num("dist1") : 0;
+            double d2 = chamfer ? p.Num("dist2", d1) : 0;
+            var r = Edit2DLogic.PolylineCorners(v, bulges, pl.Closed, vertex, chamfer, chamfer ? 0 : p.Num("radius", 0), d1, d2, tool);
+            // keep a constant width; per-vertex widths cannot follow the new vertices
+            double w = n > 0 ? pl.GetStartWidthAt(0) : 0;
+            bool constant = Enumerable.Range(0, n).All(i => Math.Abs(pl.GetStartWidthAt(i) - w) < 1e-9 && Math.Abs(pl.GetEndWidthAt(i) - w) < 1e-9);
+            for (int i = 0; i < r.Vertices.Count; i++) pl.AddVertexAt(n + i, Acad.P2(r.Vertices[i]), r.Bulges[i], constant ? w : 0, constant ? w : 0);
+            for (int i = 0; i < n; i++) pl.RemoveVertexAt(0);
+            var res = Acad.Handles(pl.ObjectId);
+            res["corners"] = r.Done.Count;
+            res["vertices"] = pl.NumberOfVertices;
+            if (r.Skipped.Count > 0) res["skipped"] = r.Skipped.Cast<object>().ToList();
+            res["note"] = "Polyline changed in place (same handle). Vertex indices after the corners have shifted.";
+            return res;
+        }
+
+        internal static object FilletEntities(ToolContext ctx, Params p)
+        {
+            var (e1, e2) = CornerObjects(ctx, p, "fillet_entities");
+            if (e2 == null) return PolylineCorners((Polyline)e1, p, "fillet_entities", false);
+            double radius = p.Num("radius", 0);
+            if (!(e1 is Line l1) || !(e2 is Line l2)) return ArcCorner(ctx, e1, e2, p, "fillet_entities", false);
+            var r = Geometry.FilletLines(D(l1.StartPoint), D(l1.EndPoint), D(l2.StartPoint), D(l2.EndPoint), radius);
             l1.StartPoint = Acad.P3(r.Line1Start); l1.EndPoint = Acad.P3(r.Line1End);
             l2.StartPoint = Acad.P3(r.Line2Start); l2.EndPoint = Acad.P3(r.Line2End);
             var ids = new List<ObjectId> { l1.ObjectId, l2.ObjectId };
@@ -280,9 +382,39 @@ namespace ClaudeCAD.Plugin.Drawing
             return res;
         }
 
+        /// <summary>Fillet / chamfer when an arc is involved (Edit2DLogic.FilletArcs / ChamferArcs).</summary>
+        private static object ArcCorner(ToolContext ctx, Entity e1, Entity e2, Params p, string tool, bool chamfer)
+        {
+            Edit2DLogic.ArcCornerResult r;
+            if (chamfer)
+            {
+                double d1 = p.Num("dist1");
+                r = Edit2DLogic.ChamferArcs(PrimOf(e1), PrimOf(e2), d1, p.Num("dist2", d1), tool);
+            }
+            else r = Edit2DLogic.FilletArcs(PrimOf(e1), PrimOf(e2), p.Num("radius", 0), tool);
+            ApplyPrim(e1, r.New1);
+            ApplyPrim(e2, r.New2);
+            var ids = new List<ObjectId> { e1.ObjectId, e2.ObjectId };
+            double z = e1 is Line ln ? ln.StartPoint.Z : ((Arc)e1).Center.Z;
+            Entity extra = null;
+            if (r.Fillet != null) extra = new Arc(new Point3d(r.Fillet.C[0], r.Fillet.C[1], z), Vector3d.ZAxis, r.Fillet.R, r.Fillet.S, r.Fillet.E);
+            else if (r.ChamferStart != null) extra = new Line(new Point3d(r.ChamferStart[0], r.ChamferStart[1], z), new Point3d(r.ChamferEnd[0], r.ChamferEnd[1], z));
+            if (extra != null)
+            {
+                extra.SetDatabaseDefaults(ctx.Db);
+                extra.SetPropertiesFrom(e1);
+                ids.Add(Acad.Add(ctx, extra, null, defaults: false, owner: e1.BlockId));
+            }
+            var res = Acad.Handles(ids);
+            if (r.Fillet != null) res["arc_handle"] = Acad.H(ids[2]);
+            return res;
+        }
+
         private static object ChamferEntities(ToolContext ctx, Params p)
         {
-            var (l1, l2) = TwoLines(ctx, p, "chamfer_entities");
+            var (e1, e2) = CornerObjects(ctx, p, "chamfer_entities");
+            if (e2 == null) return PolylineCorners((Polyline)e1, p, "chamfer_entities", true);
+            if (!(e1 is Line l1) || !(e2 is Line l2)) return ArcCorner(ctx, e1, e2, p, "chamfer_entities", true);
             double d1 = p.Num("dist1");
             double d2 = p.Num("dist2", d1);
             var r = Geometry.ChamferLines(D(l1.StartPoint), D(l1.EndPoint), D(l2.StartPoint), D(l2.EndPoint), d1, d2);
@@ -358,10 +490,17 @@ namespace ClaudeCAD.Plugin.Drawing
             return SolidLogic.IsExplodeConfirmType(names);
         }
 
+        /// <summary>For CLAUDECHATSELFTEST (nâng cấp đợt B: join with a tolerance).</summary>
+        internal static object JoinForSelfTest(ToolContext ctx, Params p) => JoinEntities(ctx, p);
+
         private static object JoinEntities(ToolContext ctx, Params p)
         {
             var hs = p.Handles("handles", MaxModifyHandles);
             if (hs.Count < 2) throw ToolException.Invalid("join_entities: give at least 2 handles (touching lines, arcs or polylines).");
+            // nâng cấp đợt B: gaps up to 'tolerance' are bridged by a straight segment (like PEDIT Join, fuzz distance + Add)
+            double tol = p.Num("tolerance", 0);
+            if (tol < 0) throw ToolException.Invalid("join_entities: 'tolerance' must be >= 0.");
+            var bridged = new List<object>();
             var ents = OpenForWrite(ctx, hs);
             foreach (var e in ents)
                 if (!(e is Line) && !(e is Arc) && !(e is Polyline))
@@ -405,13 +544,64 @@ namespace ClaudeCAD.Plugin.Drawing
                         // not touching yet; retry after others are joined
                     }
                 }
+                // Test & sửa đợt B (NB-2): bridge a small gap only when no touching object is left to join, one gap at a
+                // time and the smallest gap first, so a gap never takes the end where a touching object belongs
+                if (!progress && tol > 0)
+                    foreach (var e in pending.OrderBy(x => BridgeGap(pl, x, tol)).ToList())
+                        if (TryBridge(pl, e, tol, out var gap))
+                        {
+                            e.Erase();
+                            pending.Remove(e);
+                            progress = true;
+                            bridged.Add(new Dictionary<string, object> { ["handle"] = e.Handle.ToString(), ["gap"] = Acad.R(gap) });
+                            break;
+                        }
             }
             var r = Acad.Handles(plId);
             r["joined"] = ents.Count - pending.Count;
             r["closed"] = pl.Closed;
             if (pending.Count > 0)
                 r["not_joined"] = pending.Select(e => (object)e.Handle.ToString()).ToList();
+            if (bridged.Count > 0) r["bridged"] = bridged;
+            if (tol > 0 && !pl.Closed && pl.NumberOfVertices > 2)
+            {
+                double endGap = pl.StartPoint.DistanceTo(pl.EndPoint);
+                if (endGap > Geometry.Eps && endGap <= tol)
+                    r["note"] = $"The two ends are {Acad.R(endGap)} apart (within the tolerance) but the polyline is left open; edit_polyline closed: true closes it.";
+            }
             return r;
+        }
+
+        /// <summary>The gap TryBridge would close to this object (infinity when none).</summary>
+        private static double BridgeGap(Polyline pl, Entity e, double tol)
+        {
+            if (pl.Closed || !(e is Curve c)) return double.PositiveInfinity;
+            var b = Edit2DLogic.Bridge(D(pl.StartPoint), D(pl.EndPoint), D(c.StartPoint), D(c.EndPoint), tol);
+            return b == null ? double.PositiveInfinity : b.Value.gap;
+        }
+
+        /// <summary>Bridges a gap of at most tol between the polyline and the curve by a straight vertex, then joins; undone when the join still fails.</summary>
+        private static bool TryBridge(Polyline pl, Entity e, double tol, out double gap)
+        {
+            gap = 0;
+            if (pl.Closed || !(e is Curve c)) return false; // a closed polyline joins nothing (and its closing bulge must stay)
+            var b = Edit2DLogic.Bridge(D(pl.StartPoint), D(pl.EndPoint), D(c.StartPoint), D(c.EndPoint), tol);
+            if (b == null) return false;
+            gap = b.Value.gap;
+            var target = b.Value.objStart ? c.StartPoint : c.EndPoint;
+            var pt = new Point2d(target.X, target.Y);
+            int n = pl.NumberOfVertices;
+            int added;
+            double lastBulge = pl.GetBulgeAt(n - 1);
+            if (b.Value.plStart) { pl.AddVertexAt(0, pt, 0, 0, 0); added = 0; }
+            else { pl.SetBulgeAt(n - 1, 0); pl.AddVertexAt(n, pt, 0, 0, 0); added = n; }
+            try { pl.JoinEntity(e); return true; }
+            catch (Autodesk.AutoCAD.Runtime.Exception)
+            {
+                pl.RemoveVertexAt(added);
+                pl.SetBulgeAt(n - 1, lastBulge);
+                return false;
+            }
         }
 
         private static Polyline ToPolyline(Entity e)

@@ -32,7 +32,8 @@ describe('3D phase 3 tools', () => {
     for (const n of PLAN3D_TOOL_NAMES) {
       assert.ok(byName(n), n);
       assert.ok((SOLID_TOOL_NAMES as readonly string[]).includes(n), n);
-      assert.match(plans, new RegExp(`"[^"]*\\b${n}\\b[^"]*"\\);\\s*return d;`), `${n} in the ThreeD group (last Add of Plans.cs)`);
+      const threeDBlock = /Add\(ToolGroup\.ThreeD,([\s\S]*?)\);\s*return d;/.exec(plans)?.[1] ?? '';
+      assert.match(threeDBlock, new RegExp(`\\b${n}\\b`), `${n} in the ThreeD group (last Add of Plans.cs)`);
     }
     const twoD = tools.map((t) => t.name).filter((n) => !(SOLID_TOOL_NAMES as readonly string[]).includes(n));
     const kept = buildTools(bridge, twoD).map((t) => t.name);

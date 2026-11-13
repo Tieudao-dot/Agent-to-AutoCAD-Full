@@ -267,11 +267,171 @@ AutoCAD thật", và các lỗi đã sửa cần thử thật. M1–M2 và M10�
 | M12 | ○ | Máy đang dùng, không mạng (gói 3D). Chủ plugin đổi ô Gói sang `Full`, chạy lại `taoKeyThuCong`. ⚙ ▸ **Tài khoản AI** ▸ **Dán mã của chủ plugin**, dán dòng `CCF1` mới, **Dùng mã**. (Có mạng: ⚙ ▸ Tài khoản AI ▸ **Kiểm tra lại**) | Thẻ "Dán mã của chủ plugin" hiện; "Đã lưu gói Full cho máy này.", toast "Gói đã đổi sang Full", thanh trên "Gói: Full". Đây cũng là chỗ dán cho I5c. Kiểm tra lại: toast trạng thái máy | ☐ | ☐ | KT-41 |
 | M3 | ★ | Gói Full, một hộp dựng ở lượt trước. (a) "xóa hộp đó" → khi thẻ hiện, **gõ** "ok" thay vì bấm. (b) Bấm **Đồng ý** trên thẻ. (c) Hộp khác ở lượt trước: "sao chép hộp, khoét một lỗ trên bản sao rồi xóa hộp gốc" | (a) Hộp còn nguyên; Claude hiện lại thẻ, nhắc bấm Đồng ý. (b) Hộp bị xóa. (c) Bản sao khoét được không hỏi (khối mới); xóa hộp gốc thì có thẻ | ☐ | ☐ | KT-09, KT-12 |
 | M4 | ○ | Gói Full: lượt J2 (tường + cửa) → "Lưu thành macro"; lượt sau "khoét thêm cửa sổ vào tường" (đồng ý trên thẻ) → lưu thành macro thứ hai; chạy macro thứ hai | Macro thứ hai **không chạy** (không hỏi chọn điểm): thẻ lỗi "Macro này sửa khối 3D có sẵn trong bản vẽ… không chạy", bản vẽ không đổi. Macro thứ nhất vẫn chạy bình thường | ☐ | ☐ | KT-10 |
-| M5 | ○ | `draw_pyramid` 4 cạnh, bán kính 500, rotation 0 ("dựng chóp đáy vuông cạnh 1000") | Hộp bao ±500 theo X / Y (đáy vuông theo trục, không xoay 45°), đáy ở z của tâm | ☐ | ☐ | KT (Pyramid) |
+| M5 | ○ | `draw_solid` `pyramid` (trước đây `draw_pyramid`) 4 cạnh, bán kính 500, rotation 0 ("dựng chóp đáy vuông cạnh 1000") | Hộp bao ±500 theo X / Y (đáy vuông theo trục, không xoay 45°), đáy ở z của tâm | ☐ | ☐ | KT (Pyramid) |
 | M6 | ○ | Dựng hộp, "liệt kê cạnh và mặt"; lưu bản vẽ, mở lại (hoặc mở bằng đời AutoCAD khác), "liệt kê cạnh và mặt" của cùng khối | Thứ tự và số cạnh / mặt giữ nguyên (macro bo cạnh theo số dựa vào đây) | ☐ | ☐ | KT (Brep) |
 | M7 | ○ | Bật 🔒 Chỉ xem, "xem góc SW iso", rồi đóng bản vẽ | Ghi lại: AutoCAD có hỏi lưu không (đổi góc nhìn có thể làm bản vẽ "đã sửa") | ☐ | ☐ | KT (Chỉ xem) |
 | M8 | ○ | Khóa layer của một khối, "xoay khối 90 độ quanh trục X" và "đối xứng khối qua mặt YZ" | Câu báo dễ hiểu (layer bị khóa, hỏi mở khóa); ghi lại câu Claude nói | ☐ | ☐ | KT (khóa layer) |
 | M9 | ○ | Sau L9 / L11: gõ `PURGE` | Không có đối tượng lạ (không còn `SectionSettings` / đối tượng tạm của mặt cắt) | ☐ | ☐ | KT (Section) |
+
+## N. Nâng cấp đợt A (bản Full, gói 3D hoặc Full, ~34 phút)
+
+*13/11/2026 · từ [`ban-giao/nang-cap-a.md`](ban-giao/nang-cap-a.md). Máy ở gói `3D` hoặc `Full`, bản vẽ mới
+(acadiso.dwt), tab Model. N0: tự kiểm tra; N1–N3: 6 lệnh dựng khối gộp thành một; N4–N7: layer tên khác; N8–N9: cột;
+N10–N12: nhiều tầng; N13–N14: lan can; N15–N16: mảng nhiều tầng; N17–N19: thêm sau bước Test & sửa đợt A. **Quan trọng nhất: N0, N4, N5, N10.***
+
+| # | | Làm gì | Kết quả mong đợi | Đạt | Lỗi | Mã gốc |
+| --- | --- | --- | --- | --- | --- | --- |
+| N0 | ★ | Gõ `CLAUDECHATSELFTEST` | Hai dòng mới ✓: "Nâng cấp đợt A: dựng 2 tầng + sàn mái + 2 cột từ mặt bằng…" (tường 2 tầng ≈ 15,204 m³, 2 cột × 2 tầng ≈ 0,9159 m³, 2 sàn + sàn mái = 6,048 m³) và "Nâng cấp đợt A: lan can thẳng 3 m…" (≈ 0,03139 m³). Dòng ✗ thì gửi file báo cáo | ☐ | ☐ | A3–A5 |
+| N1 | ★ | "dựng hộp 1000x500x300, trụ D400 cao 3,3 m, cầu D600, nêm 3000x1200x450, xuyến R500 ống 50, chóp 4 cạnh đáy 1000" | Dòng trạng thái ghi "Dựng khối 3D" (không còn "Dựng khối hộp"…); đủ 6 khối đúng hình ở góc iso; thể tích từng khối đúng (hộp 0,15 m³, trụ ≈ 0,415 m³) | ☐ | ☐ | A1 |
+| N2 | ★ | Macro ghi **trước** đợt A có `draw_box` (ghi trên bản thử cũ, hoặc sửa tay một file macro đổi `draw_solid` thành `draw_box` và bỏ `shape`): chạy trên bản mới | Macro chạy, hộp dựng như cũ (tên cũ vẫn chạy trong plugin) | ☐ | ☐ | A1 |
+| N3 | ○ | Gói `2D`: chạy macro N2 | Thẻ "Không chạy macro… gói 2D… (draw_box)"; bản vẽ không đổi | ☐ | ☐ | A1 |
+| N4 | ★ | Vẽ phòng L2 nhưng tường trên layer `TUONG`, cửa đi trên `CUA`, cửa sổ trên `CUA SO`. Gõ "dựng 3D mặt bằng này" (không nhắc tên layer) | Claude chạy thử, nói ánh xạ đoán được và hiện **thẻ xác nhận có ghi đủ tên layer** (tường = TUONG, cửa đi = CUA, cửa sổ = CUA SO); **chưa dựng gì** | ☐ | ☐ | A2 |
+| N5 | ★ | Sau N4 bấm **Đồng ý** | Dựng đúng như L2 (tường có lỗ cửa); khối trên `A-WALL-3D`. Lượt sau "dựng tầng 2 cùng mặt bằng": dựng ngay, **không hỏi lại layer** | ☐ | ☐ | A2 |
+| N6 | ○ | Làm lại N4 (bản vẽ khác hoặc chat mới) rồi bấm **Hủy** | Không dựng gì. Gõ tiếp "tường ở layer TUONG, cửa ở layer CUA, dựng đi": Claude dựng theo đúng layer cậu nêu, không cần thẻ | ☐ | ☐ | A2 |
+| N7 | ○ | Chat mới, cùng bản vẽ N4, gõ không dấu "dung 3d mat bang nay, tuong cao 3m" | Vẫn hiện thẻ hỏi layer (chữ "tuong" trong câu không được coi là tên layer `TUONG`) | ☐ | ☐ | A2 |
+| N8 | ★ | Thêm 4 cột 220x220 (`draw_rectangle`) và 1 cột tròn D300 trên layer `A-COL` ở góc phòng L2 (chưa dựng). "dựng 3D, tầng cao 3,3 m, sàn 120" | Có 5 khối cột trên `A-COLS-3D` cao 3180 (bằng tường), đáy ở z 0; hatch trên `A-COL` không gây lỗi; Claude báo số cột và kích thước | ☐ | ☐ | A3 |
+| N9 | ○ | Vẽ một hình chữ nhật 5000x4000 trên `A-COL`, "chạy thử dựng 3D" | Hình đó bị bỏ qua với lý do "larger than a column"; không thành khối cột khổng lồ | ☐ | ☐ | A3 |
+| N10 | ★ | Phòng L2 chưa dựng, **có đường bao sàn** (hình kín trên `A-SLAB`; chưa có thì vẽ thêm một hình chữ nhật theo mép ngoài tường): "dựng 3 tầng, mỗi tầng cao 3,3 m, sàn 120" | Một lượt dựng 3 tầng: tường mỗi tầng cao 3180 ở z 0 / 3300 / 6600; sàn tầng 2, 3 nằm trên đỉnh tường tầng dưới (z 3180–3300, 6480–6600), không chồng vào tường; **không hỏi xóa gì**; không chờ lâu hơn hẳn dựng 1 tầng; gõ U một lần mất cả 3 tầng | ☐ | ☐ | A4, L24 |
+| N11 | ○ | Sau N10: "dựng thêm tầng 4" | Dựng ngay ở z 9900, không báo "already built", không hỏi xóa tầng dưới. Gõ lại câu N10 → Claude báo các tầng đã dựng và hỏi, không gợi ý xóa tầng khác | ☐ | ☐ | A4, L24 |
+| N12 | ○ | Bản vẽ đơn vị mét (L8): "dựng 2 tầng, mỗi tầng 3,3 m, có sàn mái" | Tầng 2 ở cao 3,3 (đơn vị bản vẽ), sàn mái trên cùng ở 6,6; không có số 3300 | ☐ | ☐ | A4, L27 |
+| N13 | ★ | Vẽ polyline ban công 3 cạnh (3000 + 1200 + 3000). "dựng lan can theo đường này" | Một khối trên `A-RAIL-3D` cao **1100**: tay vịn trên cùng, trụ ở mỗi góc và cách ≤ 1500, song đứng khe ≤ 100; polyline vẫn nguyên | ☐ | ☐ | A5 |
+| N14 | ○ | "lan can kính cao 1200 trên sàn tầng 2" (cùng polyline) | Tấm kính (không song), cao 1200, đáy ở z 3300 | ☐ | ☐ | A5 |
+| N15 | ★ | Dựng một cột 400x400 cao 3300, "lặp cột này 3 hàng x 4 cột cách 6 m x 4 m, 3 tầng cách 3,3 m" | 36 cột (35 bản sao mới), tầng trên đặt đúng cao 3300 / 6600 | ☐ | ☐ | A6 |
+| N16 | ○ | Gói `2D`: "lặp hình chữ nhật này 2 hàng x 2 cột, 3 tầng cách 3000" | Claude nói số tầng thuộc gói 3D (mảng 2D thường vẫn làm được nếu cậu bỏ số tầng) | ☐ | ☐ | A6 |
+| N17 | ★ | Phòng **không có đường bao sàn** (không có hình kín trên `A-SLAB` / `A-FLOR`), chưa dựng: "dựng 3 tầng, mỗi tầng cao 3,3 m" | **Chưa dựng gì**; Claude hỏi cậu chọn: sàn theo khung bao tường, chỉ đường bao sàn, hay không làm sàn (tường cao hết tầng). Chọn xong mới dựng, các tầng **không hở nhau** 150 mm | ☐ | ☐ | NA-3 |
+| N18 | ○ | "dựng lan can từ điểm 0,0 tới điểm 5000000,0" (5 km, gõ nhầm số) | Claude báo đường quá dài (quá 2000 mảnh), không dựng gì; AutoCAD **không đứng máy** | ☐ | ☐ | NA-2 |
+| N19 | ○ | Lan can dài: polyline thẳng 60 m, "dựng lan can theo đường này" | Dựng xong trong dưới 2 phút, không báo "hết giờ", không dựng 2 lần. Lâu hơn hoặc lỗi thì ghi lại thời gian (để hạ giới hạn 2000 mảnh) | ☐ | ☐ | A5 |
+
+Còn chỉ thấy trên AutoCAD thật: sao chép khối tầng 1 lên các tầng trên (N0, N10); cộng hàng trăm hộp của lan can dài
+(N13 với đường rất dài: thời gian; mảnh không cộng được để riêng, báo `separate_pieces`); cột hình tròn / polyline có
+cung (đùn từ region).
+
+## O. Nâng cấp đợt B — sửa hình 2D (bản Full, gói 2D hoặc Full, ~30 phút)
+
+*13/11/2026 · từ [`ban-giao/nang-cap-b.md`](ban-giao/nang-cap-b.md). Máy ở gói `2D` hoặc `Full` (O14, O15: gói `3D`),
+bản vẽ mới (acadiso.dwt), tab Model. Sau mỗi dòng gõ U một lần: mọi thay đổi của lượt đó mất hết. **Quan trọng nhất: O0,
+O1, O4, O6, O14.***
+
+| # | | Làm gì | Kết quả mong đợi | Đạt | Lỗi | Mã gốc |
+| --- | --- | --- | --- | --- | --- | --- |
+| O0 | ★ | Gõ `CLAUDECHATSELFTEST` | Dòng mới ✓ "Nâng cấp đợt B: bo 4 góc polyline, kéo dài, bẻ gãy, chia đều, nối có dung sai, kéo giãn" (chu vi bo góc ≈ 282,832). Dòng ✗ thì gửi file báo cáo | ☐ | ☐ | B1–B9 |
+| O1 | ★ | Vẽ hình chữ nhật 6000x3000. "kéo giãn cạnh phải hình này sang phải 1000" | Hình thành 7000x3000, cạnh trái giữ nguyên, vẫn cùng handle; chữ / đối tượng nằm hẳn trong khung thì được dời theo | ☐ | ☐ | B1 |
+| O2 | ○ | Vẽ 30 đoạn thẳng ngắn cạnh nhau rồi "kéo giãn tất cả đầu bên phải sang phải 500" | Claude **hỏi trước** (nói số đối tượng), chỉ làm sau khi cậu đồng ý | ☐ | ☐ | B1 |
+| O3 | ★ | Vẽ đường thẳng 5000. "bẻ gãy đường này ở giữa" rồi "cắt bỏ đoạn từ 1000 tới 2000 của đoạn đầu" | Lần 1: 2 đoạn 2500; lần 2: còn 1000 + 500, khoảng hở 1000. Vẽ đường tròn rồi "cắt bỏ một phần tư đường tròn" → còn cung 3/4 | ☐ | ☐ | B2 |
+| O4 | ★ | Vẽ đường thẳng 3000 và cung bán kính 1000. "kéo dài đường thẳng thêm 500", "rút ngắn cung còn 80%", "cho đường thẳng dài đúng 4200" | Đường 3500 rồi 4200 (chỉ một đầu đổi); cung ngắn lại, tâm và bán kính giữ nguyên | ☐ | ☐ | B3 |
+| O5 | ○ | Vẽ polyline 2 đoạn (đoạn cuối là cung). "kéo dài đầu cuối thêm 300" | Cung cuối dài thêm theo đúng đường tròn của nó, polyline vẫn một đối tượng | ☐ | ☐ | B3 |
+| O6 | ★ | Vẽ đường thẳng 6000. "chia đường này làm 6 phần" rồi "cứ 1500 đặt một block cọc (block có sẵn) dọc đường" | 5 điểm chia (thấy rõ nếu kiểu điểm PDMODE đã đổi; nếu không Claude nhắc đổi kiểu điểm); 3 block cọc xoay theo đường. Đường không bị đổi | ☐ | ☐ | B4 |
+| O7 | ★ | Chọn một bộ bàn ghế (vài đối tượng). "nhóm các đối tượng này thành nhóm BAN AN" rồi kéo thử một đối tượng | Cả nhóm chọn cùng nhau (lệnh GROUP của AutoCAD thấy nhóm BAN AN). "bỏ nhóm BAN AN" → chọn riêng từng cái được, đối tượng không đổi | ☐ | ☐ | B5 |
+| O8 | ★ | Một đường layer `A-WALL` màu đỏ nét đứt; 5 đường khác layer `0`. "chép thuộc tính đường đỏ sang 5 đường kia" | 5 đường thành layer `A-WALL`, màu đỏ, nét đứt, cùng độ dày nét / tỉ lệ nét | ☐ | ☐ | B6 |
+| O9 | ○ | Một chữ kiểu `Standard` cao 250 và vài chữ khác cao 100. "chép thuộc tính chữ cao 250 sang các chữ kia" | Các chữ đổi kiểu chữ và chiều cao, nội dung giữ nguyên. Kích thước: chép kiểu kích thước sang kích thước khác được | ☐ | ☐ | B6 |
+| O10 | ★ | Vẽ polyline kín 6000x3000 (một đối tượng). "bo tròn tất cả các góc bán kính 300", rồi trên một polyline khác "vát góc thứ 2 cạnh 200" | Bốn góc bo R300, polyline vẫn một đối tượng cùng handle; lần 2 chỉ đúng một góc bị vát. Góc nào cạnh quá ngắn thì Claude nói rõ góc đó bỏ qua | ☐ | ☐ | B7 |
+| O11 | ★ | Vẽ một đường thẳng và một cung chạm nhau thành góc. "bo góc giữa đường và cung bán kính 200" | Có cung bo R200 tiếp xúc cả hai; đường và cung được cắt bớt đúng đến chỗ tiếp xúc. "vát góc 150" trên cặp khác cũng làm được | ☐ | ☐ | B7 |
+| O12 | ★ | Vẽ trục tường (đường thẳng). "vẽ tường 220 tim ở trục này" | Hai đường song song cách trục 110 mỗi bên (một lệnh, không phải hỏi phía) | ☐ | ☐ | B8 |
+| O13 | ★ | Vẽ 3 đoạn thẳng nối nhau nhưng hở 0,3 mm ở một chỗ. "nối các đường này thành polyline" | Claude nối được (dung sai, khe được nối bằng một đoạn thẳng ngắn), báo chỗ đã nối khe; không có dung sai thì báo đoạn không nối | ☐ | ☐ | B9 |
+| O14 | ★ | Gói `3D`: một khối 3D trên layer `0` và một khối trên `A-WALL-3D` màu xanh. "chép thuộc tính khối xanh sang khối kia" | Làm được (layer, màu…). "chép kiểu chữ của chữ này sang chữ kia" → Claude nói phần chữ / kích thước thuộc gói 2D | ☐ | ☐ | B6 |
+| O15 | ○ | Gói `3D`: "nhóm các khối này" / "kéo giãn hình này" | Nhóm làm được; kéo giãn Claude nói thuộc gói 2D | ☐ | ☐ | B5, B1 |
+| O16 | ○ | Macro ghi **trước** đợt B có `fillet_entities` / `offset_entity` / `join_entities`: chạy trên bản mới | Macro chạy như cũ (tên lệnh, tham số cũ giữ nguyên) | ☐ | ☐ | B7–B9 |
+| O17 | ★ | *(Test & sửa đợt B, NB-1)* Vẽ 15 đoạn thẳng ngắn ở bên trái và 10 đoạn ở bên phải. Một câu: "kéo giãn đầu phải các đường bên trái sang phải 300, rồi kéo giãn các đường bên phải lên trên 300" | Lần kéo giãn thứ hai làm tổng thành 25 đối tượng có sẵn bị sửa (> 20): Claude **hỏi trước** (nói số đối tượng), chỉ làm sau khi cậu đồng ý. Gõ U một lần: cả hai lần kéo giãn mất | ☐ | ☐ | B1 |
+| O18 | ○ | *(NB-1, gói `Full`)* Một khối hộp 3D có sẵn. "kéo giãn khung bao cả khối hộp sang phải 500" rồi "cộng khối hộp với một hộp mới" | Lần 1: hộp được dời (không cần thẻ). Lần 2: Claude vẫn hiện **thẻ xác nhận** cho khối hộp có sẵn (khối bị dời không thành "khối mới") | ☐ | ☐ | B1 |
+| O19 | ○ | *(NB-2)* Vẽ 4 đoạn thẳng thành hình chữ nhật 2000x1000: 3 góc khít, 1 góc hở 0,4 mm. Gửi handle theo thứ tự: cạnh dưới, cạnh trái, cạnh trên, cạnh phải. "nối 4 đường này, dung sai 1 mm" | Một polyline 4 cạnh; Claude báo **đúng 1** chỗ nối khe (0,4). Không có đoạn nối khe nào ở 3 góc khít | ☐ | ☐ | B9 |
+| O20 | ○ | *(kiểm thêm)* Vẽ một cung, gõ lệnh AutoCAD `ROTATE3D` xoay cung 180° quanh trục X (cung thành "vẽ ngược", pháp tuyến −Z). Vẽ một đường thẳng cắt qua đường kéo dài của cung. "bo góc giữa đường và cung này bán kính 100" | Cung bo tiếp xúc đúng cả hai; cung gốc bị cắt đúng đầu gần góc (không bị lật sang nửa kia) | ☐ | ☐ | B7 |
+| O21 | ○ | *(KT2-03)* Vẽ 5 đường trên layer `DUNG HINH` rồi **tắt** layer đó (bóng đèn), thêm 3 đường trên layer `0` cùng chỗ. "kéo giãn khung này sang phải 500" | Chỉ 3 đường layer `0` bị kéo giãn; bật lại layer `DUNG HINH`: 5 đường vẫn nguyên chỗ cũ. Claude có thể nói vài đối tượng ở layer tắt / đóng băng được bỏ qua | ☐ | ☐ | KT2-03 |
+| O22 | ○ | *(KT2-15, KT2-23)* Một câu: "vẽ 25 đoạn thẳng ngắn cạnh nhau rồi kéo giãn đầu phải của chúng sang phải 300". Sau đó tạo 2 nhóm `A`, `B` có chung một đường, "bỏ nhóm của đường này" | Lần 1: làm luôn, **không hỏi** (đường vừa vẽ trong lượt không tính vào luật 20). Lần 2: Claude hỏi bỏ nhóm `A` hay `B` (không tự bỏ cả hai) | ☐ | ☐ | KT2-15, KT2-23 |
+
+O17–O20 thêm ở bước Test & sửa đợt B ([`ban-giao/nang-cap-b-test.md`](ban-giao/nang-cap-b-test.md)); quan trọng nhất O17.
+
+Còn chỉ thấy trên AutoCAD thật: kéo giãn kích thước / block / chữ (điểm kéo giãn của AutoCAD), cắt đường tròn / elip /
+spline kín (thứ tự các mảnh khi tách), chia đường cong spline, nhóm trên layer khóa.
+
+## P. Nâng cấp đợt C — tiện ích 2D (bản Full, gói 2D hoặc Full, ~30 phút)
+
+*13/11/2026 · từ [`ban-giao/nang-cap-c.md`](ban-giao/nang-cap-c.md). Máy ở gói `2D` hoặc `Full` (P12: gói `3D`), bản vẽ
+mặt bằng có sẵn (tường trên layer `A-WALL`, vài block cửa có thuộc tính mã, vài phòng là polyline kín có chữ tên phòng
+bên trong, 2–3 layout giấy). Sau mỗi dòng gõ U một lần: mọi thay đổi của lượt đó mất hết. **Quan trọng nhất: P1, P3, P5,
+P7, P9, P10, P14, P17.** P14–P20: các lỗi Test & sửa đợt C đã sửa ([`ban-giao/nang-cap-c-test.md`](ban-giao/nang-cap-c-test.md)).*
+
+| # | | Làm gì | Kết quả mong đợi | Đạt | Lỗi | Mã gốc |
+| --- | --- | --- | --- | --- | --- | --- |
+| P1 | ★ | Vẽ 4 đường khép kín thành một phòng (không dùng polyline). "hatch bê tông trong phòng này, điểm bên trong là …" (nói một điểm giữa phòng) | Phòng được tô AR-CONC kín đúng 4 cạnh; không còn đường bao thừa (chọn quanh không thấy polyline mới). Có cột / ô nhỏ bên trong thì ô đó để trống | ☐ | ☐ | C1 |
+| P2 | ○ | Xóa 1 đoạn cho hở phòng, hỏi lại như P1 | Claude báo vùng không kín (hoặc điểm nằm ngoài), không vẽ gì | ☐ | ☐ | C1 |
+| P3 | ★ | "ghi kích thước cả mặt bằng" | Chuỗi kích thước ngoài 4 phía: hàng 1 các góc tường và lỗ cửa nhìn thấy từ phía đó, hàng ngoài cùng là kích thước tổng; cách tường hợp lý (khoảng 8 mm trên giấy theo DIMSCALE), dùng kiểu kích thước hiện hành. U một lần mất hết | ☐ | ☐ | C2 |
+| P4 | ○ | Có đường trục trên layer riêng (vd `A-GRID`): "ghi kích thước mặt bằng, trục ở layer A-GRID" | Thêm một hàng kích thước trục giữa hàng chi tiết và hàng tổng | ☐ | ☐ | C2 |
+| P5 | ★ | "thống kê các block trong bản vẽ ra bảng ở góc phải" | Bảng STT / tên block / số lượng + dòng Tổng, số khớp với lệnh đếm (vd `QSELECT`); Claude cũng nói số trong chat | ☐ | ☐ | C3 |
+| P6 | ★ | "đếm cửa theo mã" (block cửa có thuộc tính mã) | Bảng thêm cột mã; D1, D2, …, D10 xếp đúng thứ tự số; cửa chưa có mã ghi "(trống)" | ☐ | ☐ | C3 |
+| P7 | ★ | "lập bảng diện tích các phòng" | Bảng tên phòng (lấy từ chữ trong phòng) / layer / diện tích m² + Tổng; phòng không có chữ ghi "(chưa có tên)". Phòng vừa có polyline vừa có hatch chỉ tính một lần | ☐ | ☐ | C4 |
+| P8 | ○ | Vẽ thêm polyline bao cả nhà trên cùng layer phòng, hỏi lại P7 | Claude không chèn bảng ngay: báo có vùng bao các vùng khác (diện tích tính chồng) và hỏi bỏ vùng đó hay giữ | ☐ | ☐ | C4 |
+| P9 | ★ | Có ≥ 3 chữ "P.NGU" (text, mtext, thuộc tính block). "thay P.NGU bằng PHÒNG NGỦ" | Claude **xem trước rồi hiện thẻ xác nhận** (số chỗ, ví dụ trước → sau), chưa đổi gì. Bấm **Đồng ý**: đổi đúng các chỗ đó; gõ U một lần thì trả lại hết | ☐ | ☐ | C5 |
+| P10 | ★ | Như P9 nhưng **gõ** "ok" thay vì bấm nút | Claude không thay, hiện lại thẻ và nhờ bấm Đồng ý. Bấm **Hủy**: không đổi gì | ☐ | ☐ | C5 |
+| P11 | ★ | "in tất cả layout ra một file PDF" | Một file PDF nhiều trang (đúng thứ tự tab layout) cạnh file bản vẽ, tên `<bản vẽ>-<n>-layouts.pdf`; layout đang mở giữ nguyên sau khi in | ☐ | ☐ | C6 |
+| P12 | ○ | Máy gói `3D`: "ghi kích thước mặt bằng", "thống kê block ra bảng", "in PDF" | Claude báo máy dùng gói 3D, các việc này thuộc gói 2D; không vẽ gì | ☐ | ☐ | gói |
+| P13 | ○ | Đặt tên layout có ký tự `/` hoặc `:` (vd `MB/T1`), "in layout MB/T1 ra PDF" | File PDF ra bình thường, ký tự lạ trong tên file đổi thành `_` | ☐ | ☐ | C6 |
+| P14 | ★ | Có MTEXT 2 dòng "PHONG" / "NGU" (Enter giữa hai dòng) và chữ "Ø100" gõ bằng `%%c100`. "thay chữ P bằng X" rồi bấm Đồng ý | Chỉ chữ P nhìn thấy đổi thành X; MTEXT vẫn đúng 2 dòng, ký hiệu Ø vẫn còn (không thành "\X" hay "%%X") | ☐ | ☐ | NC-1 |
+| P15 | ○ | "thay A bằng {B}" trong một MTEXT, bấm Đồng ý | MTEXT hiện đúng `{B}` có ngoặc, định dạng chữ không đổi | ☐ | ☐ | NC-1 |
+| P16 | ○ | Block cửa có thuộc tính **hằng** (Constant) `LOAI`: "đếm cửa theo LOAI" | Số đếm theo giá trị của thuộc tính hằng, không ra "(trống)" | ☐ | ☐ | NC-2 |
+| P17 | ★ | 3 layout giấy, mỗi layout một khung nhìn khác nhau, đang mở Model: "in 3 layout ra một PDF" | Mỗi trang PDF đúng nội dung khung nhìn của layout đó (không trang trắng / không lặp trang); in xong vẫn ở Model | ☐ | ☐ | NC-3 |
+| P18 | ○ | "in layout A1 ra file ketqua.pdf" (chỉ tên file) | File nằm **cạnh file bản vẽ**, không nằm trong thư mục cài AutoCAD. Tên file có `?` thì Claude báo tên không hợp lệ | ☐ | ☐ | NC-4 |
+| P19 | ○ | Bản vẽ đơn vị **mét** (nhà 10 × 6, cửa 0,9): "ghi kích thước mặt bằng" | Hàng chi tiết có đoạn 0,9 của cửa | ☐ | ☐ | NC-5 |
+| P20 | ○ | Phòng vẽ bằng polyline **không bấm Close** (điểm cuối bắt vào điểm đầu): "lập bảng diện tích các phòng" | Phòng đó có trong bảng, có hatch trùng thì vẫn chỉ tính một lần | ☐ | ☐ | NC-6 |
+
+Còn chỉ thấy trên AutoCAD thật: dò đường bao khi điểm nằm ngoài màn hình (cần phóng tới vùng đó), in nhiều trang (khổ
+giấy từng layout), thay chữ trong MTEXT có định dạng, thuộc tính nhiều dòng, ô bảng.
+
+## Q. Nâng cấp đợt D — 3D (bản Full, gói 3D hoặc Full, ~35 phút)
+
+*13/11/2026 · từ [`ban-giao/nang-cap-d.md`](ban-giao/nang-cap-d.md). Máy ở gói `3D` hoặc `Full` (Q11: so hai gói), bản vẽ
+mm. Sau mỗi dòng gõ U một lần: mọi thay đổi của lượt đó mất hết. **Quan trọng nhất: Q1, Q3, Q5, Q6, Q8, Q9, Q10.***
+
+| # | | Làm gì | Kết quả mong đợi | Đạt | Lỗi | Mã gốc |
+| --- | --- | --- | --- | --- | --- | --- |
+| Q1 | ★ | Vẽ polyline chữ L (4 m rồi rẽ 3 m). "dựng dầm 220 × 400 theo đường này, dưới sàn tầng 2 cao 3300, sàn dày 120" | Một khối trên `A-BEAM-3D`, đỉnh ở 3180, đáy 2780; góc chữ L kín (không khuyết, không gai). Thể tích ≈ 0,22 × 0,4 × 7 = 0,616 m³ | ☐ | ☐ | D1 |
+| Q2 | ○ | Polyline có một đoạn cung (bán kính ≥ 1 m): "dựng dầm theo đường này" | Dầm cong đều theo cung, nối liền đoạn thẳng | ☐ | ☐ | D1 |
+| Q3 | ★ | Mặt bằng có một tường cong: hai cung đồng tâm cách nhau 220 trên `A-WALL` (nối với tường thẳng). "dựng 3D mặt bằng này" | Tường cong được dựng liền với tường thẳng, không còn báo "curved wall: not built". Báo cáo có `curved_walls` (bán kính, dày, dài) | ☐ | ☐ | D2 |
+| Q4 | ★ | Như Q3, tường cong có khe cửa (hai cung cùng ngắt) và ký hiệu cửa đi ở khe; một ký hiệu cửa sổ đè lên đoạn cong liền | Khe cửa đi: có lanh tô phía trên (cao 2200 → 3300); cửa sổ: còn bậu dưới (0 → 900) và lanh tô (2400 → 3300). Khe không có ký hiệu thì để trống cả chiều cao và Claude hỏi | ☐ | ☐ | D2 |
+| Q5 | ★ | Hộp 1000 × 1000 × 1000 dựng **từ lượt trước**. "kéo mặt trên lên 500" | Claude hiện **thẻ xác nhận** có handle của hộp. Bấm Đồng ý: hộp cao 1500 (1,5 m³). Gõ "ok" thay vì bấm: không làm, hiện lại thẻ | ☐ | ☐ | D3 |
+| Q6 | ★ | Vẽ hình chữ nhật nhỏ nằm trên mặt trên của hộp, "ấn hình này xuống 300 vào khối" (PRESSPULL) | Qua thẻ (khối có từ trước), bấm Đồng ý: khối bị khoét lỗ sâu 300; `mode` = subtract. Kéo lên thì khối thêm phần nhô | ☐ | ☐ | D3 |
+| Q7 | ○ | Hình kín đứng riêng (không có khối nào): "kéo hình này lên 1000" | Ra khối mới, không hỏi thẻ | ☐ | ☐ | D3 |
+| Q8 | ★ | Có vài khối (tường, cột). "xuất các khối ra file STL" | File `<bản vẽ>-3d.stl` cạnh bản vẽ; mở được bằng phần mềm xem STL (Windows 3D Viewer, slicer); kích thước đúng mm. Bản vẽ không đổi (không có bước hoàn tác). Gọi lại cùng tên: Claude hỏi trước khi ghi đè | ☐ | ☐ | D4 |
+| Q9 | ★ | Dựng mặt bằng có cột lồng trong tường (đợt A). "lập bảng khối lượng theo layer" | Số theo layer (`A-WALL-3D`, `A-COLS-3D`, `A-SLAB-3D`…): thể tích, phần giao đã trừ, thể tích thực, diện tích mặt; cột giữ đủ, **tường bị trừ phần cột lồng** (tổng thực không tính chồng). Gói Full: chèn được bảng vào bản vẽ khi yêu cầu | ☐ | ☐ | D5 |
+| Q10 | ★ | Dầm đâm vào ống (hai khối giao nhau). "kiểm tra va chạm và lập bảng" | Liệt kê cặp khối, layer, thể tích giao. Gói Full: chèn bảng "BẢNG VA CHẠM KHỐI 3D" | ☐ | ☐ | D6 |
+| Q11 | ★ | Máy gói `3D`: lặp Q9, Q10 kèm "chèn bảng vào bản vẽ" | Claude **không chèn bảng** (bảng là chữ, thuộc gói 2D / Full), nói số liệu trong khung chat và báo cần gói Full để có bảng | ☐ | ☐ | gói |
+| Q12 | ○ | Máy gói `2D`: "dựng dầm", "xuất STL" | Claude báo các việc này thuộc gói 3D, không làm gì | ☐ | ☐ | gói |
+| Q13 | ★ | `CLAUDECHATSELFTEST` | Có dòng ✓ "Nâng cấp đợt D: dầm chữ L, tường cong, kéo mặt trên (PRESSPULL), xuất STL" (dầm 0,616 m³, ¼ tường cong, hộp kéo lên 1,2 m³, file `selftest-dam.stl` mở được) | ☐ | ☐ | ND-test |
+| Q14 | ○ | Đường dầm đi tới rồi quay ngược lại trên cùng một nét (polyline 0 → 4000 → 1000). "dựng dầm theo đường này" | Dựng được (trước đây AutoCAD từ chối vì góc quay 180°) | ☐ | ☐ | ND-1 |
+| Q15 | ○ | Hình kín đứng riêng, không có khối: "khoét hình này vào khối" mà không nói khối nào | Claude không dựng khối mới thay; hỏi lại khối nào (hoặc báo cần chỉ khối) | ☐ | ☐ | ND-2 |
+| Q16 | ○ | Ghi macro có "kéo mặt trên của hộp **có từ trước** lên 500", lưu macro, chạy lại macro | Macro **không chạy** (báo "Macro này sửa khối 3D có sẵn…"), hộp không đổi. Macro tự dựng hộp rồi kéo thì chạy được | ☐ | ☐ | ND-3 |
+| Q17 | ○ | Bản vẽ đơn vị **mét** (INSUNITS = m): hai khối chồng nhau, "kiểm tra va chạm" | Thể tích giao ra đúng m³ (không còn ra số nhỏ 10⁹ lần); gói Full chèn bảng đúng số | ☐ | ☐ | ND-4 |
+
+Còn chỉ thấy trên AutoCAD thật: hướng kéo mặt của PRESSPULL (dương = ra ngoài), khối giao không đo được thể tích (báo
+"chưa đo được"), STL của bản vẽ đơn vị mét (phải ra mm), tường cong đi vào tường thẳng ở góc. Q13–Q17 là các lỗi của Test & sửa đợt D
+([`ban-giao/nang-cap-d-test.md`](ban-giao/nang-cap-d-test.md)); Q13 kiểm luôn hướng kéo mặt của PRESSPULL.
+
+## R. Nâng cấp đợt E — cầu thang, mái (bản Full, gói 3D hoặc Full, ~30 phút)
+
+*13/11/2026 · từ [`ban-giao/nang-cap-e.md`](ban-giao/nang-cap-e.md). Máy ở gói `3D` hoặc `Full`, bản vẽ mm. Sau mỗi dòng
+gõ U một lần: mọi thay đổi của lượt đó mất hết. **Quan trọng nhất: R1, R2, R3, R5, R7, R8, R10.** R14–R16: các lỗi Test & sửa đợt E
+đã sửa ([`ban-giao/nang-cap-e-test.md`](ban-giao/nang-cap-e-test.md)).*
+
+| # | | Làm gì | Kết quả mong đợi | Đạt | Lỗi | Mã gốc |
+| --- | --- | --- | --- | --- | --- | --- |
+| R1 | ★ | Bản vẽ trống. "dựng cầu thang 1 vế từ điểm 0,0 đi lên theo trục Y, cao tầng 3000" | Một khối trên `A-STAIR-3D`; Claude báo **19 bậc, cao bậc ≈ 157,9**, rộng bậc 280, vế rộng 1000. Đỉnh bậc trên cùng ở 3000; dưới bậc có bản thang nghiêng (không đặc tới sàn). Nhìn `sw_iso` thấy bậc đều | ☐ | ☐ | E1 |
+| R2 | ★ | "dựng cầu thang chữ L rẽ trái, cao tầng 3300, bắt đầu ở 5000,0 đi theo trục X" | 21 bậc × 157,1: vế 1 có 11 bậc lên tới chiếu nghỉ vuông 1000 × 1000 ở cao 1728,6; vế 2 rẽ **trái** 10 bậc lên 3300. Một khối liền (không tách mảnh). Lặp lại "rẽ phải": vế 2 sang phải | ☐ | ☐ | E1 |
+| R3 | ★ | "dựng cầu thang chữ U cao 3300, có lan can hai bên" | Hai vế song song cách nhau khe 100, chiếu nghỉ rộng 2100 × 1000 ở giữa chiều cao; lan can (tay vịn cao 900 trên mũi bậc + trụ) dọc hai bên mỗi vế trên `A-RAIL-3D`. Chiếu nghỉ chưa có lan can (ghi chú báo) | ☐ | ☐ | E1 |
+| R4 | ○ | "cầu thang cao 3300, bậc cao 175, rộng bậc 260, vế rộng 1200" | Theo số của cậu: 19 bậc × 173,7, rộng 260, vế 1200 | ☐ | ☐ | E1 |
+| R5 | ★ | Vẽ hình chữ nhật 2600 × 5000 làm ô cầu thang. "dựng cầu thang chữ U trong ô này, cao 3300" | Cầu thang nằm gọn trong ô (tự chọn góc và hướng), báo hướng / điểm bắt đầu đã chọn | ☐ | ☐ | E1 |
+| R6 | ★ | Ô cầu thang nhỏ 1500 × 3000: "dựng cầu thang chữ U trong ô này, cao 3300" | Claude **không dựng**, báo rõ không vừa ô và kích thước cần (khoảng 3800 × 2100), gợi ý đổi kiểu / bề rộng | ☐ | ☐ | E1 |
+| R7 | ★ | Dựng 3D mặt bằng nhà chữ nhật 2 tầng (mỗi tầng 3300, đợt A). "lợp mái 4 dốc" | Một khối mái trên `A-ROOF-3D` **đặt trên đỉnh tường tầng 2** (mặt dưới mái chạm đỉnh tường đúng mép ngoài tường), dốc 30°, đua 600 ra ngoài tường, bản mái 150; Claude báo cao độ đỉnh mái, diện tích mặt mái | ☐ | ☐ | E2 |
+| R8 | ★ | Như R7: "lợp mái 2 dốc" (U trước để bỏ mái 4 dốc) | Nóc chạy theo cạnh dài, hai đầu hồi để hở (Claude nói); "nóc theo cạnh ngắn" thì đổi hướng | ☐ | ☐ | E2 |
+| R9 | ○ | Như R7: "đổ mái bằng dày 120" | Bản sàn mái 120 trên đỉnh tường, không đua (trừ khi nói) | ☐ | ☐ | E2 |
+| R10 | ★ | Nhà chữ L (đường bao polyline kín chữ L): "lợp mái 4 dốc theo đường bao này" | Claude **không dựng mái sai**: báo mái 4 dốc / 2 dốc chỉ làm được trên hình chữ nhật / hình lồi, gợi ý chia thành các hình chữ nhật (hoặc mái bằng). Chia ra rồi lợp từng phần: dựng được | ☐ | ☐ | E2 |
+| R11 | ○ | "mái 4 dốc dốc 35 độ, đua 800" | Theo số của cậu (35°, đua 800) | ☐ | ☐ | E2 |
+| R12 | ○ | Máy gói `2D`: "dựng cầu thang", "lợp mái" | Claude báo các việc này thuộc gói 3D, không làm gì | ☐ | ☐ | gói |
+| R13 | ★ | `CLAUDECHATSELFTEST` | Có dòng ✓ "Nâng cấp đợt E: cầu thang 1 vế + chữ U (chia bậc theo cao tầng), mái 4 dốc" | ☐ | ☐ | E-test |
+| R14 | ★ | Vẽ hình chữ nhật 1000 × 5040 (đúng bằng 18 bậc × 280) làm ô cầu thang. "dựng cầu thang 1 vế cao 3000 trong ô này" | **Dựng được** (trước bản sửa báo không vừa, đòi 5140): 19 bậc nằm gọn trong ô; bậc trên cùng gác thêm 100 lên sàn tầng trên, ra ngoài mép ô 100 (đúng: phần này nằm trên sàn) | ☐ | ☐ | NE-3 |
+| R15 | ★ | Ô cầu thang 2600 (theo X) × 5000 (theo Y). "dựng cầu thang chữ U trong ô này, đi lên theo trục Y" | Vế 1 đi theo +Y (Claude báo `direction_deg` 90). Lặp lại "đi lên theo trục X": Claude **không dựng**, báo cầu thang vừa ô nhưng không đi theo hướng đó, gợi ý bỏ hướng hoặc đưa điểm bắt đầu | ☐ | ☐ | NE-1 |
+| R16 | ○ | Vẽ polyline chữ nhật 10000 × 6000 có thêm một đỉnh giữa cạnh dưới lệch lên 0,5 mm (như nét vẽ tay lệch). "lợp mái 4 dốc theo đường bao này", rồi "mái 2 dốc" | Cả hai dựng được (trước bản sửa báo "nhà chữ L"). Đường bao lệch thật 300 mm vẫn báo không làm được mái 4 dốc | ☐ | ☐ | NE-2 |
+
+Còn chỉ thấy trên AutoCAD thật: hình bậc / bản thang sau khi xoay vào đúng hướng (dựng từ biên dạng đứng), mái cắt bằng
+các nêm (giao / trừ khối), mái trên bản vẽ đơn vị mét.
 
 ## Gửi lại gì khi lỗi
 

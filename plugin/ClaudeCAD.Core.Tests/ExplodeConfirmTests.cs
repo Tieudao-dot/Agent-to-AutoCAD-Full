@@ -170,7 +170,7 @@ namespace ClaudeCAD.Core.Tests
             // a macro that builds its own wall and cuts it runs
             m.Calls.Insert(0, new MacroCall { Tool = "draw_box", Params = new Dictionary<string, object>(), ResultHandles = new List<string> { "2F4A" } });
             Assert.Empty(MacroLogic.ExternalSolidEdits(m));
-            Assert.Subset(new HashSet<string> { "solid_union", "solid_subtract", "solid_intersect", "slice_solid", "fillet_edges", "chamfer_edges", "shell_solid" }, MacroLogic.AlwaysConfirmTools);
+            Assert.Subset(new HashSet<string> { "solid_union", "solid_subtract", "solid_intersect", "slice_solid", "fillet_edges", "chamfer_edges", "shell_solid", "presspull" }, MacroLogic.AlwaysConfirmTools); // + presspull (Test & sửa đợt D, ND-3)
             var c = Src("plugin", "ClaudeCAD.Plugin", "ChatController.cs");
             Assert.Contains("MacroLogic.ExternalSolidEdits(m)", c);
             Assert.True(c.IndexOf("MacroLogic.ExternalSolidEdits(m)", StringComparison.Ordinal) < c.IndexOf("_macroRunning = true;", StringComparison.Ordinal),

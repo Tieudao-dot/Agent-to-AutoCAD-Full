@@ -109,8 +109,9 @@ export function drawTools(b: ToolBridge): AnyTool[] {
     }),
 
     cadTool(b, 'draw_hatch',
-      'Create a HATCH. Boundary either from existing closed curves (boundary_handles: closed polylines, circles, ellipses — preferred, associative) ' +
-        'or from a polygon of points (boundary_points). pattern: "SOLID" for solid fill or a standard acadiso.pat name ' +
+      'Create a HATCH. Boundary either from existing closed curves (boundary_handles: closed polylines, circles, ellipses — preferred, associative), ' +
+        'from a polygon of points (boundary_points), or from a point inside an area closed by any lines / arcs (pick_point, like HATCH "pick points"; ' +
+        'islands inside are left out unless islands false; keep_boundary keeps the traced boundary polyline). pattern: "SOLID" for solid fill or a standard acadiso.pat name ' +
         '(ANSI31 diagonal lines, ANSI37 cross, AR-CONC concrete, AR-SAND sand, AR-BRSTD brick, GRAVEL, EARTH, NET, DOTS). ' +
         'scale multiplies the pattern spacing (for mm drawings ANSI31 usually needs 20-100).' + RET,
       {
@@ -121,6 +122,9 @@ export function drawTools(b: ToolBridge): AnyTool[] {
         boundary_points: points(3, 'boundary vertices').optional(),
         boundary_bulges: z.array(z.number()).optional().describe('Optional bulges for boundary_points segments.'),
         associative: z.boolean().optional().describe('Keep the hatch associative to boundary_handles. Default true.'),
+        pick_point: point.optional().describe('A point inside a closed area (visible on screen).'),
+        islands: z.boolean().optional(),
+        keep_boundary: z.boolean().optional(),
         ...entityProps,
       }),
 

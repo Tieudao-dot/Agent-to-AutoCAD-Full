@@ -1,17 +1,29 @@
 import { z } from 'zod';
 import { angle, cadTool, entityProps, handle, handles, point, points, type AnyTool, type ToolBridge } from './common.js';
 import { PLAN3D_TOOL_NAMES, plan3dTools } from './plan3d.js';
+import { SOLID3_TOOL_NAMES, STAIR_ROOF_TOOL_NAMES, solid3Tools, solidTable } from './solids3.js';
 
 /** The 3D tools: only machines on the 3D or Full plan load them (the plugin labels them ToolGroup.ThreeD). */
 export const SOLID_TOOL_NAMES = [
-  'draw_box', 'draw_cylinder', 'draw_sphere', 'draw_wedge', 'draw_torus', 'draw_pyramid', 'extrude', 'revolve',
+  'draw_solid', 'extrude', 'revolve',
   'solid_union', 'solid_subtract', 'solid_intersect', 'set_view_3d', 'set_visual_style', 'get_solid_info',
   // phase 2
   'sweep', 'loft', 'slice_solid', 'fillet_edges', 'chamfer_edges', 'shell_solid', 'rotate_3d', 'mirror_3d', 'align',
   'set_ucs', 'reset_ucs', 'check_interference',
   // phase 3 (plan3d.ts)
   ...PLAN3D_TOOL_NAMES,
+  // nâng cấp đợt D (solids3.ts)
+  ...SOLID3_TOOL_NAMES,
+  // nâng cấp đợt E (solids3.ts)
+  ...STAIR_ROOF_TOOL_NAMES,
 ] as const;
+
+/**
+ * The six primitives of draw_solid (nâng cấp đợt A, 13/11/2026: one tool instead of draw_box … draw_pyramid, about 1.1k
+ * tokens less per session, measured in docs/ban-giao/nang-cap-a.md). The plugin still runs the old names for recorded macros; Claude only sees draw_solid.
+ */
+export const SOLID_SHAPES = ['box', 'cylinder', 'sphere', 'wedge', 'torus', 'pyramid'] as const;
+export const SOLID_ALIASES = ['draw_box', 'draw_cylinder', 'draw_sphere', 'draw_wedge', 'draw_torus', 'draw_pyramid'] as const;
 
 /** Phase 2 tools that change an existing solid: like the booleans, a solid from before this turn always needs a yes. */
 export const SOLID_EDIT_TOOLS = ['slice_solid', 'fillet_edges', 'chamfer_edges', 'shell_solid'] as const;
@@ -75,73 +87,31 @@ const ON_EXISTING =
 /** 3D phase 1: solid primitives, extrude / revolve, booleans, 3D views and visual styles, solid query. Z up, mm. */
 export function solidTools(b: ToolBridge): AnyTool[] {
   return [
-    cadTool(b, 'draw_box',
-      'Build a 3D solid BOX length (X) × width (Y) × height (Z), mm. Place it by corner (the min x/y/z corner, default [0,0,0]) or center; ' +
-        'rotation turns it about Z around that point. Negative height with corner builds downwards. Example wall 4 m × 220 × 3.3 m: ' +
-        '{"corner": [0, 0, 0], "length": 4000, "width": 220, "height": 3300, "layer": "A-WALL-3D"}.' + RET,
+    cadTool(b, 'draw_solid',
+      'Build a 3D solid primitive (mm, Z up). shape and its parameters: ' +
+        'box: length (X) × width (Y) × height (Z), corner (min corner, default [0,0,0]; negative height builds down) or center, rotation about Z; ' +
+        'cylinder (cone / frustum with top_radius, 0 = cone): base (bottom centre), radius or diameter, height along Z (negative = down) or top_center; ' +
+        'sphere: center, radius or diameter; ' +
+        'wedge (ramps, sloped roofs): length × width × height on corner, the full-height face at the corner side, sloping to 0 at x + length, rotation about Z (180 = slope to -X); ' +
+        'torus: center, radius (to the tube centre), tube_radius (< radius); ' +
+        'pyramid (frustum with top_radius > 0): base, sides 3-32 (default 4), radius INSCRIBED in the base (square of side 1000 → 500), height or top_center, rotation. ' +
+        'Example wall 4 m × 220 × 3.3 m: {"shape": "box", "corner": [0, 0, 0], "length": 4000, "width": 220, "height": 3300, "layer": "A-WALL-3D"}; ' +
+        'column D400: {"shape": "cylinder", "base": [0, 0, 0], "radius": 200, "height": 3300}.' + RET,
       {
-        length: z.number().positive().describe('Size along X (mm).'),
-        width: z.number().positive().describe('Size along Y (mm).'),
-        height: z.number().describe('Size along Z (mm).'),
-        corner: point.optional(),
-        center: point.optional().describe('Centre of the box (alternative to corner).'),
-        rotation: angle('Rotation about Z').optional(),
-        ...solidLayer,
-      }),
-
-    cadTool(b, 'draw_cylinder',
-      'Build a 3D solid CYLINDER, CONE (top_radius 0) or frustum. base = centre of the bottom face. Axis: height along +Z (negative = downwards) ' +
-        'or top_center for any direction. Example column D400 × 3.3 m: {"base": [0, 0, 0], "radius": 200, "height": 3300}.' + RET,
-      {
-        base: point.describe('Centre of the base circle [x, y, z].'),
-        radius: z.number().positive().optional().describe('Base radius (mm).'),
-        diameter: z.number().positive().optional().describe('Base diameter (alternative to radius).'),
-        top_radius: z.number().min(0).optional().describe('Top radius (default = radius; 0 = cone).'),
-        height: z.number().optional().describe('Height along Z (mm, negative = downwards).'),
-        top_center: point.optional().describe('Centre of the top face, for an axis not along Z (instead of height).'),
-        ...solidLayer,
-      }),
-
-    cadTool(b, 'draw_sphere', 'Build a 3D solid SPHERE from center and radius (or diameter).' + RET, {
-      center: point,
-      radius: z.number().positive().optional(),
-      diameter: z.number().positive().optional(),
-      ...solidLayer,
-    }),
-
-    cadTool(b, 'draw_wedge',
-      'Build a 3D solid WEDGE on a length (X) × width (Y) base from corner (min corner): the vertical face of the full height stands at the ' +
-        'corner side (x = corner x) and the slope goes down to 0 at x + length. rotation turns it about Z around the corner (e.g. 180 to slope towards -X). ' +
-        'Typical use: ramps, sloped roofs, stair stringers.' + RET,
-      {
-        length: z.number().positive(),
-        width: z.number().positive(),
-        height: z.number().positive(),
-        corner: point.optional().describe('Min corner of the base (default [0, 0, 0]).'),
-        rotation: angle('Rotation about Z').optional(),
-        ...solidLayer,
-      }),
-
-    cadTool(b, 'draw_torus',
-      'Build a 3D solid TORUS (ring) around center in the XY plane: radius = centre to the tube centre line, tube_radius = tube radius (< radius).' + RET,
-      {
-        center: point,
-        radius: z.number().positive(),
-        tube_radius: z.number().positive(),
-        ...solidLayer,
-      }),
-
-    cadTool(b, 'draw_pyramid',
-      'Build a 3D solid PYRAMID (or frustum with top_radius > 0) with sides 3-32 (default 4). radius = radius of the circle INSCRIBED in the base polygon ' +
-        '(a square base of side 1000 has radius 500). base = centre of the base; axis: height along Z or top_center. rotation turns the polygon about its axis.' + RET,
-      {
-        base: point,
-        sides: z.number().int().min(3).max(32).optional(),
-        radius: z.number().positive(),
-        top_radius: z.number().min(0).optional().describe('Inscribed radius of the top (default 0 = pointed).'),
+        shape: z.enum(SOLID_SHAPES),
+        length: z.number().positive().optional(),
+        width: z.number().positive().optional(),
         height: z.number().optional(),
+        corner: point.optional(),
+        center: point.optional(),
+        base: point.optional(),
+        radius: z.number().positive().optional(),
+        diameter: z.number().positive().optional(),
+        top_radius: z.number().min(0).optional(),
         top_center: point.optional(),
-        rotation: angle('Rotation of the polygon about the axis').optional(),
+        tube_radius: z.number().positive().optional(),
+        sides: z.number().int().min(3).max(32).optional(),
+        rotation: angle('Rotation about Z').optional(),
         ...solidLayer,
       }),
 
@@ -219,6 +189,7 @@ export function solidTools(b: ToolBridge): AnyTool[] {
 
     ...solidTools2(b),
     ...plan3dTools(b),
+    ...solid3Tools(b),
   ];
 }
 
@@ -372,11 +343,12 @@ function solidTools2(b: ToolBridge): AnyTool[] {
 
     cadTool(b, 'check_interference',
       'CHECK INTERFERENCE (clashes) between 3D solids: every pair of handles, or each of handles against each of other_handles (e.g. beams against ducts). ' +
-        `Returns interfere, the clashing pairs with their overlap volume (volume null = AutoCAD saw a clash but could not measure it: still a clash), touching_pairs (only touching), unconfirmed_count / unconfirmed_pairs / unconfirmed_note for flagged pairs past the measuring limit (they may only touch: not clashes and not safe; say so and check a smaller list), truncated + truncated_note when more than ${SOLID2_LIMITS.MaxInterferenceCandidates} pairs with touching bounding boxes had to be cut (tell the user; check smaller groups), at most ${SOLID2_LIMITS.MaxInterferenceSolids} solids per list; each pair is checked once even when the lists overlap. Read-only: nothing is changed.`,
+        `Returns interfere, the clashing pairs with their overlap volume (volume null = AutoCAD saw a clash but could not measure it: still a clash), touching_pairs (only touching), unconfirmed_count / unconfirmed_pairs / unconfirmed_note for flagged pairs past the measuring limit (they may only touch: not clashes and not safe; say so and check a smaller list), truncated + truncated_note when more than ${SOLID2_LIMITS.MaxInterferenceCandidates} pairs with touching bounding boxes had to be cut (tell the user; check smaller groups), at most ${SOLID2_LIMITS.MaxInterferenceSolids} solids per list; each pair is checked once even when the lists overlap; each clash has layer_a / layer_b. Read-only unless table_position (a clash table: pair, layers, overlap m³).`,
       {
         handles: handles.max(SOLID2_LIMITS.MaxInterferenceSolids),
         other_handles: handles.max(SOLID2_LIMITS.MaxInterferenceSolids).optional(),
-      },
-      { readOnly: true }),
+        ...solidTable,
+        decimals: z.number().int().min(0).max(6).optional(),
+      }),
   ];
 }

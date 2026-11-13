@@ -328,6 +328,7 @@ namespace ClaudeCAD.Plugin
 
             // 3D phase 3: the same code paths as build_3d_from_plan and section_view (handlers called directly)
             string planWalls = null;
+            List<object> planWallLines = null, planDoorLines = null; // the plan of the room, read again by the đợt A step
             const double px = 20000; // a 4000 × 3000 room by its axes, wall 200, a 900 door gap in the bottom wall
             Check("3D đợt 3: dựng 3D phòng 4×3 m có cửa đi, kiểm thể tích tường", () =>
             {
@@ -357,6 +358,8 @@ namespace ClaudeCAD.Plugin
                         Add(new Line(new Point3d(px + 1550, 100, 0), new Point3d(px + 1550, 1000, 0))),
                         Add(new Arc(new Point3d(px + 1550, 100, 0), 900, 0, Math.PI / 2)),
                     };
+                    planWallLines = walls;
+                    planDoorLines = door;
                     var ctx = new ToolContext(doc, tr, true, null);
                     var p = new Params("build_3d_from_plan", new Dictionary<string, object>
                     {
@@ -394,6 +397,335 @@ namespace ClaudeCAD.Plugin
                 double area = Convert.ToDouble(r["cut_area_m2"]), want = (4200.0 * 3200 - 3800.0 * 2800 - 200 * 900) / 1e6;
                 var detail = string.Format(CultureInfo.InvariantCulture, "{0} đường bao, {1} hatch, diện tích cắt {2:0.####} m² (cần {3:0.####} m²)", outline, hatch, area, want);
                 return new SelfTestRules.Verdict(outline > 0 && hatch == 1 && Math.Abs(area - want) <= 1e-3 * want, detail);
+            });
+
+            // nâng cấp đợt A: the same code paths as build_3d_from_plan with storeys + columns (the storeys above are copies
+            // of the first one moved up) and build_railing
+            Check("Nâng cấp đợt A: dựng 2 tầng + sàn mái + 2 cột từ mặt bằng, kiểm cao độ và thể tích", () =>
+            {
+                if (planWallLines == null) return new SelfTestRules.Verdict(false, "bước dựng 3D từ mặt bằng chưa chạy được");
+                Dictionary<string, object> r;
+                using (doc.LockDocument())
+                using (var tr = doc.TransactionManager.StartTransaction())
+                {
+                    var db = doc.Database;
+                    var ms = (BlockTableRecord)tr.GetObject(SymbolUtilityServices.GetBlockModelSpaceId(db), OpenMode.ForWrite);
+                    string Add(Entity e) { e.SetDatabaseDefaults(db); ms.AppendEntity(e); tr.AddNewlyCreatedDBObject(e, true); return e.Handle.ToString(); }
+                    // a 300 × 300 column and a round D300 column inside the room
+                    var sq = new Polyline();
+                    sq.AddVertexAt(0, new Point2d(px + 1000, 1000), 0, 0, 0);
+                    sq.AddVertexAt(1, new Point2d(px + 1300, 1000), 0, 0, 0);
+                    sq.AddVertexAt(2, new Point2d(px + 1300, 1300), 0, 0, 0);
+                    sq.AddVertexAt(3, new Point2d(px + 1000, 1300), 0, 0, 0);
+                    sq.Closed = true;
+                    var cols = new List<object> { Add(sq), Add(new Circle(new Point3d(px + 3000, 2000, 0), Vector3d.ZAxis, 150)) };
+                    var ctx = new ToolContext(doc, tr, true, null);
+                    var p = new Params("build_3d_from_plan", new Dictionary<string, object>
+                    {
+                        ["wall_handles"] = planWallLines, ["door_handles"] = planDoorLines, ["column_handles"] = cols,
+                        ["storeys"] = 2.0, ["storey_height"] = 3000.0, ["slab_thickness"] = 150.0, ["door_height"] = 2100.0, ["roof_slab"] = true,
+                        ["slab"] = "bbox", ["base_z"] = 10000.0,
+                        ["wall_layer_3d"] = "0", ["slab_layer_3d"] = "0", ["column_layer_3d"] = "0", ["on_existing"] = "add",
+                    });
+                    r = (Dictionary<string, object>)DrawingService.Build3dFromPlan(ctx, p);
+                    tr.Commit();
+                }
+                var levels = (List<object>)r["levels"];
+                if (levels.Count != 3) return new SelfTestRules.Verdict(false, $"{levels.Count} mức (cần 3: tầng 1, tầng 2, sàn mái)");
+                var wall2 = (Dictionary<string, object>)((Dictionary<string, object>)levels[1])["wall_solid"];
+                double z2 = Convert.ToDouble(((List<object>)wall2["min"])[2]), top2 = Convert.ToDouble(((List<object>)wall2["max"])[2]);
+                // storey 2 starts 3000 above storey 1 (base 10000); its walls are storey height − slab = 2850 high
+                if (Math.Abs(z2 - 13000) > 0.01 || Math.Abs(top2 - 15850) > 0.01)
+                    return new SelfTestRules.Verdict(false, string.Format(CultureInfo.InvariantCulture, "tường tầng 2 từ z {0:0.###} tới {1:0.###} (cần 13000 tới 15850)", z2, top2));
+                var total = (Dictionary<string, object>)r["total_volume_m3"];
+                double wallOne = (4200.0 * 3200 - 3800.0 * 2800 - 200 * 900) * 2850 + 200.0 * 900 * 750; // lintel 2850 − 2100
+                double colOne = (300.0 * 300 + Math.PI * 150 * 150) * 2850;
+                double slabOne = 4200.0 * 3200 * 150;
+                var vw = SelfTestRules.CheckVolume("tường 2 tầng", Convert.ToDouble(total["walls"]) * 1e9, 2 * wallOne);
+                var vc = SelfTestRules.CheckVolume("2 cột × 2 tầng", Convert.ToDouble(total["columns"]) * 1e9, 2 * colOne);
+                var vs = SelfTestRules.CheckVolume("2 sàn + sàn mái", Convert.ToDouble(total["slabs"]) * 1e9, 3 * slabOne);
+                return new SelfTestRules.Verdict(vw.Ok && vc.Ok && vs.Ok, vw.Detail + "; " + vc.Detail + "; " + vs.Detail);
+            });
+
+            Check("Nâng cấp đợt A: lan can thẳng 3 m, kiểm số trụ và thể tích", () =>
+            {
+                Dictionary<string, object> r;
+                using (doc.LockDocument())
+                using (var tr = doc.TransactionManager.StartTransaction())
+                {
+                    var ctx = new ToolContext(doc, tr, true, null);
+                    var p = new Params("build_railing", new Dictionary<string, object>
+                    {
+                        ["path_points"] = new List<object> { new List<object> { px + 6000.0, 0.0 }, new List<object> { px + 9000.0, 0.0 } },
+                        ["layer"] = "0",
+                    });
+                    r = (Dictionary<string, object>)DrawingService.BuildRailing(ctx, p);
+                    tr.Commit();
+                }
+                if (Convert.ToInt32(r["posts"]) != 3) return new SelfTestRules.Verdict(false, $"{r["posts"]} trụ (cần 3: hai đầu và giữa)");
+                // a straight railing: its pieces only touch, so the united solid's volume is the sum of the pieces
+                var lay = RailingLogic.Build(new List<double[]> { new[] { 0.0, 0.0 }, new[] { 3000.0, 0.0 } }, false, new RailingLogic.Options());
+                return SelfTestRules.CheckVolume("lan can 3 m cao 1100, song đứng", Convert.ToDouble(r["volume_m3"]) * 1e9, lay.Boxes.Sum(b => b.Volume));
+            });
+
+            Check("Nâng cấp đợt B: bo 4 góc polyline, kéo dài, bẻ gãy, chia đều, nối có dung sai, kéo giãn", () =>
+            {
+                const double bx = 40000;
+                var errs = new List<string>();
+                var db = doc.Database;
+                // each edit in its own transaction, like the dispatcher runs each call (objects are opened afresh)
+                T Run<T>(Func<ToolContext, Transaction, T> f)
+                {
+                    using (doc.LockDocument())
+                    using (var tr = doc.TransactionManager.StartTransaction())
+                    {
+                        var r = f(new ToolContext(doc, tr, true, null), tr);
+                        tr.Commit();
+                        return r;
+                    }
+                }
+                Dictionary<string, object> Call(Func<ToolContext, Params, object> h, string tool, Dictionary<string, object> d) =>
+                    Run((ctx, tr) => (Dictionary<string, object>)h(ctx, new Params(tool, d)));
+                List<object> Pt(double x, double y) => new List<object> { x, y };
+                double Len(string h) => Run((ctx, tr) => { var c = (Curve)tr.GetObject(Acad.IdFromHandle(db, h), OpenMode.ForRead); return c.GetDistanceAtParameter(c.EndParam); });
+                void Near(string what, double actual, double expected) { if (Math.Abs(actual - expected) > 1e-3) errs.Add($"{what} = {actual:0.###} (cần {expected:0.###})"); }
+
+                var made = Run((ctx, tr) =>
+                {
+                    var ms = (BlockTableRecord)tr.GetObject(db.CurrentSpaceId, OpenMode.ForWrite);
+                    string Add(Entity e) { e.SetDatabaseDefaults(db); ms.AppendEntity(e); tr.AddNewlyCreatedDBObject(e, true); return e.Handle.ToString(); }
+                    return new[]
+                    {
+                        Add(Acad.MakePolyline(new List<double[]> { new[] { bx, 0.0 }, new[] { bx + 100, 0.0 }, new[] { bx + 100, 50.0 }, new[] { bx, 50.0 } }, true)),
+                        Add(new Line(new Point3d(bx, 100, 0), new Point3d(bx + 100, 100, 0))),
+                        Add(new Line(new Point3d(bx, 200, 0), new Point3d(bx + 100, 200, 0))),
+                        Add(new Line(new Point3d(bx + 100.5, 200, 0), new Point3d(bx + 200, 200, 0))),
+                        Add(Acad.MakePolyline(new List<double[]> { new[] { bx, 300.0 }, new[] { bx + 100, 300.0 }, new[] { bx + 100, 350.0 }, new[] { bx, 350.0 } }, true)),
+                    };
+                });
+                string hr = made[0], hl = made[1], j1 = made[2], j2 = made[3], hs = made[4];
+
+                // fillet r10 on a closed 100 × 50 rectangle: 300 − 8·10 + 2π·10
+                var fr = Call(DrawingService.FilletEntities, "fillet_entities", new Dictionary<string, object> { ["handle1"] = hr, ["radius"] = 10.0 });
+                Near("bo góc: số góc", Convert.ToDouble(fr["corners"]), 4);
+                Near("bo góc: chu vi", Len(hr), 220 + 20 * Math.PI);
+                // lengthen a 100 line by 20, then break out 30..50
+                Call(DrawingService.LengthenEntity, "lengthen_entity", new Dictionary<string, object> { ["handle"] = hl, ["value"] = 20.0 });
+                Near("kéo dài: chiều dài", Len(hl), 120);
+                var br = Call(DrawingService.BreakEntity, "break_entity", new Dictionary<string, object> { ["handle"] = hl, ["point"] = Pt(bx + 30, 100), ["point2"] = Pt(bx + 50, 100) });
+                var pieces = ((List<object>)br["handles"]).Cast<string>().ToList();
+                Near("bẻ gãy: số đoạn", pieces.Count, 2);
+                Near("bẻ gãy: tổng chiều dài", pieces.Sum(Len), 100);
+                // divide the first piece (30) in 3: 2 points
+                var dv = Call(DrawingService.DivideEntity, "divide_entity", new Dictionary<string, object> { ["handle"] = pieces[0], ["count"] = 3L });
+                Near("chia đều: số điểm", Convert.ToDouble(dv["marks"]), 2);
+                // join two lines 0.5 apart with tolerance 1
+                var jr = Call(DrawingService.JoinForSelfTest, "join_entities", new Dictionary<string, object> { ["handles"] = new List<object> { j1, j2 }, ["tolerance"] = 1.0 });
+                Near("nối có dung sai: số đối tượng nối", Convert.ToDouble(jr["joined"]), 2);
+                Near("nối có dung sai: chiều dài", Len((string)((List<object>)jr["handles"])[0]), 200);
+                // stretch the right side of a 100 × 50 rectangle by 50
+                Call(DrawingService.StretchEntities, "stretch_entities", new Dictionary<string, object>
+                {
+                    ["handles"] = new List<object> { hs }, ["corner1"] = Pt(bx + 80, 290), ["corner2"] = Pt(bx + 120, 360), ["displacement"] = Pt(50, 0),
+                });
+                Near("kéo giãn: chu vi", Len(hs), 400);
+                return errs.Count == 0 ? new SelfTestRules.Verdict(true, $"chu vi bo góc {Len(hr):0.###}; kéo dài / bẻ gãy / chia / nối / kéo giãn đúng số")
+                                       : new SelfTestRules.Verdict(false, string.Join("; ", errs));
+            });
+
+            // Test tổng thể nâng cấp: đợt C had no step (find & replace with the card's approval, room area schedule)
+            Check("Nâng cấp đợt C: tìm & thay chữ (TEXT + MTEXT, chỉ đổi khi đã duyệt), bảng diện tích phòng", () =>
+            {
+                const double cx = 32000;
+                var errs = new List<string>();
+                var db = doc.Database;
+                T Run<T>(Func<ToolContext, Transaction, T> f)
+                {
+                    using (doc.LockDocument())
+                    using (var tr = doc.TransactionManager.StartTransaction())
+                    {
+                        var r = f(new ToolContext(doc, tr, true, null), tr);
+                        tr.Commit();
+                        return r;
+                    }
+                }
+                // a 4000 × 3000 room with its name (TEXT) and a note (MTEXT) inside
+                var made = Run((ctx, tr) =>
+                {
+                    var ms = (BlockTableRecord)tr.GetObject(SymbolUtilityServices.GetBlockModelSpaceId(db), OpenMode.ForWrite);
+                    string Add(Entity e) { e.SetDatabaseDefaults(db); ms.AppendEntity(e); tr.AddNewlyCreatedDBObject(e, true); return e.Handle.ToString(); }
+                    return new[]
+                    {
+                        Add(Acad.MakePolyline(new List<double[]> { new[] { cx, 0.0 }, new[] { cx + 4000, 0.0 }, new[] { cx + 4000, 3000.0 }, new[] { cx, 3000.0 } }, true)),
+                        Add(new DBText { Position = new Point3d(cx + 1000, 1500, 0), Height = 200, TextString = "ZQX NGU" }),
+                        Add(new MText { Location = new Point3d(cx + 1000, 1000, 0), TextHeight = 100, Contents = "ZQX ghi chu, zqx" }),
+                    };
+                });
+                string room = made[0], text = made[1], mtext = made[2];
+                Dictionary<string, object> Replace(Dictionary<string, object> d) =>
+                    Run((ctx, tr) => (Dictionary<string, object>)DrawingService.FindReplaceText(ctx, new Params("find_replace_text", d)));
+                var preview = Replace(new Dictionary<string, object> { ["find"] = "ZQX", ["replace"] = "PHONG" });
+                if (Convert.ToInt32(preview["objects"]) != 2 || Convert.ToInt32(preview["replacements"]) != 3)
+                    errs.Add($"xem trước: {preview["objects"]} đối tượng, {preview["replacements"]} chỗ (cần 2, 3)");
+                // without the card's approval nothing changes
+                try
+                {
+                    Replace(new Dictionary<string, object> { ["find"] = "ZQX", ["replace"] = "PHONG", ["handles"] = new List<object> { text, mtext } });
+                    errs.Add("thay khi chưa duyệt thẻ: không bị từ chối");
+                }
+                catch (ToolException) { }
+                var done = Replace(new Dictionary<string, object>
+                {
+                    ["find"] = "ZQX", ["replace"] = "PHONG", ["handles"] = new List<object> { text, mtext },
+                    [SolidLogic.UserConfirmedParam] = new List<object> { text, mtext },
+                });
+                if (Convert.ToInt32(done["replacements"]) != 3) errs.Add($"thay: {done["replacements"]} chỗ (cần 3)");
+                var (t1, t2) = Run((ctx, tr) => (((DBText)tr.GetObject(Acad.IdFromHandle(db, text), OpenMode.ForRead)).TextString,
+                                                 ((MText)tr.GetObject(Acad.IdFromHandle(db, mtext), OpenMode.ForRead)).Contents));
+                if (t1 != "PHONG NGU" || t2 != "PHONG ghi chu, PHONG") errs.Add($"chữ sau khi thay: \"{t1}\", \"{t2}\"");
+                // the room's area, named by the text inside it
+                var area = Run((ctx, tr) => (Dictionary<string, object>)DrawingService.AreaSchedule(ctx, new Params("area_schedule", new Dictionary<string, object>
+                {
+                    ["group_by"] = "room", ["handles"] = new List<object> { room },
+                })));
+                var row = (Dictionary<string, object>)((List<object>)area["rows"])[0];
+                if (Math.Abs(Convert.ToDouble(area["total_m2"]) - 12) > 1e-6) errs.Add($"diện tích phòng {area["total_m2"]} m² (cần 12)");
+                if (!Convert.ToString(row["name"]).Contains("PHONG NGU")) errs.Add($"tên phòng \"{row["name"]}\" (cần PHONG NGU)");
+                return errs.Count == 0
+                    ? new SelfTestRules.Verdict(true, "xem trước 2 đối tượng / 3 chỗ, chưa duyệt thì không đổi, thay đúng; phòng PHONG NGU 12 m²")
+                    : new SelfTestRules.Verdict(false, string.Join("; ", errs));
+            });
+
+            // Test & sửa đợt D: the same code paths as build_beam, build_3d_from_plan (curved wall), presspull and export_stl
+            Check("Nâng cấp đợt D: dầm chữ L, tường cong, kéo mặt trên (PRESSPULL), xuất STL", () =>
+            {
+                const double dx = 50000;
+                var errs = new List<string>();
+                var db = doc.Database;
+                T Run<T>(Func<ToolContext, Transaction, T> f)
+                {
+                    using (doc.LockDocument())
+                    using (var tr = doc.TransactionManager.StartTransaction())
+                    {
+                        var r = f(new ToolContext(doc, tr, true, null), tr);
+                        tr.Commit();
+                        return r;
+                    }
+                }
+                List<object> Pt(double x, double y) => new List<object> { x, y };
+                void Vol(string what, double actual, double expected)
+                {
+                    var v = SelfTestRules.CheckVolume(what, actual, expected);
+                    if (!v.Ok) errs.Add(v.Detail);
+                }
+
+                // L beam 4000 + 3000 on its axis, 220 × 400: mitred corner = axis length × width × height
+                var beam = Run((ctx, tr) => (Dictionary<string, object>)DrawingService.BuildBeam(ctx, new Params("build_beam", new Dictionary<string, object>
+                {
+                    ["path_points"] = new List<object> { Pt(dx, 0), Pt(dx + 4000, 0), Pt(dx + 4000, 3000) }, ["top_z"] = 3000.0, ["layer"] = "0",
+                })));
+                Vol("dầm chữ L 220×400", Convert.ToDouble(beam["total_volume_m3"]) * 1e9, 7000.0 * 220 * 400);
+                string beamHandle = (string)((List<object>)beam["handles"])[0];
+
+                // a quarter of a curved wall: arcs R3000 and R3200, wall 3000 high
+                var wall = Run((ctx, tr) =>
+                {
+                    var ms = (BlockTableRecord)tr.GetObject(SymbolUtilityServices.GetBlockModelSpaceId(db), OpenMode.ForWrite);
+                    string Add(Entity e) { e.SetDatabaseDefaults(db); ms.AppendEntity(e); tr.AddNewlyCreatedDBObject(e, true); return e.Handle.ToString(); }
+                    var arcs = new List<object>
+                    {
+                        Add(new Arc(new Point3d(dx + 10000, 0, 0), 3000, 0, Math.PI / 2)),
+                        Add(new Arc(new Point3d(dx + 10000, 0, 0), 3200, 0, Math.PI / 2)),
+                    };
+                    return (Dictionary<string, object>)DrawingService.Build3dFromPlan(ctx, new Params("build_3d_from_plan", new Dictionary<string, object>
+                    {
+                        ["wall_handles"] = arcs, ["wall_height"] = 3000.0, ["slab"] = "none", ["wall_layer_3d"] = "0", ["on_existing"] = "add",
+                    }));
+                });
+                if (!wall.ContainsKey("curved_walls") || !wall.ContainsKey("wall_solid")) errs.Add("tường cong: không nhận được hai cung đồng tâm");
+                else Vol("¼ tường cong R3000–3200 cao 3000", Convert.ToDouble(((Dictionary<string, object>)wall["wall_solid"])["volume_m3"]) * 1e9,
+                    Math.PI / 4 * (3200.0 * 3200 - 3000.0 * 3000) * 3000);
+
+                // PRESSPULL: the top face of a 1000 box out by 200 (positive = out, the solid grows)
+                string box = Run((ctx, tr) =>
+                {
+                    var b = AddBox(tr, 1000, 1000, 1000, new double[] { dx + 20000, 0, 0 });
+                    return b.Handle.ToString();
+                });
+                Run((ctx, tr) => DrawingService.Presspull(ctx, new Params("presspull", new Dictionary<string, object>
+                {
+                    ["handle"] = box, ["face_filter"] = new List<object> { "top" }, ["distance"] = 200.0,
+                })));
+                double pulled = Run((ctx, tr) => ((Solid3d)tr.GetObject(Acad.IdFromHandle(db, box), OpenMode.ForRead)).MassProperties.Volume);
+                Vol("hộp 1000 kéo mặt trên +200", pulled, 1000.0 * 1000 * 1200);
+
+                // STL of the beam: a file with triangles, the drawing unchanged
+                string stl = Path.Combine(dir, "selftest-dam.stl");
+                var st = Run((ctx, tr) => (Dictionary<string, object>)DrawingService.ExportStl(ctx, new Params("export_stl", new Dictionary<string, object>
+                {
+                    ["handles"] = new List<object> { beamHandle }, ["output"] = stl, ["overwrite"] = true,
+                })));
+                int tris = File.Exists(stl) ? Solid3Logic.ReadStl(File.ReadAllBytes(stl)).Count : 0;
+                if (tris == 0 || tris != Convert.ToInt32(st["triangles"])) errs.Add($"STL: {tris} tam giác trong file, lệnh báo {st["triangles"]}");
+                return errs.Count == 0
+                    ? new SelfTestRules.Verdict(true, $"dầm, tường cong, PRESSPULL đúng thể tích; STL {tris} tam giác (selftest-dam.stl trong thư mục thử)")
+                    : new SelfTestRules.Verdict(false, string.Join("; ", errs));
+            });
+
+            // Nâng cấp đợt E: the same code paths as build_stair and build_roof
+            Check("Nâng cấp đợt E: cầu thang 1 vế + chữ U (chia bậc theo cao tầng), mái 4 dốc", () =>
+            {
+                const double dx = 90000;
+                var errs = new List<string>();
+                T Run<T>(Func<ToolContext, Transaction, T> f)
+                {
+                    using (doc.LockDocument())
+                    using (var tr = doc.TransactionManager.StartTransaction())
+                    {
+                        var r = f(new ToolContext(doc, tr, true, null), tr);
+                        tr.Commit();
+                        return r;
+                    }
+                }
+                List<object> Pt(double x, double y) => new List<object> { x, y };
+
+                // straight stair 3000 high: 19 risers of 157.9; one prism, so the solid volume is the layout volume
+                var s1 = Run((ctx, tr) => (Dictionary<string, object>)DrawingService.BuildStair(ctx, new Params("build_stair", new Dictionary<string, object>
+                {
+                    ["type"] = "straight", ["height"] = 3000.0, ["start"] = Pt(dx, 0), ["direction"] = 90.0, ["layer"] = "0",
+                })));
+                if (Convert.ToInt32(s1["risers"]) != 19) errs.Add($"thang 1 vế cao 3000: {s1["risers"]} bậc (cần 19)");
+                var v1 = SelfTestRules.CheckVolume("thang 1 vế", Convert.ToDouble(s1["volume_m3"]) * 1e9,
+                    StairLogic.Build(new StairLogic.Options { Type = "straight", Height = 3000 }).Volume);
+                if (!v1.Ok) errs.Add(v1.Detail);
+                var mx = (List<object>)s1["max"];
+                if (Math.Abs(Convert.ToDouble(mx[2]) - 3000) > 1) errs.Add($"thang 1 vế: đỉnh z {mx[2]} (cần 3000)");
+
+                // U stair 3300 with railings on both sides: one stair solid (flights + landing united), landing at 11 risers
+                var s2 = Run((ctx, tr) => (Dictionary<string, object>)DrawingService.BuildStair(ctx, new Params("build_stair", new Dictionary<string, object>
+                {
+                    ["type"] = "u", ["height"] = 3300.0, ["start"] = Pt(dx + 5000, 0), ["railing"] = "both", ["layer"] = "0", ["rail_layer"] = "0",
+                })));
+                if (s2.ContainsKey("separate_pieces")) errs.Add("thang chữ U: vế và chiếu nghỉ không cộng thành một khối");
+                if (Math.Abs(Convert.ToDouble(s2["landing_z_mm"]) - 11 * 3300.0 / 21) > 0.1) errs.Add($"thang chữ U: chiếu nghỉ ở {s2["landing_z_mm"]}");
+                if (!s2.ContainsKey("railing")) errs.Add("thang chữ U: thiếu lan can");
+
+                // hip roof over a 10 × 6 m house, wall top 3000: eaves 600, 30°, slab 150
+                var roof = Run((ctx, tr) => (Dictionary<string, object>)DrawingService.BuildRoof(ctx, new Params("build_roof", new Dictionary<string, object>
+                {
+                    ["type"] = "hip", ["outline_points"] = new List<object> { Pt(dx + 10000, 0), Pt(dx + 20000, 0), Pt(dx + 20000, 6000), Pt(dx + 10000, 6000) },
+                    ["wall_top_z"] = 3000.0, ["layer"] = "0",
+                })));
+                var lay = RoofLogic.Build(new List<double[]> { new[] { 0.0, 0 }, new[] { 10000.0, 0 }, new[] { 10000.0, 6000 }, new[] { 0.0, 6000 } }, 3000, new RoofLogic.Options { Type = "hip" });
+                var rmin = (List<object>)roof["min"]; var rmax = (List<object>)roof["max"];
+                if (Math.Abs(Convert.ToDouble(rmin[2]) - lay.EaveZ) > 1 || Math.Abs(Convert.ToDouble(rmax[2]) - lay.TopZ) > 1)
+                    errs.Add($"mái 4 dốc: z {rmin[2]}–{rmax[2]} (cần {lay.EaveZ:0}–{lay.TopZ:0})");
+                // a 150 slab over the sloped area, give or take the eave cuts and the hips
+                double approx = lay.RoofArea * 150, got = Convert.ToDouble(roof["volume_m3"]) * 1e9;
+                if (Math.Abs(got - approx) > 0.1 * approx) errs.Add($"mái 4 dốc: thể tích {got / 1e9:0.###} m³ (khoảng {approx / 1e9:0.###})");
+                return errs.Count == 0
+                    ? new SelfTestRules.Verdict(true, $"thang 1 vế 19 bậc, thang chữ U một khối + lan can, mái 4 dốc {got / 1e9:0.###} m³")
+                    : new SelfTestRules.Verdict(false, string.Join("; ", errs));
             });
 
             string versionFile = Path.Combine(dir, "version-copy.dwg");

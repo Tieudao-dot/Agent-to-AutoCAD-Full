@@ -99,6 +99,9 @@ namespace ClaudeCAD.Plugin.Drawing
 
         public IReadOnlyCollection<string> ToolNames => _tools.Keys.ToList();
 
+        /// <summary>Service plan of this machine (match_properties leaves text / dimension properties out without 2D).</summary>
+        public string Plan => _host?.Plan;
+
         // -------------------------------------------------------------- entry point
 
         /// <summary>Handles one tool_call message and returns the response envelope. Never throws.</summary>

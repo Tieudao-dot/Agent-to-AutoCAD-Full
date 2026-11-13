@@ -120,6 +120,8 @@ namespace ClaudeCAD.Plugin.Core
     {
         public string Handle;
         public bool IsSlab;
+        /// <summary>A solid on the column layer (nâng cấp đợt A): only compared with this run's columns.</summary>
+        public bool IsColumn;
         public double[] Min, Max; // 3D box
     }
 
@@ -216,6 +218,184 @@ namespace ClaudeCAD.Plugin.Core
             if (n.StartsWith("CUA-SO", StringComparison.Ordinal)) return "window";
             return null;
         }
+
+        // ------------------------------------------------------------------ nâng cấp đợt A: layer guess, columns, storeys
+
+        public static readonly string[] DefaultColumnLayers = { "A-COLS", "A-COL" };
+        public const string ColumnLayer3d = "A-COLS-3D";
+        /// <summary>A closed outline on a column layer bigger than this (mm, either side) is not a column (a room, a grid frame).</summary>
+        public const double MaxColumnSize = 3000;
+        public const int MaxColumns = 2000;
+        public const int MaxStoreys = 50;
+        public const int MaxLayerGuesses = 30;
+
+        /// <summary>Upper case, Vietnamese marks removed (TƯỜNG → TUONG, Đ → D).</summary>
+        public static string Fold(string s)
+        {
+            var d = (s ?? "").Replace('đ', 'd').Replace('Đ', 'D').Normalize(System.Text.NormalizationForm.FormD);
+            var sb = new System.Text.StringBuilder(d.Length);
+            foreach (var ch in d)
+                if (CharUnicodeInfo.GetUnicodeCategory(ch) != UnicodeCategory.NonSpacingMark) sb.Append(ch);
+            return sb.ToString().Normalize(System.Text.NormalizationForm.FormC).ToUpperInvariant();
+        }
+
+        /// <summary>
+        /// What a layer name most likely holds on a floor plan drawn without the A-WALL / A-DOOR... convention:
+        /// "wall", "door", "window", "slab", "column", "railing", or null. Only a guess for Claude to ASK the user about
+        /// (never built from without their yes); result layers (…3D) and section / text layers are never guessed.
+        /// </summary>
+        public static string GuessLayerKind(string layer)
+        {
+            var f = Fold(layer);
+            if (f.Length == 0 || f == "0" || f == "DEFPOINTS") return null;
+            var tokens = System.Text.RegularExpressions.Regex.Split(f, "[^A-Z0-9]+").Where(t => t.Length > 0).ToList();
+            var joined = string.Concat(tokens);
+            bool Tok(params string[] w) => tokens.Any(t => w.Contains(t));
+            // a word of the name starts with one of these (WALLS, TUONG220, DOORS…): "SIDEWALK" is not a wall, "OUTDOOR" not a door
+            bool Starts(params string[] w) => tokens.Any(t => w.Any(x => t.StartsWith(x, StringComparison.Ordinal)));
+            // words written apart or together (CUA SO, CUA_SO, CUASO)
+            bool Joined(params string[] w) => w.Any(x => joined.Contains(x));
+            // results of a 3D tool, text, dimensions, hatch patterns, axis / centre lines: not the outlines the tool reads
+            if (Tok("3D") || joined.EndsWith("3D", StringComparison.Ordinal) ||
+                Tok("TEXT", "TXT", "DIM", "DIMS", "CHU", "HATCH", "PATT", "PAT", "HAT", "SECT", "ELEV", "ANNO", "IDEN", "TAG", "TRUC", "TIM", "AXIS", "GRID", "CEN", "CENTER", "CL"))
+                return null;
+            if (Joined("LANCAN") || Tok("RAIL", "RAILS", "RAILING", "RAILINGS", "HANDRAIL", "HANDRAILS", "GUARDRAIL")) return "railing";
+            if (Joined("CUASO") || Starts("WIND", "GLAZ") || Tok("WIN")) return "window";
+            if (Joined("CUADI") || Starts("DOOR") || Tok("CUA", "DR")) return "door";
+            if (Starts("COLUMN") || Tok("COT", "COL", "COLS")) return "column";
+            if (Starts("SLAB", "FLOR", "FLOOR") || Tok("SAN")) return "slab";
+            if (Starts("WALL", "TUONG") || Tok("XAY", "TG")) return "wall";
+            return null;
+        }
+
+        /// <summary>A closed outline on a column layer: kept when no side is longer than MaxColumnSize mm.</summary>
+        public static string ColumnSkipReason(double dxMm, double dyMm)
+        {
+            if (!(dxMm > 0) || !(dyMm > 0)) return "has no area in plan: not a column";
+            if (dxMm > MaxColumnSize || dyMm > MaxColumnSize)
+                return $"{Math.Round(dxMm)} × {Math.Round(dyMm)} mm is larger than a column ({MaxColumnSize} mm per side): not built; pass it in column_handles only if it really is one column";
+            return null;
+        }
+
+        /// <summary>Column sizes in plan (mm, bounding box, smaller side first) with their counts, most frequent first: for the report.</summary>
+        public static List<(double a, double b, int count)> ColumnSizeSummary(IEnumerable<(double dx, double dy)> sizesMm, int max = 20) =>
+            sizesMm
+                .Select(x => (a: Math.Round(Math.Min(x.dx, x.dy)), b: Math.Round(Math.Max(x.dx, x.dy))))
+                .GroupBy(x => x)
+                .Select(g => (g.Key.a, g.Key.b, count: g.Count()))
+                .OrderByDescending(x => x.count).ThenBy(x => x.a).ThenBy(x => x.b)
+                .Take(max)
+                .ToList();
+
+        /// <summary>
+        /// Rerun check of the columns (all in drawing units): an earlier solid on the column layer that really overlaps one
+        /// of this run's column outlines in plan and covers more than half of the column height [baseZ, baseZ + height]
+        /// is the same column built again. Columns are only compared with columns: a column the user built inside a wall
+        /// (same place in plan as the wall) is not a rerun of the wall, and the storey below never counts.
+        /// </summary>
+        public static List<string> ColumnRerun(IEnumerable<Existing3d> existing, IList<(double[] min, double[] max)> columns, double baseZ, double height, double tol)
+        {
+            var list = new List<string>();
+            if (columns.Count == 0 || !(height > 0)) return list;
+            foreach (var e in existing)
+            {
+                if (!e.IsColumn) continue;
+                var emin = new[] { e.Min[0], e.Min[1] }; var emax = new[] { e.Max[0], e.Max[1] };
+                if (!columns.Any(c => BoxesOverlapStrict(emin, emax, c.min, c.max, tol))) continue;
+                if (ZOverlap(e.Min[2], e.Max[2], baseZ, baseZ + height) > 0.5 * height) list.Add(e.Handle);
+            }
+            return list;
+        }
+
+        /// <summary>One storey of a multi-storey build: its floor level (slab top) and wall height (mm).</summary>
+        public sealed class Storey
+        {
+            public int Number;   // 1-based
+            public double BaseZ; // mm
+            public double WallHeight; // mm
+            public bool RoofOnly; // the roof slab above the last storey
+        }
+
+        /// <summary>
+        /// Levels of "dựng 3 tầng, mỗi tầng cao 3,3 m": storey k (0-based) starts at baseZ + k × storeyHeight; its walls
+        /// are storeyHeight − slab high so the slab of the storey above sits on them (checklist L24). wallHeight
+        /// given: it must fit (wall + slab ≤ storey). storeyHeight missing: wall + slab (wall default 3300).
+        /// A roof slab (top at baseZ + n × storeyHeight) is added when roof is true.
+        /// </summary>
+        public static List<Storey> Storeys(int count, double? storeyHeight, double? wallHeight, double slab, double baseZ, bool roof, string tool = "build_3d_from_plan")
+        {
+            if (count < 1 || count > MaxStoreys) throw ToolException.Invalid($"{tool}: storeys must be 1–{MaxStoreys} (got {count}).");
+            double sh, wh;
+            if (storeyHeight.HasValue)
+            {
+                sh = storeyHeight.Value;
+                if (!(sh > slab + MinWallHeight - 1e-9) || sh > MaxWallHeight)
+                    throw ToolException.Invalid($"{tool}: storey_height must be more than slab_thickness + {MinWallHeight} mm and at most {MaxWallHeight} mm (got {sh}, slab {slab}).");
+                wh = wallHeight ?? sh - slab;
+                if (wh + slab > sh + 1e-6)
+                    throw ToolException.Invalid($"{tool}: wall_height {wh} + slab_thickness {slab} is more than storey_height {sh}: the slab above would cut into the walls. Leave wall_height out (it becomes storey_height − slab_thickness = {sh - slab}).");
+            }
+            else
+            {
+                wh = wallHeight ?? DefaultWallHeight;
+                sh = wh + slab;
+            }
+            var list = new List<Storey>();
+            for (int k = 0; k < count; k++) list.Add(new Storey { Number = k + 1, BaseZ = baseZ + k * sh, WallHeight = wh });
+            if (roof) list.Add(new Storey { Number = count + 1, BaseZ = baseZ + count * sh, WallHeight = wh, RoofOnly = true });
+            return list;
+        }
+
+        /// <summary>
+        /// Several levels (storeys, or one storey + roof slab) with slab "auto" but no slab outline on the plan: the walls
+        /// are storey − slab high, so without slabs every storey would stand slab_thickness above the walls below (a gap
+        /// all around), and a second call would be refused as "already built". Asked before building: the message, or null.
+        /// </summary>
+        public static string StoreysWithoutSlab(int levels, string slabMode, int slabOutlines, double slabMm, string tool = "build_3d_from_plan")
+        {
+            if (levels < 2 || slabMode != "auto" || slabOutlines > 0 || !(slabMm > 0)) return null;
+            return $"{tool}: several levels (storeys / roof slab), but no closed slab outline on the slab layers and no slab_handles: without slabs the walls of each storey " +
+                   $"(storey_height − slab_thickness) would stop {slabMm} mm below the storey above. Ask the user, then call again with slab \"bbox\" " +
+                   "(one slab under the walls' bounding box per storey), slab_handles (the slab outline), or slab \"none\" (no slabs: the walls fill the whole storey height).";
+        }
+
+        /// <summary>
+        /// One storey whose wall height comes from storey_height (storey − slab) with slab "auto" but no slab outline on
+        /// the plan (KT2-21): the walls would be slab_thickness lower with no slab on them, and the next storey would stand
+        /// that much above them. Asked before building, like StoreysWithoutSlab: the message, or null.
+        /// </summary>
+        public static string StoreyWithoutSlab(bool wallFromStoreyHeight, string slabMode, int slabOutlines, double slabMm, string tool = "build_3d_from_plan")
+        {
+            if (!wallFromStoreyHeight || slabMode != "auto" || slabOutlines > 0 || !(slabMm > 0)) return null;
+            return $"{tool}: storey_height is given (walls = storey_height − slab_thickness), but there is no closed slab outline on the slab layers and no slab_handles: " +
+                   $"the walls would stop {slabMm} mm below the next storey with no slab on them. Ask the user, then call again with slab \"bbox\" " +
+                   "(one slab under the walls' bounding box), slab_handles (the slab outline), or slab \"none\" (no slab: the walls fill the whole storey height).";
+        }
+
+        /// <summary>mm → drawing units by INSUNITS, like the heights of the 3D tools (KT2-10: the level spacing of array_rect).</summary>
+        public static double ToDrawingUnits(double mm, int insunits) => mm / MmPerUnit(insunits, out _);
+
+        /// <summary>
+        /// The same closed outline drawn twice (KT2-11, columns): the same box in plan (within tol, drawing units) and the
+        /// same area, like SameRegion of the slabs. An area that could not be read (≤ 0) never matches.
+        /// </summary>
+        public static bool SameOutline(double[] minA, double[] maxA, double areaA, double[] minB, double[] maxB, double areaB, double tol)
+        {
+            if (minA == null || maxA == null || minB == null || maxB == null) return false;
+            if (!(areaA > 0) || !(areaB > 0) || Math.Abs(areaA - areaB) > 1e-6 * Math.Max(areaA, areaB)) return false;
+            return Math.Abs(minA[0] - minB[0]) <= tol && Math.Abs(minA[1] - minB[1]) <= tol &&
+                   Math.Abs(maxA[0] - maxB[0]) <= tol && Math.Abs(maxA[1] - maxB[1]) <= tol;
+        }
+
+        /// <summary>
+        /// How a guessed layer may be used, for the report (KT2-22): the plan layers go into their *_layers parameter after
+        /// the user's yes (the assistant refuses the build before); a layer guessed as a railing has no such gate, so the
+        /// hint itself says to ask first.
+        /// </summary>
+        public static string GuessUse(string kind) =>
+            kind == "railing"
+                ? "ask the user first (request_confirmation naming this layer); build_railing along its lines only after their yes"
+                : kind + "_layers";
 
         // ------------------------------------------------------------------ heights
 
@@ -1151,6 +1331,7 @@ namespace ClaudeCAD.Plugin.Core
             var wallBoxes = boxes.Select(BoxXY).ToList();
             foreach (var e in existing)
             {
+                if (e.IsColumn) continue; // columns are compared with columns only (ColumnRerun)
                 var emin = new[] { e.Min[0], e.Min[1] }; var emax = new[] { e.Max[0], e.Max[1] };
                 double ez0 = e.Min[2], ez1 = e.Max[2];
                 if (e.IsSlab)

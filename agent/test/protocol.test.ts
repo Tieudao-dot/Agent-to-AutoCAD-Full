@@ -133,6 +133,12 @@ describe('v0.9.4: big messages and timeouts', () => {
     assert.equal(timeoutFor('batch_execute', { calls: Array.from({ length: 500 }, () => ({ tool: 'draw_line' })) }), 80_000);
     assert.equal(timeoutFor('plot_pdf', {}), 120_000);
     assert.equal(timeoutFor('batch_execute', { calls: [{ tool: 'save_drawing' }] }), 120_000);
+    // nâng cấp đợt A: builds that unite many boxes get the long limit; a dry run only reads
+    assert.equal(timeoutFor('build_3d_from_plan', { storeys: 3 }), 120_000);
+    assert.equal(timeoutFor('build_3d_from_plan', { dry_run: true }), 30_000);
+    assert.equal(timeoutFor('build_railing', { path_handle: '2F' }), 120_000);
+    assert.equal(timeoutFor('batch_execute', { calls: [{ tool: 'build_railing', params: {} }] }), 120_000);
+    assert.equal(timeoutFor('batch_execute', { calls: [{ tool: 'build_3d_from_plan', params: { dry_run: true } }] }), 30_100);
     assert.equal(timeoutFor('batch_execute', { calls: Array.from({ length: 5000 }, () => ({ tool: 'draw_line' })) }), 300_000);
   });
 });

@@ -8,6 +8,7 @@ import path from 'node:path';
 import { describe, it } from 'node:test';
 import { fileURLToPath } from 'node:url';
 import { z } from 'zod';
+import { SOLID_ALIASES } from '../src/tools/solids.js';
 import type { ToolBridge } from '../src/tools/common.js';
 import { buildTools } from '../src/tools/index.js';
 import { ERROR_CODES, parsePluginMessage } from '../src/ipc/protocol.js';
@@ -47,7 +48,8 @@ describe('tool catalogue', () => {
     const ts = new Set(tools.map((t) => t.name));
     const cs = pluginToolNames();
     const missingInPlugin = [...ts].filter((n) => !cs.has(n));
-    const missingInSidecar = [...cs].filter((n) => !ts.has(n));
+    // nâng cấp đợt A: the six old primitive names are plugin aliases of draw_solid for recorded macros, not declared to Claude
+    const missingInSidecar = [...cs].filter((n) => !ts.has(n) && !(SOLID_ALIASES as readonly string[]).includes(n));
     assert.deepEqual(missingInPlugin, [], 'declared to Claude but not handled by the plugin');
     assert.deepEqual(missingInSidecar, [], 'handled by the plugin but not declared to Claude');
   });

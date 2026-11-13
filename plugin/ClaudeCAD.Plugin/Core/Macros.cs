@@ -102,6 +102,27 @@ namespace ClaudeCAD.Plugin.Core
             return new List<string>();
         }
 
+        /// <summary>
+        /// KT2-01 (13/11/2026): tools whose result "handles" are the existing objects they changed, never new ones
+        /// (stretch_entities by window lists the objects the window caught). Their results are not "created by the macro".
+        /// </summary>
+        public static readonly HashSet<string> InPlaceTools = new HashSet<string>(StringComparer.Ordinal)
+        {
+            "stretch_entities", "match_properties", "lengthen_entity", "move_entities", "rotate_entities", "scale_entities",
+            "set_entity_props", "rotate_3d", "align", "edit_polyline", "set_dynamic_props", "reset_dynamic_block", "edit_text", "set_block_attributes",
+        };
+
+        /// <summary>
+        /// KT2-01: the handles a recorded call created: its result handles, minus every handle of an in-place tool and
+        /// minus the handles the call itself was given (an object a call changes keeps its handle).
+        /// </summary>
+        public static List<string> NewHandles(MacroCall c)
+        {
+            if (c == null || InPlaceTools.Contains(c.Tool ?? "")) return new List<string>();
+            var given = new HashSet<string>(HandleParams(c.Params ?? new Dictionary<string, object>()), StringComparer.OrdinalIgnoreCase);
+            return (c.ResultHandles ?? new List<string>()).Where(h => !given.Contains(h)).ToList();
+        }
+
         /// <summary>Deep copy of a JSON value (params are recorded before the next call can change anything).</summary>
         public static object DeepCopy(object v)
         {
@@ -133,10 +154,11 @@ namespace ClaudeCAD.Plugin.Core
 
         /// <summary>
         /// handle / handles / *_handle(s) / handle1, handle2 (fillet_entities, chamfer_entities) / target, subtract
-        /// (solid_subtract: without them a replayed subtract would cut the recorded solids, not the new ones).
+        /// (solid_subtract: without them a replayed subtract would cut the recorded solids, not the new ones) / source
+        /// (match_properties, nâng cấp đợt B).
         /// </summary>
         public static bool IsHandleKey(string k) =>
-            k == "handle" || k == "handles" || k == "target" || k == "subtract" || k.EndsWith("_handle", StringComparison.Ordinal) || k.EndsWith("_handles", StringComparison.Ordinal) ||
+            k == "handle" || k == "handles" || k == "target" || k == "subtract" || k == "source" || k.EndsWith("_handle", StringComparison.Ordinal) || k.EndsWith("_handles", StringComparison.Ordinal) ||
             (k.Length > 6 && k.StartsWith("handle", StringComparison.Ordinal) && k.Substring(6).All(char.IsDigit));
 
         /// <summary>
@@ -146,6 +168,20 @@ namespace ClaudeCAD.Plugin.Core
         /// </summary>
         public static List<string> Unresolved(Dictionary<string, object> p, ISet<string> createdByMacro, IDictionary<string, string> map) =>
             HandleParams(p).Where(h => createdByMacro.Contains(h) && !map.ContainsKey(h)).Distinct(StringComparer.OrdinalIgnoreCase).ToList();
+
+        /// <summary>
+        /// KT2-01: after a replayed call, map only the handles it created (NewHandles), by position. An in-place call
+        /// (window stretch) maps nothing: the objects its window caught in this drawing are not the recorded ones.
+        /// </summary>
+        public static void Learn(IDictionary<string, string> map, MacroCall c, IList<string> replayed)
+        {
+            if (c == null || InPlaceTools.Contains(c.Tool ?? "")) return;
+            var created = new HashSet<string>(NewHandles(c), StringComparer.OrdinalIgnoreCase);
+            var recorded = c.ResultHandles ?? new List<string>();
+            int n = Math.Min(recorded.Count, replayed?.Count ?? 0);
+            for (int i = 0; i < n; i++)
+                if (created.Contains(recorded[i]) && !map.ContainsKey(recorded[i])) map[recorded[i]] = replayed[i];
+        }
 
         /// <summary>After a replayed call: recorded handle k ↦ new handle k (first mapping wins).</summary>
         public static void Learn(IDictionary<string, string> map, IList<string> recorded, IList<string> replayed)
@@ -167,7 +203,7 @@ namespace ClaudeCAD.Plugin.Core
             {
                 foreach (var h in HandleParams(c.Params))
                     if (!created.Contains(h) && !external.Contains(h, StringComparer.OrdinalIgnoreCase)) external.Add(h);
-                foreach (var h in c.ResultHandles) created.Add(h);
+                foreach (var h in NewHandles(c)) created.Add(h);
             }
             return external;
         }
@@ -176,7 +212,23 @@ namespace ClaudeCAD.Plugin.Core
         public static readonly HashSet<string> AlwaysConfirmTools = new HashSet<string>(StringComparer.Ordinal)
         {
             "solid_union", "solid_subtract", "solid_intersect", "slice_solid", "fillet_edges", "chamfer_edges", "shell_solid",
+            // Test & sửa đợt D (ND-3): PRESSPULL on a solid that existed before (handle, target)
+            "presspull",
         };
+
+        /// <summary>
+        /// The solids a call of an AlwaysConfirmTools tool changes. presspull: the solid whose faces it pulls (handle) and the
+        /// target unless mode "new" (its profile curves are only read, or erased by the usual count rule); others: every handle param.
+        /// </summary>
+        public static IEnumerable<string> SolidEditHandles(string tool, Dictionary<string, object> p)
+        {
+            if (tool != "presspull") return HandleParams(p);
+            var hs = new List<string>();
+            if (p.TryGetValue("handle", out var h) && h is string hh) hs.Add(hh);
+            bool isNew = p.TryGetValue("mode", out var m) && m is string ms && ms.Trim().Equals("new", StringComparison.OrdinalIgnoreCase);
+            if (!isNew && p.TryGetValue("target", out var t) && t is string th) hs.Add(th);
+            return hs;
+        }
 
         /// <summary>
         /// KT-10: calls of the macro that change the shape of solids the macro did not build itself ("tool (handles)"). A macro
@@ -192,10 +244,10 @@ namespace ClaudeCAD.Plugin.Core
             {
                 if (AlwaysConfirmTools.Contains(c.Tool ?? ""))
                 {
-                    var ext = HandleParams(c.Params ?? new Dictionary<string, object>()).Where(h => !created.Contains(h)).Distinct(StringComparer.OrdinalIgnoreCase).ToList();
+                    var ext = SolidEditHandles(c.Tool, c.Params ?? new Dictionary<string, object>()).Where(h => !created.Contains(h)).Distinct(StringComparer.OrdinalIgnoreCase).ToList();
                     if (ext.Count > 0) found.Add($"{c.Tool} ({string.Join(", ", ext.Take(5))}{(ext.Count > 5 ? ", …" : "")})");
                 }
-                foreach (var h in c.ResultHandles ?? new List<string>()) created.Add(h);
+                foreach (var h in NewHandles(c)) created.Add(h);
             }
             return found;
         }
@@ -231,7 +283,7 @@ namespace ClaudeCAD.Plugin.Core
             foreach (var c in m.Calls)
             {
                 foreach (var h in HandleParams(c.Params)) used.Add(h);
-                foreach (var h in c.ResultHandles)
+                foreach (var h in NewHandles(c))
                     if (!used.Contains(h) && seen.Add(h)) created.Add(h);
             }
             return created;
@@ -311,6 +363,7 @@ namespace ClaudeCAD.Plugin.Core
                 if (_calls.Count >= MacroLogic.MaxCalls) { _overflow = true; return; }
                 var copy = (MacroLogic.DeepCopy(p ?? new Dictionary<string, object>()) as Dictionary<string, object>) ?? new Dictionary<string, object>();
                 copy.Remove(SolidLogic.UserConfirmedParam); // KT-10: the card's yes belongs to that turn, never to a replay
+                copy.Remove(Edit2DLogic.WindowLimitParam); // NB-1: the turn's 20-object budget belongs to that turn too
                 _calls.Add(new MacroCall
                 {
                     Tool = tool,

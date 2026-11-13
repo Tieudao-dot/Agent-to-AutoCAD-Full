@@ -78,6 +78,8 @@ namespace ClaudeCAD.Plugin.Core
                 // blocks and xrefs
                 // (block attributes are text: their parameters need 2D, see TextParams; set_block_attributes is 2D)
                 "define_block insert_block set_dynamic_props reset_dynamic_block attach_xref detach_xref bind_xref reload_xref " +
+                // nâng cấp đợt B (Drawing/Edit2DTools.cs): every plan; match_properties copies text / dimension properties only with 2D (TextValues)
+                "group_entities match_properties " +
                 // basic curves: 3D uses them as profiles and paths
                 "draw_line draw_polyline draw_circle draw_arc draw_spline draw_ellipse draw_rectangle draw_polygon draw_point draw_ray draw_xline");
             Add(ToolGroup.TwoD,
@@ -86,15 +88,26 @@ namespace ClaudeCAD.Plugin.Core
                 "draw_hatch draw_wipeout draw_revcloud " +
                 "create_layout delete_layout set_current_layout add_viewport set_viewport plot_pdf list_plot_media " +
                 "create_text_style create_dim_style set_current_styles " +
-                "offset_entity fillet_entities chamfer_entities trim_entities extend_entities join_entities explode_entities edit_polyline");
+                "offset_entity fillet_entities chamfer_entities trim_entities extend_entities join_entities explode_entities edit_polyline " +
+                // nâng cấp đợt B (Drawing/Edit2DTools.cs): STRETCH, BREAK, LENGTHEN, DIVIDE / MEASURE
+                "stretch_entities break_entity lengthen_entity divide_entity " +
+                // nâng cấp đợt C (Drawing/Util2DTools.cs): plan dimensions, block / area schedules, find & replace of text
+                "dim_floor_plan block_schedule area_schedule find_replace_text");
             // 3D phases 1, 2 and 3 (Drawing/SolidTools.cs, Solid2Tools.cs, PlanTo3dTools.cs, SectionTools.cs): only the 3D and Full plans
             Add(ToolGroup.ThreeD,
-                "draw_box draw_cylinder draw_sphere draw_wedge draw_torus draw_pyramid extrude revolve " +
+                // draw_solid (nâng cấp đợt A) replaces the six primitives for Claude; their old names stay for recorded macros
+                "draw_solid draw_box draw_cylinder draw_sphere draw_wedge draw_torus draw_pyramid extrude revolve " +
                 "solid_union solid_subtract solid_intersect set_view_3d set_visual_style get_solid_info " +
                 // 3D phase 2 (Drawing/Solid2Tools.cs)
                 "sweep loft slice_solid fillet_edges chamfer_edges shell_solid rotate_3d mirror_3d align set_ucs reset_ucs check_interference " +
                 // 3D phase 3 (Drawing/PlanTo3dTools.cs, SectionTools.cs): their 2D lines / hatch are results of a 3D tool
-                "build_3d_from_plan section_view projection_view");
+                "build_3d_from_plan section_view projection_view " +
+                // nâng cấp đợt A (Drawing/PlanTo3dTools.cs): railing along a path
+                "build_railing " +
+                // nâng cấp đợt D (Drawing/Solid3Tools.cs): beams, PRESSPULL, STL export, volume schedule by layer
+                "build_beam presspull export_stl volume_schedule " +
+                // nâng cấp đợt E (Drawing/StairRoofTools.cs): stairs, roofs
+                "build_stair build_roof");
             return d;
         }
 
@@ -125,11 +138,56 @@ namespace ClaudeCAD.Plugin.Core
         {
             ["define_block"] = "attributes",
             ["insert_block"] = "attributes",
+            // nâng cấp đợt D (phương án A, 13/11/2026): a TABLE in the drawing is text, so 2D; on the 3D plan the 3D
+            // schedules only return their numbers to Claude (shown in the chat), the table is inserted on Full only
+            ["volume_schedule"] = "table_position",
+            ["check_interference"] = "table_position",
         };
 
-        /// <summary>The parameter of this call the plan does not have (a non-empty block attribute list on a plan without 2D), or null.</summary>
+        /// <summary>
+        /// Parameters of Common tools that are 3D (nâng cấp đợt A, 13/11/2026): the levels of array_rect (copies stacked
+        /// along Z, like ARRAYRECT's levels). levels 1 (or none) stays Common.
+        /// </summary>
+        public static readonly IReadOnlyDictionary<string, string> ThreeDParams = new Dictionary<string, string>(StringComparer.Ordinal)
+        {
+            ["array_rect"] = "levels",
+        };
+
+        /// <summary>The 3D parameter of this call the plan does not have (array_rect levels above 1 on a plan without 3D), or null.</summary>
+        public static string Blocked3dParam(string plan, string tool, IDictionary<string, object> p)
+        {
+            if (tool == null || p == null || Has3D(plan) || !ThreeDParams.TryGetValue(tool, out var name)) return null;
+            if (!p.TryGetValue(name, out var v) || v == null) return null;
+            try { return Convert.ToDouble(v, System.Globalization.CultureInfo.InvariantCulture) > 1 ? name : null; }
+            catch (Exception) { return name; }
+        }
+
+        /// <summary>
+        /// Values of a Common tool's list parameter that are text (nâng cấp đợt B, 13/11/2026): match_properties copying
+        /// text / dimension properties needs 2D. Copying layer, colour... stays Common; with no list named, the plugin
+        /// leaves the text ones out by itself on a plan without 2D (Edit2DLogic.MatchProps).
+        /// </summary>
+        public static readonly IReadOnlyDictionary<string, (string param, string[] values)> TextValues =
+            new Dictionary<string, (string, string[])>(StringComparer.Ordinal)
+            {
+                ["match_properties"] = ("properties", new[] { "text", "dimension" }),
+            };
+
+        private static string BlockedTextValue(string plan, string tool, IDictionary<string, object> p)
+        {
+            if (tool == null || p == null || Has2D(plan) || !TextValues.TryGetValue(tool, out var tv)) return null;
+            if (!p.TryGetValue(tv.param, out var v) || v == null) return null;
+            IEnumerable<object> items = v is string s1 ? new object[] { s1 } : v is System.Collections.IEnumerable e ? e.Cast<object>() : new object[] { v };
+            return items.Any(x => tv.values.Contains((Convert.ToString(x, System.Globalization.CultureInfo.InvariantCulture) ?? "").Trim().ToLowerInvariant())) ? tv.param : null;
+        }
+
+        /// <summary>The parameter of this call the plan does not have (block attributes without 2D, array levels without 3D), or null.</summary>
         public static string BlockedParam(string plan, string tool, IDictionary<string, object> p)
         {
+            var three = Blocked3dParam(plan, tool, p);
+            if (three != null) return three;
+            var textValue = BlockedTextValue(plan, tool, p);
+            if (textValue != null) return textValue;
             if (tool == null || p == null || Has2D(plan) || !TextParams.TryGetValue(tool, out var name)) return null;
             if (!p.TryGetValue(name, out var v) || v == null) return null;
             if (v is System.Collections.ICollection c && c.Count == 0) return null;
@@ -143,7 +201,20 @@ namespace ClaudeCAD.Plugin.Core
 
         /// <summary>Error text for Claude when a parameter (block attributes) is outside the machine's plan.</summary>
         public static string BlockedParamMessage(string tool, string param, string plan, string contact) =>
-            $"{tool}: this machine's plan is \"{Label(plan)}\", which has no text, and '{param}' (block attributes) is text from the 2D group. " +
+            TextValues.TryGetValue(tool ?? "", out var tv) && tv.param == param
+                ? $"{tool}: this machine's plan is \"{Label(plan)}\", which has no text or dimensions, and '{param}' asks for " +
+                  $"{string.Join(" / ", tv.values)} properties from the 2D group. Leave them out (layer, color, linetype... are copied on every plan), " +
+                  $"or tell the user in Vietnamese that this machine uses the \"{Label(plan)}\" plan and that the plugin owner can open the 2D group" +
+                  (string.IsNullOrWhiteSpace(contact) ? "." : $" ({contact}).")
+            : ThreeDParams.TryGetValue(tool ?? "", out var p3) && p3 == param
+                ? $"{tool}: this machine's plan is \"{Label(plan)}\", which has no 3D, and '{param}' (copies stacked along Z) belongs to the 3D group. " +
+                  "Leave levels out (one level), or tell the user in Vietnamese that this machine uses the " +
+                  $"\"{Label(plan)}\" plan and that the plugin owner can open the 3D group" + (string.IsNullOrWhiteSpace(contact) ? "." : $" ({contact}).")
+                : param == "table_position"
+                ? $"{tool}: this machine's plan is \"{Label(plan)}\", which has no text, and '{param}' inserts a table (text, 2D group) into the drawing. " +
+                  "Call it without table_position (the numbers come back to you) and show them to the user in the chat, or tell the user in Vietnamese that a table in the drawing needs the " +
+                  $"\"Full\" plan and that the plugin owner can open the 2D group" + (string.IsNullOrWhiteSpace(contact) ? "." : $" ({contact}).")
+                : $"{tool}: this machine's plan is \"{Label(plan)}\", which has no text, and '{param}' (block attributes) is text from the 2D group. " +
             "Define or insert the block without attributes, or tell the user in Vietnamese that this machine uses the " +
             $"\"{Label(plan)}\" plan and that the plugin owner can open the 2D group" +
             (string.IsNullOrWhiteSpace(contact) ? "." : $" ({contact}).");
@@ -154,7 +225,10 @@ namespace ClaudeCAD.Plugin.Core
             var list = new List<string>();
             foreach (var (tool, p) in calls)
             {
-                string what = !Allowed(plan, tool) ? tool : BlockedParam(plan, tool, p) != null ? tool + " (thuộc tính block)" : null;
+                var bp = Allowed(plan, tool) ? BlockedParam(plan, tool, p) : null;
+                string what = !Allowed(plan, tool) ? tool : bp == null ? null
+                    : tool + (Blocked3dParam(plan, tool, p) != null ? " (số tầng)" : BlockedTextValue(plan, tool, p) != null ? " (thuộc tính chữ / kích thước)"
+                        : TextParams.TryGetValue(tool, out var tp) && tp == "table_position" ? " (bảng trong bản vẽ)" : " (thuộc tính block)");
                 if (what != null && !list.Contains(what)) list.Add(what);
             }
             return list;

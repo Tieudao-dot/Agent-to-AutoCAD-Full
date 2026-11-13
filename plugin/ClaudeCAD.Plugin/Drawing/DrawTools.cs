@@ -148,7 +148,10 @@ namespace ClaudeCAD.Plugin.Drawing
             double scale = p.Positive("scale", 1);
             double angle = Geometry.DegToRad(p.Num("angle", 0));
             var handles = p.Has("boundary_handles") ? p.Handles("boundary_handles") : null;
-            var points = handles == null ? p.Points("boundary_points", 3) : null;
+            // nâng cấp đợt C: pick an internal point (like HATCH > Pick points); the boundary is traced around it
+            bool pick = handles == null && p.Has("pick_point");
+            var points = handles == null && !pick ? p.Points("boundary_points", 3) : null;
+            var seed = pick ? p.Point("pick_point") : null;
 
             var hatch = new Hatch();
             var id = Acad.Add(ctx, hatch, p); // must be database-resident before loops are added
@@ -163,6 +166,47 @@ namespace ClaudeCAD.Plugin.Drawing
             catch (Autodesk.AutoCAD.Runtime.Exception)
             {
                 throw ToolException.Invalid($"draw_hatch: unknown pattern '{pattern}'. Use SOLID or a standard acadiso.pat name (ANSI31, ANSI32, AR-CONC, AR-SAND, AR-BRSTD, GRAVEL, NET, DOTS...).");
+            }
+
+            if (pick)
+            {
+                // the traced loops become boundary objects of the hatch; without keep_boundary they are erased again
+                // (a non-associative hatch, like HATCH with "Retain boundaries" off)
+                bool keep = p.Bool("keep_boundary", false);
+                hatch.Associative = keep && p.Bool("associative", true);
+                DBObjectCollection traced = null;
+                try { traced = ctx.Ed.TraceBoundary(new Point3d(seed[0], seed[1], 0), p.Bool("islands", true)); }
+                catch (Autodesk.AutoCAD.Runtime.Exception) { traced = null; }
+                var loops = new List<Curve>();
+                if (traced != null)
+                    foreach (DBObject o in traced)
+                    {
+                        if (o is Curve cv) loops.Add(cv);
+                        else o.Dispose(); // never leave a non-database object to the finalizer
+                    }
+                if (loops.Count == 0) throw ToolException.Invalid(Util2DLogic.NoBoundaryMessage(seed));
+                var areas = loops.Select(c => { try { return c.Area; } catch (Autodesk.AutoCAD.Runtime.Exception) { return 0.0; } }).ToList();
+                int outer = Util2DLogic.OuterLoopIndex(areas);
+                var boundaryIds = new List<ObjectId>();
+                try
+                {
+                    for (int i = 0; i < loops.Count; i++) boundaryIds.Add(Acad.Add(ctx, loops[i], p));
+                }
+                catch
+                {
+                    for (int i = boundaryIds.Count; i < loops.Count; i++) loops[i].Dispose();
+                    throw;
+                }
+                hatch.AppendLoop(HatchLoopTypes.Outermost | HatchLoopTypes.External, new ObjectIdCollection { boundaryIds[outer] });
+                for (int i = 0; i < loops.Count; i++)
+                    if (i != outer) hatch.AppendLoop(HatchLoopTypes.Default, new ObjectIdCollection { boundaryIds[i] });
+                hatch.EvaluateHatch(true);
+                // kept boundaries are new objects of this turn too (the hatch first)
+                var res = keep ? Acad.Handles(new[] { id }.Concat(boundaryIds)) : Acad.Handles(id);
+                res["islands"] = loops.Count - 1;
+                res["area"] = Acad.R(EntityInfo.SafeArea(hatch));
+                if (!keep) foreach (var b in boundaryIds) ((Entity)ctx.Tr.GetObject(b, OpenMode.ForWrite)).Erase();
+                return res;
             }
 
             if (handles != null)
