@@ -19,12 +19,12 @@ này **giữ nhánh tích hợp** cho các bản sửa sau kiểm tra độc l�
 
 | Mã | Lỗi | Sửa | Commit |
 | --- | --- | --- | --- |
-| KT2-01 (vừa) | Macro coi đối tượng **bị sửa** (kéo giãn theo khung, chép thuộc tính, kéo dài, dời…) là **do macro tạo**: lách được luật "macro không sửa khối 3D có sẵn" (kéo giãn khung trọn khối S rồi cắt S), và khi chạy lại, handle ghép nhầm với đối tượng khung chọn trúng ở bản vẽ mới | `MacroLogic.InPlaceTools` (lệnh sửa tại chỗ) + `NewHandles(call)` = kết quả trừ lệnh sửa tại chỗ và trừ handle chính lệnh đó nhận. Dùng cho `ExternalSolidEdits`, `ExternalHandles`, `CreatedHandles`; `Learn(map, call, replayed)` chỉ ghép handle do lệnh tạo (`ChatController` gọi bản mới) | (commit phần 1) |
-| KT2-20 | Dòng trạng thái hiện tên lệnh tiếng Anh thô cho 29 lệnh (B, C, D và 3D đợt 2–3) | Thêm nhãn tiếng Việt cho mọi lệnh có nhãn gói; test so `Plans.cs` với `ToolLabels.cs` | (commit phần 1) |
-| KT2-26 | Luật 3D chưa nêu `build_beam`, `build_stair`, `build_roof`, `presspull`, `volume_schedule`, `export_stl`; luật và skill bảo luôn `create_layer` trước dù các lệnh dựng tự tạo layer | Tiêu đề luật 3D nêu đủ; câu layer: lệnh dựng / mặt cắt tự tạo layer, `create_layer` chỉ cho khối tự dựng (`draw_solid`, `extrude`…); skill `ve-3d-kien-truc` như vậy | (commit phần 1) |
-| KT2-27 | Câu "gói 3D không gồm" thiếu wipeout / mây sửa đổi | Thêm "wipeouts and revision clouds" | (commit phần 1) |
-| KT2-29 | Ghi chú `draw_solid` ghi bớt "~2k token" | Đổi thành ~1,1k (số đo trong `nang-cap-a.md`) | (commit phần 1) |
-| KT2-31 | Đầu checklist tổng chỉ nêu khối cũ (~97 / ~157 phút); "các mục ★" của lượt rút gọn N–R là tập chọn lọc | Đầu file có bảng 2 khối + thời gian (cộng ~3 giờ 15 / ~5 giờ 40); ghi rõ "một số mục ★ chọn lọc", phần 16 liệt kê các ★ còn lại | (commit phần 1) |
+| KT2-01 (vừa) | Macro coi đối tượng **bị sửa** (kéo giãn theo khung, chép thuộc tính, kéo dài, dời…) là **do macro tạo**: lách được luật "macro không sửa khối 3D có sẵn" (kéo giãn khung trọn khối S rồi cắt S), và khi chạy lại, handle ghép nhầm với đối tượng khung chọn trúng ở bản vẽ mới | `MacroLogic.InPlaceTools` (lệnh sửa tại chỗ) + `NewHandles(call)` = kết quả trừ lệnh sửa tại chỗ và trừ handle chính lệnh đó nhận. Dùng cho `ExternalSolidEdits`, `ExternalHandles`, `CreatedHandles`; `Learn(map, call, replayed)` chỉ ghép handle do lệnh tạo (`ChatController` gọi bản mới) | `b9f7136` |
+| KT2-20 | Dòng trạng thái hiện tên lệnh tiếng Anh thô cho 29 lệnh (B, C, D và 3D đợt 2–3) | Thêm nhãn tiếng Việt cho mọi lệnh có nhãn gói; test so `Plans.cs` với `ToolLabels.cs` | `b9f7136` |
+| KT2-26 | Luật 3D chưa nêu `build_beam`, `build_stair`, `build_roof`, `presspull`, `volume_schedule`, `export_stl`; luật và skill bảo luôn `create_layer` trước dù các lệnh dựng tự tạo layer | Tiêu đề luật 3D nêu đủ; câu layer: lệnh dựng / mặt cắt tự tạo layer, `create_layer` chỉ cho khối tự dựng (`draw_solid`, `extrude`…); skill `ve-3d-kien-truc` như vậy | `b9f7136` |
+| KT2-27 | Câu "gói 3D không gồm" thiếu wipeout / mây sửa đổi | Thêm "wipeouts and revision clouds" | `b9f7136` |
+| KT2-29 | Ghi chú `draw_solid` ghi bớt "~2k token" | Đổi thành ~1,1k (số đo trong `nang-cap-a.md`) | `b9f7136` |
+| KT2-31 | Đầu checklist tổng chỉ nêu khối cũ (~97 / ~157 phút); "các mục ★" của lượt rút gọn N–R là tập chọn lọc | Đầu file có bảng 2 khối + thời gian (cộng ~3 giờ 15 / ~5 giờ 40); ghi rõ "một số mục ★ chọn lọc", phần 16 liệt kê các ★ còn lại | `b9f7136` |
 
 Test: lõi 866 (+5: `TongTheNangCapTests` KT2-01 ×3, KT2-20, KT2-29), trợ lý 293 (+2: KT2-26, KT2-27); build 3 bản xanh.
 
