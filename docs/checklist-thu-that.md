@@ -331,6 +331,12 @@ O1, O4, O6, O14.***
 | O14 | ★ | Gói `3D`: một khối 3D trên layer `0` và một khối trên `A-WALL-3D` màu xanh. "chép thuộc tính khối xanh sang khối kia" | Làm được (layer, màu…). "chép kiểu chữ của chữ này sang chữ kia" → Claude nói phần chữ / kích thước thuộc gói 2D | ☐ | ☐ | B6 |
 | O15 | ○ | Gói `3D`: "nhóm các khối này" / "kéo giãn hình này" | Nhóm làm được; kéo giãn Claude nói thuộc gói 2D | ☐ | ☐ | B5, B1 |
 | O16 | ○ | Macro ghi **trước** đợt B có `fillet_entities` / `offset_entity` / `join_entities`: chạy trên bản mới | Macro chạy như cũ (tên lệnh, tham số cũ giữ nguyên) | ☐ | ☐ | B7–B9 |
+| O17 | ★ | *(Test & sửa đợt B, NB-1)* Vẽ 15 đoạn thẳng ngắn ở bên trái và 10 đoạn ở bên phải. Một câu: "kéo giãn đầu phải các đường bên trái sang phải 300, rồi kéo giãn các đường bên phải lên trên 300" | Lần kéo giãn thứ hai làm tổng thành 25 đối tượng có sẵn bị sửa (> 20): Claude **hỏi trước** (nói số đối tượng), chỉ làm sau khi cậu đồng ý. Gõ U một lần: cả hai lần kéo giãn mất | ☐ | ☐ | B1 |
+| O18 | ○ | *(NB-1, gói `Full`)* Một khối hộp 3D có sẵn. "kéo giãn khung bao cả khối hộp sang phải 500" rồi "cộng khối hộp với một hộp mới" | Lần 1: hộp được dời (không cần thẻ). Lần 2: Claude vẫn hiện **thẻ xác nhận** cho khối hộp có sẵn (khối bị dời không thành "khối mới") | ☐ | ☐ | B1 |
+| O19 | ○ | *(NB-2)* Vẽ 4 đoạn thẳng thành hình chữ nhật 2000x1000: 3 góc khít, 1 góc hở 0,4 mm. Gửi handle theo thứ tự: cạnh dưới, cạnh trái, cạnh trên, cạnh phải. "nối 4 đường này, dung sai 1 mm" | Một polyline 4 cạnh; Claude báo **đúng 1** chỗ nối khe (0,4). Không có đoạn nối khe nào ở 3 góc khít | ☐ | ☐ | B9 |
+| O20 | ○ | *(kiểm thêm)* Vẽ một cung, gõ lệnh AutoCAD `ROTATE3D` xoay cung 180° quanh trục X (cung thành "vẽ ngược", pháp tuyến −Z). Vẽ một đường thẳng cắt qua đường kéo dài của cung. "bo góc giữa đường và cung này bán kính 100" | Cung bo tiếp xúc đúng cả hai; cung gốc bị cắt đúng đầu gần góc (không bị lật sang nửa kia) | ☐ | ☐ | B7 |
+
+O17–O20 thêm ở bước Test & sửa đợt B ([`ban-giao/nang-cap-b-test.md`](ban-giao/nang-cap-b-test.md)); quan trọng nhất O17.
 
 Còn chỉ thấy trên AutoCAD thật: kéo giãn kích thước / block / chữ (điểm kéo giãn của AutoCAD), cắt đường tròn / elip /
 spline kín (thứ tự các mảnh khi tách), chia đường cong spline, nhóm trên layer khóa.

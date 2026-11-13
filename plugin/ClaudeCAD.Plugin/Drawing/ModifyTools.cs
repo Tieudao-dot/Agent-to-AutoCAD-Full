@@ -314,9 +314,9 @@ namespace ClaudeCAD.Plugin.Drawing
         {
             if (e is Line l) return Edit2DLogic.Prim.Line(D(l.StartPoint), D(l.EndPoint));
             var a = (Arc)e;
-            // an arc whose normal is -Z runs clockwise in the WCS: its OCS angles are mirrored
-            if (a.Normal.Z < 0) return Edit2DLogic.Prim.Arc(D(a.Center), a.Radius, Math.PI - a.EndAngle, Math.PI - a.StartAngle);
-            return Edit2DLogic.Prim.Arc(D(a.Center), a.Radius, a.StartAngle, a.EndAngle);
+            // an arc whose normal is -Z runs clockwise in the WCS: its OCS angles are mirrored (Edit2DLogic.WcsArcAngles)
+            var (s, e2) = Edit2DLogic.WcsArcAngles(a.StartAngle, a.EndAngle, a.Normal.Z < 0);
+            return Edit2DLogic.Prim.Arc(D(a.Center), a.Radius, s, e2);
         }
 
         private static void ApplyPrim(Entity e, Edit2DLogic.Prim k)
@@ -329,8 +329,8 @@ namespace ClaudeCAD.Plugin.Drawing
                 return;
             }
             var a = (Arc)e;
-            if (a.Normal.Z < 0) { a.StartAngle = Geometry.NormalizeRad(Math.PI - k.E); a.EndAngle = Geometry.NormalizeRad(Math.PI - k.S); }
-            else { a.StartAngle = k.S; a.EndAngle = k.E; }
+            var (s, e2) = Edit2DLogic.WcsArcAngles(k.S, k.E, a.Normal.Z < 0); // the map is its own inverse
+            a.StartAngle = s; a.EndAngle = e2;
         }
 
         /// <summary>Fillet / chamfer of a polyline's corners: the vertices are rewritten in place (same handle).</summary>
@@ -539,16 +539,21 @@ namespace ClaudeCAD.Plugin.Drawing
                     }
                     catch (Autodesk.AutoCAD.Runtime.Exception)
                     {
-                        // not touching yet; retry after others are joined (or bridge a small gap)
-                        if (tol > 0 && TryBridge(pl, e, tol, out var gap))
+                        // not touching yet; retry after others are joined
+                    }
+                }
+                // Test & sửa đợt B (NB-2): bridge a small gap only when no touching object is left to join, one gap at a
+                // time and the smallest gap first, so a gap never takes the end where a touching object belongs
+                if (!progress && tol > 0)
+                    foreach (var e in pending.OrderBy(x => BridgeGap(pl, x, tol)).ToList())
+                        if (TryBridge(pl, e, tol, out var gap))
                         {
                             e.Erase();
                             pending.Remove(e);
                             progress = true;
                             bridged.Add(new Dictionary<string, object> { ["handle"] = e.Handle.ToString(), ["gap"] = Acad.R(gap) });
+                            break;
                         }
-                    }
-                }
             }
             var r = Acad.Handles(plId);
             r["joined"] = ents.Count - pending.Count;
@@ -563,6 +568,14 @@ namespace ClaudeCAD.Plugin.Drawing
                     r["note"] = $"The two ends are {Acad.R(endGap)} apart (within the tolerance) but the polyline is left open; edit_polyline closed: true closes it.";
             }
             return r;
+        }
+
+        /// <summary>The gap TryBridge would close to this object (infinity when none).</summary>
+        private static double BridgeGap(Polyline pl, Entity e, double tol)
+        {
+            if (pl.Closed || !(e is Curve c)) return double.PositiveInfinity;
+            var b = Edit2DLogic.Bridge(D(pl.StartPoint), D(pl.EndPoint), D(c.StartPoint), D(c.EndPoint), tol);
+            return b == null ? double.PositiveInfinity : b.Value.gap;
         }
 
         /// <summary>Bridges a gap of at most tol between the polyline and the curve by a straight vertex, then joins; undone when the join still fails.</summary>

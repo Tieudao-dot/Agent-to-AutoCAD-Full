@@ -132,6 +132,57 @@ export function affectedHandles(tool: string, params: Record<string, unknown>): 
   return Array.from({ length: n }, () => `#${tool}-${++anonymous}`);
 }
 
+/**
+ * Test & sửa đợt B (NB-1): stretch_entities without handles changes whatever lies in its crossing window. The gate cannot
+ * count it before the call, so (1) the plugin refuses a window that would change more objects than the turn has left
+ * under the 20-object rule (WINDOW_LIMIT_PARAM, set by the assistant, never by Claude), and (2) after the call its result
+ * handles count as existing objects changed in this turn (never as created ones: a moved 3D solid stays "existing").
+ */
+export const WINDOW_LIMIT_PARAM = 'max_unasked';
+const WINDOW_TOOLS = new Set(['stretch_entities']);
+
+function isWindowCall(tool: string, params: Record<string, unknown>): boolean {
+  return WINDOW_TOOLS.has(tool) && !(Array.isArray(params.handles) && params.handles.length > 0);
+}
+
+/** Existing objects a successful window call changed (from its result; batch_execute: its window calls). */
+export function windowChanged(tool: string, params: Record<string, unknown>, result: unknown): string[] {
+  const out: string[] = [];
+  const take = (r: unknown) => {
+    const hs = (r as { handles?: unknown } | null | undefined)?.handles;
+    if (Array.isArray(hs)) for (const h of hs) if (typeof h === 'string') out.push(h.toUpperCase());
+  };
+  if (tool === 'batch_execute' && Array.isArray(params.calls)) {
+    const results = (result as { results?: unknown[] } | undefined)?.results;
+    if (!Array.isArray(results)) return out;
+    (params.calls as Array<{ tool?: unknown; params?: unknown }>).forEach((c, i) => {
+      const r = results[i] as { ok?: unknown; result?: unknown } | undefined;
+      const cp = (c?.params as Record<string, unknown>) ?? {};
+      if (c && typeof c.tool === 'string' && r?.ok === true && isWindowCall(c.tool, cp)) take(r.result);
+    });
+    return [...new Set(out)];
+  }
+  if (isWindowCall(tool, params)) take(result);
+  return [...new Set(out)];
+}
+
+/** The params with the window limit the assistant computed (any value Claude put there is dropped). */
+function windowLimited(params: Record<string, unknown>, limit: number | undefined): Record<string, unknown> {
+  const { [WINDOW_LIMIT_PARAM]: _ignored, ...rest } = params;
+  return limit === undefined ? rest : { ...rest, [WINDOW_LIMIT_PARAM]: limit };
+}
+
+/**
+ * How many objects a window call of this turn may still change without asking: 20 minus the existing objects the turn
+ * has already changed (the gate added this call's named handles before it is sent), shared between the window calls
+ * of one batch. undefined = the plugin's own limit (20), when the user has already said yes in this turn.
+ */
+function windowLimit(g: GateState, windowCalls: number): number | undefined {
+  if (userConfirmed(g)) return undefined;
+  const before = g.touched ? g.touched.size : g.alreadyAffected ?? 0;
+  return Math.floor(Math.max(0, CONFIRM_THRESHOLD - before) / Math.max(1, windowCalls));
+}
+
 /** Handles a successful call created (draw_*, insert_block, copy / array / offset, a batch's creating calls). */
 export function createdHandles(tool: string, params: Record<string, unknown>, result: unknown): string[] {
   const out: string[] = [];
@@ -153,11 +204,11 @@ export function createdHandles(tool: string, params: Record<string, unknown>, re
     (params.calls as Array<{ tool?: unknown; params?: unknown }>).forEach((c, i) => {
       const r = results[i] as { ok?: unknown; result?: unknown } | undefined;
       const cp = (c?.params as Record<string, unknown>) ?? {};
-      if (c && typeof c.tool === 'string' && r?.ok === true && (CREATES_TOO.has(c.tool) || affectedCount(c.tool, cp) === 0)) take(r.result, c.tool, cp);
+      if (c && typeof c.tool === 'string' && r?.ok === true && !WINDOW_TOOLS.has(c.tool) && (CREATES_TOO.has(c.tool) || affectedCount(c.tool, cp) === 0)) take(r.result, c.tool, cp);
     });
     return out;
   }
-  if (CREATES_TOO.has(tool) || affectedCount(tool, params) === 0) take(result, tool, params);
+  if (!WINDOW_TOOLS.has(tool) && (CREATES_TOO.has(tool) || affectedCount(tool, params) === 0)) take(result, tool, params);
   return [...new Set(out)];
 }
 
@@ -283,12 +334,25 @@ function flagged(params: Record<string, unknown>, g: GateState): Record<string, 
  */
 export function applyUserConfirmation(tool: string, params: Record<string, unknown>, g: GateState): Record<string, unknown> {
   if (PLUGIN_CONFIRMED.has(tool)) return flagged(params, g);
+  if (WINDOW_TOOLS.has(tool)) return windowLimited(params, isWindowCall(tool, params) ? windowLimit(g, 1) : undefined);
   if (tool === 'batch_execute' && Array.isArray(params.calls)) {
     let changed = false;
+    const paramsOf = (call: { params?: unknown }) => (call.params && typeof call.params === 'object' ? (call.params as Record<string, unknown>) : {});
+    const windows = (params.calls as unknown[]).filter((c) => {
+      const call = c as { tool?: unknown; params?: unknown } | null;
+      return !!call && typeof call === 'object' && typeof call.tool === 'string' && isWindowCall(call.tool, paramsOf(call));
+    }).length;
     const calls = (params.calls as unknown[]).map((c) => {
       const call = c as { tool?: unknown; params?: unknown } | null;
-      if (!call || typeof call !== 'object' || typeof call.tool !== 'string' || !PLUGIN_CONFIRMED.has(call.tool)) return c;
-      const p = call.params && typeof call.params === 'object' ? (call.params as Record<string, unknown>) : {};
+      if (!call || typeof call !== 'object' || typeof call.tool !== 'string') return c;
+      const p = paramsOf(call);
+      if (WINDOW_TOOLS.has(call.tool)) {
+        const next = windowLimited(p, isWindowCall(call.tool, p) ? windowLimit(g, windows) : undefined);
+        if (!(WINDOW_LIMIT_PARAM in p) && !(WINDOW_LIMIT_PARAM in next)) return c;
+        changed = true;
+        return { ...call, params: next };
+      }
+      if (!PLUGIN_CONFIRMED.has(call.tool)) return c;
       const next = flagged(p, g);
       if (!(USER_CONFIRMED_PARAM in p) && !(USER_CONFIRMED_PARAM in next)) return c;
       changed = true;

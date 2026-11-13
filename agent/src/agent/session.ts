@@ -6,7 +6,7 @@ import {
   type SDKUserMessage,
 } from '@anthropic-ai/claude-agent-sdk';
 import type { ServicePlan, SidecarToPlugin, UserMessage } from '../ipc/protocol.js';
-import { applyUserConfirmation, confirmationError, createdHandles, newlyAffected, planLayersOf, refusedForConfirmation, type GateState } from './confirmation.js';
+import { applyUserConfirmation, confirmationError, createdHandles, newlyAffected, planLayersOf, refusedForConfirmation, windowChanged, type GateState } from './confirmation.js';
 import { toSdkUserMessage } from './content.js';
 import type { ToolBridge } from '../tools/common.js';
 import { MCP_SERVER_NAME, createCadServer } from '../tools/index.js';
@@ -213,6 +213,8 @@ export class AgentSession {
     if (refusedForConfirmation(resp)) this.turnAsked = true;
     if (!resp.ok) return;
     for (const h of createdHandles(tool, params, resp.result)) this.createdThisTurn.add(h);
+    // NB-1: objects a crossing window changed are existing objects of this turn's 20-object count
+    for (const h of windowChanged(tool, params, resp.result)) if (!this.createdThisTurn.has(h)) this.touchedThisTurn.add(h);
   }
 
   /** Options handed to query(); exported for tests and documentation. */

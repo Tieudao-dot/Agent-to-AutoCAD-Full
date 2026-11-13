@@ -312,6 +312,7 @@ namespace ClaudeCAD.Plugin.Core
                 if (_calls.Count >= MacroLogic.MaxCalls) { _overflow = true; return; }
                 var copy = (MacroLogic.DeepCopy(p ?? new Dictionary<string, object>()) as Dictionary<string, object>) ?? new Dictionary<string, object>();
                 copy.Remove(SolidLogic.UserConfirmedParam); // KT-10: the card's yes belongs to that turn, never to a replay
+                copy.Remove(Edit2DLogic.WindowLimitParam); // NB-1: the turn's 20-object budget belongs to that turn too
                 _calls.Add(new MacroCall
                 {
                     Tool = tool,

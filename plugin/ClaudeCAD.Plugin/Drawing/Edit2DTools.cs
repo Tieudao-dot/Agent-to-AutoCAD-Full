@@ -69,11 +69,12 @@ namespace ClaudeCAD.Plugin.Drawing
                 }
                 plan.Add((id, kind == Edit2DLogic.StretchKind.All, new IntegerCollection(inside.ToArray())));
             }
-            if (!named && plan.Count > Edit2DLogic.MaxStretchUnasked)
+            // Test & sửa đợt B (NB-1): the assistant passes how many objects the turn may still change without asking
+            int limit = Edit2DLogic.WindowLimit(p.Has(Edit2DLogic.WindowLimitParam) ? p.Num(Edit2DLogic.WindowLimitParam) : (double?)null);
+            if (!named && plan.Count > limit)
             {
                 var hs = plan.Select(x => x.id.Handle.ToString()).ToList();
-                throw ToolException.Invalid($"stretch_entities: the window would change {plan.Count} objects (more than {Edit2DLogic.MaxStretchUnasked}). " +
-                    "Tell the user how many and ask; after they agree, call again with these handles: " +
+                throw ToolException.Invalid(Edit2DLogic.WindowLimitMessage(plan.Count, limit) +
                     string.Join(", ", hs.Take(200)) + (hs.Count > 200 ? $" … (+{hs.Count - 200}; use list_entities with the window)" : "") + ".");
             }
             var moved = new List<object>();

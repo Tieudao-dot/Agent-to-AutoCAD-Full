@@ -27,6 +27,27 @@ namespace ClaudeCAD.Plugin.Core
         /// <summary>Without handles, stretch_entities changes at most this many objects (more: pass handles after asking the user).</summary>
         public const int MaxStretchUnasked = 20;
 
+        /// <summary>
+        /// Test & sửa đợt B (NB-1): the parameter the assistant adds to a window stretch (no handles): how many objects the
+        /// turn may still change without asking (20 minus those already changed). Claude cannot set it (not in the schema,
+        /// replaced by the assistant) and macros do not record it.
+        /// </summary>
+        public const string WindowLimitParam = "max_unasked";
+
+        /// <summary>The window limit: the assistant's value clamped to 0–20; none (macro replay, older assistant) = 20.</summary>
+        public static int WindowLimit(double? fromAssistant)
+        {
+            if (fromAssistant == null || double.IsNaN(fromAssistant.Value)) return MaxStretchUnasked;
+            return (int)Math.Max(0, Math.Min(MaxStretchUnasked, Math.Floor(fromAssistant.Value)));
+        }
+
+        /// <summary>Why a window stretch was refused (the handles to call again with follow).</summary>
+        public static string WindowLimitMessage(int count, int limit) =>
+            limit >= MaxStretchUnasked
+                ? $"stretch_entities: the window would change {count} objects (more than {MaxStretchUnasked}). Tell the user how many and ask; after they agree, call again with these handles: "
+                : $"stretch_entities: the window would change {count} objects, and this turn has already changed others: together more than {MaxStretchUnasked} " +
+                  $"(only {limit} more allowed without asking). Tell the user how many and ask; after they agree, call again with these handles: ";
+
         /// <summary>The crossing window: a rectangle from two corners, or a polygon of at least 3 points.</summary>
         public static List<double[]> StretchWindow(double[] corner1, double[] corner2, IList<double[]> polygon)
         {
@@ -360,6 +381,13 @@ namespace ClaudeCAD.Plugin.Core
             public double[] Start => IsArc ? OnCircle(C, R, S) : A;
             public double[] End => IsArc ? OnCircle(C, R, E) : B;
         }
+
+        /// <summary>
+        /// An arc's angles as a CCW arc in the WCS (Prim.Arc). An arc whose normal is −Z runs clockwise in the WCS: its OCS X
+        /// axis is −X, so the OCS angle a is the WCS angle π − a, and start / end swap. The same map turns them back.
+        /// </summary>
+        public static (double s, double e) WcsArcAngles(double startAngle, double endAngle, bool normalDown) =>
+            normalDown ? (Norm(Math.PI - endAngle), Norm(Math.PI - startAngle)) : (Norm(startAngle), Norm(endAngle));
 
         public sealed class ArcCornerResult
         {
