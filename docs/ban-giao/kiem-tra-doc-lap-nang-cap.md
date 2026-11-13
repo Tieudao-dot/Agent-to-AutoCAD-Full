@@ -13,7 +13,7 @@ trong bàn giao các đợt (NA-*, NB-*, NC-*, ND-*, NE-*, TT2-*) không ghi l�
 | `dotnet test plugin/ClaudeCAD.Core.Tests` | **861/861** xanh |
 | `cd agent && npm ci && npm test` | **291/291** xanh |
 | Build plugin net48 / net8.0-windows / net10.0-windows (Linux, `-p:EnableWindowsTargeting=true`, xóa `obj` / `bin` giữa các lần) | cả 3 xanh, 0 cảnh báo |
-| CI run `43471931772` (workflow_dispatch, `release: "false"`, ở `f1e7123`) | xem mục CI cuối file |
+| CI run `43471931772` (workflow_dispatch, `release: "false"`, ở `f1e7123`) | **xanh** |
 
 ## Tổng hợp
 
@@ -103,4 +103,4 @@ mét ở cầu thang / mái / lan can / dầm, cao độ tầng / sàn mái (TT2
 
 ## CI
 
-Run `43471931772` (workflow_dispatch, `release: "false"`, ở `f1e7123` = nhánh lúc tách, chưa có file này): KQ_CI.
+Run `43471931772` (workflow_dispatch, `release: "false"`, ở `f1e7123` = nhánh lúc tách, chưa có file này): **xanh** — trợ lý, test lõi, UI test WPF, build 3 bản, gói + Setup.exe; bước phát hành bỏ qua đúng (không cài secret).
