@@ -1,6 +1,6 @@
 # Báo cáo: chuỗi nâng cấp lệnh vẽ A → E (13–14/11/2026)
 
-*Luồng chính. Chạy từ 14h28 ngày 13/11 tới khoảng 1h20 ngày 14/11 (giờ Việt Nam), theo yêu cầu "chạy liền A → E, chỉ
+*Luồng chính. Chạy từ 14h28 ngày 13/11 tới khoảng 1h40 ngày 14/11 (giờ Việt Nam), theo yêu cầu "chạy liền A → E, chỉ
 dừng trước phát hành".*
 
 ## 1. Tóm tắt
@@ -9,7 +9,7 @@ dừng trước phát hành".*
 - Nhánh tích hợp cuối: **`full/nang-cap-tong-the` @ `f7f32ad`**. Test lõi **909/909**, trợ lý **298/298**, build đủ 3 bản
   AutoCAD 2022–2027, **CI Windows xanh** (run 43478782014).
 - Lỗi: các bước Test & sửa từng đợt sửa 21 lỗi, test tổng thể 3 lỗi chéo, kiểm tra độc lập **32 lỗi: 30 sửa đúng,
-  2 chấp nhận, 0 còn mở**. Không có lỗi nặng.
+  2 chấp nhận, 0 còn mở**. Cộng 56 lỗi (54 sửa, 2 chấp nhận), không có lỗi nặng.
 - **Chưa thử trên AutoCAD thật. Chưa phát hành:** `main` vẫn là v0.9.3 của bản gốc.
 - Bộ cài thử nội bộ mới (có đủ các lệnh nâng cấp): xem mục 5.
 
@@ -43,7 +43,7 @@ Cậu đã cho chạy liền, không dừng hỏi, nên các chỗ này tớ / t
 
 | Bước | Kết quả |
 | --- | --- |
-| Test & sửa từng đợt | A 4, B 4, C 6, D 6, E 3 lỗi sửa; mỗi đợt CI xanh |
+| Test & sửa từng đợt | 21 lỗi sửa: A 4, B 2, C 6, D 6, E 3 (thread đợt B tự sửa thêm 2 trước CI); mỗi đợt CI xanh |
 | Test tổng thể nâng cấp | 3 lỗi chéo (mái cắt vào sàn mái nhà nhiều tầng, câu phạm vi gói, bước tự kiểm tra thiếu đợt C) |
 | Kiểm tra độc lập lượt 1 | 31 lỗi (0 nặng, 7 vừa, 24 nhẹ), chia về 6 thread sửa |
 | Lượt 2 | 29 sửa đúng, 2 chấp nhận (mục 3 dòng 5, 6), 1 lỗi mới nhẹ |
@@ -68,7 +68,7 @@ Chi tiết: `docs/ban-giao/test-tong-the-nang-cap.md` (bảng lỗi → thread �
 
 ## 6. Thời gian và chi phí
 
-- **Thời gian:** khoảng 11 giờ (14h28 → ~1h20), gồm ~2 giờ đứng / nghỉ: chạm giới hạn dùng 5 giờ (16h41 → 17h05) và vài
+- **Thời gian:** khoảng 11 giờ (14h28 → ~1h40), gồm ~2 giờ đứng / nghỉ: chạm giới hạn dùng 5 giờ (16h41 → 17h05) và vài
   lần thread không tự dậy sau khi chờ CI (đã gỡ bằng lần tự kiểm tra; từ đợt D đổi cách chờ thì hết bị).
 - **Chi phí** (hệ thống ghi theo từng thread, quy ra giá API, có thể chưa đủ phần tác vụ con):
 
