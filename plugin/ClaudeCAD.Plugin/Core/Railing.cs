@@ -82,6 +82,13 @@ namespace ClaudeCAD.Plugin.Core
             var res = new Layout();
             double railBottom = o.Height - RailSize;
             var postKeys = new HashSet<string>();
+            // checked while laying out, not only at the end: a path of kilometres (a wrong unit, a far-off point) must
+            // stop here and not fill the memory with millions of pieces first
+            void Limit(double pieces)
+            {
+                if (!(pieces <= MaxBoxes))
+                    throw new ToolException(ErrorCodes.TooManyEntities, $"{tool}: more than {MaxBoxes} railing pieces (the path is about {Math.Round(points.Count > 1 ? PathLength(pts, closed) / 1000 : 0)} m long). Nothing was built. Check the path and the drawing units, build it in shorter parts, or use infill \"panel\" / \"none\".");
+            }
             void Post(double[] at, double rot)
             {
                 var key = Math.Round(at[0], 3) + "," + Math.Round(at[1], 3);
@@ -99,12 +106,14 @@ namespace ClaudeCAD.Plugin.Core
                 res.Length += len;
                 // top rail, a rail-size longer so the corners close
                 res.Boxes.Add(Box(a, u, len / 2, len + RailSize, RailSize, railBottom, o.Height, rot));
+                Limit(res.Boxes.Count + len / o.PostSpacing); // before the cast: the spans alone are too many
                 int n = Math.Max(1, (int)Math.Ceiling(len / o.PostSpacing - 1e-9));
                 double step = len / n;
                 for (int k = 0; k <= n; k++) Post(new[] { a[0] + u[0] * step * k, a[1] + u[1] * step * k }, rot);
                 if (o.Infill == "none") continue;
                 for (int k = 0; k < n; k++)
                 {
+                    Limit(res.Boxes.Count);
                     double s0 = step * k + PostSize / 2, s1 = step * (k + 1) - PostSize / 2, clear = s1 - s0;
                     if (clear < BarSize) continue; // posts (almost) touching: nothing fits between them
                     if (o.Infill == "panel")
@@ -126,9 +135,20 @@ namespace ClaudeCAD.Plugin.Core
                 }
             }
             if (res.Length <= 0) throw ToolException.Invalid($"{tool}: every path segment is shorter than a post ({PostSize} mm); nothing was built.");
-            if (res.Boxes.Count > MaxBoxes)
-                throw new ToolException(ErrorCodes.TooManyEntities, $"{tool}: {res.Boxes.Count} railing pieces (more than {MaxBoxes}). Nothing was built. Build the path in shorter parts, or use infill \"panel\" / \"none\".");
+            Limit(res.Boxes.Count);
             return res;
+        }
+
+        private static double PathLength(IList<double[]> pts, bool closed)
+        {
+            double sum = 0;
+            int segs = closed && pts.Count > 2 ? pts.Count : pts.Count - 1;
+            for (int i = 0; i < segs; i++)
+            {
+                var a = pts[i]; var b = pts[(i + 1) % pts.Count];
+                sum += Math.Sqrt((b[0] - a[0]) * (b[0] - a[0]) + (b[1] - a[1]) * (b[1] - a[1]));
+            }
+            return sum;
         }
 
         /// <summary>The fewest bars that keep every clear gap of a span at most MaxBarGap.</summary>

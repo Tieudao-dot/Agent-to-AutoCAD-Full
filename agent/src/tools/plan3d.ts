@@ -104,7 +104,7 @@ export function plan3dTools(b: ToolBridge): AnyTool[] {
         base_z: z.number().optional().describe('Floor level in mm (scaled like the heights): walls start here, this storey\'s slab top is here (default 0; e.g. 3300 for storey 2). With it use wall_height = storey height − slab thickness so the slab sits on the walls below.'),
         slab: z.enum(['auto', 'none', 'bbox']).optional()
           .describe('auto (default): slabs from closed outlines on the slab layers / slab_handles (an outline inside another is a hole); bbox: one slab under the walls\' bounding box; none.'),
-        storeys: z.number().int().min(1).max(L.MaxStoreys).optional().describe('Storeys built at once (default 1).'),
+        storeys: z.number().int().min(1).max(L.MaxStoreys).optional().describe('Storeys built at once (default 1). Needs slabs between them: with no slab outline it refuses until the user chooses slab "bbox" or "none".'),
         storey_height: z.number().positive().optional().describe('Floor to floor (mm): storey k at base_z + (k − 1) × storey_height; walls default to storey_height − slab_thickness.'),
         roof_slab: z.boolean().optional().describe('Also a slab on top of the last storey (default false).'),
         columns: z.enum(['auto', 'none']).optional().describe('auto (default) or none.'),

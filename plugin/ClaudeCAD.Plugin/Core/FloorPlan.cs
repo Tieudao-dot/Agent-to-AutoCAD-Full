@@ -346,6 +346,19 @@ namespace ClaudeCAD.Plugin.Core
             return list;
         }
 
+        /// <summary>
+        /// Several levels (storeys, or one storey + roof slab) with slab "auto" but no slab outline on the plan: the walls
+        /// are storey − slab high, so without slabs every storey would stand slab_thickness above the walls below (a gap
+        /// all around), and a second call would be refused as "already built". Asked before building: the message, or null.
+        /// </summary>
+        public static string StoreysWithoutSlab(int levels, string slabMode, int slabOutlines, double slabMm, string tool = "build_3d_from_plan")
+        {
+            if (levels < 2 || slabMode != "auto" || slabOutlines > 0 || !(slabMm > 0)) return null;
+            return $"{tool}: several levels (storeys / roof slab), but no closed slab outline on the slab layers and no slab_handles: without slabs the walls of each storey " +
+                   $"(storey_height − slab_thickness) would stop {slabMm} mm below the storey above. Ask the user, then call again with slab \"bbox\" " +
+                   "(one slab under the walls' bounding box per storey), slab_handles (the slab outline), or slab \"none\" (no slabs: the walls fill the whole storey height).";
+        }
+
         // ------------------------------------------------------------------ heights
 
         public sealed class Heights

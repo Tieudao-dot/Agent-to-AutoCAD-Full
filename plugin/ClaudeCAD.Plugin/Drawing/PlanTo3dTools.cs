@@ -106,7 +106,7 @@ namespace ClaudeCAD.Plugin.Drawing
             var extra = new List<string>();
             foreach (var b in lay.Boxes)
             {
-                var s = MakeBox(b.Length / f, b.Width / f, b.Height / f, null, new[] { b.Center[0] / f, b.Center[1] / f, z + b.Center[2] / f }, b.RotationDeg);
+                var s = MakeBox(b.Length / f, b.Width / f, b.Height / f, null, new[] { b.Center[0] / f, b.Center[1] / f, z + b.Center[2] / f }, b.RotationDeg, tool);
                 if (rail == null) { railId = AddSolid(ctx, s, layerP); rail = s; continue; }
                 try { BooleanInto(rail, s, BooleanOperationType.BoolUnite); s.Dispose(); }
                 catch (Autodesk.AutoCAD.Runtime.Exception) { extra.Add(Acad.H(AddSolid(ctx, s, layerP))); }
@@ -530,6 +530,13 @@ namespace ClaudeCAD.Plugin.Drawing
                         : "Check the layer names with list_layers and pass wall_layers, or pass wall_handles (two face lines per wall) / centerline_handles + thickness.") +
                     (res.Skipped.Count > 0 ? $" Skipped: {string.Join("; ", res.Skipped.Take(5).Select(s => $"{s.Handle} {s.Reason}"))}." : "") +
                     (f == 1 && unitName.Contains("unitless") ? " The drawing has no units set (INSUNITS = 0): it was read as mm; a plan drawn in metres needs INSUNITS = 6." : ""));
+            }
+            // several storeys with walls of storey − slab but no slab outline: the storeys would stand slab_thickness apart
+            string noSlab = FloorPlanLogic.StoreysWithoutSlab(levels.Count, slabMode, input.Slabs.Count, hmm.Slab, tool);
+            if (noSlab != null)
+            {
+                if (!dryRun) throw ToolException.Invalid(noSlab + " Nothing was built.");
+                notes.Add(noSlab);
             }
             var boxes = FloorPlanLogic.Boxes(res, hu);
             if (boxes.Count > FloorPlanLogic.MaxBoxes)

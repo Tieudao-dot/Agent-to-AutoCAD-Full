@@ -330,7 +330,8 @@ export function planLayersOf(tool: string, params: Record<string, unknown>): str
   if (tool !== 'build_3d_from_plan' || params.dry_run === true) return [];
   const out: string[] = [];
   for (const k of PLAN_LAYER_PARAMS) {
-    const v = params[k];
+    // the plugin also reads a single string as a one-layer list (Params.Strings); inside batch_execute no schema stops it
+    const v = typeof params[k] === 'string' ? [params[k]] : params[k];
     if (!Array.isArray(v)) continue;
     for (const x of v) {
       if (typeof x !== 'string' || !x.trim()) continue;
