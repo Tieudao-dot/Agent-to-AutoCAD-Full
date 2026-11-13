@@ -52,7 +52,7 @@ Kèm theo:
   `table_position` ẩn ở gói 3D (cả mô tả), schema, số mặc định khớp plugin, thời gian chờ, PRESSPULL qua thẻ (gõ ok không
   được, khối mới trong lượt không hỏi, trong batch), hình kín không target không hỏi, khối mới là "đã tạo".
 - Build net48 / net8.0-windows / net10.0-windows (Linux, `-p:EnableWindowsTargeting=true`): xanh, 0 cảnh báo.
-- CI: xem mục Commit.
+- CI: run **43451219212 xanh** ở `2f0ffc6` (`release: "false"`).
 
 ## Token mô tả lệnh + system prompt (cùng cách đo với đợt A / C, ~3,5 ký tự / token)
 
@@ -90,4 +90,5 @@ gói 3D (plugin + trợ lý + macro); token (rút gọn mô tả nếu đáng).
 
 ## Commit
 
-Xem `git log full/nang-cap-d`.
+`2f0ffc6` (code 6 việc + test + tài liệu, CI 43451219212 xanh), sau đó một commit ghi kết quả CI vào file này (chỉ tài liệu; CI của
+thread con phủ nó).
