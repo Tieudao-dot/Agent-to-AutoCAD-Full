@@ -171,6 +171,7 @@ dự án gốc), `bo-cai/README.md`.
 | ↳ Test & sửa đợt A (con của Nâng cấp đợt A) | `session_01D56HmExJjYYvbztLiiRbdx` | Nhánh `full/nang-cap-a-test` (tách từ `full/nang-cap-a` @ `fc68469`): rà soát, thêm test tự động, sửa lỗi đợt A; 1 lượt CI. Báo về thread đợt A, tin cập nhật ngắn gửi luồng chính. Bàn giao: `docs/ban-giao/nang-cap-a-test.md` |
 | Nâng cấp đợt B | `session_01D56HmERJAiGtKizUeoMK7s` | Nhánh `full/nang-cap-b` (tách từ `full/nang-cap-a-test` @ `33acb5f`): STRETCH, BREAK, LENGTHEN, DIVIDE / MEASURE, GROUP, MATCHPROP; bo / vát polyline + cung, offset hai phía, nối có dung sai. Viết xong tự mở thread con Test & sửa (`full/nang-cap-b-test`). Bàn giao: `docs/ban-giao/nang-cap-b.md` |
 | ↳ Test & sửa đợt B (con của Nâng cấp đợt B) | `session_01D56HmJLL8fUhKMHs8VaPJm` | Nhánh `full/nang-cap-b-test` (tách từ `full/nang-cap-b` @ `81eaf7c`): rà soát, thêm test tự động, sửa lỗi đợt B; 1 lượt CI. Báo về thread đợt B, tin cập nhật ngắn gửi luồng chính. Bàn giao: `docs/ban-giao/nang-cap-b-test.md` |
+| Nâng cấp đợt C | `session_01D56HmJra3trN7XwA1QApZ6` | Nhánh `full/nang-cap-c` (tách từ `full/nang-cap-b-test` @ `265b66e`): hatch bấm một điểm, tự ghi kích thước mặt bằng, thống kê block ra bảng, tổng diện tích phòng / layer, tìm & thay chữ (thẻ xác nhận), in nhiều layout vào một PDF. Viết xong tự mở thread con Test & sửa (`full/nang-cap-c-test`). Bàn giao: `docs/ban-giao/nang-cap-c.md` |
 
 Link mở thread: `https://claude.ai/code/<session id>`.
 
