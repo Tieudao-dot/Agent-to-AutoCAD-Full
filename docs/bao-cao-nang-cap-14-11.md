@@ -11,7 +11,7 @@ dừng trước phát hành".*
 - Lỗi: các bước Test & sửa từng đợt sửa 21 lỗi, test tổng thể 3 lỗi chéo, kiểm tra độc lập **32 lỗi: 30 sửa đúng,
   2 chấp nhận, 0 còn mở**. Cộng 56 lỗi (54 sửa, 2 chấp nhận), không có lỗi nặng.
 - **Chưa thử trên AutoCAD thật. Chưa phát hành:** `main` vẫn là v0.9.3 của bản gốc.
-- Bộ cài thử nội bộ mới (có đủ các lệnh nâng cấp): xem mục 5.
+- Bộ cài thử nội bộ mới (có đủ các lệnh nâng cấp) đã build xong, CI xanh: link ở mục 5.
 
 ## 2. Plugin có thêm gì (nói gọn)
 
@@ -57,7 +57,10 @@ Chi tiết: `docs/ban-giao/test-tong-the-nang-cap.md` (bảng lỗi → thread �
 
 ## 5. Việc cần cậu làm
 
-1. **Thử trên AutoCAD thật** bằng bộ cài thử nội bộ mới (có đủ nâng cấp): BO_CAI_THU. Theo
+1. **Thử trên AutoCAD thật** bằng bộ cài thử nội bộ mới (có đủ nâng cấp): [tải `AgentToAutoCADFull-ThuNoiBo-nang-cap-0.9.4`](https://github.com/Tieudao-dot/Agent-to-AutoCAD-Full/actions/runs/43481896536/artifacts/14065019481)
+   (~141 MB, cần đăng nhập GitHub, tải được tới 11/02/2027; CI 43481896536, nhánh `full/ban-thu-noi-bo` @ `8f84973`). Bản
+   thử luôn chạy gói Full nên các mục cần máy gói 2D / 3D (N3, N16, O14, O15, P12, Q11, Q12, R12) chờ bộ cài thật. Bản cũ
+   (CI 43373318854) chưa có lệnh nâng cấp. Theo
    `docs/checklist-tong-the.md` trên nhánh tích hợp: khối "chuỗi nâng cấp A → E" rút gọn ~105 phút (cả hai khối ~3 giờ 25
    phút / đủ ~5 giờ 50 phút). Ưu tiên: bước tự kiểm tra `CLAUDECHATSELFTEST`, các mục chéo V1–V13, ★ của N–R. Bản dùng thử
    AutoCAD và bộ cài thử đều hết khoảng **10/12/2026**.

@@ -80,7 +80,7 @@ Kiểm tra độc lập $22; test tổng thể $65 (gồm bộ cài, 3 vòng g�
 | D | `session_01D56HmEVecDKB1j1iGf8vNc` (21h41 → 22h50, không bị đứng) | `session_01D56HmFm4aVWGEgb2v8hWTB` (6 lỗi sửa) | `full/nang-cap-d` @ `809ad78` → `full/nang-cap-d-test` @ `db34801`, CI 43451219212 + 43454839792 xanh | **Xong** ~1 giờ 10 phút, ~$15 (đợt $10,8 + test $4,5); token 3D +1,9k, Full +2,1k |
 | E | `session_01D56HmJ3WbDQRkUMc3aJjvF` (22h51 → 23h50, không bị đứng) | `session_01D56HmEVcsHK1xiof9qua9w` (3 lỗi sửa) | `full/nang-cap-e` @ `3e8a67c` → `full/nang-cap-e-test` @ `cdaa29b`, CI 43461186495 + 43465289107 xanh | **Xong** ~1 giờ, ~$12,1 (đợt $7,3 + test $4,8); token 3D / Full +1,4k. Tự chọn 3 số chờ chủ dự án xem: bản thang 150, khe 2 vế chữ U 100, bản mái dốc 150 (mm) |
 | Test tổng thể nâng cấp | `session_01D56HmGm85zfmxQqdNwrF2N` (23h51 → 0h13) | — | `full/nang-cap-tong-the` @ `f1e7123`, CI 43468951145 xanh | **Xong**, 3 lỗi chéo sửa; token 2D 34,4k → 38,7k, 3D 35,7k → 39,7k, Full 49,7k → 57,5k; giữ nhánh tích hợp |
-| Kiểm tra độc lập nâng cấp | `session_01D56HmHmd7iAXreWAFzYLX4` (0h14 → 0h31, ~$14) | — | `full/kiem-tra-doc-lap-2` @ `8e6fede`, CI 43471931772 xanh | Lượt 1: **31 lỗi** (0 nặng, 7 vừa, 24 nhẹ). Đang sửa: đợt A 4, B 6, C 5, D 6, E 3, test tổng thể nâng cấp 6 (gồm 2 lỗi phần cũ + checklist); luồng chính sửa tổng quan (KT2-30, 31). Sau đó gộp + CI, soát lại lượt 2 |
+| Kiểm tra độc lập nâng cấp | `session_01D56HmHmd7iAXreWAFzYLX4` (0h14 → 1h17, ~$16, 3 lượt) | — | `full/kiem-tra-doc-lap-2` @ `e21e61a` | **Xong**: 32 lỗi (0 nặng), 30 sửa đúng, 2 chấp nhận (KT2-11 phần cân nhắc, KT2-22), 0 mở. Nhánh tích hợp cuối `full/nang-cap-tong-the` @ `f7f32ad`, CI 43478782014 xanh |
 
 Lịch sử duyệt: 13/11 chủ dự án duyệt đợt A, ban đầu chờ thử 3D thật; cùng ngày đổi sang chạy liền A → E, bắt đầu ngay.
 
@@ -88,3 +88,6 @@ Quyết định luồng chính chọn theo đề xuất của kiểm tra độc 
 cách rẻ, đổi lại được, chủ dự án xem trong báo cáo cuối):
 - bản vẽ đơn vị mét: các lệnh 2D mới + `array_rect` số tầng + PRESSPULL tự quy đổi đơn vị như lệnh 3D (KT2-04, 10, 13);
 - mái nhà chữ L / T: Claude báo trước chỗ nối hai mái sẽ chồng, cần sửa tay (KT2-08); mái liền để đợt F.
+
+**Chuỗi xong 14/11 ~1h40.** Bộ cài thử nội bộ build lại có đủ nâng cấp (CI 43481896536). Báo cáo:
+[`bao-cao-nang-cap-14-11.md`](bao-cao-nang-cap-14-11.md). Dừng trước phát hành.

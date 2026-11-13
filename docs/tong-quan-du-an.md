@@ -10,24 +10,26 @@ quy tắc làm việc và danh bạ thread: [`../CLAUDE.md`](../CLAUDE.md).
 
 *Cập nhật 14/11/2026 ~0h40 (giờ VN).*
 
-- **Nhánh tích hợp mới nhất:** `full/nang-cap-tong-the` @ `f1e7123` (CI 43468951145 xanh). Chứa toàn bộ: gói dịch vụ,
+- **Nhánh tích hợp mới nhất:** `full/nang-cap-tong-the` @ `f7f32ad` (CI 43478782014 xanh). Chứa toàn bộ: gói dịch vụ,
   3D đợt 1–3, test tổng thể + 4 lượt kiểm tra độc lập lần 1 (43 lỗi), bộ cài thay bản gốc + cảnh báo, và **chuỗi nâng
   cấp A → E** (13/11) + test tổng thể nâng cấp.
-  - Test lõi 861, trợ lý 291, build net48 / net8 / net10 sạch.
+  - Test lõi 909, trợ lý 298, build net48 / net8 / net10 sạch.
   - Nhánh tích hợp cũ `full/test-tong-the` @ `19944df` vẫn giữ (nơi sửa lỗi thử thật phần 3D cũ, hiện chưa có lỗi nào).
   - **Chưa thử trên AutoCAD thật. Chưa phát hành.** `main` vẫn là v0.9.3 của bản gốc.
 - **Chuỗi nâng cấp lệnh vẽ (13/11):** [`ke-hoach-nang-cap-lenh.md`](ke-hoach-nang-cap-lenh.md) (bảng tiến độ). Cả 5 đợt
   xong (~$96, 22 lỗi sửa trong các bước Test & sửa), test tổng thể nâng cấp xong (3 lỗi chéo). **Kiểm tra độc lập
-  nâng cấp lượt 1** (agent mới): 31 lỗi (0 nặng, 7 vừa, 24 nhẹ), báo cáo `docs/ban-giao/kiem-tra-doc-lap-nang-cap.md`
-  trên `full/kiem-tra-doc-lap-2`; 6 thread đang sửa, thread "Test tổng thể nâng cấp" gộp + CI, rồi soát lại.
+  nâng cấp** (agent mới, 3 lượt): 32 lỗi, 30 sửa đúng, 2 chấp nhận, **0 mở**; báo cáo
+  `docs/ban-giao/kiem-tra-doc-lap-nang-cap.md` trên `full/kiem-tra-doc-lap-2`. **Báo cáo cho chủ dự án:**
+  [`bao-cao-nang-cap-14-11.md`](bao-cao-nang-cap-14-11.md).
 - **Token mỗi lần mở chat** (mô tả lệnh + system prompt): 2D 34,4k → 38,7k, 3D 35,7k → 39,7k, Full 49,7k → 57,5k
   (trước / sau chuỗi nâng cấp; phần này được cache, lượt sau trong 5 phút ~10%).
 - **Chưa dùng được bộ cài thật:** `activation/activation.json` và khóa công khai trong `License.cs` vẫn là của dự án
   gốc; chờ chủ dự án dựng máy chủ kích hoạt riêng.
-- **Bộ cài thử nội bộ (13/11):** chỉ chủ dự án dùng, không gửi ai. Bỏ qua kích hoạt, gói Full, hết hạn 10/12/2026, nhãn
-  "BẢN THỬ NỘI BỘ", không tự cập nhật. Nhánh `full/ban-thu-noi-bo` @ `8387b06` (**không bao giờ gộp**), CI run 43373318854,
-  artifact `AgentToAutoCADFull-ThuNoiBo-0.9.4` (tải được tới 11/02/2027). Bản này **chưa có chuỗi nâng cấp**; muốn thử
-  các lệnh mới thì cần build lại bộ cài thử từ nhánh tích hợp mới.
+- **Bộ cài thử nội bộ** (chỉ chủ dự án dùng, không gửi ai; bỏ qua kích hoạt, gói Full, hết hạn 10/12/2026, nhãn "BẢN THỬ
+  NỘI BỘ", không tự cập nhật; nhánh `full/ban-thu-noi-bo`, **không bao giờ gộp**). Bản mới 14/11 có đủ chuỗi nâng cấp:
+  `8f84973`, CI 43481896536, artifact `AgentToAutoCADFull-ThuNoiBo-nang-cap-0.9.4`
+  ([tải](https://github.com/Tieudao-dot/Agent-to-AutoCAD-Full/actions/runs/43481896536/artifacts/14065019481), tới 11/02/2027). Bản cũ 13/11 (CI 43373318854) chưa có lệnh nâng cấp.
+  Bàn giao: `docs/ban-giao/ban-thu-noi-bo.md` trên nhánh đó.
 - **Checklist thử tay:** [`checklist-tong-the.md`](checklist-tong-the.md) trên nhánh tích hợp: phần cũ I–M, X (rút gọn
   ~97 phút, đủ ~157 phút) + khối **chuỗi nâng cấp A → E** (rút gọn ~95 phút, đủ ~3 giờ; mục N–R, chéo V1–V8). Chi tiết
   ở [`checklist-thu-that.md`](checklist-thu-that.md). Bản dùng thử AutoCAD hết khoảng 10/12/2026.
@@ -111,4 +113,6 @@ trong 5 phút chỉ tốn ~10%.
   - chủ dự án cho chạy liền chuỗi nâng cấp A → E; mở thread Nâng cấp đợt A.
   - chuỗi nâng cấp A → E chạy liền 14h28 → 23h50 (~$96, 22 lỗi sửa trong Test & sửa), test tổng thể nâng cấp (3 lỗi chéo).
 - **14/11/2026 (rạng sáng):**
-  - kiểm tra độc lập nâng cấp lượt 1: 31 lỗi (0 nặng, 7 vừa, 24 nhẹ); chuyển về 6 thread sửa.
+  - kiểm tra độc lập nâng cấp lượt 1: 31 lỗi (0 nặng, 7 vừa, 24 nhẹ); chuyển về 6 thread sửa; lượt 2: 29 sửa đúng,
+    2 chấp nhận, 1 lỗi mới; lượt 3: sửa đúng, 0 lỗi mở. Nhánh tích hợp cuối `full/nang-cap-tong-the` @ `f7f32ad`, CI xanh;
+  - bộ cài thử nội bộ build lại có đủ nâng cấp (CI 43481896536); báo cáo [`bao-cao-nang-cap-14-11.md`](bao-cao-nang-cap-14-11.md).
