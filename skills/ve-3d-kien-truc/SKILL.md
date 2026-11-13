@@ -145,7 +145,8 @@ Mái: `build_roof`, `type` `flat` (mái bằng, dày 150, mặc định không �
 cạnh dài, `ridge` `short` để đổi) / `hip` (4 dốc, đường bao lồi). Mái dốc mặc định 30°, bản mái 150, đua 600. Đường
 bao = mặt ngoài tường: `outline_handle` (polyline kín), `outline_points`, hoặc `from_walls: true` (hình chữ nhật bao
 các khối tường). Mái đặt trên đỉnh tường: mặc định đỉnh cao nhất của khối tường `A-WALL-3D` dưới đường bao (tầng trên
-cùng), hoặc `wall_top_z`. Nhà chữ L / T: 4 dốc và 2 dốc báo lỗi → chia đường bao thành các hình chữ nhật rồi dựng
+cùng; có sàn mái `roof_slab` nằm trên đỉnh tường thì mái đặt trên mặt sàn mái), hoặc `wall_top_z`. Đã có sàn
+mái thì không dựng thêm mái bằng (thành hai lớp sàn). Nhà chữ L / T: 4 dốc và 2 dốc báo lỗi → chia đường bao thành các hình chữ nhật rồi dựng
 từng mái, hoặc mái bằng. Đầu hồi mái 2 dốc để hở (tường hồi: `extrude` / `presspull`). Báo `top_z_mm`,
 `roof_area_m2` (diện tích mặt mái nghiêng, để tính tôn / ngói).
 

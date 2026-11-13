@@ -533,6 +533,69 @@ namespace ClaudeCAD.Plugin
                                        : new SelfTestRules.Verdict(false, string.Join("; ", errs));
             });
 
+            // Test tổng thể nâng cấp: đợt C had no step (find & replace with the card's approval, room area schedule)
+            Check("Nâng cấp đợt C: tìm & thay chữ (TEXT + MTEXT, chỉ đổi khi đã duyệt), bảng diện tích phòng", () =>
+            {
+                const double cx = 32000;
+                var errs = new List<string>();
+                var db = doc.Database;
+                T Run<T>(Func<ToolContext, Transaction, T> f)
+                {
+                    using (doc.LockDocument())
+                    using (var tr = doc.TransactionManager.StartTransaction())
+                    {
+                        var r = f(new ToolContext(doc, tr, true, null), tr);
+                        tr.Commit();
+                        return r;
+                    }
+                }
+                // a 4000 × 3000 room with its name (TEXT) and a note (MTEXT) inside
+                var made = Run((ctx, tr) =>
+                {
+                    var ms = (BlockTableRecord)tr.GetObject(SymbolUtilityServices.GetBlockModelSpaceId(db), OpenMode.ForWrite);
+                    string Add(Entity e) { e.SetDatabaseDefaults(db); ms.AppendEntity(e); tr.AddNewlyCreatedDBObject(e, true); return e.Handle.ToString(); }
+                    return new[]
+                    {
+                        Add(Acad.MakePolyline(new List<double[]> { new[] { cx, 0.0 }, new[] { cx + 4000, 0.0 }, new[] { cx + 4000, 3000.0 }, new[] { cx, 3000.0 } }, true)),
+                        Add(new DBText { Position = new Point3d(cx + 1000, 1500, 0), Height = 200, TextString = "ZQX NGU" }),
+                        Add(new MText { Location = new Point3d(cx + 1000, 1000, 0), TextHeight = 100, Contents = "ZQX ghi chu, zqx" }),
+                    };
+                });
+                string room = made[0], text = made[1], mtext = made[2];
+                Dictionary<string, object> Replace(Dictionary<string, object> d) =>
+                    Run((ctx, tr) => (Dictionary<string, object>)DrawingService.FindReplaceText(ctx, new Params("find_replace_text", d)));
+                var preview = Replace(new Dictionary<string, object> { ["find"] = "ZQX", ["replace"] = "PHONG" });
+                if (Convert.ToInt32(preview["objects"]) != 2 || Convert.ToInt32(preview["replacements"]) != 3)
+                    errs.Add($"xem trước: {preview["objects"]} đối tượng, {preview["replacements"]} chỗ (cần 2, 3)");
+                // without the card's approval nothing changes
+                try
+                {
+                    Replace(new Dictionary<string, object> { ["find"] = "ZQX", ["replace"] = "PHONG", ["handles"] = new List<object> { text, mtext } });
+                    errs.Add("thay khi chưa duyệt thẻ: không bị từ chối");
+                }
+                catch (ToolException) { }
+                var done = Replace(new Dictionary<string, object>
+                {
+                    ["find"] = "ZQX", ["replace"] = "PHONG", ["handles"] = new List<object> { text, mtext },
+                    [SolidLogic.UserConfirmedParam] = new List<object> { text, mtext },
+                });
+                if (Convert.ToInt32(done["replacements"]) != 3) errs.Add($"thay: {done["replacements"]} chỗ (cần 3)");
+                var (t1, t2) = Run((ctx, tr) => (((DBText)tr.GetObject(Acad.IdFromHandle(db, text), OpenMode.ForRead)).TextString,
+                                                 ((MText)tr.GetObject(Acad.IdFromHandle(db, mtext), OpenMode.ForRead)).Contents));
+                if (t1 != "PHONG NGU" || t2 != "PHONG ghi chu, PHONG") errs.Add($"chữ sau khi thay: \"{t1}\", \"{t2}\"");
+                // the room's area, named by the text inside it
+                var area = Run((ctx, tr) => (Dictionary<string, object>)DrawingService.AreaSchedule(ctx, new Params("area_schedule", new Dictionary<string, object>
+                {
+                    ["group_by"] = "room", ["handles"] = new List<object> { room },
+                })));
+                var row = (Dictionary<string, object>)((List<object>)area["rows"])[0];
+                if (Math.Abs(Convert.ToDouble(area["total_m2"]) - 12) > 1e-6) errs.Add($"diện tích phòng {area["total_m2"]} m² (cần 12)");
+                if (!Convert.ToString(row["name"]).Contains("PHONG NGU")) errs.Add($"tên phòng \"{row["name"]}\" (cần PHONG NGU)");
+                return errs.Count == 0
+                    ? new SelfTestRules.Verdict(true, "xem trước 2 đối tượng / 3 chỗ, chưa duyệt thì không đổi, thay đúng; phòng PHONG NGU 12 m²")
+                    : new SelfTestRules.Verdict(false, string.Join("; ", errs));
+            });
+
             // Test & sửa đợt D: the same code paths as build_beam, build_3d_from_plan (curved wall), presspull and export_stl
             Check("Nâng cấp đợt D: dầm chữ L, tường cong, kéo mặt trên (PRESSPULL), xuất STL", () =>
             {

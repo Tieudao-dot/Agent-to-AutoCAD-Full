@@ -262,7 +262,7 @@ namespace ClaudeCAD.Plugin.Drawing
             return new List<double[]> { new[] { a.X, a.Y }, new[] { b.X, a.Y }, new[] { b.X, b.Y }, new[] { a.X, b.Y } };
         }
 
-        private static object AreaSchedule(ToolContext ctx, Params p)
+        internal static object AreaSchedule(ToolContext ctx, Params p)
         {
             string groupBy = p.Str("group_by", "layer").Trim().ToLowerInvariant();
             if (groupBy != "layer" && groupBy != "room") throw ToolException.Invalid("area_schedule: group_by must be layer or room.");
@@ -417,7 +417,7 @@ namespace ClaudeCAD.Plugin.Drawing
 
         private static readonly string[] ReplaceTypes = { "text", "mtext", "attribute", "dimension", "mleader", "table" };
 
-        private static object FindReplaceText(ToolContext ctx, Params p)
+        internal static object FindReplaceText(ToolContext ctx, Params p)
         {
             string find = p.Str("find");
             if (find.Length == 0) throw ToolException.Invalid("find_replace_text: 'find' is empty.");

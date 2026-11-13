@@ -521,6 +521,23 @@ namespace ClaudeCAD.Plugin.Core
         public const string Layer3d = "A-ROOF-3D";
         public static readonly string[] Types = { "flat", "gable", "hip" };
 
+        /// <summary>
+        /// Test tổng thể nâng cấp (TT2-1): a slab whose underside lies on the wall top (± this, mm) is a roof slab
+        /// (build_3d_from_plan roof_slab), so the roof sits on the slab, not on the walls (it would cut into the slab).
+        /// </summary>
+        public const double SlabOnWallTolMm = 1;
+
+        /// <summary>
+        /// Where the roof sits when wall_top_z is not given (mm): on the wall top, or on top of the slab solids lying on
+        /// the wall top (a roof slab). slabs = (bottom z, top z) in mm of the slab solids under the outline.
+        /// </summary>
+        public static double RoofBase(double wallTopMm, IEnumerable<(double Bottom, double Top)> slabs, out bool onSlab)
+        {
+            var onTop = (slabs ?? Enumerable.Empty<(double, double)>()).Where(s => Math.Abs(s.Bottom - wallTopMm) <= SlabOnWallTolMm && s.Top > wallTopMm).ToList();
+            onSlab = onTop.Count > 0;
+            return onSlab ? onTop.Max(s => s.Top) : wallTopMm;
+        }
+
         public sealed class Options
         {
             public string Type = "hip";

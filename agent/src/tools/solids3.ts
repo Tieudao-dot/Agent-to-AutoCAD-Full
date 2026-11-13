@@ -164,7 +164,7 @@ export function solid3Tools(b: ToolBridge): AnyTool[] {
       `ROOF (mái) as one solid on ${E.RoofLayer}: type flat (mái bằng, slab thickness default ${E.DefaultRoofThickness}), gable (2 dốc, rectangle only; ridge along the long side, or ridge short) ` +
         `or hip (4 dốc, convex outline only). Sloped: slope default ${E.DefaultSlopeDeg}°, slab ${E.DefaultRoofThickness} mm, overhang (eave past the walls) default ${E.DefaultOverhang} mm (flat: 0); ` +
         "use the user's numbers when given. Outline = outer face of the walls: outline_handle (closed polyline), outline_points, or from_walls: true (box around the wall solids). " +
-        'It sits on the wall top: wall_top_z (mm) or, by default, the top of the wall solids under it (wall_layers, default A-WALL-3D: the top storey). An L / T house cannot take a hip ' +
+        'It sits on the wall top: wall_top_z (mm) or, by default, the top of the wall solids under it (wall_layers, default A-WALL-3D: the top storey; a roof slab on A-SLAB-3D lying on them: its top). An L / T house cannot take a hip ' +
         'or gable roof: the error says so; tell the user (split it into rectangles, or flat). Gable ends are left open. Returns handle, eave_z_mm, top_z_mm, ridge_length_m, plan_area_m2, roof_area_m2, volume_m3, wall_top_from.',
       {
         type: z.enum(['flat', 'gable', 'hip']).describe('flat = mái bằng, gable = 2 dốc, hip = 4 dốc.'),

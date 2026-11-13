@@ -292,12 +292,22 @@ namespace ClaudeCAD.Plugin.Drawing
             // the wall top: given, or the highest wall solid under the outline
             double wallTopMm;
             string topFrom;
+            bool roofOnSlab = false;
             if (p.Has("wall_top_z")) { wallTopMm = p.Num("wall_top_z"); topFrom = "wall_top_z"; }
             else
             {
                 var box = new[] { outline.Min(q => q[0]), outline.Min(q => q[1]), outline.Max(q => q[0]), outline.Max(q => q[1]) };
                 var walls = WallBoxes(ctx, wallLayers, box);
-                if (walls.Count > 0) { wallTopMm = walls.Max(e => e.MaxPoint.Z) * f; topFrom = $"top of the {walls.Count} wall solid(s) on {string.Join(", ", wallLayers)}"; }
+                if (walls.Count > 0)
+                {
+                    wallTopMm = walls.Max(e => e.MaxPoint.Z) * f;
+                    topFrom = $"top of the {walls.Count} wall solid(s) on {string.Join(", ", wallLayers)}";
+                    // TT2-1: a roof slab (build_3d_from_plan roof_slab) lying on the wall top: the roof goes on the slab
+                    var slabs = WallBoxes(ctx, new List<string> { FloorPlanLogic.SlabLayer3d }, box).Select(e => (e.MinPoint.Z * f, e.MaxPoint.Z * f));
+                    double wallTop = wallTopMm;
+                    wallTopMm = RoofLogic.RoofBase(wallTop, slabs, out roofOnSlab);
+                    if (roofOnSlab) topFrom = $"top of the roof slab on {FloorPlanLogic.SlabLayer3d} lying on the walls (wall top {Math.Round(wallTop)} mm)";
+                }
                 else { wallTopMm = outlineZ * f; topFrom = "outline level (no wall solid found under it)"; }
             }
             var lay = RoofLogic.Build(outline.Select(q => new[] { q[0] * f, q[1] * f }).ToList(), wallTopMm, o, tool);
@@ -346,6 +356,8 @@ namespace ClaudeCAD.Plugin.Drawing
             r["roof_area_m2"] = Math.Round(lay.RoofArea / 1e6, 3);
             r["outline"] = from;
             r["layer"] = layer;
+            if (roofOnSlab && o.Type == "flat")
+                lay.Notes.Add("A roof slab already lies on these walls (roof_slab of build_3d_from_plan): this flat roof is a second slab on top of it. If one slab was meant, undo (U) and keep the roof slab.");
             if (lay.Notes.Count > 0) r["notes"] = lay.Notes;
             r["note"] = (o.Type == "flat"
                             ? $"Flat roof slab {o.Thickness} mm on the walls"
