@@ -97,3 +97,22 @@ tự lạ, `output` tương đối; token (rút gọn mô tả nếu đáng).
 
 `0f62082` (code 6 việc + test + tài liệu, CI xanh), sau đó một commit ghi kết quả CI vào file này (chỉ tài liệu; CI của
 thread con phủ nó).
+
+## Sửa sau kiểm tra độc lập nâng cấp (13/11/2026)
+
+Lỗi từ [`kiem-tra-doc-lap-nang-cap.md`](kiem-tra-doc-lap-nang-cap.md) (nhánh `full/kiem-tra-doc-lap-2` @ `8e6fede`) thuộc đợt C.
+Nhánh `full/nang-cap-c` sau khi gộp nhánh tích hợp `full/nang-cap-tong-the` @ `f1e7123`. Không chạy CI (thread "Test tổng thể
+nâng cấp" gộp và chạy CI chung).
+
+| # | Lỗi | Sửa |
+| --- | --- | --- |
+| KT2-02 (vừa) | Tìm & thay: một chữ trên layer khóa làm hỏng cả lượt, lỗi không nói chữ nào (mở ForWrite trước khi kiểm layer) | Đọc hết các chữ đã duyệt trước (ForRead), có chữ trên layer khóa (của chính nó, hoặc của block chứa thuộc tính) thì từ chối **trước khi đổi gì**, liệt kê handle + layer (`Util2DLogic.LockedTextMessage`); sau đó mới `UpgradeOpen` và ghi. Bước xem trước để chữ trên layer khóa ra `locked` (handle, layer), không đưa vào `match_handles` / thẻ |
+| KT2-04 (vừa) | Tiện ích 2D trong bản vẽ đơn vị mét dùng số mm (khoảng hàng kích thước 8 m, chữ bảng 2,5 m, `min_area` / m² sai 10⁶ lần) | Quy đổi theo INSUNITS như lệnh 3D (`FloorPlanLogic.MmPerUnit`): `DefaultDimOffset(dimscale, size, mmPerUnit)`, `DefaultTableTextHeight`, `ToM2` / `FromM2`, bảng diện tích truyền `mmPerUnit`. Bản vẽ mm (hoặc không đặt đơn vị) giữ như cũ. Mô tả lệnh: `offset`, `text_height` tính theo đơn vị bản vẽ |
+| KT2-16 (nhẹ) | `plot_pdf` báo `exists: true` khi file PDF cũ còn đó | Ghi thời điểm sửa file trước khi in; `exists` = file mới hoặc mới hơn (`Util2DLogic.PdfWritten`), không thì kèm `warning`. File đang mở ở chương trình khác (khóa): báo trước khi in, không in |
+| KT2-17 (nhẹ) | In nhiều layout ép mọi trang cùng khổ A3 | Không nêu `media`: mỗi trang giữ khổ giấy của layout nếu máy in PDF có khổ đó (`Util2DLogic.PickMedia`), không có thì A3; kết quả `media` là một khổ hoặc danh sách theo trang. Nêu `media` thì như cũ |
+| KT2-28 (nhẹ) | Mô tả `spacing` ghi "mặc định 8 mm × DIMSCALE" nhưng code lấy = `offset` | Sửa mô tả: "spacing between rows (default = offset)" |
+
+Test: `NangCapCKt2Tests.cs` (7 test); một test cũ (`NangCapCTests`, kiểm mã nguồn tìm & thay) cập nhật theo cách kiểm layer khóa
+mới. Lõi **867** xanh, trợ lý **291** xanh, build net48 / net8.0-windows / net10.0-windows xanh, 0 cảnh báo. Thử tay thêm:
+P9 với một chữ trên layer khóa (Claude báo đúng chữ / layer, không thay chữ nào); P3 / P7 trên bản vẽ INSUNITS = m; P11 với
+layout A1 + A3 và khi file PDF cũ đang mở.

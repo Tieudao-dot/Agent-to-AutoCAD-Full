@@ -4,7 +4,7 @@ import { cadTool, entityProps, handles, point, type AnyTool, type ToolBridge } f
 const table = {
   table_position: point.optional().describe('Insert the result as a TABLE with its top-left corner here (omit = only return the numbers).'),
   title: z.string().optional(),
-  text_height: z.number().positive().optional().describe('Table text height in mm (default 2.5 × DIMSCALE).'),
+  text_height: z.number().positive().optional().describe('Table text height in drawing units (default 2.5 mm on paper × DIMSCALE).'),
   layout: z.string().optional().describe('Space to read and to put the table in (default Model).'),
   layer: z.string().optional(),
 };
@@ -18,8 +18,8 @@ export function utility2dTools(b: ToolBridge): AnyTool[] {
     cadTool(b, 'dim_floor_plan',
       'Dimension a whole floor plan: chains of linear dimensions outside each side (bottom, top, left, right): row 1 = wall corners and ' +
         'openings seen from that side, row 2 = axes (if axis_layers / axis_handles), row 3 = overall size. Current dimension style unless ' +
-        'dim_style. Walls: wall_layers (default ["A-WALL"]) or wall_handles (lines / polylines). offset = distance of row 1 from the walls, ' +
-        'spacing between rows (default 8 mm × DIMSCALE, at least 5 % of the plan). Returns {"handles": [...], "by_side_row"}.',
+        'dim_style. Walls: wall_layers (default ["A-WALL"]) or wall_handles (lines / polylines). offset = distance of row 1 from the walls ' +
+        '(drawing units; default 8 mm on paper × DIMSCALE, at least 5 % of the plan), spacing between rows (default = offset). Returns {"handles": [...], "by_side_row"}.',
       {
         wall_layers: z.array(z.string()).optional(),
         wall_handles: handles.optional(),

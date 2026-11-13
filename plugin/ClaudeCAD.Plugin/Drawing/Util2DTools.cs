@@ -76,7 +76,9 @@ namespace ClaudeCAD.Plugin.Drawing
             var axes = Segments(ctx, Pick(ctx, p, "axis_handles", "axis_layers", null));
             var sides = p.StringsOpt("sides") ?? Util2DLogic.AllSides.ToList();
             double size = Math.Max(walls.Max(s => Math.Max(s.X1, s.X2)) - walls.Min(s => Math.Min(s.X1, s.X2)), walls.Max(s => Math.Max(s.Y1, s.Y2)) - walls.Min(s => Math.Min(s.Y1, s.Y2)));
-            double offset = p.Positive("offset", Util2DLogic.DefaultDimOffset(ctx.Db.Dimscale, size));
+            // KT2-04: the paper distance (8 mm × DIMSCALE) is converted to drawing units (a plan in metres: 0,8 not 800)
+            double mmPerUnit = FloorPlanLogic.MmPerUnit(Convert.ToInt32(ctx.Db.Insunits), out _);
+            double offset = p.Positive("offset", Util2DLogic.DefaultDimOffset(ctx.Db.Dimscale, size, mmPerUnit));
             double spacing = p.Positive("spacing", offset);
             // NC-5: in a plan drawn in metres 1 unit is a whole metre; the tolerance follows the plan size
             var specs = Util2DLogic.FloorPlanDims(walls, axes, sides, offset, spacing, Util2DLogic.PieceTolerance(size));
@@ -104,8 +106,9 @@ namespace ClaudeCAD.Plugin.Drawing
 
         // ------------------------------------------------------------------ schedules (tables)
 
+        /// <summary>KT2-04: 2.5 mm × DIMSCALE, converted to drawing units (a drawing in metres: 0.25, not 250 or 2.5).</summary>
         private static double TableTextHeight(ToolContext ctx, Params p) =>
-            p.Positive("text_height", Math.Max(ctx.Db.Dimscale > 0 ? ctx.Db.Dimscale : 1, 1) * 2.5);
+            p.Positive("text_height", Util2DLogic.DefaultTableTextHeight(ctx.Db.Dimscale, FloorPlanLogic.MmPerUnit(Convert.ToInt32(ctx.Db.Insunits), out _)));
 
         /// <summary>Inserts the schedule as a TABLE through add_table (same table style, same code path).</summary>
         private static Dictionary<string, object> InsertSchedule(ToolContext ctx, Params p, List<List<object>> data, double[] widthsInText, string defaultTitle)
@@ -267,7 +270,9 @@ namespace ClaudeCAD.Plugin.Drawing
             string groupBy = p.Str("group_by", "layer").Trim().ToLowerInvariant();
             if (groupBy != "layer" && groupBy != "room") throw ToolException.Invalid("area_schedule: group_by must be layer or room.");
             var layers = p.StringsOpt("layers");
-            double minArea = p.Num("min_area", 0) * 1e6; // m² → mm²
+            // KT2-04: areas are in drawing units²; m² via Util2DLogic.ToM2 / FromM2 (mm per unit from INSUNITS)
+            double mmPerUnit = FloorPlanLogic.MmPerUnit(Convert.ToInt32(ctx.Db.Insunits), out _);
+            double minArea = Util2DLogic.FromM2(p.Num("min_area", 0), mmPerUnit);
             int decimals = p.Int("decimals", 2, 0, 4);
             var handles = p.Has("handles") ? new HashSet<string>(p.Handles("handles", 20000), StringComparer.OrdinalIgnoreCase) : null;
             var curves = new List<Util2DLogic.AreaItem>();
@@ -321,10 +326,10 @@ namespace ClaudeCAD.Plugin.Drawing
             {
                 ["group_by"] = groupBy,
                 ["count"] = areas.Count,
-                ["total_m2"] = Math.Round(total / 1e6, decimals),
+                ["total_m2"] = Math.Round(Util2DLogic.ToM2(total, mmPerUnit), decimals),
                 ["rows"] = rows.Select(r =>
                 {
-                    var d = new Dictionary<string, object> { ["name"] = r.Name, ["area_m2"] = Math.Round(r.Area / 1e6, decimals), ["count"] = r.Count };
+                    var d = new Dictionary<string, object> { ["name"] = r.Name, ["area_m2"] = Math.Round(Util2DLogic.ToM2(r.Area, mmPerUnit), decimals), ["count"] = r.Count };
                     if (groupBy == "room") { d["layer"] = r.Layer; d["object"] = r.Handles.FirstOrDefault(); }
                     return (object)d;
                 }).ToList(),
@@ -346,7 +351,7 @@ namespace ClaudeCAD.Plugin.Drawing
             if (p.Has("table_position"))
             {
                 var widths = groupBy == "room" ? new[] { 5.0, 22, 12, 12 } : new[] { 5.0, 18, 9, 12 };
-                var t = InsertSchedule(ctx, p, Util2DLogic.AreaTable(rows, groupBy, decimals), widths, groupBy == "room" ? "BẢNG DIỆN TÍCH PHÒNG" : "BẢNG DIỆN TÍCH THEO LAYER");
+                var t = InsertSchedule(ctx, p, Util2DLogic.AreaTable(rows, groupBy, decimals, mmPerUnit), widths, groupBy == "room" ? "BẢNG DIỆN TÍCH PHÒNG" : "BẢNG DIỆN TÍCH THEO LAYER");
                 res["handles"] = t["handles"];
             }
             return res;
@@ -438,6 +443,11 @@ namespace ClaudeCAD.Plugin.Drawing
                     if (layers != null && !layers.Any(l => WildcardMatch(e.Layer, l))) continue;
                     all.AddRange(TextHits(ctx, e, find, repl, matchCase, wholeWord, types));
                 }
+                // KT2-02: text on locked layers is listed apart and never offered on the card
+                var lockedPreview = all.Select(h => (h.Ent.Handle.ToString(), LockedLayerOf(ctx, h.Ent))).Where(x => x.Item2 != null)
+                    .GroupBy(x => x.Item1).Select(g => g.First()).ToList();
+                var lockedSet = new HashSet<string>(lockedPreview.Select(x => x.Item1), StringComparer.OrdinalIgnoreCase);
+                all = all.Where(h => !lockedSet.Contains(h.Ent.Handle.ToString())).ToList();
                 var objs = all.Select(h => h.Ent.Handle.ToString()).Distinct().ToList();
                 var res = new Dictionary<string, object>
                 {
@@ -452,7 +462,12 @@ namespace ClaudeCAD.Plugin.Drawing
                     }).ToList(),
                     ["match_handles"] = objs.Take(Util2DLogic.MaxReplaceHandles).Cast<object>().ToList(),
                 };
-                if (objs.Count == 0) res["note"] = "Nothing matches. Nothing to replace.";
+                if (lockedPreview.Count > 0)
+                {
+                    res["locked"] = lockedPreview.Take(50).Select(x => (object)new Dictionary<string, object> { ["handle"] = x.Item1, ["layer"] = x.Item2 }).ToList();
+                    res["locked_note"] = $"{lockedPreview.Count} matching object(s) are on locked layers ({string.Join(", ", lockedPreview.Select(x => x.Item2).Distinct().Take(10))}): left out of match_handles. Tell the user; they can unlock the layer and run the preview again.";
+                }
+                if (objs.Count == 0) res["note"] = lockedPreview.Count > 0 ? "Every match is on a locked layer. Nothing to replace." : "Nothing matches. Nothing to replace.";
                 else
                     res["next"] = "Nothing was changed. Call request_confirmation with match_handles and one Vietnamese sentence (count, find → replace, one example), end the turn; after Đồng ý call find_replace_text again with handles = match_handles.";
                 if (!Util2DLogic.SafeForMText(find)) res["mtext_skipped"] = "find contains \\ { or }: MTEXT / multileader / multi-line attributes were not searched (formatting codes).";
@@ -469,6 +484,10 @@ namespace ClaudeCAD.Plugin.Drawing
             var changed = new List<object>();
             var unchanged = new List<object>();
             int replacements = 0;
+            // KT2-02: read everything first (ForRead) and refuse before any change when some text is on a locked layer,
+            // naming the handles and layers (opening ForWrite first made AutoCAD throw eOnLockedLayer with no detail)
+            var plan = new List<(string handle, List<TextHit> hits)>();
+            var locked = new List<(string handle, string layer)>();
             foreach (var h in hs.Distinct(StringComparer.OrdinalIgnoreCase))
             {
                 var ent = Acad.GetEntity(ctx, h, false);
@@ -477,11 +496,17 @@ namespace ClaudeCAD.Plugin.Drawing
                     ? (types.Contains("attribute") ? AttributeHits(ar0, find, repl, matchCase, wholeWord) : new List<TextHit>())
                     : TextHits(ctx, ent, find, repl, matchCase, wholeWord, types).ToList();
                 if (hits.Count == 0) { unchanged.Add(h); continue; }
+                var lockedLayer = LockedLayerOf(ctx, hits[0].Ent);
+                if (lockedLayer != null) { locked.Add((h.ToUpperInvariant(), lockedLayer)); continue; }
+                plan.Add((h, hits));
+            }
+            if (locked.Count > 0) throw new ToolException(ErrorCodes.Locked, Util2DLogic.LockedTextMessage(locked));
+            foreach (var (h, hits) in plan)
+            {
                 foreach (var hit in hits)
                 {
-                    var w = ctx.Tr.GetObject(hit.Ent.ObjectId, OpenMode.ForWrite) as Entity;
-                    if (w is AttributeReference) Acad.EnsureLayerUnlocked(ctx, (Entity)ctx.Tr.GetObject(w.OwnerId, OpenMode.ForRead), hit.Owner ?? h);
-                    Acad.EnsureLayerUnlocked(ctx, w, w.Handle.ToString());
+                    var w = (Entity)ctx.Tr.GetObject(hit.Ent.ObjectId, OpenMode.ForRead);
+                    if (!w.IsWriteEnabled) w.UpgradeOpen();
                     WriteText(w, hit);
                     replacements += hit.Count;
                 }
@@ -491,6 +516,15 @@ namespace ClaudeCAD.Plugin.Drawing
             var r2 = new Dictionary<string, object> { ["changed"] = changed, ["replacements"] = replacements };
             if (unchanged.Count > 0) r2["unchanged"] = unchanged;
             return r2;
+        }
+
+        /// <summary>The locked layer that stops changing this text (its own layer, or the block's for an attribute), or null.</summary>
+        private static string LockedLayerOf(ToolContext ctx, Entity e)
+        {
+            bool Locked(Entity x) => ((LayerTableRecord)ctx.Tr.GetObject(x.LayerId, OpenMode.ForRead)).IsLocked;
+            if (Locked(e)) return e.Layer;
+            if (e is AttributeReference && ctx.Tr.GetObject(e.OwnerId, OpenMode.ForRead) is Entity owner && Locked(owner)) return owner.Layer;
+            return null;
         }
 
         private static List<TextHit> AttributeHits(AttributeReference ar, string find, string repl, bool matchCase, bool wholeWord)
