@@ -131,3 +131,25 @@ Rà 6 việc trên, đặc biệt: cổng layer (có lách được không: `wal
 tự lạ), `layer_guess` khi đã truyền layer, nhiều tầng + `on_existing` / `dry_run` / tầng đã có một phần, cột + kiểm tra
 dựng lại, `CopyLevel` (thứ tự handle, số liệu từng tầng), lan can vòng kín / đoạn rất ngắn / đơn vị mét, `levels` trong
 `batch_execute` ở gói 2D, macro cũ 6 lệnh, token của `draw_solid`, 2 bước self-test mới (số mong đợi có đúng không).
+
+## Sửa sau kiểm tra độc lập nâng cấp (13/11/2026)
+
+Lỗi từ `docs/ban-giao/kiem-tra-doc-lap-nang-cap.md` (nhánh `full/kiem-tra-doc-lap-2` @ `8e6fede`), sửa trên
+`full/nang-cap-a` sau khi gộp nhánh tích hợp `full/nang-cap-tong-the` @ `f1e7123`. Không chạy CI ở thread này (thread
+"Test tổng thể nâng cấp" gộp rồi chạy chung).
+
+| Mã | Mức | Sửa | Test |
+| --- | --- | --- | --- |
+| KT2-10 | nhẹ | `array_rect` `level_spacing` là **mm, tự quy đổi theo đơn vị bản vẽ** như chiều cao của các lệnh 3D (bản vẽ mét: 3300 → 3,3; trước đây thành 3,3 km). `row_spacing` / `col_spacing` giữ nguyên là đơn vị bản vẽ như mọi lệnh 2D. Kết quả có `level_step` (bước theo đơn vị bản vẽ) để Claude đối chiếu. `FloorPlanLogic.ToDrawingUnits`; `Drawing/ModifyTools.cs`; mô tả tham số ở `agent/src/tools/modify.ts` | `NangCapAKt2Tests` (6 đơn vị + kiểm mã nguồn); trợ lý `nangcapa-kt2.test.ts` |
+| KT2-11 | nhẹ | Đường bao cột **vẽ trùng hai lần chỉ dựng một cột**: cùng hộp bao trên mặt bằng + cùng diện tích (như `SameRegion` của sàn) thì bỏ cái sau, ghi vào `skipped` "the same outline as …: one column built". Lọc ngay lúc đọc mặt bằng (`AddColumn`) nên chạy thử và dựng thật đếm cột như nhau. `FloorPlanLogic.SameOutline`; `Drawing/PlanTo3dTools.cs` | `NangCapAKt2Tests` |
+| KT2-21 | nhẹ | **Một tầng** mà chiều cao tường lấy từ `storey_height` (tường = cao tầng − dày sàn), `slab` tự động nhưng mặt bằng không có đường bao sàn: **từ chối trước khi dựng** và bảo Claude hỏi người dùng (sàn theo hộp bao tường / chỉ đường bao sàn / không sàn thì tường cao trọn tầng), giống luật nhiều tầng của NA-3; chạy thử thì ghi chú. Truyền thẳng `wall_height` (cách cũ của skill) thì giữ như trước. `FloorPlanLogic.StoreyWithoutSlab`; `Drawing/PlanTo3dTools.cs` | `NangCapAKt2Tests` |
+| KT2-22 | nhẹ | Layer **đoán** là lan can: gợi ý trong `layer_guess` đổi từ "dùng build_railing path_handle" thành "hỏi người dùng trước (thẻ xác nhận ghi tên layer), đồng ý rồi mới `build_railing`"; ghi chú của báo cáo và luật 3D của trợ lý nói rõ điều đó. Đây là sửa ở mức lời dặn: trợ lý không biết handle nằm trên layer nào nên chưa chặn cứng được như `build_3d_from_plan`. `FloorPlanLogic.GuessUse`; `Drawing/PlanTo3dTools.cs`; `agent/src/agent/systemPrompt.ts` | `NangCapAKt2Tests`; `nangcapa-kt2.test.ts` |
+
+- Chưa làm (gợi ý "cân nhắc" của KT2-11): đường bao cột nằm hẳn trong đường bao cột khác vẫn dựng cả hai (khối chồng nhau).
+  Muốn bỏ chính xác phải thử bằng region của AutoCAD; so hộp bao thì có thể bỏ nhầm cột thật nằm trong góc lõm của cột
+  chữ L, nên để nguyên.
+- Thử tay thêm: N15 trên bản vẽ **mét** ("3 tầng cách 3,3 m" → các tầng cách 3,3 đơn vị); vẽ một cột hai lần chồng nhau
+  rồi dựng (một khối, có dòng "the same outline"); N8 / "dựng tầng 1, tầng cao 3,3 m" trên mặt bằng không có đường bao
+  sàn: Claude hỏi chọn sàn trước khi dựng; layer `LAN CAN`: Claude hỏi trước khi dựng lan can.
+- Test: lõi 873/873, trợ lý 293/293, build net48 / net8.0-windows / net10.0-windows 0 cảnh báo (máy cloud).
+

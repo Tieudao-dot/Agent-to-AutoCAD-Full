@@ -153,6 +153,8 @@ namespace ClaudeCAD.Plugin.Drawing
             public List<Existing3d> Existing = new List<Existing3d>();
             /// <summary>Closed column outlines (nâng cấp đợt A).</summary>
             public List<(ObjectId id, string handle)> Columns = new List<(ObjectId, string)>();
+            /// <summary>Box in plan and area of every column outline kept (same order as Columns): the same outline twice is one column (KT2-11).</summary>
+            public List<(double[] min, double[] max, double area)> ColumnShapes = new List<(double[], double[], double)>();
             /// <summary>Objects on layers that were not read, per layer: for the layer guess (nâng cấp đợt A).</summary>
             public Dictionary<string, int> Unread = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
         }
@@ -304,6 +306,13 @@ namespace ClaudeCAD.Plugin.Drawing
             });
         }
 
+        /// <summary>Area of a closed outline in plan (0 when AutoCAD cannot give it).</summary>
+        private static double OutlineArea(Entity e)
+        {
+            try { return e is Region r ? r.Area : e is Curve c ? c.Area : 0; }
+            catch (Autodesk.AutoCAD.Runtime.Exception) { return 0; }
+        }
+
         private static bool IsClosedArea(Entity e) =>
             e is Region || e is Circle || (e is Ellipse el && Math.Abs(el.EndParam - el.StartParam - 2 * Math.PI) < 1e-9) ||
             (e is Curve c && (c.Closed || (!(e is Line) && c.StartPoint.DistanceTo(c.EndPoint) < 1e-9 * Math.Max(1, c.StartPoint.GetAsVector().Length))));
@@ -359,6 +368,23 @@ namespace ClaudeCAD.Plugin.Drawing
                 if (why != null && !explicitColumns) { input.Skipped.Add(new PlanSkip(h, Acad.TypeName(e), why)); return; }
                 if (input.Columns.Count >= FloorPlanLogic.MaxColumns)
                     throw ToolException.Invalid($"build_3d_from_plan: more than {FloorPlanLogic.MaxColumns} columns. Nothing was built. Pass area_min / area_max.");
+                double[] bmin = null, bmax = null;
+                double area = 0;
+                if (x.HasValue)
+                {
+                    bmin = new[] { x.Value.MinPoint.X, x.Value.MinPoint.Y };
+                    bmax = new[] { x.Value.MaxPoint.X, x.Value.MaxPoint.Y };
+                    area = OutlineArea(e);
+                    double tol = 1e-6 * Math.Max(1, Math.Sqrt((bmax[0] - bmin[0]) * (bmax[0] - bmin[0]) + (bmax[1] - bmin[1]) * (bmax[1] - bmin[1])));
+                    // the same outline drawn twice gives one column, not two solids on top of each other (KT2-11; like SameRegion of the slabs)
+                    int same = input.ColumnShapes.FindIndex(c => FloorPlanLogic.SameOutline(c.min, c.max, c.area, bmin, bmax, area, tol));
+                    if (same >= 0)
+                    {
+                        input.Skipped.Add(new PlanSkip(h, Acad.TypeName(e), $"the same outline as {input.Columns[same].handle}: one column built"));
+                        return;
+                    }
+                }
+                input.ColumnShapes.Add((bmin, bmax, area));
                 input.Columns.Add((e.ObjectId, h));
             }
             if (readColumns) Explicit("column_handles", AddColumn);
@@ -547,8 +573,9 @@ namespace ClaudeCAD.Plugin.Drawing
             {
                 report["layer_guess"] = guesses;
                 notes.Add("layer_guess lists layers whose NAMES look like plan parts but were not read. Do not build from a guess: tell the user the mapping " +
-                          "(layer → tường / cửa đi / cửa sổ / sàn / cột) and ask with request_confirmation (write every layer name on the card), end the turn, and build with " +
-                          "wall_layers / door_layers / window_layers / slab_layers / column_layers only after their yes (a build with layers the user did not name is refused until then).");
+                          "(layer → tường / cửa đi / cửa sổ / sàn / cột / lan can) and ask with request_confirmation (write every layer name on the card), end the turn, and build with " +
+                          "wall_layers / door_layers / window_layers / slab_layers / column_layers only after their yes (a build with layers the user did not name is refused until then). " +
+                          "A layer guessed as a railing is the same: ask before build_railing along its lines (KT2-22).");
             }
             if (input.ThinWidePolylines > 0)
                 notes.Add($"{input.ThinWidePolylines} polyline(s) with a width below min_thickness were read as plain wall face lines (the width taken as a print line weight, not a wall thickness).");
@@ -565,7 +592,9 @@ namespace ClaudeCAD.Plugin.Drawing
                     (f == 1 && unitName.Contains("unitless") ? " The drawing has no units set (INSUNITS = 0): it was read as mm; a plan drawn in metres needs INSUNITS = 6." : ""));
             }
             // several storeys with walls of storey − slab but no slab outline: the storeys would stand slab_thickness apart
-            string noSlab = FloorPlanLogic.StoreysWithoutSlab(levels.Count, slabMode, input.Slabs.Count, hmm.Slab, tool);
+            string noSlab = FloorPlanLogic.StoreysWithoutSlab(levels.Count, slabMode, input.Slabs.Count, hmm.Slab, tool)
+                // one storey whose walls come from storey_height is the same question (KT2-21); wall_height given stays as before
+                ?? FloorPlanLogic.StoreyWithoutSlab(p.Has("storey_height") && !p.Has("wall_height"), slabMode, input.Slabs.Count, hmm.Slab, tool);
             if (noSlab != null)
             {
                 if (!dryRun) throw ToolException.Invalid(noSlab + " Nothing was built.");
@@ -1076,7 +1105,7 @@ namespace ClaudeCAD.Plugin.Drawing
                 .Select(x => (object)new Dictionary<string, object>
                 {
                     ["layer"] = x.layer, ["kind"] = x.kind, ["objects"] = x.n,
-                    ["use"] = x.kind == "railing" ? "build_railing path_handle" : x.kind + "_layers",
+                    ["use"] = FloorPlanLogic.GuessUse(x.kind),
                 })
                 .ToList();
         }

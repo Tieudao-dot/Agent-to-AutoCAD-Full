@@ -47,7 +47,7 @@ export function modifyTools(b: ToolBridge): AnyTool[] {
         col_spacing: z.number().describe('Distance between columns (mm, along X; negative = leftwards).'),
         angle: angle('Array axis rotation').optional(),
         levels: z.number().int().min(1).max(1000).optional().describe('3D: levels stacked along Z (default 1), like ARRAYRECT levels, e.g. 3 storeys of columns.'),
-        level_spacing: z.number().optional().describe('Distance between levels (mm, along Z; negative = downwards); needed when levels > 1.'),
+        level_spacing: z.number().optional().describe('Distance between levels along Z in mm, converted to the drawing\'s units like the 3D heights (3300 = 3.3 in a metres drawing; negative = downwards); needed when levels > 1.'),
       }),
 
     cadTool(b, 'array_polar',
