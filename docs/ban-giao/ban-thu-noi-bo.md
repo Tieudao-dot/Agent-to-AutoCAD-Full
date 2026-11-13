@@ -36,7 +36,7 @@ Gỡ bản thử: Windows ▸ Settings ▸ Apps ▸ "Agent to AutoCAD Full: BẢ
 
 ## Cách tải và cài
 
-1. Mở trang lượt chạy CI: **(link ghi ở mục "Lượt CI" cuối file)**. Cần đăng nhập GitHub bằng tài khoản có quyền vào repo.
+1. Mở trang lượt chạy CI: <https://github.com/Tieudao-dot/Agent-to-AutoCAD-Full/actions/runs/43373318854>. Cần đăng nhập GitHub bằng tài khoản có quyền vào repo.
 2. Kéo xuống cuối trang, mục **Artifacts**, bấm **`AgentToAutoCADFull-ThuNoiBo-0.9.4`** để tải về file `.zip`.
 3. Giải nén zip (chuột phải ▸ Extract All), ra file `AgentToAutoCADFull-ThuNoiBo-Setup.exe`.
 4. Đóng AutoCAD, chạy file đó. Trang đầu ghi rõ "ĐÂY LÀ BẢN THỬ NỘI BỘ". Bấm Next tới hết. Windows có thể cảnh báo
@@ -45,7 +45,7 @@ Gỡ bản thử: Windows ▸ Settings ▸ Apps ▸ "Agent to AutoCAD Full: BẢ
 6. Mở AutoCAD, gõ `CLAUDECHAT`. Thanh trên cùng khung chat có chữ "BẢN THỬ NỘI BỘ"; ⚙ ▸ dòng Kích hoạt ghi "bản thử
    nội bộ — bỏ qua kích hoạt, gói Full, … (còn N ngày)".
 
-GitHub chỉ giữ artifact khoảng 90 ngày: đủ tới 10/12/2026.
+GitHub giữ artifact này tới 11/02/2027: đủ tới hết hạn bản thử.
 
 ## Thử được gì trong `docs/checklist-tong-the.md`
 
@@ -114,4 +114,9 @@ Hằng biên dịch `BAN_THU_NOI_BO` chỉ đặt ở `plugin/ClaudeCAD.Plugin/C
 
 ## Lượt CI
 
-(điền sau lượt chạy)
+- Lượt **#16**, run `43373318854`, commit `57a55fa`, workflow_dispatch `release: "false"`, nhánh `full/ban-thu-noi-bo`:
+  **xanh** (~7 phút). Trang: <https://github.com/Tieudao-dot/Agent-to-AutoCAD-Full/actions/runs/43373318854>.
+- Bước nào chạy: test trợ lý, test lõi, UI test WPF, build 3 bản plugin, kiểm dll, bundle không có link cập nhật / URL
+  kích hoạt, Setup.exe đều qua. "Refuse to publish" và Release **bỏ qua** đúng như mong đợi (không phát hành).
+- Artifact bộ cài: **`AgentToAutoCADFull-ThuNoiBo-0.9.4`** (~141 MB zip, chứa `AgentToAutoCADFull-ThuNoiBo-Setup.exe`),
+  hết hạn tải 11/02/2027. Artifact `palette-screenshots` là ảnh UI test, không cần tải.
