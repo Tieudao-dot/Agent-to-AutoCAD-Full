@@ -162,3 +162,15 @@ trên AutoCAD thật.**
 | KT2-32 | nhẹ | Bản sửa KT2-02 chỉ kiểm layer khóa của **chữ đầu tiên** trong một đối tượng. Block có nhiều thuộc tính nằm trên các layer khác nhau (thuộc tính 1 trên layer mở, thuộc tính 2 trên layer khóa, block trên layer mở): bước thay không thấy layer khóa, `UpgradeOpen` của thuộc tính 2 ném eOnLockedLayer → lại ra lỗi chung không nói chữ nào (đúng cái KT2-02 muốn bỏ), và vì lỗi ném giữa chừng nên cả lượt hoàn tác. Bước xem trước thì kiểm từng thuộc tính nên không mắc | `Drawing/Util2DTools.cs` (bước thay: `LockedLayerOf(ctx, hits[0].Ent)`) | Nâng cấp đợt C | Kiểm `hits.Select(x => LockedLayerOf(ctx, x.Ent))`, lấy layer khóa đầu tiên khác null |
 
 Không thấy bản sửa nào làm hỏng luật cũ (chặn gói, thẻ xác nhận, macro, bước tự kiểm tra) khi lần theo code.
+
+## Lượt 3: soát KT2-32 (13/11/2026)
+
+Gộp `origin/full/nang-cap-tong-the` @ `f7f32ad` (code `6b6c911`, bản sửa đợt C `5c244af`). Test lõi **909/909**, trợ lý
+**298/298** xanh; không chạy CI (nhánh tích hợp vừa xanh, run 43478782014).
+
+| Mã | Kết luận | Ghi chú soát |
+| --- | --- | --- |
+| KT2-32 | sửa đúng | Bước thay kiểm layer khóa của **mọi** chữ trong đối tượng (`Util2DLogic.LockedHits` trên toàn bộ `hits`), không chỉ chữ đầu; thuộc tính ghi rõ "handle (attribute TAG of block …)", mỗi chữ một lần; từ chối trước khi đổi gì, nên không còn lỗi chung giữa chừng. Block trên layer khóa thì mọi thuộc tính đều báo layer của block (đúng, vì AutoCAD cũng chặn). Không thấy lỗi mới ở phần tìm & thay / block |
+
+**Không còn lỗi mở từ kiểm tra độc lập nâng cấp.** Điểm còn chờ thử trên AutoCAD thật: KT2-17 (checklist V13) và 3 mục
+"Cần thử trên AutoCAD thật" của lượt 1.
