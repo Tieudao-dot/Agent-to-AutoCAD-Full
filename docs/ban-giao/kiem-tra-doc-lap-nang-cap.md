@@ -104,3 +104,61 @@ mét ở cầu thang / mái / lan can / dầm, cao độ tầng / sàn mái (TT2
 ## CI
 
 Run `43471931772` (workflow_dispatch, `release: "false"`, ở `f1e7123` = nhánh lúc tách, chưa có file này): **xanh** — trợ lý, test lõi, UI test WPF, build 3 bản, gói + Setup.exe; bước phát hành bỏ qua đúng (không cài secret).
+
+## Lượt 2: soát lại các lỗi đã sửa (13/11/2026)
+
+Gộp `origin/full/nang-cap-tong-the` @ `4487514` (code ở `0153a1f`, bản sửa của 6 thread) vào `full/kiem-tra-doc-lap-2`.
+Soát bằng đọc diff `f1e7123..4487514` (23 file code / skill) theo từng mã, đối chiếu bảng lỗi → thread → commit trong
+`test-tong-the-nang-cap.md`. Theo 2 hướng luồng chính đã chọn: bản vẽ mét → các lệnh tự quy đổi; mái chữ L / T → Claude
+báo trước chỗ chồng, mái liền để đợt F. Không chạy CI (nhánh tích hợp vừa xanh, run 43475785808).
+
+| Việc | Kết quả |
+| --- | --- |
+| `dotnet test plugin/ClaudeCAD.Core.Tests` | **908/908** xanh |
+| `cd agent && npm ci && npm test` | **298/298** xanh |
+| Build net48 / net8.0-windows / net10.0-windows (xóa `obj` / `bin` giữa các lần) | cả 3 xanh, 0 cảnh báo |
+
+**Tổng: 29 sửa đúng, 2 chấp nhận (KT2-11 phần "cân nhắc", KT2-22), 0 chưa đủ; 1 lỗi mới nhẹ (KT2-32), 1 điểm cần thử
+trên AutoCAD thật.**
+
+| Mã | Kết luận | Ghi chú soát |
+| --- | --- | --- |
+| KT2-01 | sửa đúng | `MacroLogic.InPlaceTools` + `NewHandles` (trừ lệnh sửa tại chỗ và handle chính lệnh nhận) dùng cho cả `ExternalSolidEdits`, `ExternalHandles`, `CreatedHandles`, `Learn`; macro "kéo giãn trọn khối S rồi cắt S" giờ bị chặn. Đã rà các lệnh mới trả `handles`: tìm & thay, PRESSPULL không trả handle có sẵn; cộng / trừ / cắt khối trả handle khối gốc (là handle đã nhận → bị trừ đúng) |
+| KT2-02 | sửa đúng (trừ KT2-32) | Xem trước để chữ trên layer khóa ra `locked`, không vào thẻ; bước thay đọc hết trước, từ chối có handle + layer trước khi đổi gì |
+| KT2-03 | sửa đúng | Layer tắt / đóng băng không bị khung chọn, đếm `hidden_layer_skipped` |
+| KT2-04 | sửa đúng | Khoảng cách kích thước, cỡ chữ bảng, `min_area`, `area_m2` / `total_m2`, bảng diện tích đều quy đổi theo INSUNITS |
+| KT2-05 | sửa đúng | `WellCutsInto`: đỉnh ô nằm hẳn trong phần thang, hoặc cạnh ô cắt cạnh phần thang (thu vào `tol`) → không vừa; ví dụ chỗ lõm 200 × 200 của lượt 1 bị bắt |
+| KT2-06 | sửa đúng | `StlShift`: tọa độ > 10⁶ mm hoặc âm → dời góc nhỏ nhất về 0, đi đường bản sao; báo `moved_by_mm` |
+| KT2-07 | sửa đúng | Skill `:133-135` (đỉnh dầm = `top_z` − `slab_thickness`), checklist V2 "đỉnh 3150, đáy 2750" |
+| KT2-08 | sửa đúng (theo hướng đã chọn) | Lỗi mái 4 dốc / 2 dốc và mô tả `build_roof` dặn Claude báo trước chỗ chồng và bảng khối lượng tính hai lần |
+| KT2-09 | sửa đúng | (a) gợi ý "type flat"; (b) `MinLanding` 600 chung cho plugin và schema. Hệ quả nhỏ: vế rộng 500–599 mà Claude truyền `landing` = vế thì bị từ chối (trước đây nhận); không truyền `landing` thì vẫn mặc định = vế, nên chấp nhận được |
+| KT2-10 | sửa đúng | `level_spacing` quy đổi theo INSUNITS; `row_spacing` / `col_spacing` giữ đơn vị bản vẽ như mọi lệnh 2D, mô tả ghi rõ |
+| KT2-11 | sửa đúng + **chấp nhận** phần "cân nhắc" | Hai đường bao trùng → một cột (cùng hộp bao + cùng diện tích). Đường bao nằm trong đường bao khác chưa lọc: hiếm (đường hoàn thiện quanh cột kết cấu), dễ nhầm cột thật nhỏ đặt sát; để nguyên là hợp lý |
+| KT2-12 | sửa đúng | Đường mở có điểm cuối trùng điểm đầu (dung sai tương đối) thành vòng khép, có ô góc |
+| KT2-13 | sửa đúng | PRESSPULL `distance` chia hệ số mm / đơn vị |
+| KT2-14 | sửa đúng | Gói không 2D: enum `properties` chỉ còn thuộc tính chung, mô tả bỏ câu text / dimension |
+| KT2-15 | sửa đúng | Plugin không tính đối tượng tạo trong lượt (`ctx.CreatedThisTurn`) vào giới hạn 20 của khung chọn |
+| KT2-16 | sửa đúng | Kiểm file đang mở (khóa ghi) trước khi in, so thời điểm sửa sau khi in; `exists` chỉ true khi file mới được ghi, kèm `warning` |
+| KT2-17 | sửa đúng, **cần thử thật** | Mỗi trang giữ khổ giấy của layout khi máy in PDF có khổ đó. Cần thử: `SetPlotConfigurationName(ps, device, null)` (khổ trống) có được AutoCAD nhận không (chỉ bắt lỗi AutoCAD, lỗi tham số trống sẽ làm hỏng cả lệnh in). Hệ quả: in **Model** không chỉ định khổ giờ theo khổ đang đặt cho Model (bản vẽ từ mẫu có thể là Letter / A4) thay vì A3 như trước; mô tả lệnh đã ghi |
+| KT2-18 | sửa đúng | Không có cặp nào → từ chối "cần hai khối khác nhau" |
+| KT2-19 | sửa đúng | Tổng ≤ 5000 đoạn mỗi lần gọi, kiểm trước khi dựng |
+| KT2-20 | sửa đúng | Nhãn tiếng Việt cho mọi lệnh có nhãn gói; test so `Plans.cs` ↔ `ToolLabels.cs` |
+| KT2-21 | sửa đúng | `StoreyWithoutSlab`: 1 tầng, có `storey_height`, không `wall_height`, sàn "auto" mà không có đường bao sàn → hỏi trước. Bước tự kiểm tra A (2 tầng có sàn) không bị ảnh hưởng |
+| KT2-22 | **chấp nhận** | Chỉ là lời dặn trong báo cáo / system prompt ("hỏi trước"), không có cổng chặn ở trợ lý như layer tường / cửa. Chấp nhận: lan can chỉ thêm khối mới, U bỏ được; checklist V12 kiểm tay |
+| KT2-23 | sửa đúng | Đối tượng thuộc > 1 nhóm → từ chối, nêu tên nhóm, cần `name` |
+| KT2-24 | sửa đúng | Kéo dài theo hướng 3D; polyline (z = 0 hai đầu) không đổi |
+| KT2-25 | sửa đúng | `.max(1000)` |
+| KT2-26 | sửa đúng | Tiêu đề luật 3D đủ lệnh; câu layer + skill chỉ bảo `create_layer` cho khối tự dựng |
+| KT2-27 | sửa đúng | Thêm "wipeouts and revision clouds" |
+| KT2-28 | sửa đúng | "spacing … default = offset" |
+| KT2-29 | sửa đúng | ~1,1k ở `solids.ts` và tổng quan |
+| KT2-30 | sửa đúng | `tong-quan-du-an.md` / `ke-hoach-nang-cap-lenh.md` trên `claude/inspiring-cray-58xsmt` @ `69bf71c` khớp lúc `f1e7123`. Sau khi gộp KT2 cần đẩy tiếp lên `4487514`, lõi 908 / trợ lý 298, CI 43475785808 (việc thường lệ của luồng chính, không tính lỗi) |
+| KT2-31 | sửa đúng | Đầu checklist có bảng 2 khối + thời gian; ghi "một số mục ★ chọn lọc", phần 16 liệt kê phần còn lại; thêm 10b (V9–V12) cho các sửa KT2 |
+
+### Lỗi mới
+
+| Mã | Mức | Lỗi + cách tái hiện | File / dòng (`4487514`) | Phụ trách | Đề xuất sửa |
+| --- | --- | --- | --- | --- | --- |
+| KT2-32 | nhẹ | Bản sửa KT2-02 chỉ kiểm layer khóa của **chữ đầu tiên** trong một đối tượng. Block có nhiều thuộc tính nằm trên các layer khác nhau (thuộc tính 1 trên layer mở, thuộc tính 2 trên layer khóa, block trên layer mở): bước thay không thấy layer khóa, `UpgradeOpen` của thuộc tính 2 ném eOnLockedLayer → lại ra lỗi chung không nói chữ nào (đúng cái KT2-02 muốn bỏ), và vì lỗi ném giữa chừng nên cả lượt hoàn tác. Bước xem trước thì kiểm từng thuộc tính nên không mắc | `Drawing/Util2DTools.cs` (bước thay: `LockedLayerOf(ctx, hits[0].Ent)`) | Nâng cấp đợt C | Kiểm `hits.Select(x => LockedLayerOf(ctx, x.Ent))`, lấy layer khóa đầu tiên khác null |
+
+Không thấy bản sửa nào làm hỏng luật cũ (chặn gói, thẻ xác nhận, macro, bước tự kiểm tra) khi lần theo code.
