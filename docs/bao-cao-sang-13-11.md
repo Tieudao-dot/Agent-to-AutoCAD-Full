@@ -13,6 +13,11 @@
 - Mọi thứ nằm ở nhánh cuối `full/test-tong-the` (commit `860101b`). Test lõi 369/369, trợ lý 215/215, build đủ 3 bản
   AutoCAD 2022–2027. CI Windows xanh ở lượt cuối.
 - **Chưa thử trên AutoCAD thật**, và **chưa có bộ cài để cậu thử**: cần cậu dựng máy chủ kích hoạt riêng trước (mục 2).
+- **Kiểm lại lúc 7h sáng 13/11:**
+  - không nhánh nào đổi sau 1h sáng;
+  - không có lượt CI hay phát hành nào chạy thêm;
+  - `main` vẫn là v0.9.3 của bản gốc;
+  - mọi thread đang nghỉ.
 
 ## 2. Việc cần cậu làm (theo thứ tự)
 
@@ -85,3 +90,8 @@ Chi tiết:
 - **Tớ không thấy tổng số token chính xác.**
 - **Thread:** ngoài luồng chính còn 9 thread phụ đang mở (danh bạ trong `CLAUDE.md`), tất cả đang nghỉ và không tốn gì
   khi nghỉ. Muốn đóng bớt thì cậu bảo.
+- **Lỗi nhỏ của tớ:** lúc sửa báo cáo này, tớ lỡ đăng nó thành một trang xem riêng tư:
+  <https://claude.ai/artifact/WPPsfsNDXPsMnJ58EzGyKn>.
+  - Chỉ tài khoản của cậu mở được.
+  - Trang đó dừng ở bản nháp lúc 1h sáng, chưa có phần kiểm lại lúc 7h; file này mới là bản đầy đủ.
+  - Muốn xóa trang thì cậu bảo tớ.
