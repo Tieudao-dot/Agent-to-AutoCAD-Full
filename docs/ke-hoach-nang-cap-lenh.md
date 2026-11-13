@@ -75,8 +75,8 @@ Kiểm tra độc lập $22; test tổng thể $65 (gồm bộ cài, 3 vòng g�
 | Đợt | Thread viết | Thread con Test & sửa | Nhánh | Trạng thái |
 | --- | --- | --- | --- | --- |
 | A | `session_01D56HmEZnPtpeS5RWXPVPYD` (14h28 → 16h17) | `session_01D56HmExJjYYvbztLiiRbdx` (4 lỗi sửa) | `full/nang-cap-a` @ `fc68469` → `full/nang-cap-a-test` @ `33acb5f`, CI 43390204331 + 43398072331 xanh | **Xong** ~1 giờ 50 phút, $35,7 (viết $27,6, vượt mềm $2,6 do lượt tự rà chạy ở mức suy nghĩ cao nhất ~$19; test $8,1) |
-| B | `session_01D56HmERJAiGtKizUeoMK7s` (mở 16h18; tạm dừng 16h41–17h05 vì giới hạn dùng 5 giờ; đứng chờ CI 17h18–18h59; viết xong @ `81eaf7c`, CI 43408010489 xanh) | `session_01D56HmJLL8fUhKMHs8VaPJm` (mở 19h00) | `full/nang-cap-b` → `full/nang-cap-b-test` | Đang test & sửa |
-| C | | | | |
+| B | `session_01D56HmERJAiGtKizUeoMK7s` (16h18 → 19h31; nghỉ ~1 giờ 40 phút vì giới hạn dùng 5 giờ + đứng chờ CI) | `session_01D56HmJLL8fUhKMHs8VaPJm` (2 lỗi sửa) | `full/nang-cap-b` @ `81eaf7c` → `full/nang-cap-b-test` @ `265b66e`, CI 43408010489 + 43423428390 xanh | **Xong**, ~$21 (đợt $15,8 + test $5,2); token 2D / Full +2,2k, 3D +0,5k |
+| C | `session_01D56HmJra3trN7XwA1QApZ6` (mở 19h34; viết xong @ `1305053`, CI 43429577551 xanh; đứng chờ CI 19h58–20h24) | `session_01D56HmJVjAwoMYD2HCjBwLe` (mở 20h29) | `full/nang-cap-c` → `full/nang-cap-c-test` | Đang test & sửa |
 | D | | | | |
 | E | | | | Đã chốt kiểu + số mặc định (điểm 6) |
 | Kiểm tra độc lập, test tổng thể | | | | Cuối chuỗi |
