@@ -77,6 +77,8 @@ Kèm theo:
   thời gian chờ 120 s. Sửa test cũ: 25 lệnh 3D Claude thấy, 31 nhãn (6 bí danh).
 - Build net48 / net8.0-windows / net10.0-windows (Linux, `-p:EnableWindowsTargeting=true`): xanh, 0 cảnh báo.
 - CI: run 43390204331 xanh ở `37209c4` (`release: "false"`).
+- Máy cloud chưa có .NET: `apt-get update && apt-get install -y dotnet-sdk-10.0 dotnet-runtime-8.0` (script cài của
+  dot.net bị proxy chặn; test lõi chạy trên runtime 8, build cần SDK 10).
 
 ## Token mô tả lệnh + system prompt (cùng cách đo, ~3,5 ký tự / token)
 
