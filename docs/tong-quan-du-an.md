@@ -15,6 +15,10 @@ quy tắc làm việc và danh bạ thread: [`../CLAUDE.md`](../CLAUDE.md).
   - **Chưa thử trên AutoCAD thật. Chưa phát hành.** `main` vẫn là v0.9.3 của bản gốc.
 - **Chưa dùng được bộ cài:** `activation/activation.json` và khóa công khai trong `License.cs` vẫn là của dự án gốc.
   Bộ cài CI build ra chỉ để kiểm build, không cài thử, không phát cho ai.
+- **Bộ cài thử nội bộ (13/11):** chỉ chủ dự án dùng, không gửi ai. Bỏ qua kích hoạt, gói Full, hết hạn 10/12/2026, nhãn
+  "BẢN THỬ NỘI BỘ", không tự cập nhật. Nhánh `full/ban-thu-noi-bo` @ `8387b06` (**không bao giờ gộp**), CI run 43373318854,
+  artifact `AgentToAutoCADFull-ThuNoiBo-0.9.4` (tải được tới 11/02/2027). Thử được 2D + 3D; phần gói / kích hoạt chờ bộ cài
+  thật. Bàn giao: `docs/ban-giao/ban-thu-noi-bo.md` trên nhánh đó.
 - **Checklist thử tay:** [`checklist-tong-the.md`](checklist-tong-the.md) (rút gọn ~97 phút, đủ ~157 phút; chi tiết ở
   [`checklist-thu-that.md`](checklist-thu-that.md) phần I, J, K, L, M, X). Bản dùng thử AutoCAD hết khoảng 10/12/2026.
 - **Báo cáo sáng 13/11:** [`bao-cao-sang-13-11.md`](bao-cao-sang-13-11.md). Chủ dự án đã đồng ý cả 9 quyết định
