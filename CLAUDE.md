@@ -175,6 +175,8 @@ dự án gốc), `bo-cai/README.md`.
 | ↳ Test & sửa đợt C (con của Nâng cấp đợt C) | `session_01D56HmJVjAwoMYD2HCjBwLe` | Nhánh `full/nang-cap-c-test` (tách từ `full/nang-cap-c` @ `1305053`): rà soát, thêm test tự động, sửa lỗi đợt C; 1 lượt CI. Báo về thread đợt C, tin cập nhật ngắn gửi luồng chính. Bàn giao: `docs/ban-giao/nang-cap-c-test.md` |
 | Nâng cấp đợt D | `session_01D56HmEVecDKB1j1iGf8vNc` | Nhánh `full/nang-cap-d` (tách từ `full/nang-cap-c-test` @ `f4f27fe`): dầm, tường cong, PRESSPULL, xuất STL, bảng khối lượng theo layer, va chạm ra bảng (gói 3D chỉ trả số liệu, không vẽ table). Viết xong tự mở thread con Test & sửa (`full/nang-cap-d-test`). Bàn giao: `docs/ban-giao/nang-cap-d.md` |
 | ↳ Test & sửa đợt D (con của Nâng cấp đợt D) | `session_01D56HmFm4aVWGEgb2v8hWTB` | Nhánh `full/nang-cap-d-test` (tách từ `full/nang-cap-d` @ `809ad78`): rà soát, thêm test tự động, sửa lỗi đợt D; 1 lượt CI. Báo về thread đợt D, tin cập nhật ngắn gửi luồng chính. Bàn giao: `docs/ban-giao/nang-cap-d-test.md` |
+| Nâng cấp đợt E | `session_01D56HmJ3WbDQRkUMc3aJjvF` | Nhánh `full/nang-cap-e` (tách từ `full/nang-cap-d-test` @ `db34801`): cầu thang 1 vế / chữ L / chữ U, mái bằng / 2 dốc / 4 dốc, số mặc định theo điểm 6 kế hoạch. Viết xong tự mở thread con Test & sửa (`full/nang-cap-e-test`). Bàn giao: `docs/ban-giao/nang-cap-e.md` |
+| ↳ Test & sửa đợt E (con của Nâng cấp đợt E) | `session_01D56HmEVcsHK1xiof9qua9w` | Nhánh `full/nang-cap-e-test` (tách từ `full/nang-cap-e` @ `3e8a67c`): rà soát, thêm test tự động, sửa lỗi đợt E; 1 lượt CI. Báo về thread đợt E, tin cập nhật ngắn gửi luồng chính. Bàn giao: `docs/ban-giao/nang-cap-e-test.md` |
 
 Link mở thread: `https://claude.ai/code/<session id>`.
 
