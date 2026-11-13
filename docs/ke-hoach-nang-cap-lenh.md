@@ -29,12 +29,22 @@ file).** Mỗi đợt chỉ bắt đầu khi chủ dự án duyệt nội dung +
 | E (lớn) | Cầu thang (1 vế / chữ L / chữ U); mái bằng / 2 mái / 4 mái. Cần chốt kiểu và số mặc định | 3D / Full |
 | F (sau phát hành) | Mọi lệnh hiểu UCS (hiện theo WCS); vật liệu / render; block từ thư viện; bộ layout khung tên; layer state; lưu góc nhìn; bộ style chuẩn Việt Nam | — |
 
-## Chi phí ước (QnA đoán, chưa đo)
+## Chi phí ước
 
-- Theo kế hoạch 3D cũ: khoảng $5–15 mỗi đợt.
-- A–D: khoảng $20–60, chưa kể test & sửa.
-- Cả chuỗi A–E, kèm kiểm tra độc lập và test tổng thể: khoảng $50–120.
-- Thử tay trên AutoCAD: thêm 20–40 phút mỗi đợt.
+**Số thật của chuỗi 3D** (hệ thống ghi cho từng thread, quy ra giá API, xem lúc 13/11 14h; có thể chưa gồm hết tác vụ con):
+
+| Đợt | Thread viết (gồm sửa sau kiểm tra độc lập) | Test & sửa | Cộng |
+| --- | --- | --- | --- |
+| 3D đợt 1 | $12,3 | $4,7 | ~$17 |
+| 3D đợt 2 | $13,7 | $5,0 | ~$19 |
+| 3D đợt 3 | $20,8 | $6,2 | ~$27 |
+
+Kiểm tra độc lập $22; test tổng thể $65 (gồm bộ cài, 3 vòng gộp, nhiều lượt CI); luồng chính $66 tới 13/11.
+
+Ước lại cho nâng cấp:
+- mỗi đợt (viết + test & sửa): khoảng $15–30;
+- cả chuỗi A–E, kèm kiểm tra độc lập và test tổng thể cuối chuỗi: khoảng $150–230 (QnA ước cũ $50–120 là thấp);
+- thử tay trên AutoCAD: thêm 20–40 phút mỗi đợt.
 
 ## Chủ dự án đã chốt (13/11/2026)
 
@@ -55,4 +65,4 @@ file).** Mỗi đợt chỉ bắt đầu khi chủ dự án duyệt nội dung +
 
 | Ngày | Đợt | Chủ dự án duyệt | Chi phí ước | Trạng thái |
 | --- | --- | --- | --- | --- |
-| 13/11 | A | Đồng ý, **chờ chủ dự án thử phần 3D trên AutoCAD thật trước** (bộ cài thử nội bộ, `checklist-tong-the.md` phần 0, 2, 3, 4, 5, ~54 phút; quan trọng nhất phần 0 và 5). Lỗi tìm được sửa trước, rồi mới mở thread đợt A | $10–30 (đoán theo các đợt 3D trước, chưa đo), 1 thread viết + 1 thread con test & sửa, 2 lượt CI | Chờ kết quả thử 3D |
+| 13/11 | A | Đồng ý, **chờ chủ dự án thử phần 3D trên AutoCAD thật trước** (bộ cài thử nội bộ, `checklist-tong-the.md` phần 0, 2, 3, 4, 5, ~54 phút; quan trọng nhất phần 0 và 5). Lỗi tìm được sửa trước, rồi mới mở thread đợt A | $15–30 (theo số thật các đợt 3D: $17–27), 1 thread viết + 1 thread con test & sửa, 2 lượt CI | Chờ kết quả thử 3D |
