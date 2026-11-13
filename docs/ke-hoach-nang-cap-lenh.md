@@ -79,7 +79,7 @@ Kiểm tra độc lập $22; test tổng thể $65 (gồm bộ cài, 3 vòng g�
 | C | `session_01D56HmJra3trN7XwA1QApZ6` (19h34 → 21h40; đứng chờ CI 19h58–20h24) | `session_01D56HmJVjAwoMYD2HCjBwLe` (6 lỗi sửa; đứng chờ CI 20h38–21h39) | `full/nang-cap-c` @ `1305053` → `full/nang-cap-c-test` @ `f4f27fe`, CI 43429577551 + 43435421710 xanh | **Xong**, ~$12 (đợt $8,6 + test ~$3,3, số hệ thống ghi lúc 21h38); token 2D / Full +2,1k, 3D không đổi |
 | D | `session_01D56HmEVecDKB1j1iGf8vNc` (21h41 → 22h50, không bị đứng) | `session_01D56HmFm4aVWGEgb2v8hWTB` (6 lỗi sửa) | `full/nang-cap-d` @ `809ad78` → `full/nang-cap-d-test` @ `db34801`, CI 43451219212 + 43454839792 xanh | **Xong** ~1 giờ 10 phút, ~$15 (đợt $10,8 + test $4,5); token 3D +1,9k, Full +2,1k |
 | E | `session_01D56HmJ3WbDQRkUMc3aJjvF` (22h51 → 23h50, không bị đứng) | `session_01D56HmEVcsHK1xiof9qua9w` (3 lỗi sửa) | `full/nang-cap-e` @ `3e8a67c` → `full/nang-cap-e-test` @ `cdaa29b`, CI 43461186495 + 43465289107 xanh | **Xong** ~1 giờ, ~$12,1 (đợt $7,3 + test $4,8); token 3D / Full +1,4k. Tự chọn 3 số chờ chủ dự án xem: bản thang 150, khe 2 vế chữ U 100, bản mái dốc 150 (mm) |
-| Test tổng thể nâng cấp | `session_01D56HmGm85zfmxQqdNwrF2N` (mở 23h51) | — | `full/nang-cap-tong-the` (từ `cdaa29b`) | Đang chạy; giữ nhánh tích hợp |
-| Kiểm tra độc lập nâng cấp | (mở sau test tổng thể) | — | | Chờ |
+| Test tổng thể nâng cấp | `session_01D56HmGm85zfmxQqdNwrF2N` (23h51 → 0h13) | — | `full/nang-cap-tong-the` @ `f1e7123`, CI 43468951145 xanh | **Xong**, 3 lỗi chéo sửa; token 2D 34,4k → 38,7k, 3D 35,7k → 39,7k, Full 49,7k → 57,5k; giữ nhánh tích hợp |
+| Kiểm tra độc lập nâng cấp | `session_01D56HmHmd7iAXreWAFzYLX4` (mở 0h14) | — | `full/kiem-tra-doc-lap-2` (từ `f1e7123`) | Đang chạy |
 
 Lịch sử duyệt: 13/11 chủ dự án duyệt đợt A, ban đầu chờ thử 3D thật; cùng ngày đổi sang chạy liền A → E, bắt đầu ngay.
