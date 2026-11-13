@@ -6,6 +6,11 @@
 
 *13/11/2026 · thread "Bộ cài thử nội bộ" · xuất phát từ `full/test-tong-the` @ `19944df`. Chủ dự án chốt 13/11/2026.*
 
+> **Bản mới nhất (13/11/2026 tối): có thêm chuỗi nâng cấp A → E.** Đã gộp `full/nang-cap-tong-the` @ `f7f32ad` (gói dịch
+> vụ + 3D đợt 1–3 + nâng cấp A → E + mọi bản sửa của kiểm tra độc lập) vào nhánh này. Tải artifact
+> **`AgentToAutoCADFull-ThuNoiBo-nang-cap-0.9.4`** của lượt CI mới (mục "Lượt CI" cuối file). Bộ cài lượt cũ (#16,
+> không có chữ "nang-cap") **chưa có** các lệnh nâng cấp: đừng dùng nữa.
+
 ## Bản này là gì
 
 Một bộ cài để cậu thử ngay 2D + 3D trên AutoCAD trong lúc bản Full **chưa có máy chủ kích hoạt riêng**.
@@ -36,8 +41,8 @@ Gỡ bản thử: Windows ▸ Settings ▸ Apps ▸ "Agent to AutoCAD Full: BẢ
 
 ## Cách tải và cài
 
-1. Mở trang lượt chạy CI: <https://github.com/Tieudao-dot/Agent-to-AutoCAD-Full/actions/runs/43373318854>. Cần đăng nhập GitHub bằng tài khoản có quyền vào repo.
-2. Kéo xuống cuối trang, mục **Artifacts**, bấm **`AgentToAutoCADFull-ThuNoiBo-0.9.4`** để tải về file `.zip`.
+1. Mở trang lượt chạy CI mới: <https://github.com/Tieudao-dot/Agent-to-AutoCAD-Full/actions/runs/43481896536>. Cần đăng nhập GitHub bằng tài khoản có quyền vào repo.
+2. Kéo xuống cuối trang, mục **Artifacts**, bấm **`AgentToAutoCADFull-ThuNoiBo-nang-cap-0.9.4`** để tải về file `.zip`.
 3. Giải nén zip (chuột phải ▸ Extract All), ra file `AgentToAutoCADFull-ThuNoiBo-Setup.exe`.
 4. Đóng AutoCAD, chạy file đó. Trang đầu ghi rõ "ĐÂY LÀ BẢN THỬ NỘI BỘ". Bấm Next tới hết. Windows có thể cảnh báo
    "Windows protected your PC" (file chưa ký): bấm **More info ▸ Run anyway**.
@@ -45,7 +50,7 @@ Gỡ bản thử: Windows ▸ Settings ▸ Apps ▸ "Agent to AutoCAD Full: BẢ
 6. Mở AutoCAD, gõ `CLAUDECHAT`. Thanh trên cùng khung chat có chữ "BẢN THỬ NỘI BỘ"; ⚙ ▸ dòng Kích hoạt ghi "bản thử
    nội bộ — bỏ qua kích hoạt, gói Full, … (còn N ngày)".
 
-GitHub giữ artifact này tới 11/02/2027: đủ tới hết hạn bản thử.
+GitHub giữ artifact khoảng 90 ngày (tới khoảng 11/02/2027): đủ tới hết hạn bản thử.
 
 ## Thử được gì trong `docs/checklist-tong-the.md`
 
@@ -56,12 +61,14 @@ GitHub giữ artifact này tới 11/02/2027: đủ tới hết hạn bản thử
 - **Phần 6** một lượt dùng lệnh cả 3 đợt (X1–X5);
 - **Phần 7** J1–J9, K1–K16, L1–L8, L10, L12–L16 (**trừ** J8, K15, L13: cần máy gói 2D);
 - **Phần 8** M3–M9;
+- **Khối chuỗi nâng cấp A → E** (phần 9–16): S3, **V1–V13**, các mục ★ / ○ của N–R (`checklist-thu-that.md`),
+  **trừ** các mục cần máy gói `2D` hoặc `3D`: N3, N16, O14, O15, P12, Q11, Q12, R12; ở V3, V6 chỉ thử nhánh gói `Full`;
 - toàn bộ phần 2D có sẵn từ bản gốc.
 
 **Không thử được** (cần máy chủ kích hoạt và Sheet "Thiết bị"):
 
 - **Phần 1** gói dịch vụ: I1–I6, I5b–I5d, T1–T5, M1–M2, M10–M12;
-- J8, K15, L13 (máy gói 2D);
+- J8, K15, L13 (máy gói 2D); N3, N16, O14, O15, P12, Q11, Q12, R12 (máy gói 2D / 3D);
 - mọi bước có trang Kích hoạt, thẻ 🔒 Kích hoạt, "Kiểm tra lại", đổi gói trong Sheet.
 
 Riêng T5 / I6 (cài đè lên bản gốc): hộp thoại hỏi thay bản gốc vẫn hiện như bản thật, nhưng phần kích hoạt sau đó
@@ -104,6 +111,9 @@ Hằng biên dịch `BAN_THU_NOI_BO` chỉ đặt ở `plugin/ClaudeCAD.Plugin/C
 
 ## Test
 
+Lượt đầu (trước khi gộp nâng cấp):
+
+
 - Lõi `dotnet test plugin/ClaudeCAD.Core.Tests`: **379/379** (thêm `InternalBuildTests`: 10 test hết hạn, nhãn, vặn
   đồng hồ, số ngày còn lại, kiểm mã nguồn plugin / bộ cài / CI).
 - Trợ lý `cd agent && npm ci && npm test`: **215/215**.
@@ -111,6 +121,11 @@ Hằng biên dịch `BAN_THU_NOI_BO` chỉ đặt ở `plugin/ClaudeCAD.Plugin/C
 - **Không loại trừ test nào.** Test lõi biên dịch phần Core không có `BAN_THU_NOI_BO` (như nhánh tích hợp), nên các
   test kích hoạt / gói vẫn chạy và vẫn đúng; các kiểm tra mã nguồn của `EditionTests` vẫn khớp vì bộ cài giữ nhánh
   `#else` với tên thật.
+
+Sau khi gộp nâng cấp A → E (commit `29fa991`): lõi **919/919**, trợ lý **298/298**, build plugin 3 target xanh.
+Xung đột gộp duy nhất: danh sách file Core trong `ClaudeCAD.Core.Tests.csproj` (giữ cả `InternalBuild.cs` lẫn
+`Edit2D.cs`, `Util2D.cs`, `Solids3.cs`). Mã gộp vào không thêm chỗ gọi máy chủ kích hoạt hay cập nhật nào. Không loại trừ
+test nào.
 
 ## Lượt CI
 
