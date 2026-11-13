@@ -5,6 +5,15 @@ const CONFIRM =
   ' DESTRUCTIVE when it affects objects selected by a filter or more than 20 objects: first tell the user how many and what, ask for confirmation, ' +
   'and only call this after they agree.';
 
+/**
+ * match_properties (nâng cấp đợt B): the properties every plan copies, and the text / dimension ones that need 2D. Without
+ * 2D the schema offers only the general ones and the description drops MATCH_PROPS_TEXT_DESC (KT2-14, tools/index.ts).
+ */
+export const MATCH_PROPS_GENERAL = ['layer', 'color', 'linetype', 'lineweight', 'linetype_scale', 'transparency', 'thickness'] as const;
+export const MATCH_PROPS_TEXT = ['text', 'dimension'] as const;
+export const MATCH_PROPS_TEXT_DESC =
+  ', text (style, height: text to text) and dimension (style: dimension to dimension). Default: all (text / dimension only on plans with 2D).';
+
 /** Spec §7.5 — modification. */
 export function modifyTools(b: ToolBridge): AnyTool[] {
   return [
@@ -136,7 +145,7 @@ export function modifyTools(b: ToolBridge): AnyTool[] {
       {
         handles: handles.optional(),
         corner1: point.optional(), corner2: point.optional(),
-        polygon: points(3, 'crossing polygon').optional(),
+        polygon: points(3, 'crossing polygon').max(1000).optional(), // KT2-25: the plugin takes at most 1000 points
         from: point.optional(), to: point.optional(), displacement: point.optional(),
       }),
 
@@ -179,12 +188,11 @@ export function modifyTools(b: ToolBridge): AnyTool[] {
       }),
 
     cadTool(b, 'match_properties',
-      'MATCHPROP: copy properties from source to handles: layer, color, linetype, lineweight, linetype_scale, transparency, thickness, ' +
-        'text (style, height: text to text) and dimension (style: dimension to dimension). Default: all (text / dimension only on plans with 2D).' + CONFIRM,
+      'MATCHPROP: copy properties from source to handles: ' + MATCH_PROPS_GENERAL.join(', ') + MATCH_PROPS_TEXT_DESC + CONFIRM,
       {
         source: handle,
         handles,
-        properties: z.array(z.enum(['layer', 'color', 'linetype', 'lineweight', 'linetype_scale', 'transparency', 'thickness', 'text', 'dimension'])).optional(),
+        properties: z.array(z.enum([...MATCH_PROPS_GENERAL, ...MATCH_PROPS_TEXT])).optional(),
       }),
   ];
 }

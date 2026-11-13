@@ -96,6 +96,25 @@ System prompt không đổi. Phần thêm là mô tả + schema của 6 lệnh m
 - `divide_entity` với block có thuộc tính: thuộc tính nhận giá trị mặc định.
 - `match_properties` chưa chép thuộc tính hatch, kiểu bảng, kiểu multileader.
 
+## Sửa sau kiểm tra độc lập nâng cấp
+
+*13/11/2026 · lỗi từ [`kiem-tra-doc-lap-nang-cap.md`](kiem-tra-doc-lap-nang-cap.md) (nhánh `full/kiem-tra-doc-lap-2` @
+`8e6fede`) thuộc đợt B. Đã gộp nhánh tích hợp `full/nang-cap-tong-the` @ `f1e7123` vào `full/nang-cap-b` trước khi sửa.
+Không chạy CI ở bước này (thread "Test tổng thể nâng cấp" gộp bản sửa của mọi đợt rồi chạy CI chung).*
+
+| Mã | Mức | Lỗi | Sửa | Test |
+| --- | --- | --- | --- | --- |
+| KT2-03 | vừa | Kéo giãn theo khung sửa cả đối tượng trên **layer đang tắt** (người dùng không thấy) và tính chúng vào giới hạn 20 | Khung chọn bỏ qua layer tắt như layer đóng băng (`Edit2DLogic.WindowLayerRule`), giống khung chọn của AutoCAD; báo `hidden_layer_skipped`. Layer khóa vẫn báo `locked_layer_skipped` như cũ | `NangCapBKt2Tests` (luật layer 6 trường hợp; `StretchEntities` dùng luật có `IsOff`); O21 |
+| KT2-14 | nhẹ | Gói 3D: trợ lý vẫn mời `match_properties` `properties` `text` / `dimension` (plugin từ chối) | Gói không 2D: schema chỉ còn 7 thuộc tính chung, bỏ câu mô tả chữ / kích thước (`tools/index.ts` `trimForPlan`; hằng `MATCH_PROPS_*` trong `tools/modify.ts`). Gói 2D / Full giữ nguyên từng chữ | `agent/test/nangcapb-kt2.test.ts` |
+| KT2-15 | nhẹ | Kéo giãn theo khung tính cả đối tượng **vừa tạo trong lượt** vào giới hạn 20 (vẽ 25 đường rồi kéo giãn thì bị từ chối) | Plugin chỉ so số đối tượng **có trước lượt** với giới hạn (`Edit2DLogic.CountedForLimit` + `ctx.CreatedThisTurn`), khớp cổng của trợ lý (vốn không tính đối tượng tạo trong lượt) | `NangCapBKt2Tests`; sửa 2 dòng kiểm mã nguồn cũ (`plan.Count > limit` → `existing > limit`, cùng ý); O22 |
+| KT2-23 | nhẹ | Bỏ nhóm theo handle xóa **mọi** nhóm chứa các đối tượng đó | Đối tượng ở nhiều nhóm: từ chối trước khi bỏ gì, liệt kê tên nhóm, bảo Claude hỏi người dùng rồi gọi lại với `name` (`Edit2DLogic.UngroupRefusal`). Một nhóm: bỏ như cũ, trả tên nhóm trong `ungrouped` | `NangCapBKt2Tests`; O22 |
+| KT2-24 | nhẹ | `lengthen_entity` trên LINE nghiêng / 3D chỉ tính trong mặt XY (sai độ dài; đường thẳng đứng báo "không có độ dài") | `Edit2DLogic.LengthenSegment` tính theo hướng 3D; đoạn polyline (2D) cho kết quả như trước | `NangCapBKt2Tests` (đường nghiêng, thẳng đứng, rút ngắn đầu, đoạn polyline) |
+| KT2-25 | nhẹ | Schema `stretch_entities` `polygon` không giới hạn số đỉnh, plugin nhận tối đa 1000 | Thêm `.max(1000)` | `agent/test/nangcapb-kt2.test.ts` |
+
+Test: lõi `dotnet test plugin/ClaudeCAD.Core.Tests` **875** xanh (861 ở `f1e7123` + 14 mới); trợ lý `npm test` **294** xanh
+(291 + 3); build net48 / net8.0-windows / net10.0-windows xanh, 0 cảnh báo. Token: gói 3D bớt một ít (mô tả + schema
+`match_properties` ngắn hơn ~150 ký tự), gói 2D / Full không đổi.
+
 ## Việc cho thread con Test & sửa đợt B
 
 Rà 9 việc trên, đặc biệt: kéo giãn không `handles` (giới hạn 20, layer khóa, đối tượng chỉ chạm khung), khối 3D một phần

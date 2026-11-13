@@ -138,7 +138,7 @@ namespace ClaudeCAD.Core.Tests
         {
             Assert.Equal(20, Edit2DLogic.MaxStretchUnasked);
             var src = Src("plugin", "ClaudeCAD.Plugin", "Drawing", "Edit2DTools.cs");
-            Assert.Contains("!named && plan.Count > limit", src); // limit = Edit2DLogic.WindowLimit(...): 20 at most (NB-1)
+            Assert.Contains("!named && existing > limit", src); // limit = Edit2DLogic.WindowLimit(...): 20 at most (NB-1); existing: KT2-15
             Assert.Equal(20, Edit2DLogic.WindowLimit(null));
             Assert.Contains("kind == Edit2DLogic.StretchKind.Some && IsExplodeConfirmEntity(ent)", src);
             Assert.Contains("ltr.IsLocked", src);

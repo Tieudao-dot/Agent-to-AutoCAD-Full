@@ -42,7 +42,7 @@ namespace ClaudeCAD.Plugin.Drawing
 
             var plan = new List<(ObjectId id, bool all, IntegerCollection idx)>();
             var skipped = new List<object>();
-            int lockedSkipped = 0;
+            int lockedSkipped = 0, hiddenSkipped = 0;
             foreach (var id in candidates)
             {
                 var ent = ctx.Tr.GetObject(id, OpenMode.ForRead, false) as Entity;
@@ -52,8 +52,10 @@ namespace ClaudeCAD.Plugin.Drawing
                     var ext = EntityInfo.Extents(ent);
                     if (!ext.HasValue || ext.Value.MaxPoint.X < minX || ext.Value.MinPoint.X > maxX || ext.Value.MaxPoint.Y < minY || ext.Value.MinPoint.Y > maxY) continue;
                     var ltr = (LayerTableRecord)ctx.Tr.GetObject(ent.LayerId, OpenMode.ForRead);
-                    if (ltr.IsFrozen) continue;
-                    if (ltr.IsLocked) { lockedSkipped++; continue; }
+                    // KT2-03: like AutoCAD's crossing window, nothing on a frozen or turned-off layer (the user cannot see it)
+                    var rule = Edit2DLogic.WindowLayerRule(ltr.IsFrozen, ltr.IsOff, ltr.IsLocked);
+                    if (rule == Edit2DLogic.WindowLayer.Hidden) { hiddenSkipped++; continue; }
+                    if (rule == Edit2DLogic.WindowLayer.Locked) { lockedSkipped++; continue; }
                 }
                 var pts = new Point3dCollection();
                 try { ent.GetStretchPoints(pts); }
@@ -71,10 +73,12 @@ namespace ClaudeCAD.Plugin.Drawing
             }
             // Test & sửa đợt B (NB-1): the assistant passes how many objects the turn may still change without asking
             int limit = Edit2DLogic.WindowLimit(p.Has(Edit2DLogic.WindowLimitParam) ? p.Num(Edit2DLogic.WindowLimitParam) : (double?)null);
-            if (!named && plan.Count > limit)
+            // KT2-15: objects created in this turn are new, not existing objects to ask about (the assistant's gate does the same)
+            var hs = plan.Select(x => x.id.Handle.ToString()).ToList();
+            int existing = Edit2DLogic.CountedForLimit(hs, ctx.CreatedThisTurn);
+            if (!named && existing > limit)
             {
-                var hs = plan.Select(x => x.id.Handle.ToString()).ToList();
-                throw ToolException.Invalid(Edit2DLogic.WindowLimitMessage(plan.Count, limit) +
+                throw ToolException.Invalid(Edit2DLogic.WindowLimitMessage(existing, limit) +
                     string.Join(", ", hs.Take(200)) + (hs.Count > 200 ? $" … (+{hs.Count - 200}; use list_entities with the window)" : "") + ".");
             }
             var moved = new List<object>();
@@ -93,6 +97,7 @@ namespace ClaudeCAD.Plugin.Drawing
             };
             if (skipped.Count > 0) r["skipped"] = skipped;
             if (lockedSkipped > 0) r["locked_layer_skipped"] = lockedSkipped;
+            if (hiddenSkipped > 0) r["hidden_layer_skipped"] = hiddenSkipped; // frozen / turned off: not selected, unchanged
             if (plan.Count == 0) r["note"] = "Nothing had a vertex / end point inside the window: nothing changed.";
             return r;
         }
@@ -326,6 +331,9 @@ namespace ClaudeCAD.Plugin.Drawing
                     }
                 }
                 if (groups.Count == 0) throw ToolException.Invalid("group_entities: these objects are in no group.");
+                // KT2-23: objects in several groups → the user names the group (one call never removes groups nobody meant)
+                var refusal = Edit2DLogic.UngroupRefusal(groups.Values.Distinct(StringComparer.OrdinalIgnoreCase).ToList());
+                if (refusal != null) throw ToolException.Invalid(refusal);
                 ctx.RequireWritable("ungroup");
                 gd.UpgradeOpen();
                 foreach (var kv in groups)

@@ -49,7 +49,7 @@ namespace ClaudeCAD.Core.Tests
         {
             var tools = Src("plugin", "ClaudeCAD.Plugin", "Drawing", "Edit2DTools.cs");
             Assert.Contains("Edit2DLogic.WindowLimit(p.Has(Edit2DLogic.WindowLimitParam)", tools);
-            Assert.Contains("plan.Count > limit", tools);
+            Assert.Contains("existing > limit", tools); // KT2-15: existing objects of the window (not those created this turn) vs the limit
             Assert.DoesNotContain("plan.Count > Edit2DLogic.MaxStretchUnasked", tools);
             Assert.Contains("copy.Remove(Edit2DLogic.WindowLimitParam)", Src("plugin", "ClaudeCAD.Plugin", "Core", "Macros.cs"));
         }
