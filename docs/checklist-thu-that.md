@@ -346,7 +346,7 @@ spline kín (thứ tự các mảnh khi tách), chia đường cong spline, nhó
 *13/11/2026 · từ [`ban-giao/nang-cap-c.md`](ban-giao/nang-cap-c.md). Máy ở gói `2D` hoặc `Full` (P12: gói `3D`), bản vẽ
 mặt bằng có sẵn (tường trên layer `A-WALL`, vài block cửa có thuộc tính mã, vài phòng là polyline kín có chữ tên phòng
 bên trong, 2–3 layout giấy). Sau mỗi dòng gõ U một lần: mọi thay đổi của lượt đó mất hết. **Quan trọng nhất: P1, P3, P5,
-P7, P9, P10.***
+P7, P9, P10, P14, P17.** P14–P20: các lỗi Test & sửa đợt C đã sửa ([`ban-giao/nang-cap-c-test.md`](ban-giao/nang-cap-c-test.md)).*
 
 | # | | Làm gì | Kết quả mong đợi | Đạt | Lỗi | Mã gốc |
 | --- | --- | --- | --- | --- | --- | --- |
@@ -363,6 +363,13 @@ P7, P9, P10.***
 | P11 | ★ | "in tất cả layout ra một file PDF" | Một file PDF nhiều trang (đúng thứ tự tab layout) cạnh file bản vẽ, tên `<bản vẽ>-<n>-layouts.pdf`; layout đang mở giữ nguyên sau khi in | ☐ | ☐ | C6 |
 | P12 | ○ | Máy gói `3D`: "ghi kích thước mặt bằng", "thống kê block ra bảng", "in PDF" | Claude báo máy dùng gói 3D, các việc này thuộc gói 2D; không vẽ gì | ☐ | ☐ | gói |
 | P13 | ○ | Đặt tên layout có ký tự `/` hoặc `:` (vd `MB/T1`), "in layout MB/T1 ra PDF" | File PDF ra bình thường, ký tự lạ trong tên file đổi thành `_` | ☐ | ☐ | C6 |
+| P14 | ★ | Có MTEXT 2 dòng "PHONG" / "NGU" (Enter giữa hai dòng) và chữ "Ø100" gõ bằng `%%c100`. "thay chữ P bằng X" rồi bấm Đồng ý | Chỉ chữ P nhìn thấy đổi thành X; MTEXT vẫn đúng 2 dòng, ký hiệu Ø vẫn còn (không thành "\X" hay "%%X") | ☐ | ☐ | NC-1 |
+| P15 | ○ | "thay A bằng {B}" trong một MTEXT, bấm Đồng ý | MTEXT hiện đúng `{B}` có ngoặc, định dạng chữ không đổi | ☐ | ☐ | NC-1 |
+| P16 | ○ | Block cửa có thuộc tính **hằng** (Constant) `LOAI`: "đếm cửa theo LOAI" | Số đếm theo giá trị của thuộc tính hằng, không ra "(trống)" | ☐ | ☐ | NC-2 |
+| P17 | ★ | 3 layout giấy, mỗi layout một khung nhìn khác nhau, đang mở Model: "in 3 layout ra một PDF" | Mỗi trang PDF đúng nội dung khung nhìn của layout đó (không trang trắng / không lặp trang); in xong vẫn ở Model | ☐ | ☐ | NC-3 |
+| P18 | ○ | "in layout A1 ra file ketqua.pdf" (chỉ tên file) | File nằm **cạnh file bản vẽ**, không nằm trong thư mục cài AutoCAD. Tên file có `?` thì Claude báo tên không hợp lệ | ☐ | ☐ | NC-4 |
+| P19 | ○ | Bản vẽ đơn vị **mét** (nhà 10 × 6, cửa 0,9): "ghi kích thước mặt bằng" | Hàng chi tiết có đoạn 0,9 của cửa | ☐ | ☐ | NC-5 |
+| P20 | ○ | Phòng vẽ bằng polyline **không bấm Close** (điểm cuối bắt vào điểm đầu): "lập bảng diện tích các phòng" | Phòng đó có trong bảng, có hatch trùng thì vẫn chỉ tính một lần | ☐ | ☐ | NC-6 |
 
 Còn chỉ thấy trên AutoCAD thật: dò đường bao khi điểm nằm ngoài màn hình (cần phóng tới vùng đó), in nhiều trang (khổ
 giấy từng layout), thay chữ trong MTEXT có định dạng, thuộc tính nhiều dòng, ô bảng.

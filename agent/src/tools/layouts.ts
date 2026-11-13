@@ -67,7 +67,7 @@ export function layoutTools(b: ToolBridge): AnyTool[] {
       {
         layout: z.string().optional(),
         layouts: z.array(z.string().min(1)).min(1).max(255).optional(),
-        output: z.string().optional().describe('Full path ending in .pdf.'),
+        output: z.string().optional().describe('Path ending in .pdf (a relative path or bare file name goes next to the drawing).'),
         media: z.string().optional(),
         device: z.string().optional(),
         plot_style: z.string().optional().describe('e.g. "monochrome.ctb", "acad.ctb".'),

@@ -78,7 +78,8 @@ namespace ClaudeCAD.Plugin.Drawing
             double size = Math.Max(walls.Max(s => Math.Max(s.X1, s.X2)) - walls.Min(s => Math.Min(s.X1, s.X2)), walls.Max(s => Math.Max(s.Y1, s.Y2)) - walls.Min(s => Math.Min(s.Y1, s.Y2)));
             double offset = p.Positive("offset", Util2DLogic.DefaultDimOffset(ctx.Db.Dimscale, size));
             double spacing = p.Positive("spacing", offset);
-            var specs = Util2DLogic.FloorPlanDims(walls, axes, sides, offset, spacing);
+            // NC-5: in a plan drawn in metres 1 unit is a whole metre; the tolerance follows the plan size
+            var specs = Util2DLogic.FloorPlanDims(walls, axes, sides, offset, spacing, Util2DLogic.PieceTolerance(size));
             if (specs.Count > MaxPlanDims)
                 throw ToolException.Invalid($"dim_floor_plan: {specs.Count} dimensions (more than {MaxPlanDims}). Dimension fewer sides, or pass wall_handles of the outer walls only.");
 
@@ -137,6 +138,7 @@ namespace ClaudeCAD.Plugin.Drawing
             var layers = p.StringsOpt("layers");
             string byAttr = p.Str("group_by_attribute", null);
             var items = new List<Util2DLogic.BlockItem>();
+            var constants = new Dictionary<ObjectId, Dictionary<string, string>>();
             foreach (var e in SpaceEntities(ctx, p))
             {
                 if (!(e is BlockReference br) || e is Table) continue;
@@ -154,6 +156,10 @@ namespace ClaudeCAD.Plugin.Drawing
                         else s = ar.TextString;
                         it.Attributes[ar.Tag] = s;
                     }
+                // NC-2: a constant attribute lives in the block definition, not in the reference's attribute collection
+                if (!string.IsNullOrWhiteSpace(byAttr))
+                    foreach (var kv in ConstantAttributes(ctx, br.BlockTableRecord, constants))
+                        if (!it.Attributes.ContainsKey(kv.Key)) it.Attributes[kv.Key] = kv.Value;
                 items.Add(it);
             }
             var rows = Util2DLogic.CountBlocks(items, byAttr);
@@ -179,6 +185,20 @@ namespace ClaudeCAD.Plugin.Drawing
             return res;
         }
 
+        /// <summary>Tag → value of the constant attribute definitions of a block (cached per definition).</summary>
+        private static Dictionary<string, string> ConstantAttributes(ToolContext ctx, ObjectId btrId, Dictionary<ObjectId, Dictionary<string, string>> cache)
+        {
+            if (cache.TryGetValue(btrId, out var d)) return d;
+            d = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+            var btr = (BlockTableRecord)ctx.Tr.GetObject(btrId, OpenMode.ForRead);
+            if (btr.HasAttributeDefinitions)
+                foreach (ObjectId id in btr)
+                    if (ctx.Tr.GetObject(id, OpenMode.ForRead) is AttributeDefinition ad && ad.Constant && !d.ContainsKey(ad.Tag))
+                        d[ad.Tag] = ad.TextString;
+            cache[btrId] = d;
+            return d;
+        }
+
         /// <summary>Points around a closed curve: polyline vertices (arc segments sampled), others sampled by length.</summary>
         private static List<double[]> Outline(Curve c)
         {
@@ -187,7 +207,10 @@ namespace ClaudeCAD.Plugin.Drawing
             {
                 if (c is Polyline pl && Enumerable.Range(0, pl.NumberOfVertices).All(i => Math.Abs(pl.GetBulgeAt(i)) < 1e-12))
                 {
-                    for (int i = 0; i < pl.NumberOfVertices; i++) { var q = pl.GetPoint3dAt(i); pts.Add(new[] { q.X, q.Y }); }
+                    int nv = pl.NumberOfVertices;
+                    // closed by its ends (NC-6): the repeated first point would shift the centre used to find twins
+                    if (nv > 3 && !pl.Closed && pl.GetPoint3dAt(0).DistanceTo(pl.GetPoint3dAt(nv - 1)) < 1e-6) nv--;
+                    for (int i = 0; i < nv; i++) { var q = pl.GetPoint3dAt(i); pts.Add(new[] { q.X, q.Y }); }
                     return pts;
                 }
                 double len = c.GetDistanceAtParameter(c.EndParam);
@@ -197,6 +220,9 @@ namespace ClaudeCAD.Plugin.Drawing
             catch (Autodesk.AutoCAD.Runtime.Exception) { return null; }
             return pts;
         }
+
+        private static bool ClosedByEnds(Curve c) =>
+            c is Polyline pl && !pl.Closed && pl.NumberOfVertices > 3 && pl.GetPoint3dAt(0).DistanceTo(pl.GetPoint3dAt(pl.NumberOfVertices - 1)) < 1e-6;
 
         private static List<double[]> HatchOutline(Hatch h)
         {
@@ -270,7 +296,8 @@ namespace ClaudeCAD.Plugin.Drawing
                     case Region region:
                         it = new Util2DLogic.AreaItem { Handle = h, Type = "REGION", Layer = e.Layer, Area = region.Area, Outline = BoxOutline(e) };
                         break;
-                    case Curve c when c.Closed || c is Circle || (c is Ellipse el && el.Closed):
+                    // NC-6: a polyline whose last vertex sits on the first one is closed too (drawn without the Closed flag)
+                    case Curve c when c.Closed || c is Circle || (c is Ellipse el && el.Closed) || ClosedByEnds(c):
                         if (c is Line || c is Arc) break;
                         double a;
                         try { a = c.Area; } catch (Autodesk.AutoCAD.Runtime.Exception) { skipped.Add($"{h}: area could not be computed"); break; }
@@ -342,31 +369,33 @@ namespace ClaudeCAD.Plugin.Drawing
 
         private static IEnumerable<TextHit> TextHits(ToolContext ctx, Entity e, string find, string repl, bool matchCase, bool wholeWord, ISet<string> types)
         {
-            TextHit Hit(Entity ent, string type, string s, string tag = null, string owner = null)
+            // NC-1: codes (\P, %%c, {\C1;...}) are never cut; in MTEXT-format text the replacement is escaped
+            bool fmt = Util2DLogic.SafeForMText(find);
+            TextHit Hit(Entity ent, string type, string s, bool mtext, string tag = null, string owner = null)
             {
-                var after = Util2DLogic.Replace(s, find, repl, matchCase, wholeWord, out int n);
+                var after = Util2DLogic.ReplaceFormatted(s, find, repl, matchCase, wholeWord, mtext, out int n);
                 return n > 0 ? new TextHit { Ent = ent, Type = type, Before = s, After = after, Count = n, Tag = tag, Owner = owner } : null;
             }
             var hits = new List<TextHit>();
             switch (e)
             {
                 case DBText t when types.Contains("text"):
-                    hits.Add(Hit(t, "TEXT", t.TextString));
+                    hits.Add(Hit(t, "TEXT", t.TextString, false));
                     break;
                 case MText mt when types.Contains("mtext") && Util2DLogic.SafeForMText(find):
-                    hits.Add(Hit(mt, "MTEXT", mt.Contents));
+                    hits.Add(Hit(mt, "MTEXT", mt.Contents, true));
                     break;
                 case Dimension dim when types.Contains("dimension") && !string.IsNullOrEmpty(dim.DimensionText):
-                    hits.Add(Hit(dim, "DIMENSION", dim.DimensionText));
+                    hits.Add(Hit(dim, "DIMENSION", dim.DimensionText, fmt));
                     break;
                 case MLeader ml when types.Contains("mleader") && ml.ContentType == ContentType.MTextContent && Util2DLogic.SafeForMText(find):
-                    using (var m = ml.MText) if (m != null) hits.Add(Hit(ml, "MULTILEADER", m.Contents));
+                    using (var m = ml.MText) if (m != null) hits.Add(Hit(ml, "MULTILEADER", m.Contents, true));
                     break;
                 case Table tb when types.Contains("table"):
                     for (int r = 0; r < tb.Rows.Count; r++)
                         for (int c = 0; c < tb.Columns.Count; c++)
                         {
-                            var h = Hit(tb, "TABLE_CELL", SafeCellText(tb, r, c));
+                            var h = Hit(tb, "TABLE_CELL", SafeCellText(tb, r, c), fmt);
                             if (h != null) { h.Row = r; h.Col = c; hits.Add(h); }
                         }
                     break;
@@ -377,9 +406,9 @@ namespace ClaudeCAD.Plugin.Drawing
                         if (ar.IsMTextAttribute)
                         {
                             if (!Util2DLogic.SafeForMText(find)) continue;
-                            using (var m = ar.MTextAttribute) hits.Add(Hit(ar, "ATTRIBUTE", m.Contents, ar.Tag, br.Handle.ToString()));
+                            using (var m = ar.MTextAttribute) hits.Add(Hit(ar, "ATTRIBUTE", m.Contents, true, ar.Tag, br.Handle.ToString()));
                         }
-                        else hits.Add(Hit(ar, "ATTRIBUTE", ar.TextString, ar.Tag, br.Handle.ToString()));
+                        else hits.Add(Hit(ar, "ATTRIBUTE", ar.TextString, false, ar.Tag, br.Handle.ToString()));
                     }
                     break;
             }
@@ -473,7 +502,7 @@ namespace ClaudeCAD.Plugin.Drawing
                 using (var m = ar.MTextAttribute) s = m.Contents;
             }
             else s = ar.TextString;
-            var after = Util2DLogic.Replace(s, find, repl, matchCase, wholeWord, out int n);
+            var after = Util2DLogic.ReplaceFormatted(s, find, repl, matchCase, wholeWord, ar.IsMTextAttribute, out int n);
             return n == 0 ? new List<TextHit>() : new List<TextHit> { new TextHit { Ent = ar, Type = "ATTRIBUTE", Tag = ar.Tag, Owner = ar.OwnerId.Handle.ToString(), Before = s, After = after, Count = n } };
         }
 

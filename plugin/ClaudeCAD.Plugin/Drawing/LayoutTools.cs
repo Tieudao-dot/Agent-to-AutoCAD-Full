@@ -268,17 +268,23 @@ namespace ClaudeCAD.Plugin.Drawing
             }
 
             string output = p.Str("output", null);
+            string drawingDir = SafeString(() => Path.GetDirectoryName(ctx.Doc.Name));
+            if (string.IsNullOrEmpty(drawingDir) || !Directory.Exists(drawingDir)) drawingDir = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
             if (string.IsNullOrEmpty(output))
             {
-                string dir = SafeString(() => Path.GetDirectoryName(ctx.Doc.Name));
-                if (string.IsNullOrEmpty(dir) || !Directory.Exists(dir)) dir = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
                 // the layout name may hold characters a file name cannot (\ / : * ? " < > |)
-                output = Path.Combine(dir, Util2DLogic.DefaultPdfName(Path.GetFileNameWithoutExtension(ctx.Doc.Name), layouts));
+                output = Path.Combine(drawingDir, Util2DLogic.DefaultPdfName(Path.GetFileNameWithoutExtension(ctx.Doc.Name), layouts));
             }
             if (!output.EndsWith(".pdf", StringComparison.OrdinalIgnoreCase)) throw ToolException.Invalid("plot_pdf: 'output' must end with .pdf.");
             string full;
-            try { full = Path.GetFullPath(output); }
+            try
+            {
+                // Test & sửa đợt C (NC-4): a relative output goes next to the drawing, not into AutoCAD's own folder
+                full = Path.GetFullPath(Path.IsPathRooted(output) ? output : Path.Combine(drawingDir, output));
+            }
             catch (Exception) { throw ToolException.Invalid($"plot_pdf: '{output}' is not a valid file path."); }
+            var badName = Util2DLogic.BadFileName(Path.GetFileName(full));
+            if (badName != null) throw ToolException.Invalid($"plot_pdf: '{output}': {badName}. Give another file name ending in .pdf.");
             if (Directory.Exists(full)) throw ToolException.Invalid($"plot_pdf: '{output}' is a folder; give a file name ending in .pdf.");
             var outDir = Path.GetDirectoryName(full);
             if (!Directory.Exists(outDir)) throw ToolException.Invalid($"plot_pdf: folder '{outDir}' does not exist.");
@@ -323,6 +329,9 @@ namespace ClaudeCAD.Plugin.Drawing
                             pe.BeginDocument(infos[0], ctx.Doc.Name, null, 1, true, output);
                             for (int i = 0; i < infos.Count; i++)
                             {
+                                // Test & sửa đợt C (NC-3): AutoCAD plots the paper-space viewports of the current layout, so each
+                                // page's layout is made current while it is plotted (restored in finally)
+                                if (!lm.CurrentLayout.Equals(layouts[i], StringComparison.OrdinalIgnoreCase)) lm.CurrentLayout = layouts[i];
                                 using (var ppi = new PlotPageInfo())
                                 {
                                     pe.BeginPage(ppi, infos[i], i == infos.Count - 1, null);

@@ -477,6 +477,80 @@ namespace ClaudeCAD.Plugin.Core
         /// <summary>MTEXT formatting codes the find text must not cut through: a find with "\", "{" or "}" is refused for MTEXT.</summary>
         public static bool SafeForMText(string find) => find != null && find.IndexOfAny(new[] { '\\', '{', '}' }) < 0;
 
+        /// <summary>MTEXT codes followed by an argument up to ";" (\A1; \C3; \fArial|b0; \H2.5x; \Q15; \T1.2; \W0.8; \pxi1; \S1^2;).</summary>
+        private const string MTextArgCodes = "ACcFfHQTWpS";
+
+        /// <summary>
+        /// Test & sửa đợt C (NC-1): the text split into plain runs and formatting codes, so a replace never cuts a code.
+        /// TEXT (mtext false): %%c %%d %%p %%u %%o %%% and %%nnn. MTEXT / dimension text / table cells (mtext true): also
+        /// \P, \~, \\, \{, \}, \U+xxxx, codes with an argument up to ";" and the { } groups. keepPercent: %% is plain text
+        /// (the find itself holds "%%", e.g. replacing %%c).
+        /// </summary>
+        public static List<KeyValuePair<string, bool>> FormatSegments(string s, bool mtext, bool keepPercent = false)
+        {
+            var outList = new List<KeyValuePair<string, bool>>();
+            var sb = new StringBuilder();
+            void Flush() { if (sb.Length > 0) { outList.Add(new KeyValuePair<string, bool>(sb.ToString(), false)); sb.Clear(); } }
+            void Code(string c) { Flush(); outList.Add(new KeyValuePair<string, bool>(c, true)); }
+            s = s ?? "";
+            int i = 0;
+            while (i < s.Length)
+            {
+                char ch = s[i];
+                if (!keepPercent && ch == '%' && i + 2 < s.Length && s[i + 1] == '%')
+                {
+                    int len = i + 4 < s.Length && char.IsDigit(s[i + 2]) && char.IsDigit(s[i + 3]) && char.IsDigit(s[i + 4]) ? 5 : 3;
+                    Code(s.Substring(i, len));
+                    i += len;
+                    continue;
+                }
+                if (mtext && (ch == '{' || ch == '}')) { Code(ch.ToString()); i++; continue; }
+                if (mtext && ch == '\\' && i + 1 < s.Length)
+                {
+                    char c = s[i + 1];
+                    int end;
+                    if (MTextArgCodes.IndexOf(c) >= 0)
+                    {
+                        int semi = s.IndexOf(';', i + 2);
+                        end = semi < 0 ? s.Length : semi + 1;
+                    }
+                    else if ((c == 'U' || c == 'u') && i + 2 < s.Length && s[i + 2] == '+') end = Math.Min(s.Length, i + 7);
+                    else if ((c == 'M' || c == 'm') && i + 2 < s.Length && s[i + 2] == '+') end = Math.Min(s.Length, i + 8);
+                    else end = i + 2;
+                    Code(s.Substring(i, end - i));
+                    i = end;
+                    continue;
+                }
+                sb.Append(ch);
+                i++;
+            }
+            Flush();
+            return outList;
+        }
+
+        /// <summary>A replacement written into MTEXT: \ { } shown as typed (escaped), a line break becomes \P.</summary>
+        public static string EscapeMText(string s) =>
+            (s ?? "").Replace("\\", "\\\\").Replace("{", "\\{").Replace("}", "\\}").Replace("\r\n", "\n").Replace("\r", "\n").Replace("\n", "\\P");
+
+        /// <summary>
+        /// Test & sửa đợt C (NC-1): Replace on the plain runs only (FormatSegments), so "P" never hits the "\P" of an MTEXT
+        /// line break nor "c" the "%%c" of a diameter sign; in MTEXT the replacement is escaped (EscapeMText).
+        /// </summary>
+        public static string ReplaceFormatted(string s, string find, string replacement, bool matchCase, bool wholeWord, bool mtext, out int count)
+        {
+            count = 0;
+            if (string.IsNullOrEmpty(s) || string.IsNullOrEmpty(find)) return s;
+            var repl = mtext ? EscapeMText(replacement) : replacement ?? "";
+            var sb = new StringBuilder();
+            foreach (var seg in FormatSegments(s, mtext, find.Contains("%%")))
+            {
+                if (seg.Value) { sb.Append(seg.Key); continue; }
+                sb.Append(Replace(seg.Key, find, repl, matchCase, wholeWord, out int n));
+                count += n;
+            }
+            return count == 0 ? s : sb.ToString();
+        }
+
         /// <summary>The handles of an apply call the user has not approved on the card (upper case), in order.</summary>
         public static List<string> NotApproved(IEnumerable<string> handles, ICollection<string> approved) =>
             (handles ?? Enumerable.Empty<string>()).Select(h => (h ?? "").Trim().ToUpperInvariant()).Where(h => h.Length > 0)
@@ -534,6 +608,26 @@ namespace ClaudeCAD.Plugin.Core
                 throw ToolException.Invalid($"plot_pdf: layout(s) not found: {string.Join(", ", missing)}. Layouts: {string.Join(", ", existing)}.");
             return outList;
         }
+
+        /// <summary>
+        /// Test & sửa đợt C (NC-4): why a file name given in 'output' cannot be written on Windows, or null when it can
+        /// (characters &lt;&gt;:"/\|?* or control characters, a trailing dot / space, a reserved name such as CON or NUL).
+        /// </summary>
+        public static string BadFileName(string fileName)
+        {
+            if (string.IsNullOrWhiteSpace(fileName)) return "the file name is empty";
+            var bad = fileName.Where(ch => ch < 32 || "<>:\"/\\|?*".IndexOf(ch) >= 0).Distinct().ToList();
+            if (bad.Count > 0) return "the file name contains " + string.Join(" ", bad.Select(ch => ch < 32 ? "a control character" : ch.ToString()));
+            if (fileName.EndsWith(".", StringComparison.Ordinal) || fileName.EndsWith(" ", StringComparison.Ordinal)) return "the file name ends with a dot or a space";
+            if (Reserved.Contains(fileName.Split('.')[0].Trim().ToUpperInvariant())) return $"'{fileName.Split('.')[0]}' is a reserved name on Windows";
+            return null;
+        }
+
+        /// <summary>
+        /// Test & sửa đợt C (NC-5): stations closer than this are one (1 drawing unit in mm drawings; a plan drawn in metres
+        /// keeps a 0.9 m door): 1 unit, at most 1/10 000 of the plan size, at least 1e-6.
+        /// </summary>
+        public static double PieceTolerance(double planSize) => Math.Max(1e-6, Math.Min(1, planSize * 1e-4));
 
         /// <summary>The default output of a multi-page plot: &lt;drawing&gt;-&lt;n&gt;layouts.pdf (or -&lt;layout&gt;.pdf for one).</summary>
         public static string DefaultPdfName(string drawingName, IList<string> layouts)
