@@ -173,6 +173,7 @@ dự án gốc), `bo-cai/README.md`.
 | ↳ Test & sửa đợt B (con của Nâng cấp đợt B) | `session_01D56HmJLL8fUhKMHs8VaPJm` | Nhánh `full/nang-cap-b-test` (tách từ `full/nang-cap-b` @ `81eaf7c`): rà soát, thêm test tự động, sửa lỗi đợt B; 1 lượt CI. Báo về thread đợt B, tin cập nhật ngắn gửi luồng chính. Bàn giao: `docs/ban-giao/nang-cap-b-test.md` |
 | Nâng cấp đợt C | `session_01D56HmJra3trN7XwA1QApZ6` | Nhánh `full/nang-cap-c` (tách từ `full/nang-cap-b-test` @ `265b66e`): hatch bấm một điểm, tự ghi kích thước mặt bằng, thống kê block ra bảng, tổng diện tích phòng / layer, tìm & thay chữ (thẻ xác nhận), in nhiều layout vào một PDF. Viết xong tự mở thread con Test & sửa (`full/nang-cap-c-test`). Bàn giao: `docs/ban-giao/nang-cap-c.md` |
 | ↳ Test & sửa đợt C (con của Nâng cấp đợt C) | `session_01D56HmJVjAwoMYD2HCjBwLe` | Nhánh `full/nang-cap-c-test` (tách từ `full/nang-cap-c` @ `1305053`): rà soát, thêm test tự động, sửa lỗi đợt C; 1 lượt CI. Báo về thread đợt C, tin cập nhật ngắn gửi luồng chính. Bàn giao: `docs/ban-giao/nang-cap-c-test.md` |
+| Nâng cấp đợt D | `session_01D56HmEVecDKB1j1iGf8vNc` | Nhánh `full/nang-cap-d` (tách từ `full/nang-cap-c-test` @ `f4f27fe`): dầm, tường cong, PRESSPULL, xuất STL, bảng khối lượng theo layer, va chạm ra bảng (gói 3D chỉ trả số liệu, không vẽ table). Viết xong tự mở thread con Test & sửa (`full/nang-cap-d-test`). Bàn giao: `docs/ban-giao/nang-cap-d.md` |
 
 Link mở thread: `https://claude.ai/code/<session id>`.
 

@@ -26,8 +26,9 @@ quy tắc làm việc và danh bạ thread: [`../CLAUDE.md`](../CLAUDE.md).
 - **Kế hoạch nâng cấp lệnh vẽ (13/11):** [`ke-hoach-nang-cap-lenh.md`](ke-hoach-nang-cap-lenh.md), 5 điểm đã chốt.
   **Chạy liền A → B → C → D → E từ 13/11** (chủ dự án thử 3D song song), cuối chuỗi kiểm tra độc lập + test tổng thể,
   dừng trước phát hành. **Đợt A xong** (13/11 16h17, `full/nang-cap-a-test` @ `33acb5f`, $35,7). **Đợt B xong** (19h31,
-  `full/nang-cap-b-test` @ `265b66e`, ~$21). Đợt C đang chạy: thread `session_01D56HmJra3trN7XwA1QApZ6`, nhánh
-  `full/nang-cap-c`. Tiến độ: bảng trong kế hoạch.
+  `full/nang-cap-b-test` @ `265b66e`, ~$21). **Đợt C xong** (21h40,
+  `full/nang-cap-c-test` @ `f4f27fe`, ~$12). Đợt D đang chạy: thread `session_01D56HmEVecDKB1j1iGf8vNc`, nhánh
+  `full/nang-cap-d`. Tiến độ: bảng trong kế hoạch.
 
 ## 2. Việc chờ chủ dự án
 
