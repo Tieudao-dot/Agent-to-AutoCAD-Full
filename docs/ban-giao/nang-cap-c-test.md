@@ -36,7 +36,7 @@ không đổi (+~50 ký tự ở gói 2D / Full).
 - Trợ lý: `cd agent && npm ci && npm test` — **270** test, xanh (không thêm: chỉ đổi mô tả).
 - Build net48 / net8.0-windows / net10.0-windows (Linux, `-p:EnableWindowsTargeting=true`, .NET SDK 10 từ kho Ubuntu,
   `DOTNET_ROLL_FORWARD=Major` để chạy test net8 trên runtime 10): xanh, 0 cảnh báo.
-- CI: xem mục cuối.
+- CI: run **43435421710 xanh** ở `04bf0f2` (`release: "false"`, Windows: trợ lý, test lõi, UI test WPF, build 3 bản, gói + Setup.exe; bước phát hành bỏ qua đúng). ~8 phút.
 
 ## Còn phải thử tay (chỉ thấy trên AutoCAD thật)
 
@@ -56,4 +56,4 @@ bảng sau khi thay.
 
 ## Commit
 
-Xem `git log full/nang-cap-c-test`: commit sửa NC-1…NC-6 + test + tài liệu, sau đó commit ghi kết quả CI vào file này.
+`04bf0f2` (sửa NC-1…NC-6 + test + tài liệu, CI xanh), sau đó một commit ghi kết quả CI vào file này (chỉ tài liệu).
