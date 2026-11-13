@@ -1,12 +1,12 @@
 import { z } from 'zod';
-import { cadTool, handles, point, points, type AnyTool, type ToolBridge } from './common.js';
+import { cadTool, handle, handles, point, points, type AnyTool, type ToolBridge } from './common.js';
 
 /**
  * 3D phase 3 (docs/ban-giao/ve-3d-dot-3.md): build 3D from a 2D floor plan, 2D sections and projections of solids.
  * Only machines on the 3D or Full plan load them (the plugin labels them ToolGroup.ThreeD); their 2D lines / hatch
  * are results of a 3D tool, so a 3D machine needs no 2D tool for them.
  */
-export const PLAN3D_TOOL_NAMES = ['build_3d_from_plan', 'section_view', 'projection_view'] as const;
+export const PLAN3D_TOOL_NAMES = ['build_3d_from_plan', 'section_view', 'projection_view', 'build_railing'] as const;
 
 /** Limits and defaults shared with the plugin (Core/FloorPlan.cs, FloorPlanLogic / SectionLogic). */
 export const PLAN3D_LIMITS = {
@@ -25,6 +25,24 @@ export const PLAN3D_LIMITS = {
   DefaultMaxThickness: 600,
   MaxSectionSolids: 500,
   DefaultHatchScale: 10,
+  // nâng cấp đợt A
+  MaxStoreys: 50,
+  MaxColumnSize: 3000,
+} as const;
+
+/** Railing defaults (Core/Railing.cs, RailingLogic), mm. Written in docs/ban-giao/nang-cap-a.md. */
+export const RAILING = {
+  DefaultHeight: 1100,
+  MinHeight: 300,
+  MaxHeight: 3000,
+  RailSize: 50,
+  PostSize: 50,
+  DefaultPostSpacing: 1500,
+  BarSize: 20,
+  MaxBarGap: 100,
+  BottomGap: 100,
+  PanelThickness: 20,
+  Layer3d: 'A-RAIL-3D',
 } as const;
 
 export const PLAN3D_LAYERS = {
@@ -32,6 +50,8 @@ export const PLAN3D_LAYERS = {
   door: ['A-DOOR'],
   window: ['A-WIND'],
   slab: ['A-SLAB', 'A-FLOR'],
+  column: ['A-COLS', 'A-COL'],
+  column3d: 'A-COLS-3D',
   wall3d: 'A-WALL-3D',
   slab3d: 'A-SLAB-3D',
   section: 'A-SECT',
@@ -71,7 +91,9 @@ export function plan3dTools(b: ToolBridge): AnyTool[] {
         'The plan objects are only read, never changed. dry_run: true builds nothing and returns walls, openings, open_gaps (gaps with no symbol, left open), ' +
         'skipped and existing_solids (solids of an earlier run over this plan); it only reads (no undo step, allowed in read-only mode). ' +
         'Refuses (nothing built) when this plan was already built at the same level, unless on_existing "add"; the storey below or a part beside only touching it is not a rerun. ' +
-        'Returns handles, wall_solid {volume_m3, pieces_volume_m3, min, max}, slabs, walls / openings / skipped, thickness_summary.',
+        'Columns: closed outlines on A-COLS / A-COL or column_handles → solids on A-COLS-3D, as high as the walls. storeys + storey_height: several storeys at once. ' +
+        'layer_guess: layers named like plan parts (TUONG, CUA…) that were not read; ask the user (request_confirmation) before building with them. ' +
+        'Returns handles, wall_solid {volume_m3, pieces_volume_m3, min, max}, slabs, columns, levels (several storeys), walls / openings / skipped, thickness_summary.',
       {
         wall_height: z.number().min(L.MinWallHeight).max(L.MaxWallHeight).optional().describe(`Wall height (mm, default ${L.DefaultWallHeight}).`),
         door_height: z.number().positive().optional().describe(`Door opening height (mm, default ${L.DefaultDoorHeight}).`),
@@ -81,6 +103,12 @@ export function plan3dTools(b: ToolBridge): AnyTool[] {
         base_z: z.number().optional().describe('Floor level in mm (scaled like the heights): walls start here, this storey\'s slab top is here (default 0; e.g. 3300 for storey 2). With it use wall_height = storey height − slab thickness so the slab sits on the walls below.'),
         slab: z.enum(['auto', 'none', 'bbox']).optional()
           .describe('auto (default): slabs from closed outlines on the slab layers / slab_handles (an outline inside another is a hole); bbox: one slab under the walls\' bounding box; none.'),
+        storeys: z.number().int().min(1).max(L.MaxStoreys).optional().describe('Storeys built at once (default 1).'),
+        storey_height: z.number().positive().optional().describe('Floor to floor (mm): storey k at base_z + (k − 1) × storey_height; walls default to storey_height − slab_thickness.'),
+        roof_slab: z.boolean().optional().describe('Also a slab on top of the last storey (default false).'),
+        columns: z.enum(['auto', 'none']).optional().describe('auto (default) or none.'),
+        column_layers: layerList('column outlines', PLAN3D_LAYERS.column),
+        column_handles: handles.max(L.MaxSourceEntities).optional().describe('Closed column outlines instead of the column layers (any size).'),
         wall_layers: layerList('wall face lines', PLAN3D_LAYERS.wall),
         door_layers: layerList('door symbols', PLAN3D_LAYERS.door),
         window_layers: layerList('window symbols', PLAN3D_LAYERS.window),
@@ -102,6 +130,23 @@ export function plan3dTools(b: ToolBridge): AnyTool[] {
         dry_run: z.boolean().optional().describe('Only recognise and report; build nothing (a read: no undo step, works in read-only mode).'),
         wall_layer_3d: z.string().min(1).max(255).optional().describe(`Layer of the wall solids (default ${PLAN3D_LAYERS.wall3d}, created when missing).`),
         slab_layer_3d: z.string().min(1).max(255).optional().describe(`Layer of the slab solids (default ${PLAN3D_LAYERS.slab3d}).`),
+        column_layer_3d: z.string().min(1).max(255).optional().describe(`Layer of the column solids (default ${PLAN3D_LAYERS.column3d}).`),
+      }),
+
+    cadTool(b, 'build_railing',
+      `RAILING (lan can) along a path: path_handle (a line / polyline with straight segments, only read) or path_points [[x, y], ...] (closed for a loop), centred on it. ` +
+        `Default ${RAILING.DefaultHeight} mm high: top rail ${RAILING.RailSize} × ${RAILING.RailSize}, posts ${RAILING.PostSize} × ${RAILING.PostSize} at every corner and at most post_spacing (default ${RAILING.DefaultPostSpacing}) apart, ` +
+        `infill bars (default: ${RAILING.BarSize} mm bars, gaps ≤ ${RAILING.MaxBarGap} mm, bottom rail ${RAILING.BottomGap} mm above the floor), panel (${RAILING.PanelThickness} mm, glass-like) or none. ` +
+        `One solid on ${RAILING.Layer3d}; base_z (mm) = floor level (default the path\'s z). Returns handles, volume_m3, length_m, posts, bars.`,
+      {
+        path_handle: handle.optional().describe('Handle of the path line / polyline.'),
+        path_points: points(2, 'path points').max(2000).optional(),
+        closed: z.boolean().optional(),
+        height: z.number().min(RAILING.MinHeight).max(RAILING.MaxHeight).optional().describe(`Top of the rail above the floor (mm, default ${RAILING.DefaultHeight}).`),
+        infill: z.enum(['bars', 'panel', 'none']).optional(),
+        post_spacing: z.number().min(200).max(6000).optional(),
+        base_z: z.number().optional(),
+        layer: z.string().min(1).max(255).optional(),
       }),
 
     cadTool(b, 'section_view',

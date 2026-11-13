@@ -19,6 +19,9 @@ namespace ClaudeCAD.Plugin.Drawing
     {
         private static void RegisterSolids(ToolDispatcher d)
         {
+            // nâng cấp đợt A (13/11/2026): one tool for the six primitives; the old names stay registered as aliases so
+            // macros recorded with them still run (Claude only sees draw_solid)
+            d.Register("draw_solid", true, DrawSolid);
             d.Register("draw_box", true, DrawBox);
             d.Register("draw_cylinder", true, DrawCylinder);
             d.Register("draw_sphere", true, DrawSphere);
@@ -127,12 +130,28 @@ namespace ClaudeCAD.Plugin.Drawing
             });
         }
 
+        /// <summary>draw_solid: shape = box / cylinder / sphere / wedge / torus / pyramid, then the parameters of that shape.</summary>
+        private static object DrawSolid(ToolContext ctx, Params p)
+        {
+            var shape = SolidLogic.NormalizeShape(p.Has("shape") ? p.Str("shape") : null);
+            SolidLogic.CheckShapeParams(shape, p.Keys);
+            switch (shape)
+            {
+                case "box": return DrawBox(ctx, p);
+                case "cylinder": return DrawCylinder(ctx, p);
+                case "sphere": return DrawSphere(ctx, p);
+                case "wedge": return DrawWedge(ctx, p);
+                case "torus": return DrawTorus(ctx, p);
+                default: return DrawPyramid(ctx, p);
+            }
+        }
+
         private static object DrawBox(ToolContext ctx, Params p)
         {
             double l = p.Positive("length"), w = p.Positive("width"), h = p.Num("height");
             double[] corner = p.PointOpt("corner"), center = p.PointOpt("center");
             if (corner == null && center == null) corner = new double[] { 0, 0, 0 };
-            if (corner != null && center != null) throw ToolException.Invalid("draw_box: pass either 'corner' or 'center', not both.");
+            if (corner != null && center != null) throw ToolException.Invalid($"{p.Tool}: pass either 'corner' or 'center', not both.");
             // a negative height builds the box downwards from the corner
             if (h < 0 && corner != null) { corner = new[] { corner[0], corner[1], SolidLogic.Z3(corner) + h }; h = -h; }
             var s = MakeBox(l, w, h, corner, center, p.Num("rotation", 0));
@@ -182,7 +201,7 @@ namespace ClaudeCAD.Plugin.Drawing
                 if (cg.X > 1e-6 * l) { x.TransformBy(Matrix3d.Rotation(Math.PI, Vector3d.ZAxis, Point3d.Origin)); cg = x.MassProperties.Centroid; }
                 if (!SolidLogic.WedgeCentroidOk(new[] { cg.X, cg.Y, cg.Z }, l, w, h))
                     throw new ToolException(ErrorCodes.AcadError,
-                        $"draw_wedge: this AutoCAD built the wedge in an unexpected orientation (centroid {cg.X:0.#}, {cg.Y:0.#}, {cg.Z:0.#}); nothing was drawn. Build it with extrude of a triangle profile instead.");
+                        $"{p.Tool}: this AutoCAD built the wedge in an unexpected orientation (centroid {cg.X:0.#}, {cg.Y:0.#}, {cg.Z:0.#}); nothing was drawn. Build it with extrude of a triangle profile instead.");
                 x.TransformBy(Matrix3d.Displacement(P(c) - Point3d.Origin) * Matrix3d.Rotation(Geometry.DegToRad(rot), Vector3d.ZAxis, Point3d.Origin));
             });
             return SolidResult(ctx, s, p);

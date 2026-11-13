@@ -20,13 +20,16 @@ Quy ước: đơn vị mm, WCS, Z hướng lên. Cốt ±0.000 (sàn tầng 1) �
 | `A-DOOR` | cửa đi | Cánh cửa: đoạn thẳng dài W (mặc định 900) vẽ ở vị trí mở 90°, gốc tại bản lề (mép một bên lỗ); cung mở 90° tâm bản lề, bán kính W |
 | `A-WIND` | cửa sổ | 3 nét song song trong bề dày tường (hai nét mép + một nét giữa), hoặc 4 nét chia đều với tường 220, đặt trong lỗ tường |
 | `A-SLAB` (hoặc `A-FLOR`) | đường bao sàn (có trong bảng layer của `ve-kien-truc`) | Polyline **kín**; polyline kín nằm trong polyline khác là lỗ sàn (cầu thang, giếng trời) |
-| `A-COL` | cột | Không được đọc: dựng cột riêng bằng `draw_box` / `extrude` trên `A-COLS-3D` |
+| `A-COLS` (hoặc `A-COL`) | cột | Hình chữ nhật / tròn **kín** (cạnh ≤ 3000): dựng thành cột trên `A-COLS-3D`, cao bằng tường. Cột tên layer khác: `column_layers` / `column_handles`; `columns: "none"` để bỏ |
 
 - Block cửa: tên `CUA-DI-<W>` / `CUA-SO-<W>` (ví dụ `CUA-DI-900`) được nhận là cửa đi / cửa sổ dù chèn trên layer nào.
 - Tường vẽ bằng **một polyline có bề rộng** = chiều dày được đọc là tường theo đường tim; bề rộng nhỏ hơn `min_thickness`
   chỉ là nét in, đọc như nét mặt tường. Tường vẽ bằng đường trục: truyền `centerline_handles` + `thickness`.
-- Mặt bằng của người dùng dùng tên layer khác: `list_layers`, rồi truyền `wall_layers` / `door_layers` / `window_layers`
-  / `slab_layers` (có `*`, ví dụ `KT_TUONG*`).
+- Mặt bằng của người dùng dùng tên layer khác (`TUONG`, `CUA`, `A-WALL-NEW`…): báo cáo `dry_run` có `layer_guess`
+  (layer → loại đoán theo tên). **Không tự dựng theo đoán**: nói ánh xạ cho người dùng và hỏi bằng
+  `request_confirmation` (ví dụ "Dựng 3D với: tường = TUONG, cửa đi = CUA, cửa sổ = CUASO?"), dừng lượt; người dùng
+  đồng ý mới dựng với `wall_layers` / `door_layers` / `window_layers` / `slab_layers` / `column_layers` (có `*`, ví dụ
+  `KT_TUONG*`). Trợ lý từ chối lệnh dựng dùng layer người dùng chưa nêu / chưa đồng ý.
 
 Máy gói 3D cần vẽ mặt bằng để dựng (chỉ có đường cơ bản, không có kích thước / chữ): phòng 4 × 6 m theo trục
 [0,0]–[4000,6000], tường 220, cửa đi 900 ở cạnh phải (lỗ y = 2550…3450), một `batch_execute`:
@@ -64,7 +67,8 @@ dày sàn, sàn tầng trên không chồng vào tường tầng dưới. Ngư�
 | --- | --- | --- |
 | `A-WALL-3D` | khối tường (đã chừa lỗ cửa) | 7 |
 | `A-SLAB-3D` | sàn | 8 |
-| `A-COLS-3D` | cột (khi dựng thêm bằng `draw_box`) | 1 |
+| `A-COLS-3D` | cột (`build_3d_from_plan` từ `A-COLS` / `A-COL`, hoặc `draw_solid`) | 1 |
+| `A-RAIL-3D` | lan can (`build_railing`) | 3 |
 | `A-STAIR-3D` | cầu thang | 6 |
 | `A-ROOF-3D` | mái | 30 |
 | `A-SECT` | đường bao vết cắt của mặt cắt 2D | 7 |
@@ -108,9 +112,17 @@ Ví dụ phòng 4 × 6 m ở mục 0 (tường 220, cửa đi 900), tầng cao 3
 
 Tầng 2 cùng mặt bằng: thêm `"base_z": 3300`.
 
+Nhiều tầng một lần ("3 tầng, mỗi tầng cao 3,3 m"): `{"storeys": 3, "storey_height": 3300, "slab_thickness": 120}`
+(tường mỗi tầng tự = 3300 − 120 = 3180, sàn tầng trên nằm trên đỉnh tường tầng dưới; `"roof_slab": true` thêm sàn mái
+khi người dùng muốn). Kết quả có `levels` (mỗi tầng: `base_z`, `wall_solid`, `slabs`, `columns`).
+
+Lan can theo một polyline (ban công, hành lang): `build_railing` với `path_handle`; mặc định cao **1100**, tay vịn
+50 × 50, trụ 50 × 50 cách ≤ 1500, song 20 × 20 khe ≤ 100 (`infill: "panel"` = tấm kính 20, `"none"` = chỉ trụ + tay
+vịn); `base_z` = cao độ sàn (mm).
+
 ## 4. Tự kiểm tra trước khi báo xong
 
-- Mỗi lệnh dựng khối (`draw_box`, `extrude`, `revolve`, `sweep`, `loft`…) trả `volume_m3`, `min`, `max`: so ngay với
+- Mỗi lệnh dựng khối (`draw_solid`, `extrude`, `revolve`, `sweep`, `loft`…) trả `volume_m3`, `min`, `max`: so ngay với
   kích thước định dựng (tường 4000 × 220 × 3300 = 2,904 m³).
 
 - **Bằng số** (`wall_solid` của kết quả):
@@ -132,8 +144,10 @@ Tầng 2 cùng mặt bằng: thêm `"base_z": 3300`.
 | Cột tròn có đầu cột, chậu, bể tròn, ống ngắn | `revolve` | Biên dạng nửa mặt cắt vẽ cạnh trục, trục không cắt biên dạng |
 | Tay vịn, ống, gờ chỉ, máng xối, thép uốn | `sweep` | Tiết diện kín + đường dẫn; tiết diện rộng hơn bán kính cong thì AutoCAD từ chối |
 | Móng vuông lên cột tròn, ống khói thon, thân tàu | `loft` | Các tiết diện kín theo thứ tự từ dưới lên |
-| Cột vuông, dầm, bậc thang | `draw_box` | Bậc: một hộp mỗi bậc, hoặc `extrude` biên dạng răng cưa |
-| Dốc, mái dốc một phía | `draw_wedge` | Mặt cao ở phía `corner`, `rotation` để đổi hướng dốc |
+| Cột theo mặt bằng | `build_3d_from_plan` | Hình kín trên `A-COLS` / `A-COL`, cao bằng tường |
+| Cột vuông, dầm, bậc thang | `draw_solid` `box` | Bậc: một hộp mỗi bậc, hoặc `extrude` biên dạng răng cưa |
+| Lan can | `build_railing` | Theo polyline, mặc định 1100 |
+| Dốc, mái dốc một phía | `draw_solid` `wedge` | Mặt cao ở phía `corner`, `rotation` để đổi hướng dốc |
 
 ## 6. Mặt cắt và mặt đứng 2D từ mô hình
 

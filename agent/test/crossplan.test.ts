@@ -15,6 +15,7 @@ import { SAMPLE_2D_SKILLS, librarySkills, skillPlan, skillsForPlan } from '../sr
 import os from 'node:os';
 import { BASE_PROMPT, SYSTEM_PROMPT, TWO_D_HINTS, THREE_D_RULES, systemPromptFor } from '../src/agent/systemPrompt.js';
 import type { ToolBridge } from '../src/tools/common.js';
+import { SOLID_ALIASES } from '../src/tools/solids.js';
 import { buildTools } from '../src/tools/index.js';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
@@ -40,6 +41,9 @@ const allowed = (plan: string, t: string) => {
 /** What the plugin sends as context.plan_tools (none for Full). */
 const planTools = (plan: string) => [...G.keys()].filter((t) => allowed(plan, t)).sort();
 const threeD = [...G.keys()].filter((t) => G.get(t) === 'ThreeD').sort();
+/** Nâng cấp đợt A: the six old primitive names stay plan labels (recorded macros) but Claude sees only draw_solid. */
+const ALIASES: readonly string[] = SOLID_ALIASES;
+const threeDSeen = threeD.filter((t) => !ALIASES.includes(t));
 
 describe('service plans × 3D', () => {
   it('2D loads no 3D tool, 3D loads no 2D-group tool, Full loads every tool', () => {
@@ -47,9 +51,11 @@ describe('service plans × 3D', () => {
     const t3 = buildTools(bridge, planTools('3d')).map((t) => t.name);
     assert.deepEqual(t2.filter((n) => G.get(n) === 'ThreeD'), []);
     assert.deepEqual(t3.filter((n) => G.get(n) === 'TwoD'), []);
-    assert.deepEqual(threeD.filter((n) => !t3.includes(n)), [], 'every 3D tool on the 3D plan');
-    assert.equal(threeD.length, 29, 'phases 1 + 2 + 3: 14 + 12 + 3 tools');
-    assert.deepEqual(buildTools(bridge).map((t) => t.name).sort(), [...G.keys()].sort(), 'Full = every labelled tool');
+    assert.deepEqual(threeDSeen.filter((n) => !t3.includes(n)), [], 'every 3D tool on the 3D plan');
+    assert.equal(threeD.length, 31, 'phases 1 + 2 + 3: 14 + 12 + 3 tools, nâng cấp đợt A: draw_solid, build_railing');
+    assert.equal(threeDSeen.length, 25, 'Claude sees draw_solid instead of the six primitives');
+    for (const a of ALIASES) assert.ok(!all.includes(a), `${a} is a macro alias only`);
+    assert.deepEqual(buildTools(bridge).map((t) => t.name).sort(), [...G.keys()].filter((t) => !ALIASES.includes(t)).sort(), 'Full = every labelled tool but the aliases');
   });
 
   it('the system prompt of each plan names no tool outside the plan', () => {
@@ -100,7 +106,7 @@ describe('confirmation gate × every 3D tool', () => {
   const COUNTED = ['align', 'extrude', 'loft', 'mirror_3d', 'revolve', 'rotate_3d', 'sweep'];
   /** Only create, read or change the view / UCS: never change existing objects. */
   const NONE = [
-    'build_3d_from_plan', 'check_interference', 'draw_box', 'draw_cylinder', 'draw_pyramid', 'draw_sphere', 'draw_torus', 'draw_wedge',
+    'build_3d_from_plan', 'build_railing', 'check_interference', 'draw_solid', 'draw_box', 'draw_cylinder', 'draw_pyramid', 'draw_sphere', 'draw_torus', 'draw_wedge',
     'get_solid_info', 'projection_view', 'reset_ucs', 'section_view', 'set_ucs', 'set_view_3d', 'set_visual_style',
   ];
 
@@ -205,11 +211,11 @@ describe('explode_entities × 3D solids (decided 12/11/2026)', () => {
 });
 
 describe('3D token cut (decided 12/11/2026): no tool renamed, parameter meanings kept', () => {
-  const BUILDERS = ['draw_box', 'draw_cylinder', 'draw_sphere', 'draw_wedge', 'draw_torus', 'draw_pyramid', 'extrude', 'revolve', 'sweep', 'loft'];
+  const BUILDERS = ['draw_solid', 'extrude', 'revolve', 'sweep', 'loft', 'build_railing'];
   const tools = buildTools(bridge);
   const shape = (n: string) => tools.find((t) => t.name === n)!.inputSchema as Record<string, unknown>;
 
-  it('the 10 solid builders show only the layer of the common properties', () => {
+  it('the solid builders show only the layer of the common properties', () => {
     for (const n of BUILDERS) {
       const s = shape(n);
       assert.ok('layer' in s, `${n}: layer`);
@@ -221,9 +227,9 @@ describe('3D token cut (decided 12/11/2026): no tool renamed, parameter meanings
     assert.match(THREE_D_RULES, /set_entity_props/);
   });
 
-  it('the 3D tool names and the plan labels are unchanged (29 tools)', () => {
-    assert.deepEqual(tools.filter((t) => G.get(t.name) === 'ThreeD').map((t) => t.name).sort(), threeD);
-    assert.equal(threeD.length, 29);
+  it('the 3D tool names Claude sees are the labels minus the macro aliases (25 tools)', () => {
+    assert.deepEqual(tools.filter((t) => G.get(t.name) === 'ThreeD').map((t) => t.name).sort(), threeDSeen);
+    assert.equal(threeDSeen.length, 25);
   });
 
   it('the moved uses and examples are in the 3D skill, the rules stay in the tool parameters', () => {

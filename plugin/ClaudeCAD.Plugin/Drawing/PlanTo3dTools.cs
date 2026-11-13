@@ -19,6 +19,101 @@ namespace ClaudeCAD.Plugin.Drawing
         {
             // dry_run only reads: no version copy, no undo group, not recorded, allowed in "Chỉ xem" (KT-15)
             d.Register(new ToolDef("build_3d_from_plan", true, Build3dFromPlan, readsWhen: p => p.Bool("dry_run", false)));
+            // nâng cấp đợt A: railing (lan can) along a path
+            d.Register("build_railing", true, BuildRailing);
+        }
+
+        /// <summary>
+        /// build_railing: a railing along a path (an existing line / polyline, or points), from RailingLogic boxes united
+        /// into one solid on A-RAIL-3D. The path object is only read. Heights / sizes are mm, scaled by INSUNITS.
+        /// </summary>
+        internal static object BuildRailing(ToolContext ctx, Params p)
+        {
+            const string tool = "build_railing";
+            double f = FloorPlanLogic.MmPerUnit(Convert.ToInt32(ctx.Db.Insunits), out var unitName);
+            if (p.Has("path_handle") == p.Has("path_points"))
+                throw ToolException.Invalid($"{tool}: pass either 'path_handle' (a line / polyline) or 'path_points' [[x, y], ...], not both.");
+            var pts = new List<double[]>();
+            bool closed = p.Bool("closed", false);
+            double z = 0;
+            string from = null;
+            if (p.Has("path_points"))
+            {
+                pts = p.Points("path_points", 2, RailingLogic.MaxPoints);
+                z = pts[0].Length > 2 ? pts[0][2] : 0;
+            }
+            else
+            {
+                from = p.Handle("path_handle").ToUpperInvariant();
+                var e = Acad.GetEntity(ctx, from, false);
+                switch (e)
+                {
+                    case Line l:
+                        pts.Add(new[] { l.StartPoint.X, l.StartPoint.Y }); pts.Add(new[] { l.EndPoint.X, l.EndPoint.Y });
+                        z = l.StartPoint.Z;
+                        break;
+                    case Polyline pl:
+                        for (int i = 0; i < pl.NumberOfVertices; i++)
+                        {
+                            int segs = pl.Closed ? pl.NumberOfVertices : pl.NumberOfVertices - 1;
+                            if (i < segs && Math.Abs(pl.GetBulgeAt(i)) > 1e-9)
+                                throw ToolException.Invalid($"{tool}: {from} has arc segments; only straight segments are supported. Nothing was built. Draw the path with straight segments (short ones along a curve).");
+                            var v = pl.GetPoint3dAt(i);
+                            pts.Add(new[] { v.X, v.Y });
+                        }
+                        closed = closed || pl.Closed;
+                        z = pl.Elevation;
+                        break;
+                    default:
+                        throw ToolException.Invalid($"{tool}: {from} is a {Acad.TypeName(e)}; the path must be a line or a polyline with straight segments.");
+                }
+            }
+            if (p.Has("base_z")) z = p.Num("base_z") / f;
+            var o = new RailingLogic.Options
+            {
+                Height = p.Num("height", RailingLogic.DefaultHeight),
+                PostSpacing = p.Num("post_spacing", RailingLogic.DefaultPostSpacing),
+                Infill = p.Str("infill", "bars"),
+            };
+            // the layout is in mm: path points scaled to mm, boxes scaled back to drawing units
+            var mmPts = pts.Select(q => new[] { q[0] * f, q[1] * f }).ToList();
+            var lay = RailingLogic.Build(mmPts, closed, o, tool);
+            string layer = p.Str("layer", RailingLogic.Layer3d);
+            var layerP = LayerParams(tool, layer);
+            var layersCreated = new List<string>();
+            if (EnsureLayer(ctx, layer, 3)) layersCreated.Add(layer);
+            Solid3d rail = null;
+            ObjectId railId = ObjectId.Null;
+            var extra = new List<string>();
+            foreach (var b in lay.Boxes)
+            {
+                var s = MakeBox(b.Length / f, b.Width / f, b.Height / f, null, new[] { b.Center[0] / f, b.Center[1] / f, z + b.Center[2] / f }, b.RotationDeg);
+                if (rail == null) { railId = AddSolid(ctx, s, layerP); rail = s; continue; }
+                try { BooleanInto(rail, s, BooleanOperationType.BoolUnite); s.Dispose(); }
+                catch (Autodesk.AutoCAD.Runtime.Exception) { extra.Add(Acad.H(AddSolid(ctx, s, layerP))); }
+                catch { if (s.ObjectId.IsNull) s.Dispose(); throw; }
+            }
+            var r = Acad.Handles(railId);
+            var hs = new List<object> { Acad.H(railId) };
+            hs.AddRange(extra);
+            r["handles"] = hs;
+            AddSolidNumbers(r, rail);
+            double vol = VolumeOf(rail) + extra.Sum(h => VolumeOf((Solid3d)Acad.GetEntity(ctx, h, false)));
+            r["volume_m3"] = Math.Round(vol * f * f * f / 1e9, 6);
+            r["layer"] = layer;
+            r["length_m"] = Math.Round(lay.Length / 1000, 3);
+            r["height_mm"] = o.Height;
+            r["infill"] = o.Infill;
+            r["posts"] = lay.Posts;
+            if (lay.Bars > 0) r["bars"] = lay.Bars;
+            if (lay.Panels > 0) r["panels"] = lay.Panels;
+            if (from != null) r["path"] = from;
+            if (extra.Count > 0) r["separate_pieces"] = extra;
+            if (layersCreated.Count > 0) r["layers_created"] = layersCreated;
+            r["note"] = $"Railing {o.Height} mm high (top rail {RailingLogic.RailSize} mm, posts {RailingLogic.PostSize} mm at most {o.PostSpacing} mm apart" +
+                        (o.Infill == "bars" ? $", bars {RailingLogic.BarSize} mm with gaps ≤ {RailingLogic.MaxBarGap} mm" : o.Infill == "panel" ? $", panels {RailingLogic.PanelThickness} mm" : "") +
+                        "), centred on the path; the path object was only read.";
+            return r;
         }
 
         private sealed class PlanInput
@@ -34,6 +129,10 @@ namespace ClaudeCAD.Plugin.Drawing
             public PlanOptions Options = new PlanOptions();
             /// <summary>Existing solids on the result layers (rerun check).</summary>
             public List<Existing3d> Existing = new List<Existing3d>();
+            /// <summary>Closed column outlines (nâng cấp đợt A).</summary>
+            public List<(ObjectId id, string handle)> Columns = new List<(ObjectId, string)>();
+            /// <summary>Objects on layers that were not read, per layer: for the layer guess (nâng cấp đợt A).</summary>
+            public Dictionary<string, int> Unread = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
         }
 
         private static List<string> LayerList(Params p, string name, string[] def) =>
@@ -170,8 +269,10 @@ namespace ClaudeCAD.Plugin.Drawing
             e is Region || e is Circle || (e is Ellipse el && Math.Abs(el.EndParam - el.StartParam - 2 * Math.PI) < 1e-9) ||
             (e is Curve c && (c.Closed || (!(e is Line) && c.StartPoint.DistanceTo(c.EndPoint) < 1e-9 * Math.Max(1, c.StartPoint.GetAsVector().Length))));
 
-        private static void ReadPlan(ToolContext ctx, Params p, PlanInput input, double mmPerUnit, string wall3d, string slab3d)
+        private static void ReadPlan(ToolContext ctx, Params p, PlanInput input, double mmPerUnit, string wall3d, string slab3d, string column3d, bool readColumns)
         {
+            var columnLayers = LayerList(p, "column_layers", FloorPlanLogic.DefaultColumnLayers);
+            bool explicitColumns = p.Has("column_handles");
             var wallLayers = LayerList(p, "wall_layers", FloorPlanLogic.DefaultWallLayers);
             var doorLayers = LayerList(p, "door_layers", FloorPlanLogic.DefaultDoorLayers);
             var windowLayers = LayerList(p, "window_layers", FloorPlanLogic.DefaultWindowLayers);
@@ -211,6 +312,17 @@ namespace ClaudeCAD.Plugin.Drawing
             Explicit("centerline_handles", (e, h) => ReadWallCurve(ctx, e, h, input, ct));
             Explicit("door_handles", (e, h) => AddSymbol(ctx, e, h, "door", input));
             Explicit("window_handles", (e, h) => AddSymbol(ctx, e, h, "window", input));
+            void AddColumn(Entity e, string h)
+            {
+                if (!IsClosedArea(e)) { input.Skipped.Add(new PlanSkip(h, Acad.TypeName(e), "column outline is not a closed curve / region: no column from it")); return; }
+                var x = EntityInfo.Extents(e);
+                var why = x.HasValue ? FloorPlanLogic.ColumnSkipReason((x.Value.MaxPoint.X - x.Value.MinPoint.X) * mmPerUnit, (x.Value.MaxPoint.Y - x.Value.MinPoint.Y) * mmPerUnit) : "no extents";
+                if (why != null && !explicitColumns) { input.Skipped.Add(new PlanSkip(h, Acad.TypeName(e), why)); return; }
+                if (input.Columns.Count >= FloorPlanLogic.MaxColumns)
+                    throw ToolException.Invalid($"build_3d_from_plan: more than {FloorPlanLogic.MaxColumns} columns. Nothing was built. Pass area_min / area_max.");
+                input.Columns.Add((e.ObjectId, h));
+            }
+            if (readColumns) Explicit("column_handles", AddColumn);
             Explicit("slab_handles", (e, h) =>
             {
                 if (IsClosedArea(e)) input.Slabs.Add((e.ObjectId, h));
@@ -222,7 +334,8 @@ namespace ClaudeCAD.Plugin.Drawing
                 if (!(ctx.Tr.GetObject(id, OpenMode.ForRead) is Entity e) || e.IsErased) continue;
                 string layer = Acad.LayerName(ctx, e.LayerId);
                 // the result layers: earlier runs (rerun check), never read as plan
-                if (e is Solid3d && (string.Equals(layer, wall3d, StringComparison.OrdinalIgnoreCase) || string.Equals(layer, slab3d, StringComparison.OrdinalIgnoreCase)))
+                if (e is Solid3d && (string.Equals(layer, wall3d, StringComparison.OrdinalIgnoreCase) || string.Equals(layer, slab3d, StringComparison.OrdinalIgnoreCase) ||
+                                     string.Equals(layer, column3d, StringComparison.OrdinalIgnoreCase)))
                 {
                     var x = EntityInfo.Extents(e);
                     if (x.HasValue)
@@ -246,7 +359,13 @@ namespace ClaudeCAD.Plugin.Drawing
                 else if (!explicitDoors && FloorPlanLogic.LayerMatches(layer, doorLayers)) kind = "door";
                 else if (!explicitWindows && FloorPlanLogic.LayerMatches(layer, windowLayers)) kind = "window";
                 else if (!explicitSlabs && FloorPlanLogic.LayerMatches(layer, slabLayers)) kind = "slab";
-                if (kind == null) continue;
+                else if (readColumns && !explicitColumns && FloorPlanLogic.LayerMatches(layer, columnLayers)) kind = "column";
+                if (kind == null)
+                {
+                    // for the layer guess: what else is on the plan (only inside the area)
+                    if (InArea(EntityInfo.Extents(e), amin, amax)) input.Unread[layer] = input.Unread.TryGetValue(layer, out var n) ? n + 1 : 1;
+                    continue;
+                }
                 if (!InArea(EntityInfo.Extents(e), amin, amax)) continue;
                 Count();
                 string h = Acad.H(id);
@@ -261,6 +380,10 @@ namespace ClaudeCAD.Plugin.Drawing
                         if (IsClosedArea(e)) input.Slabs.Add((id, h));
                         else if (e is Hatch || e is DBText || e is MText || e is Dimension) input.Ignored++;
                         else input.Skipped.Add(new PlanSkip(h, Acad.TypeName(e), "on a slab layer but not a closed curve / region: no slab from it"));
+                        break;
+                    case "column":
+                        if (e is Hatch || e is DBText || e is MText || e is Dimension) { input.Ignored++; break; }
+                        AddColumn(e, h);
                         break;
                 }
             }
@@ -290,31 +413,41 @@ namespace ClaudeCAD.Plugin.Drawing
         {
             const string tool = "build_3d_from_plan";
             double f = FloorPlanLogic.MmPerUnit(Convert.ToInt32(ctx.Db.Insunits), out var unitName);
+            string slabMode = (p.Str("slab", "auto") ?? "auto").Trim().ToLowerInvariant();
+            if (slabMode != "auto" && slabMode != "none" && slabMode != "bbox") throw ToolException.Invalid($"{tool}: slab must be \"auto\" (slab layers / slab_handles), \"bbox\" (one slab under the walls' bounding box) or \"none\".");
+            double slabMm = p.Num("slab_thickness", FloorPlanLogic.DefaultSlabThickness);
+            // base_z is mm like the heights (the skill gives storey levels in mm), scaled by INSUNITS (KT-16)
+            double baseZmm = p.Num("base_z", 0);
+            // nâng cấp đợt A: several storeys at once ("dựng 3 tầng, mỗi tầng cao 3,3 m"), walls = storey − slab (L24)
+            int storeyCount = p.Int("storeys", 1, 1, FloorPlanLogic.MaxStoreys);
+            bool roof = p.Bool("roof_slab", false);
+            var levels = FloorPlanLogic.Storeys(storeyCount, p.NumOpt("storey_height"), p.NumOpt("wall_height"),
+                slabMode == "none" ? 0 : Math.Max(0, slabMm), baseZmm, roof, tool);
             var hmm = new FloorPlanLogic.Heights
             {
-                Wall = p.Num("wall_height", FloorPlanLogic.DefaultWallHeight),
+                Wall = levels[0].WallHeight,
                 Door = p.Num("door_height", FloorPlanLogic.DefaultDoorHeight),
                 Sill = p.Num("window_sill", FloorPlanLogic.DefaultSill),
                 Window = p.Num("window_height", FloorPlanLogic.DefaultWindowHeight),
-                Slab = p.Num("slab_thickness", FloorPlanLogic.DefaultSlabThickness),
+                Slab = slabMm,
             };
             FloorPlanLogic.CheckHeights(hmm, tool);
+            if (roof && (slabMode == "none" || hmm.Slab <= 0)) throw ToolException.Invalid($"{tool}: roof_slab needs a slab (slab \"auto\" / \"bbox\" and slab_thickness > 0).");
             double minT = p.Num("min_thickness", FloorPlanLogic.DefaultMinThickness), maxT = p.Num("max_thickness", FloorPlanLogic.DefaultMaxThickness);
             if (minT <= 0 || maxT < minT || maxT > FloorPlanLogic.MaxThicknessLimit)
                 throw ToolException.Invalid($"{tool}: need 0 < min_thickness ≤ max_thickness ≤ {FloorPlanLogic.MaxThicknessLimit} mm.");
             var hu = new FloorPlanLogic.Heights { Wall = hmm.Wall / f, Door = hmm.Door / f, Sill = hmm.Sill / f, Window = hmm.Window / f, Slab = hmm.Slab / f };
-            // base_z is mm like the heights (the skill gives storey levels in mm), scaled by INSUNITS (KT-16)
-            double baseZmm = p.Num("base_z", 0), baseZ = baseZmm / f;
-            string slabMode = (p.Str("slab", "auto") ?? "auto").Trim().ToLowerInvariant();
-            if (slabMode != "auto" && slabMode != "none" && slabMode != "bbox") throw ToolException.Invalid($"{tool}: slab must be \"auto\" (slab layers / slab_handles), \"bbox\" (one slab under the walls' bounding box) or \"none\".");
             string onExisting = (p.Str("on_existing", "stop") ?? "stop").Trim().ToLowerInvariant();
             if (onExisting != "stop" && onExisting != "add") throw ToolException.Invalid($"{tool}: on_existing must be \"stop\" (default) or \"add\".");
+            string colMode = (p.Str("columns", "auto") ?? "auto").Trim().ToLowerInvariant();
+            if (colMode != "auto" && colMode != "none") throw ToolException.Invalid($"{tool}: columns must be \"auto\" (column layers / column_handles) or \"none\".");
             bool dryRun = p.Bool("dry_run", false);
             string wall3d = p.Str("wall_layer_3d", FloorPlanLogic.WallLayer3d), slab3d = p.Str("slab_layer_3d", FloorPlanLogic.SlabLayer3d);
+            string col3d = p.Str("column_layer_3d", FloorPlanLogic.ColumnLayer3d);
             var opt = PlanOptions.ForUnits(f, minT, maxT);
 
             var input = new PlanInput { Options = opt };
-            ReadPlan(ctx, p, input, f, wall3d, slab3d);
+            ReadPlan(ctx, p, input, f, wall3d, slab3d, col3d, colMode == "auto");
             var res = FloorPlanLogic.Recognize(input.Faces, input.Centers, input.Symbols, opt);
             res.Skipped.InsertRange(0, input.Skipped);
 
@@ -354,48 +487,144 @@ namespace ClaudeCAD.Plugin.Drawing
 
             var report = Report(res, input, f, unitName, hmm, baseZmm);
             var notes = new List<string>();
+            // nâng cấp đợt A: layers whose names look like walls / doors / windows... but were not read
+            var guesses = LayerGuesses(p, input);
+            if (guesses.Count > 0)
+            {
+                report["layer_guess"] = guesses;
+                notes.Add("layer_guess lists layers whose NAMES look like plan parts but were not read. Do not build from a guess: tell the user the mapping " +
+                          "(layer → tường / cửa đi / cửa sổ / sàn / cột) and ask with request_confirmation, end the turn, and build with wall_layers / door_layers / " +
+                          "window_layers / slab_layers / column_layers only after their yes (a build with layers the user did not name is refused until then).");
+            }
             if (input.ThinWidePolylines > 0)
                 notes.Add($"{input.ThinWidePolylines} polyline(s) with a width below min_thickness were read as plain wall face lines (the width taken as a print line weight, not a wall thickness).");
-            if (res.Walls.Count == 0 && input.Slabs.Count == 0 && slabMode != "bbox")
+            if (res.Walls.Count == 0 && input.Slabs.Count == 0 && input.Columns.Count == 0 && slabMode != "bbox")
             {
-                throw ToolException.Invalid($"{tool}: no wall recognised. Nothing was built. Read: {input.Read} objects on the wall / door / window / slab layers " +
+                throw ToolException.Invalid($"{tool}: no wall recognised. Nothing was built. Read: {input.Read} objects on the wall / door / window / slab / column layers " +
                     $"({string.Join(", ", LayerList(p, "wall_layers", FloorPlanLogic.DefaultWallLayers))} for walls). " +
-                    "Check the layer names with list_layers and pass wall_layers, or pass wall_handles (two face lines per wall) / centerline_handles + thickness." +
+                    (guesses.Count > 0
+                        ? $"Layers that look like plan parts: {string.Join("; ", guesses.Take(10).Cast<Dictionary<string, object>>().Select(g => $"{g["layer"]} → {g["kind"]} ({g["objects"]} objects)"))}. " +
+                          "Ask the user to confirm this mapping (request_confirmation, then end the turn) and call again with wall_layers / door_layers / window_layers / slab_layers / column_layers. "
+                        : "Check the layer names with list_layers and pass wall_layers, or pass wall_handles (two face lines per wall) / centerline_handles + thickness.") +
                     (res.Skipped.Count > 0 ? $" Skipped: {string.Join("; ", res.Skipped.Take(5).Select(s => $"{s.Handle} {s.Reason}"))}." : "") +
                     (f == 1 && unitName.Contains("unitless") ? " The drawing has no units set (INSUNITS = 0): it was read as mm; a plan drawn in metres needs INSUNITS = 6." : ""));
             }
             var boxes = FloorPlanLogic.Boxes(res, hu);
-            if (boxes.Count > FloorPlanLogic.MaxBoxes)
-                throw ToolException.Invalid($"{tool}: {boxes.Count} wall pieces (more than {FloorPlanLogic.MaxBoxes}). Nothing was built. Pass area_min / area_max.");
+            if (boxes.Count * Math.Max(1, storeyCount) > FloorPlanLogic.MaxBoxes)
+                throw ToolException.Invalid($"{tool}: {boxes.Count * storeyCount} wall pieces (more than {FloorPlanLogic.MaxBoxes}). Nothing was built. Pass area_min / area_max, or build fewer storeys at a time.");
             report["pieces"] = boxes.Count;
+            report["columns_count"] = input.Columns.Count;
+            if (storeyCount > 1 || roof)
+            {
+                report["storeys"] = storeyCount;
+                report["storey_height_mm"] = Acad.R(levels.Count > 1 ? levels[1].BaseZ - levels[0].BaseZ : hmm.Wall + (slabMode == "none" ? 0 : hmm.Slab));
+                report["levels_mm"] = levels.Select(l => (object)new Dictionary<string, object> { ["storey"] = l.Number, ["base_z"] = Acad.R(l.BaseZ), ["roof"] = l.RoofOnly }).ToList();
+            }
 
-            // rerun check: solids already on the result layers over this plan (walls and slab outlines)
+            // column footprints for the rerun check (xy box, wall height)
+            var colBoxes = new List<PlanBox>();
+            foreach (var (id, _) in input.Columns)
+            {
+                var x = EntityInfo.Extents((Entity)ctx.Tr.GetObject(id, OpenMode.ForRead));
+                if (!x.HasValue) continue;
+                colBoxes.Add(new PlanBox
+                {
+                    Center = new[] { (x.Value.MinPoint.X + x.Value.MaxPoint.X) / 2, (x.Value.MinPoint.Y + x.Value.MaxPoint.Y) / 2, hu.Wall / 2 },
+                    Length = x.Value.MaxPoint.X - x.Value.MinPoint.X, Width = x.Value.MaxPoint.Y - x.Value.MinPoint.Y, Height = hu.Wall,
+                });
+            }
+
+            // rerun check of every storey BEFORE anything is built: solids already on the result layers at that level
             var fp = FloorPlanLogic.Footprint(res);
-            var rerun = ExistingOver(ctx, input, boxes, fp, slabMode, baseZ, hu);
-            var dup = rerun.Rerun;
-            if (rerun.SlabIntoWallsBelow.Count > 0)
-                notes.Add($"This storey's slab ({Acad.R(hmm.Slab)} mm under base_z) cuts {Acad.R(rerun.SlabIntoWallsBy * f)} mm into {rerun.SlabIntoWallsBelow.Count} wall solid(s) of the storey below " +
-                    $"({string.Join(", ", rerun.SlabIntoWallsBelow.Take(10))}): that is not a rerun, but the walls below should be storey height − slab thickness high. Never erase the storey below for this.");
+            var dup = new List<string>();
+            foreach (var lv in levels)
+            {
+                double bz = lv.BaseZ / f;
+                var levelBoxes = lv.RoofOnly ? new List<PlanBox>() : boxes.Concat(colBoxes).ToList();
+                var rerun = ExistingOver(ctx, input, levelBoxes, fp, slabMode, bz, hu);
+                foreach (var h in rerun.Rerun) if (!dup.Contains(h)) dup.Add(h);
+                if (rerun.SlabIntoWallsBelow.Count > 0)
+                    notes.Add($"The slab of storey {lv.Number} ({Acad.R(hmm.Slab)} mm under base_z {Acad.R(lv.BaseZ)}) cuts {Acad.R(rerun.SlabIntoWallsBy * f)} mm into {rerun.SlabIntoWallsBelow.Count} wall solid(s) of the storey below " +
+                        $"({string.Join(", ", rerun.SlabIntoWallsBelow.Take(10))}): that is not a rerun, but the walls below should be storey height − slab thickness high. Never erase the storey below for this.");
+            }
             if (dryRun)
             {
                 report["dry_run"] = true;
-                report["note"] = "Dry run: nothing was built. Check walls / openings / skipped, then call again without dry_run (add 'openings' for what was missed).";
+                report["note"] = "Dry run: nothing was built. Check walls / openings / columns / skipped, then call again without dry_run (add 'openings' for what was missed).";
                 if (dup.Count > 0)
                 {
                     report["existing_solids"] = dup.Take(FloorPlanLogic.MaxReportItems).Cast<object>().ToList();
-                    notes.Add($"{dup.Count} solid(s) of an earlier run are already on {wall3d} / {slab3d} at this level (base_z {Acad.R(baseZmm)} mm) over this plan: building again stops unless the user chooses (a different base_z for another storey, on_existing \"add\", or erasing exactly those solids).");
+                    notes.Add($"{dup.Count} solid(s) of an earlier run are already on {wall3d} / {slab3d} / {col3d} at {(levels.Count > 1 ? "these levels" : $"this level (base_z {Acad.R(baseZmm)} mm)")} over this plan: building again stops unless the user chooses (a different base_z for another storey, on_existing \"add\", or erasing exactly those solids).");
                 }
                 if (notes.Count > 0) report["notes"] = notes;
                 return report;
             }
             if (dup.Count > 0 && onExisting == "stop")
-                throw ToolException.Invalid($"{tool}: this plan was already built at this level (base_z {Acad.R(baseZmm)} mm): {dup.Count} solid(s) on {wall3d} / {slab3d} over it at the same height ({string.Join(", ", dup.Take(20))}{(dup.Count > 20 ? ", …" : "")}). " +
+                throw ToolException.Invalid($"{tool}: this plan was already built at {(levels.Count > 1 ? "one of these levels" : $"this level (base_z {Acad.R(baseZmm)} mm)")}: {dup.Count} solid(s) on {wall3d} / {slab3d} / {col3d} over it at the same height ({string.Join(", ", dup.Take(20))}{(dup.Count > 20 ? ", …" : "")}). " +
                     "A storey below or beside only touching this one does not count. Nothing was built. Ask the user: another storey (a different base_z), build again anyway with on_existing \"add\", or erase exactly these solids first (erase_entities, needs their yes). Never erase other storeys.");
 
             var created = new List<string>();
             var layersCreated = new List<string>();
+            var perLevel = new List<object>();
+            bool slabNoted = false;
+            foreach (var lv in levels)
+            {
+                double bz = lv.BaseZ / f;
+                var lr = new Dictionary<string, object> { ["storey"] = lv.Number, ["base_z"] = Acad.R(lv.BaseZ) };
+                if (!lv.RoofOnly)
+                {
+                    var wr = BuildWalls(ctx, tool, boxes, bz, f, wall3d, created, layersCreated, notes);
+                    if (wr != null) lr["wall_solid"] = wr;
+                    var cols = BuildColumns(ctx, tool, input, bz, hu.Wall, f, col3d, created, layersCreated, res.Skipped);
+                    if (cols.Count > 0) lr["columns"] = cols;
+                }
+                else lr["roof"] = true;
+                var slabs = new List<object>();
+                if (slabMode != "none" && hmm.Slab > 0)
+                {
+                    slabs = BuildSlabs(ctx, tool, input, res, fp, slabMode, bz, hu.Slab, f, slab3d, created, layersCreated);
+                    if (slabs.Count == 0 && slabMode == "auto" && !slabNoted)
+                    {
+                        slabNoted = true;
+                        notes.Add($"No slab: no closed outline on {string.Join(", ", LayerList(p, "slab_layers", FloorPlanLogic.DefaultSlabLayers))} and no slab_handles. Ask the user for the slab outline, or call again with slab \"bbox\" (one slab under the walls' bounding box) if that is what they want.");
+                    }
+                }
+                lr["slabs"] = slabs;
+                perLevel.Add(lr);
+            }
+            // one storey: the fields as before; several: one entry per storey (and the roof)
+            var first = (Dictionary<string, object>)perLevel[0];
+            if (perLevel.Count == 1)
+            {
+                if (first.TryGetValue("wall_solid", out var w0)) report["wall_solid"] = w0;
+                if (first.TryGetValue("columns", out var c0)) report["columns"] = c0;
+                report["slabs"] = first["slabs"];
+            }
+            else
+            {
+                report["levels"] = perLevel;
+                if (first.TryGetValue("wall_solid", out var w0)) report["wall_solid"] = w0;
+                report["slabs"] = perLevel.Cast<Dictionary<string, object>>().SelectMany(l => (List<object>)l["slabs"]).ToList();
+            }
+            report["skipped"] = SkipList(res.Skipped);
+            report["skipped_count"] = res.Skipped.Count;
+            if (created.Count == 0)
+                throw ToolException.Invalid($"{tool}: nothing to build (no wall piece or column{(slabMode == "none" || hmm.Slab <= 0 ? "; slab is off" : " and no slab outline could be used")}). Nothing was built." +
+                    (res.Skipped.Count > 0 ? $" Skipped: {string.Join("; ", res.Skipped.Take(5).Select(x => $"{x.Handle} {x.Reason}"))}." : ""));
+            report["handles"] = created.Cast<object>().ToList();
+            if (layersCreated.Count > 0) report["layers_created"] = layersCreated.Distinct().ToList();
+            notes.Add("Plan objects were only read, not changed. Self-check now: set_view_3d sw_iso with these handles, set_visual_style conceptual, capture_view; compare volume_m3 / min / max with the plan.");
+            report["notes"] = notes;
+            return report;
+        }
+
+        /// <summary>The wall boxes of one storey united into one solid (pieces AutoCAD cannot unite stay separate).</summary>
+        private static Dictionary<string, object> BuildWalls(ToolContext ctx, string tool, List<PlanBox> boxes, double baseZ, double f, string wall3d,
+            List<string> created, List<string> layersCreated, List<string> notes)
+        {
+            if (boxes.Count == 0) return null;
             var wallP = LayerParams(tool, wall3d);
-            if (boxes.Count > 0 && EnsureLayer(ctx, wall3d, 7)) layersCreated.Add(wall3d);
+            if (EnsureLayer(ctx, wall3d, 7)) layersCreated.Add(wall3d);
             double piecesVolume = 0;
             Solid3d walls = null;
             ObjectId wallsId = ObjectId.Null;
@@ -429,123 +658,174 @@ namespace ClaudeCAD.Plugin.Drawing
                 }
                 catch { if (s.ObjectId.IsNull) s.Dispose(); throw; }
             }
-            if (walls != null)
-            {
-                created.Add(Acad.H(wallsId));
-                created.AddRange(extra);
-                var wr = new Dictionary<string, object> { ["handle"] = Acad.H(wallsId), ["layer"] = wall3d };
-                AddSolidNumbers(wr, walls);
-                double vol = VolumeOf(walls) + extra.Sum(h => VolumeOf((Solid3d)Acad.GetEntity(ctx, h, false)));
-                wr["volume_m3"] = Math.Round(vol * f * f * f / 1e9, 6);
-                wr["pieces_volume_m3"] = Math.Round(piecesVolume * f * f * f / 1e9, 6);
-                if (extra.Count > 0) { wr["separate_pieces"] = extra; notes.Add($"AutoCAD could not unite {unionFailed} wall piece(s); they are separate solids on {wall3d}."); }
-                report["wall_solid"] = wr;
-            }
+            created.Add(Acad.H(wallsId));
+            created.AddRange(extra);
+            var wr = new Dictionary<string, object> { ["handle"] = Acad.H(wallsId), ["layer"] = wall3d };
+            AddSolidNumbers(wr, walls);
+            double vol = VolumeOf(walls) + extra.Sum(h => VolumeOf((Solid3d)Acad.GetEntity(ctx, h, false)));
+            wr["volume_m3"] = Math.Round(vol * f * f * f / 1e9, 6);
+            wr["pieces_volume_m3"] = Math.Round(piecesVolume * f * f * f / 1e9, 6);
+            if (extra.Count > 0) { wr["separate_pieces"] = extra; notes.Add($"AutoCAD could not unite {unionFailed} wall piece(s); they are separate solids on {wall3d}."); }
+            return wr;
+        }
 
-            // slabs: top at base_z, slab_thickness down
-            var slabs = new List<object>();
-            if (slabMode != "none" && hmm.Slab > 0)
+        /// <summary>Regions of closed outlines (the caller disposes them); outlines that cannot become a region are skipped.</summary>
+        private static List<(Region r, string src)> OutlineRegions(ToolContext ctx, IEnumerable<(ObjectId id, string handle)> outlines, List<PlanSkip> skipped, string what)
+        {
+            var regions = new List<(Region r, string src)>();
+            foreach (var (id, h) in outlines)
             {
-                var regions = new List<(Region r, string src)>();
+                var e = (Entity)ctx.Tr.GetObject(id, OpenMode.ForRead);
+                if (e is Region reg) { regions.Add(((Region)reg.Clone(), h)); continue; }
                 try
                 {
-                    if (slabMode == "bbox")
+                    foreach (DBObject o in Region.CreateFromCurves(new DBObjectCollection { e })) if (o is Region r) regions.Add((r, h)); else o.Dispose();
+                }
+                catch (Autodesk.AutoCAD.Runtime.Exception ex)
+                {
+                    skipped.Add(new PlanSkip(h, Acad.TypeName(e), $"{what} outline could not become a region ({ex.ErrorStatus}: self-crossing or not flat): no {what} from it"));
+                }
+            }
+            return regions;
+        }
+
+        /// <summary>
+        /// Extrudes a region by height (drawing units, positive = up) and puts its bottom at z0, or its top at z0 when
+        /// topAt; refuses an outline that is not flat in XY.
+        /// </summary>
+        private static Solid3d ExtrudeFlat(string tool, Region reg, double height, double z0, bool topAt, string src, string what)
+        {
+            var s = new Solid3d();
+            try
+            {
+                s.Extrude(reg, topAt ? -height : height, 0);
+                var ext = s.GeometricExtents;
+                s.TransformBy(Matrix3d.Displacement(new Vector3d(0, 0, topAt ? z0 - ext.MaxPoint.Z : z0 - ext.MinPoint.Z)));
+                ext = s.GeometricExtents;
+                if (Math.Abs(ext.MaxPoint.Z - ext.MinPoint.Z - height) > 1e-6 * Math.Max(1, height))
+                    throw ToolException.Invalid($"{tool}: the {what} outline {src} is not horizontal (flat in XY). Nothing was built.");
+                return s;
+            }
+            catch (Autodesk.AutoCAD.Runtime.Exception ex)
+            {
+                s.Dispose();
+                throw ToolException.Invalid($"{tool}: AutoCAD could not build the {what} from {src} ({ex.ErrorStatus}). Nothing was built.");
+            }
+            catch { s.Dispose(); throw; }
+        }
+
+        /// <summary>Columns of one storey: each closed outline extruded from base_z by the wall height, one solid each.</summary>
+        private static List<object> BuildColumns(ToolContext ctx, string tool, PlanInput input, double baseZ, double height, double f, string col3d,
+            List<string> created, List<string> layersCreated, List<PlanSkip> skipped)
+        {
+            var list = new List<object>();
+            if (input.Columns.Count == 0) return list;
+            var regions = OutlineRegions(ctx, input.Columns, skipped, "column");
+            try
+            {
+                if (regions.Count > 0 && EnsureLayer(ctx, col3d, 1)) layersCreated.Add(col3d);
+                var colP = LayerParams(tool, col3d);
+                foreach (var (reg, src) in regions)
+                {
+                    var s = ExtrudeFlat(tool, reg, height, baseZ, false, src, "column");
+                    var id = AddSolid(ctx, s, colP);
+                    created.Add(Acad.H(id));
+                    var cr = new Dictionary<string, object> { ["handle"] = Acad.H(id), ["from"] = src };
+                    AddSolidNumbers(cr, s);
+                    cr["volume_m3"] = Math.Round(VolumeOf(s) * f * f * f / 1e9, 6);
+                    list.Add(cr);
+                }
+            }
+            finally { foreach (var x in regions) x.r.Dispose(); }
+            // the same outline is skipped once only (every storey reads it again)
+            var seen = new HashSet<string>();
+            skipped.RemoveAll(x => !seen.Add(x.Handle + "|" + x.Reason));
+            return list;
+        }
+
+        /// <summary>Slabs of one level: top at base_z, slab thickness down; outlines inside others are holes (KT-22).</summary>
+        private static List<object> BuildSlabs(ToolContext ctx, string tool, PlanInput input, PlanResult res, (double[] min, double[] max)? fp, string slabMode,
+            double baseZ, double slabT, double f, string slab3d, List<string> created, List<string> layersCreated)
+        {
+            var slabs = new List<object>();
+            var regions = new List<(Region r, string src)>();
+            try
+            {
+                if (slabMode == "bbox")
+                {
+                    if (!fp.HasValue) throw ToolException.Invalid($"{tool}: slab \"bbox\" needs recognised walls.");
+                    var a = fp.Value.min; var c = fp.Value.max;
+                    using (var pl = Acad.MakePolyline(new List<double[]> { new[] { a[0], a[1] }, new[] { c[0], a[1] }, new[] { c[0], c[1] }, new[] { a[0], c[1] } }, true))
                     {
-                        if (!fp.HasValue) throw ToolException.Invalid($"{tool}: slab \"bbox\" needs recognised walls.");
-                        var a = fp.Value.min; var c = fp.Value.max;
-                        using (var pl = Acad.MakePolyline(new List<double[]> { new[] { a[0], a[1] }, new[] { c[0], a[1] }, new[] { c[0], c[1] }, new[] { a[0], c[1] } }, true))
-                        {
-                            var col = new DBObjectCollection { pl };
-                            foreach (DBObject o in Region.CreateFromCurves(col)) if (o is Region r) regions.Add((r, "bbox")); else o.Dispose();
-                        }
-                    }
-                    else
-                    {
-                        foreach (var (id, h) in input.Slabs)
-                        {
-                            var e = (Entity)ctx.Tr.GetObject(id, OpenMode.ForRead);
-                            if (e is Region reg) { regions.Add(((Region)reg.Clone(), h)); continue; }
-                            try
-                            {
-                                foreach (DBObject o in Region.CreateFromCurves(new DBObjectCollection { e })) if (o is Region r) regions.Add((r, h)); else o.Dispose();
-                            }
-                            catch (Autodesk.AutoCAD.Runtime.Exception ex)
-                            {
-                                res.Skipped.Add(new PlanSkip(h, Acad.TypeName(e), $"slab outline could not become a region ({ex.ErrorStatus}: self-crossing or not flat): no slab from it"));
-                            }
-                        }
-                    }
-                    // a smaller outline inside a bigger one is a hole (stair, shaft)
-                    regions = regions.OrderByDescending(x => SafeArea(x.r)).ToList();
-                    var holes = new HashSet<int>();
-                    // the same outline twice (drawn twice, or on A-SLAB and A-FLOR) gives one slab, not two on top of each other
-                    for (int i = 0; i < regions.Count; i++)
-                        for (int j = i + 1; j < regions.Count && !holes.Contains(i); j++)
-                            if (!holes.Contains(j) && SameRegion(regions[i].r, regions[j].r))
-                            {
-                                holes.Add(j);
-                                res.Skipped.Add(new PlanSkip(regions[j].src, "SLAB", $"the same outline as {regions[i].src}: one slab built"));
-                            }
-                    // nesting (KT-22): even depth = a slab, odd = a hole in its parent; an island inside a hole is a slab again
-                    var live = Enumerable.Range(0, regions.Count).Where(i => !holes.Contains(i)).ToList();
-                    var (depth, parent) = FloorPlanLogic.SlabNesting(live.Select(i => SafeArea(regions[i].r)).ToList(),
-                        (a, b) => Inside(regions[live[a]].r, regions[live[b]].r));
-                    for (int a = 0; a < live.Count; a++)
-                    {
-                        if (depth[a] % 2 == 1) { holes.Add(live[a]); continue; }
-                        for (int b = 0; b < live.Count; b++)
-                        {
-                            if (parent[b] != a) continue;
-                            using (var cut = (Region)regions[live[b]].r.Clone()) regions[live[a]].r.BooleanOperation(BooleanOperationType.BoolSubtract, cut);
-                        }
-                    }
-                    if (regions.Count > holes.Count && EnsureLayer(ctx, slab3d, 8)) layersCreated.Add(slab3d);
-                    var slabP = LayerParams(tool, slab3d);
-                    for (int i = 0; i < regions.Count; i++)
-                    {
-                        if (holes.Contains(i)) continue;
-                        var reg = regions[i].r;
-                        var s = new Solid3d();
-                        try
-                        {
-                            s.Extrude(reg, -hu.Slab, 0);
-                            // the outline may lie at any z (or have a downward normal): put the top at base_z
-                            var ext = s.GeometricExtents;
-                            s.TransformBy(Matrix3d.Displacement(new Vector3d(0, 0, baseZ - ext.MaxPoint.Z)));
-                            ext = s.GeometricExtents;
-                            if (Math.Abs(ext.MaxPoint.Z - ext.MinPoint.Z - hu.Slab) > 1e-6 * Math.Max(1, hu.Slab))
-                                throw ToolException.Invalid($"{tool}: the slab outline {regions[i].src} is not horizontal (flat in XY). Nothing was built.");
-                        }
-                        catch (Autodesk.AutoCAD.Runtime.Exception ex)
-                        {
-                            s.Dispose();
-                            throw ToolException.Invalid($"{tool}: AutoCAD could not build the slab from {regions[i].src} ({ex.ErrorStatus}). Nothing was built.");
-                        }
-                        catch { s.Dispose(); throw; }
-                        var sid = AddSolid(ctx, s, slabP);
-                        created.Add(Acad.H(sid));
-                        var sr = new Dictionary<string, object> { ["handle"] = Acad.H(sid), ["from"] = regions[i].src, ["area_m2"] = Math.Round(SafeArea(reg) * f * f / 1e6, 4) };
-                        AddSolidNumbers(sr, s);
-                        sr["volume_m3"] = Math.Round(VolumeOf(s) * f * f * f / 1e9, 6);
-                        slabs.Add(sr);
+                        var col = new DBObjectCollection { pl };
+                        foreach (DBObject o in Region.CreateFromCurves(col)) if (o is Region r) regions.Add((r, "bbox")); else o.Dispose();
                     }
                 }
-                finally { foreach (var x in regions) x.r.Dispose(); }
-                if (slabs.Count == 0 && slabMode == "auto")
-                    notes.Add($"No slab: no closed outline on {string.Join(", ", LayerList(p, "slab_layers", FloorPlanLogic.DefaultSlabLayers))} and no slab_handles. Ask the user for the slab outline, or call again with slab \"bbox\" (one slab under the walls' bounding box) if that is what they want.");
+                else
+                {
+                    regions = OutlineRegions(ctx, input.Slabs, res.Skipped, "slab");
+                    // every level reads the outlines again: keep one skip line per outline
+                    var seen = new HashSet<string>();
+                    res.Skipped.RemoveAll(x => !seen.Add(x.Handle + "|" + x.Reason));
+                }
+                // a smaller outline inside a bigger one is a hole (stair, shaft)
+                regions = regions.OrderByDescending(x => SafeArea(x.r)).ToList();
+                var holes = new HashSet<int>();
+                // the same outline twice (drawn twice, or on A-SLAB and A-FLOR) gives one slab, not two on top of each other
+                for (int i = 0; i < regions.Count; i++)
+                    for (int j = i + 1; j < regions.Count && !holes.Contains(i); j++)
+                        if (!holes.Contains(j) && SameRegion(regions[i].r, regions[j].r))
+                        {
+                            holes.Add(j);
+                            var msg = $"the same outline as {regions[i].src}: one slab built";
+                            if (!res.Skipped.Any(x => x.Handle == regions[j].src && x.Reason == msg)) res.Skipped.Add(new PlanSkip(regions[j].src, "SLAB", msg));
+                        }
+                // nesting (KT-22): even depth = a slab, odd = a hole in its parent; an island inside a hole is a slab again
+                var live = Enumerable.Range(0, regions.Count).Where(i => !holes.Contains(i)).ToList();
+                var (depth, parent) = FloorPlanLogic.SlabNesting(live.Select(i => SafeArea(regions[i].r)).ToList(),
+                    (a, b) => Inside(regions[live[a]].r, regions[live[b]].r));
+                for (int a = 0; a < live.Count; a++)
+                {
+                    if (depth[a] % 2 == 1) { holes.Add(live[a]); continue; }
+                    for (int b = 0; b < live.Count; b++)
+                    {
+                        if (parent[b] != a) continue;
+                        using (var cut = (Region)regions[live[b]].r.Clone()) regions[live[a]].r.BooleanOperation(BooleanOperationType.BoolSubtract, cut);
+                    }
+                }
+                if (regions.Count > holes.Count && EnsureLayer(ctx, slab3d, 8)) layersCreated.Add(slab3d);
+                var slabP = LayerParams(tool, slab3d);
+                for (int i = 0; i < regions.Count; i++)
+                {
+                    if (holes.Contains(i)) continue;
+                    var reg = regions[i].r;
+                    // the outline may lie at any z (or have a downward normal): put the top at base_z
+                    var s = ExtrudeFlat(tool, reg, slabT, baseZ, true, regions[i].src, "slab");
+                    var sid = AddSolid(ctx, s, slabP);
+                    created.Add(Acad.H(sid));
+                    var sr = new Dictionary<string, object> { ["handle"] = Acad.H(sid), ["from"] = regions[i].src, ["area_m2"] = Math.Round(SafeArea(reg) * f * f / 1e6, 4) };
+                    AddSolidNumbers(sr, s);
+                    sr["volume_m3"] = Math.Round(VolumeOf(s) * f * f * f / 1e9, 6);
+                    slabs.Add(sr);
+                }
             }
-            report["slabs"] = slabs;
-            report["skipped"] = SkipList(res.Skipped);
-            report["skipped_count"] = res.Skipped.Count;
-            if (created.Count == 0)
-                throw ToolException.Invalid($"{tool}: nothing to build (no wall piece{(slabMode == "none" || hmm.Slab <= 0 ? "; slab is off" : " and no slab outline could be used")}). Nothing was built." +
-                    (res.Skipped.Count > 0 ? $" Skipped: {string.Join("; ", res.Skipped.Take(5).Select(x => $"{x.Handle} {x.Reason}"))}." : ""));
-            report["handles"] = created.Cast<object>().ToList();
-            if (layersCreated.Count > 0) report["layers_created"] = layersCreated;
-            notes.Add("Plan objects were only read, not changed. Self-check now: set_view_3d sw_iso with these handles, set_visual_style conceptual, capture_view; compare volume_m3 / min / max with the plan.");
-            report["notes"] = notes;
-            return report;
+            finally { foreach (var x in regions) x.r.Dispose(); }
+            return slabs;
         }
+
+        /// <summary>Layers that were not read but whose names look like plan parts (FloorPlanLogic.GuessLayerKind), most objects first.</summary>
+        private static List<object> LayerGuesses(Params p, PlanInput input) =>
+            input.Unread
+                .Select(kv => (layer: kv.Key, n: kv.Value, kind: FloorPlanLogic.GuessLayerKind(kv.Key)))
+                .Where(x => x.kind != null)
+                .OrderByDescending(x => x.n).ThenBy(x => x.layer, StringComparer.OrdinalIgnoreCase)
+                .Take(FloorPlanLogic.MaxLayerGuesses)
+                .Select(x => (object)new Dictionary<string, object>
+                {
+                    ["layer"] = x.layer, ["kind"] = x.kind, ["objects"] = x.n,
+                    ["param"] = x.kind == "railing" ? "build_railing (path_handle)" : x.kind + "_layers",
+                })
+                .ToList();
 
         /// <summary>Rerun check (FloorPlanLogic.CheckRerun): solids of an earlier run at this level over the new walls / slab outlines.</summary>
         private static RerunCheck ExistingOver(ToolContext ctx, PlanInput input, List<PlanBox> boxes, (double[] min, double[] max)? fp, string slabMode, double baseZ, FloorPlanLogic.Heights hu)

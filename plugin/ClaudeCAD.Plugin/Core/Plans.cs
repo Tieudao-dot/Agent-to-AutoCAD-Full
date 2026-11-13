@@ -89,12 +89,15 @@ namespace ClaudeCAD.Plugin.Core
                 "offset_entity fillet_entities chamfer_entities trim_entities extend_entities join_entities explode_entities edit_polyline");
             // 3D phases 1, 2 and 3 (Drawing/SolidTools.cs, Solid2Tools.cs, PlanTo3dTools.cs, SectionTools.cs): only the 3D and Full plans
             Add(ToolGroup.ThreeD,
-                "draw_box draw_cylinder draw_sphere draw_wedge draw_torus draw_pyramid extrude revolve " +
+                // draw_solid (nâng cấp đợt A) replaces the six primitives for Claude; their old names stay for recorded macros
+                "draw_solid draw_box draw_cylinder draw_sphere draw_wedge draw_torus draw_pyramid extrude revolve " +
                 "solid_union solid_subtract solid_intersect set_view_3d set_visual_style get_solid_info " +
                 // 3D phase 2 (Drawing/Solid2Tools.cs)
                 "sweep loft slice_solid fillet_edges chamfer_edges shell_solid rotate_3d mirror_3d align set_ucs reset_ucs check_interference " +
                 // 3D phase 3 (Drawing/PlanTo3dTools.cs, SectionTools.cs): their 2D lines / hatch are results of a 3D tool
-                "build_3d_from_plan section_view projection_view");
+                "build_3d_from_plan section_view projection_view " +
+                // nâng cấp đợt A (Drawing/PlanTo3dTools.cs): railing along a path
+                "build_railing");
             return d;
         }
 
@@ -127,9 +130,29 @@ namespace ClaudeCAD.Plugin.Core
             ["insert_block"] = "attributes",
         };
 
-        /// <summary>The parameter of this call the plan does not have (a non-empty block attribute list on a plan without 2D), or null.</summary>
+        /// <summary>
+        /// Parameters of Common tools that are 3D (nâng cấp đợt A, 13/11/2026): the levels of array_rect (copies stacked
+        /// along Z, like ARRAYRECT's levels). levels 1 (or none) stays Common.
+        /// </summary>
+        public static readonly IReadOnlyDictionary<string, string> ThreeDParams = new Dictionary<string, string>(StringComparer.Ordinal)
+        {
+            ["array_rect"] = "levels",
+        };
+
+        /// <summary>The 3D parameter of this call the plan does not have (array_rect levels above 1 on a plan without 3D), or null.</summary>
+        public static string Blocked3dParam(string plan, string tool, IDictionary<string, object> p)
+        {
+            if (tool == null || p == null || Has3D(plan) || !ThreeDParams.TryGetValue(tool, out var name)) return null;
+            if (!p.TryGetValue(name, out var v) || v == null) return null;
+            try { return Convert.ToDouble(v, System.Globalization.CultureInfo.InvariantCulture) > 1 ? name : null; }
+            catch (Exception) { return name; }
+        }
+
+        /// <summary>The parameter of this call the plan does not have (block attributes without 2D, array levels without 3D), or null.</summary>
         public static string BlockedParam(string plan, string tool, IDictionary<string, object> p)
         {
+            var three = Blocked3dParam(plan, tool, p);
+            if (three != null) return three;
             if (tool == null || p == null || Has2D(plan) || !TextParams.TryGetValue(tool, out var name)) return null;
             if (!p.TryGetValue(name, out var v) || v == null) return null;
             if (v is System.Collections.ICollection c && c.Count == 0) return null;
@@ -143,7 +166,11 @@ namespace ClaudeCAD.Plugin.Core
 
         /// <summary>Error text for Claude when a parameter (block attributes) is outside the machine's plan.</summary>
         public static string BlockedParamMessage(string tool, string param, string plan, string contact) =>
-            $"{tool}: this machine's plan is \"{Label(plan)}\", which has no text, and '{param}' (block attributes) is text from the 2D group. " +
+            ThreeDParams.TryGetValue(tool ?? "", out var p3) && p3 == param
+                ? $"{tool}: this machine's plan is \"{Label(plan)}\", which has no 3D, and '{param}' (copies stacked along Z) belongs to the 3D group. " +
+                  "Leave levels out (one level), or tell the user in Vietnamese that this machine uses the " +
+                  $"\"{Label(plan)}\" plan and that the plugin owner can open the 3D group" + (string.IsNullOrWhiteSpace(contact) ? "." : $" ({contact}).")
+                : $"{tool}: this machine's plan is \"{Label(plan)}\", which has no text, and '{param}' (block attributes) is text from the 2D group. " +
             "Define or insert the block without attributes, or tell the user in Vietnamese that this machine uses the " +
             $"\"{Label(plan)}\" plan and that the plugin owner can open the 2D group" +
             (string.IsNullOrWhiteSpace(contact) ? "." : $" ({contact}).");
@@ -154,7 +181,8 @@ namespace ClaudeCAD.Plugin.Core
             var list = new List<string>();
             foreach (var (tool, p) in calls)
             {
-                string what = !Allowed(plan, tool) ? tool : BlockedParam(plan, tool, p) != null ? tool + " (thuộc tính block)" : null;
+                var bp = Allowed(plan, tool) ? BlockedParam(plan, tool, p) : null;
+                string what = !Allowed(plan, tool) ? tool : bp == null ? null : tool + (Blocked3dParam(plan, tool, p) != null ? " (số tầng)" : " (thuộc tính block)");
                 if (what != null && !list.Contains(what)) list.Add(what);
             }
             return list;

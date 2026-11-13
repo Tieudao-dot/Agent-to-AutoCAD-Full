@@ -217,6 +217,99 @@ namespace ClaudeCAD.Plugin.Core
             return null;
         }
 
+        // ------------------------------------------------------------------ nâng cấp đợt A: layer guess, columns, storeys
+
+        public static readonly string[] DefaultColumnLayers = { "A-COLS", "A-COL" };
+        public const string ColumnLayer3d = "A-COLS-3D";
+        /// <summary>A closed outline on a column layer bigger than this (mm, either side) is not a column (a room, a grid frame).</summary>
+        public const double MaxColumnSize = 3000;
+        public const int MaxColumns = 2000;
+        public const int MaxStoreys = 50;
+        public const int MaxLayerGuesses = 30;
+
+        /// <summary>Upper case, Vietnamese marks removed (TƯỜNG → TUONG, Đ → D).</summary>
+        public static string Fold(string s)
+        {
+            var d = (s ?? "").Replace('đ', 'd').Replace('Đ', 'D').Normalize(System.Text.NormalizationForm.FormD);
+            var sb = new System.Text.StringBuilder(d.Length);
+            foreach (var ch in d)
+                if (CharUnicodeInfo.GetUnicodeCategory(ch) != UnicodeCategory.NonSpacingMark) sb.Append(ch);
+            return sb.ToString().Normalize(System.Text.NormalizationForm.FormC).ToUpperInvariant();
+        }
+
+        /// <summary>
+        /// What a layer name most likely holds on a floor plan drawn without the A-WALL / A-DOOR... convention:
+        /// "wall", "door", "window", "slab", "column", "railing", or null. Only a guess for Claude to ASK the user about
+        /// (never built from without their yes); result layers (…3D) and section / text layers are never guessed.
+        /// </summary>
+        public static string GuessLayerKind(string layer)
+        {
+            var f = Fold(layer);
+            if (f.Length == 0 || f == "0" || f == "DEFPOINTS") return null;
+            var tokens = System.Text.RegularExpressions.Regex.Split(f, "[^A-Z0-9]+").Where(t => t.Length > 0).ToList();
+            var joined = string.Concat(tokens);
+            bool Tok(params string[] w) => tokens.Any(t => w.Contains(t));
+            bool Has(params string[] w) => w.Any(x => joined.Contains(x));
+            // results of a 3D tool, text, dimensions, hatch patterns: not plan geometry
+            if (Tok("3D") || joined.EndsWith("3D", StringComparison.Ordinal) || Tok("TEXT", "TXT", "DIM", "CHU", "HATCH", "PATT", "PAT", "HAT", "SECT", "ELEV", "ANNO", "IDEN", "TAG"))
+                return null;
+            if (Has("LANCAN", "RAIL", "HANDRAIL", "GUARD")) return "railing";
+            if (Has("CUASO", "WIND", "GLAZ") || (Tok("CUA") && Tok("SO")) || Tok("WIN", "WD")) return "window";
+            if (Has("CUADI", "DOOR") || Tok("CUA", "DR", "DOORS")) return "door";
+            if (Has("COLUMN") || Tok("COT", "COL", "COLS")) return "column";
+            if (Has("SLAB", "FLOR", "FLOOR") || Tok("SAN")) return "slab";
+            if (Has("WALL", "TUONG") || Tok("XAY", "TG")) return "wall";
+            return null;
+        }
+
+        /// <summary>A closed outline on a column layer: kept when no side is longer than MaxColumnSize mm.</summary>
+        public static string ColumnSkipReason(double dxMm, double dyMm)
+        {
+            if (!(dxMm > 0) || !(dyMm > 0)) return "has no area in plan: not a column";
+            if (dxMm > MaxColumnSize || dyMm > MaxColumnSize)
+                return $"{Math.Round(dxMm)} × {Math.Round(dyMm)} mm is larger than a column ({MaxColumnSize} mm per side): not built; pass it in column_handles only if it really is one column";
+            return null;
+        }
+
+        /// <summary>One storey of a multi-storey build: its floor level (slab top) and wall height (mm).</summary>
+        public sealed class Storey
+        {
+            public int Number;   // 1-based
+            public double BaseZ; // mm
+            public double WallHeight; // mm
+            public bool RoofOnly; // the roof slab above the last storey
+        }
+
+        /// <summary>
+        /// Levels of "dựng 3 tầng, mỗi tầng cao 3,3 m": storey k (0-based) starts at baseZ + k × storeyHeight; its walls
+        /// are storeyHeight − slab high so the slab of the storey above sits on them (checklist L24). wallHeight
+        /// given: it must fit (wall + slab ≤ storey). storeyHeight missing: wall + slab (wall default 3300).
+        /// A roof slab (top at baseZ + n × storeyHeight) is added when roof is true.
+        /// </summary>
+        public static List<Storey> Storeys(int count, double? storeyHeight, double? wallHeight, double slab, double baseZ, bool roof, string tool = "build_3d_from_plan")
+        {
+            if (count < 1 || count > MaxStoreys) throw ToolException.Invalid($"{tool}: storeys must be 1–{MaxStoreys} (got {count}).");
+            double sh, wh;
+            if (storeyHeight.HasValue)
+            {
+                sh = storeyHeight.Value;
+                if (!(sh > slab + MinWallHeight - 1e-9) || sh > MaxWallHeight)
+                    throw ToolException.Invalid($"{tool}: storey_height must be more than slab_thickness + {MinWallHeight} mm and at most {MaxWallHeight} mm (got {sh}, slab {slab}).");
+                wh = wallHeight ?? sh - slab;
+                if (wh + slab > sh + 1e-6)
+                    throw ToolException.Invalid($"{tool}: wall_height {wh} + slab_thickness {slab} is more than storey_height {sh}: the slab above would cut into the walls. Leave wall_height out (it becomes storey_height − slab_thickness = {sh - slab}).");
+            }
+            else
+            {
+                wh = wallHeight ?? DefaultWallHeight;
+                sh = wh + slab;
+            }
+            var list = new List<Storey>();
+            for (int k = 0; k < count; k++) list.Add(new Storey { Number = k + 1, BaseZ = baseZ + k * sh, WallHeight = wh });
+            if (roof) list.Add(new Storey { Number = count + 1, BaseZ = baseZ + count * sh, WallHeight = wh, RoofOnly = true });
+            return list;
+        }
+
         // ------------------------------------------------------------------ heights
 
         public sealed class Heights

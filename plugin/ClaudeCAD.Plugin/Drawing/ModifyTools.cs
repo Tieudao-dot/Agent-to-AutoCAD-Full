@@ -142,27 +142,38 @@ namespace ClaudeCAD.Plugin.Drawing
             var hs = p.Handles("handles", MaxModifyHandles);
             int rows = p.Int("rows", 1, 1, 1000);
             int cols = p.Int("cols", 1, 1, 1000);
+            // nâng cấp đợt A: levels stacked along Z (ARRAYRECT's levels); labelled 3D (PlanLogic.ThreeDParams)
+            int levels = p.Int("levels", 1, 1, 1000);
             double rs = p.Num("row_spacing", 0);
             double cs = p.Num("col_spacing", 0);
+            double ls = p.Num("level_spacing", 0);
+            if (levels > 1 && Math.Abs(ls) < Geometry.Eps)
+                throw ToolException.Invalid("array_rect: levels > 1 needs 'level_spacing' (the distance between levels along Z, mm; negative = downwards).");
             double ang = Geometry.DegToRad(p.Num("angle", 0));
-            if ((long)rows * cols * hs.Count > MaxArrayCopies)
-                throw new ToolException(ErrorCodes.TooManyEntities, $"array_rect would create {(long)rows * cols * hs.Count} entities; the limit is {MaxArrayCopies}.");
+            long total = (long)rows * cols * levels * hs.Count;
+            if (total > MaxArrayCopies)
+                throw new ToolException(ErrorCodes.TooManyEntities, $"array_rect would create {total} entities; the limit is {MaxArrayCopies}.");
             var ux = new Vector3d(Math.Cos(ang), Math.Sin(ang), 0);
             var uy = new Vector3d(-Math.Sin(ang), Math.Cos(ang), 0);
             var all = new List<object>();
-            for (int r = 0; r < rows; r++)
-                for (int c = 0; c < cols; c++)
-                {
-                    if (r == 0 && c == 0) continue; // the original is the first item
-                    var v = ux * (c * cs) + uy * (r * rs);
-                    all.AddRange(CloneEntities(ctx, hs, Matrix3d.Displacement(v)).Select(Acad.H));
-                }
-            return new Dictionary<string, object>
+            for (int l = 0; l < levels; l++)
+                for (int r = 0; r < rows; r++)
+                    for (int c = 0; c < cols; c++)
+                    {
+                        if (l == 0 && r == 0 && c == 0) continue; // the original is the first item
+                        var v = ux * (c * cs) + uy * (r * rs) + Vector3d.ZAxis * (l * ls);
+                        all.AddRange(CloneEntities(ctx, hs, Matrix3d.Displacement(v)).Select(Acad.H));
+                    }
+            var res = new Dictionary<string, object>
             {
                 ["handles"] = all,
-                ["items"] = rows * cols,
-                ["note"] = "The originals are item [row 0, col 0]; returned handles are the new copies.",
+                ["items"] = rows * cols * levels,
+                ["note"] = levels > 1
+                    ? "The originals are item [level 0, row 0, col 0]; returned handles are the new copies, level by level."
+                    : "The originals are item [row 0, col 0]; returned handles are the new copies.",
             };
+            if (levels > 1) res["levels"] = levels;
+            return res;
         }
 
         private static object ArrayPolar(ToolContext ctx, Params p)

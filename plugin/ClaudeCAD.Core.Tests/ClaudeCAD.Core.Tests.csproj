@@ -31,6 +31,7 @@
     <Compile Include="..\ClaudeCAD.Plugin\Core\Edition.cs" Link="Core\Edition.cs" />
     <Compile Include="..\ClaudeCAD.Plugin\Core\Solids2.cs" Link="Core\Solids2.cs" />
     <Compile Include="..\ClaudeCAD.Plugin\Core\FloorPlan.cs" Link="Core\FloorPlan.cs" />
+    <Compile Include="..\ClaudeCAD.Plugin\Core\Railing.cs" Link="Core\Railing.cs" />
     <Compile Include="..\ClaudeCAD.Plugin\Core\SelfTestRules.cs" Link="Core\SelfTestRules.cs" />
   </ItemGroup>
   <ItemGroup>

@@ -47,12 +47,14 @@ export function buildTools(bridge: ToolBridge, allowed?: readonly string[], plan
 /**
  * Parameters a plan does not have, left out of the schemas Claude sees (tokens, and no invitation to try them):
  * a plan without 2D has no block attributes (text, decided 12/11/2026 C3: the plugin refuses them, NOT_IN_PLAN); a
- * plan without 3D has no 3D pictures in capture_view. Full and an older plugin (no plan) see every parameter.
+ * plan without 3D has no 3D pictures in capture_view and no array_rect levels. Full and an older plugin (no plan) see every parameter.
  */
 export const PLAN_HIDDEN_PARAMS: Record<string, { needs: '2d' | '3d'; params: string[]; note: string }> = {
   define_block: { needs: '2d', params: ['attributes'], note: ' This machine\'s plan has no block attributes (text): define blocks from entities only.' },
   insert_block: { needs: '2d', params: ['attributes'], note: ' This machine\'s plan has no block attributes (text): do not set attribute values.' },
   capture_view: { needs: '3d', params: ['view', 'direction', 'visual_style'], note: '' },
+  // nâng cấp đợt A: levels along Z are 3D (the plugin refuses levels > 1 without 3D: PlanLogic.ThreeDParams)
+  array_rect: { needs: '3d', params: ['levels', 'level_spacing'], note: '' },
 };
 
 function trimForPlan(t: AnyTool, plan: string): AnyTool {

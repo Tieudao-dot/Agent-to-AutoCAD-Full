@@ -45,6 +45,8 @@ export function modifyTools(b: ToolBridge): AnyTool[] {
         row_spacing: z.number().describe('Distance between rows (mm, along Y; negative = downwards).'),
         col_spacing: z.number().describe('Distance between columns (mm, along X; negative = leftwards).'),
         angle: angle('Array axis rotation').optional(),
+        levels: z.number().int().min(1).max(1000).optional().describe('3D: levels stacked along Z (default 1), like ARRAYRECT levels, e.g. 3 storeys of columns.'),
+        level_spacing: z.number().optional().describe('Distance between levels (mm, along Z; negative = downwards); needed when levels > 1.'),
       }),
 
     cadTool(b, 'array_polar',

@@ -12,7 +12,7 @@ namespace ClaudeCAD.Core.Tests
     {
         private static readonly string[] Tools3d =
         {
-            "draw_box", "draw_cylinder", "draw_sphere", "draw_wedge", "draw_torus", "draw_pyramid", "extrude", "revolve",
+            "draw_solid", "draw_box", "draw_cylinder", "draw_sphere", "draw_wedge", "draw_torus", "draw_pyramid", "extrude", "revolve",
             "solid_union", "solid_subtract", "solid_intersect", "set_view_3d", "set_visual_style", "get_solid_info",
         };
 
@@ -31,7 +31,9 @@ namespace ClaudeCAD.Core.Tests
                 Assert.False(PlanLogic.Allowed(null, t), t);
             }
             // phase 1 + phase 2 (Solid2Tests.Phase2) + phase 3 (Plan3dToolTests.Phase3)
-            Assert.Equal(Tools3d.Length + Solid2Tests.Phase2.Length + Plan3dToolTests.Phase3.Length, PlanLogic.Groups.Count(kv => kv.Value == ToolGroup.ThreeD));
+            // + nâng cấp đợt A (NangCapATests.NewPlanTools)
+            Assert.Equal(Tools3d.Length + Solid2Tests.Phase2.Length + Plan3dToolTests.Phase3.Length + NangCapATests.NewPlanTools.Length,
+                PlanLogic.Groups.Count(kv => kv.Value == ToolGroup.ThreeD));
             // the self-check picture stays in every plan
             Assert.Equal(ToolGroup.Common, PlanLogic.GroupOf("capture_view"));
         }

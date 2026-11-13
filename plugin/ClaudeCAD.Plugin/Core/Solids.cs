@@ -238,6 +238,54 @@ namespace ClaudeCAD.Plugin.Core
             throw ToolException.Invalid($"{tool}: unknown visual style '{style}'. Use one of: {string.Join(", ", VisualStyleKeys)}.");
         }
 
+        // ================================================================= draw_solid (nâng cấp đợt A)
+
+        /// <summary>The shapes of draw_solid (one tool instead of draw_box … draw_pyramid, which stay as macro aliases).</summary>
+        public static readonly string[] Shapes = { "box", "cylinder", "sphere", "wedge", "torus", "pyramid" };
+
+        /// <summary>The old tool of each shape (its code builds the solid).</summary>
+        public static string AliasOf(string shape) => "draw_" + NormalizeShape(shape);
+
+        /// <summary>The parameters of each shape (besides shape and layer / color...).</summary>
+        public static readonly IReadOnlyDictionary<string, string[]> ShapeParams = new Dictionary<string, string[]>(StringComparer.Ordinal)
+        {
+            ["box"] = new[] { "length", "width", "height", "corner", "center", "rotation" },
+            ["cylinder"] = new[] { "base", "radius", "diameter", "top_radius", "height", "top_center" },
+            ["sphere"] = new[] { "center", "radius", "diameter" },
+            ["wedge"] = new[] { "length", "width", "height", "corner", "rotation" },
+            ["torus"] = new[] { "center", "radius", "tube_radius" },
+            ["pyramid"] = new[] { "base", "sides", "radius", "top_radius", "height", "top_center", "rotation" },
+        };
+
+        /// <summary>"box" … "pyramid" (a few everyday synonyms too); anything else is a clear error.</summary>
+        public static string NormalizeShape(string shape, string tool = "draw_solid")
+        {
+            var s = (shape ?? "").Trim().ToLowerInvariant();
+            switch (s)
+            {
+                case "cube": case "hop": case "hộp": s = "box"; break;
+                case "cyl": case "tru": case "trụ": s = "cylinder"; break;
+                case "ball": case "cau": case "cầu": s = "sphere"; break;
+                case "ramp": case "nem": case "nêm": s = "wedge"; break;
+                case "ring": case "xuyen": case "xuyến": s = "torus"; break;
+                case "chop": case "chóp": s = "pyramid"; break;
+            }
+            if (Array.IndexOf(Shapes, s) < 0)
+                throw ToolException.Invalid($"{tool}: 'shape' must be one of {string.Join(", ", Shapes)} (got '{shape}').");
+            return s;
+        }
+
+        /// <summary>A parameter of another shape (tube_radius on a box...) is a mistake: say so instead of ignoring it.</summary>
+        public static void CheckShapeParams(string shape, IEnumerable<string> keys, string tool = "draw_solid")
+        {
+            var own = new HashSet<string>(ShapeParams[shape], StringComparer.Ordinal);
+            var other = new HashSet<string>(ShapeParams.Values.SelectMany(v => v), StringComparer.Ordinal);
+            var wrong = keys.Where(k => other.Contains(k) && !own.Contains(k)).OrderBy(k => k, StringComparer.Ordinal).ToList();
+            if (wrong.Count > 0)
+                throw ToolException.Invalid($"{tool}: {string.Join(", ", wrong)} {(wrong.Count == 1 ? "is not a parameter" : "are not parameters")} of shape '{shape}'. " +
+                    $"A {shape} takes: {string.Join(", ", ShapeParams[shape])}.");
+        }
+
         // ================================================================= primitives: checks
 
         public static void CheckBox(double length, double width, double height, string tool = "draw_box")

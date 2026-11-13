@@ -97,6 +97,8 @@ namespace ClaudeCAD.Plugin.UI
             ["extend_entities"] = "Extend",
             ["get_dynamic_props"] = "Đọc dynamic block",
             ["reset_dynamic_block"] = "Reset dynamic block",
+            ["draw_solid"] = "Dựng khối 3D",
+            ["build_railing"] = "Dựng lan can",
             ["draw_box"] = "Dựng khối hộp",
             ["draw_cylinder"] = "Dựng khối trụ / nón",
             ["draw_sphere"] = "Dựng khối cầu",
