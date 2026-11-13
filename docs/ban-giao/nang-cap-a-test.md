@@ -31,7 +31,7 @@ Máy cloud không có AutoCAD: "test" = rà code 6 việc của đợt A, viết
 | NA-3 | Dựng nhiều tầng khi mặt bằng không có đường bao sàn: tường mỗi tầng vẫn = cao tầng − dày sàn nhưng không có sàn nào | Các tầng **hở nhau một khe bằng dày sàn** (150 mm); dựng lại thì bị báo "đã dựng rồi" | Từ chối trước khi dựng, bảo Claude hỏi người dùng: sàn theo khung bao tường (`bbox`), chỉ đường bao sàn, hay không sàn (`none`, tường cao hết tầng). Chạy thử thì ghi chú (`FloorPlanLogic.StoreysWithoutSlab`) |
 | NA-4 | Mảnh lan can lỗi thì câu báo ghi tên lệnh `draw_box` | Claude có thể hiểu nhầm lệnh nào lỗi | Truyền đúng tên `build_railing` |
 
-Commit: xem `git log full/nang-cap-a-test` (commit "Test & sửa đợt A…").
+Commit: `ed52fa0` (sửa + test + tài liệu), sau đó một commit ghi kết quả CI vào file này.
 
 ## Test
 
@@ -44,7 +44,7 @@ Commit: xem `git log full/nang-cap-a-test` (commit "Test & sửa đợt A…").
   batch), chỉ `dry_run: true` thật mới được đọc không hỏi, thẻ 3D khác / gõ "ok" không thẻ / Hủy, tên layer ký tự lạ, mẫu
   `*`, luật thẻ 3D với lệnh mới, tham số theo gói, thời gian chờ.
 - Build net48 / net8.0-windows / net10.0-windows (Linux, `-p:EnableWindowsTargeting=true`): xanh, 0 cảnh báo.
-- CI: xem mục "CI" cuối file.
+- CI: run **43398072331 xanh** ở `ed52fa0` (`release: "false"`, Windows: trợ lý qua named pipe, test lõi, UI test WPF, build 3 bản, gói + Setup.exe; bước phát hành bỏ qua đúng). ~8 phút.
 
 ## Token mô tả lệnh (đo lại, cùng script cho hai bản; ký tự tên + mô tả + schema JSON)
 
