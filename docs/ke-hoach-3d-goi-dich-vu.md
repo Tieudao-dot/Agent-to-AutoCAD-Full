@@ -160,7 +160,7 @@ Lệnh này dựa trên đợt 1 nên làm sau cùng.
   - layer, zoom, lưu, hoàn tác, chụp ảnh, xác nhận / kế hoạch;
   - di chuyển / sao chép / xoay / tỉ lệ / đối xứng / xóa / mảng / đổi thuộc tính;
   - block, xref (gói 3D: block **không thuộc tính**, vì thuộc tính là chữ; chốt C3 12/11/2026).
-    Gói 3D: chèn block có sẵn vẫn hiện chữ mặc định của block; Claude không đặt / sửa được chữ thuộc tính (chấp nhận 12/11/2026, KT-42);
+    Gói 3D: chèn block có sẵn vẫn hiện chữ mặc định của block; Claude không đặt / sửa được chữ thuộc tính (KT-42, đã chốt 13/11/2026, chủ dự án đồng ý);
   - đường cơ bản (line, polyline, circle, arc, spline, ellipse, rectangle, polygon). 3D cần các đường này làm biên dạng và
     đường dẫn.
 - **2D:**

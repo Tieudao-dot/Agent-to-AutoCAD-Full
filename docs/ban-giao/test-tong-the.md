@@ -245,7 +245,7 @@ tổng thêm K25.
 | --- | --- | --- | --- | --- | --- |
 | KT-40 | nhẹ | Vẽ 3D đợt 2 | `2f5aa58` | Cặp `CheckInterference` đánh dấu sau giới hạn đo 200 cặp là **"chưa xác nhận"** (`Solid2Logic.InterferenceKind`; `unconfirmed_count` / `unconfirmed_pairs` / `unconfirmed_note`): không tính vào `clashes` / `interfere`, cũng không coi là an toàn | `Solid2Tests` (KT-40); K25 |
 | KT-41 | nhẹ | Test tổng thể | `2ddbbc1` | Ô key thẻ Kích hoạt nhận nhiều dòng (Enter vẫn là Kích hoạt); thẻ 🔒 có ô **Dùng mã** (dòng CCS1 / CCF1 hoặc cả 3 dòng, đi cùng đường `Activation.ActivateAsync`, dùng được thì mở khóa ngay); ⚙ ▸ Tài khoản AI có **Kiểm tra lại** và **Dán mã của chủ plugin** cho máy đã kích hoạt (máy đang dùng không có thẻ 🔒 nên trước đó không có chỗ dán dòng gói mới, tài liệu lại ghi là có); sửa tài liệu chỗ dán mã | UI test `KT41_code_boxes_take_every_line_of_the_offline_email` (CI Windows; thử dán thật khi máy CI có clipboard), `EditionTests.KT41_*`; M10–M12 |
-| KT-42 | nhẹ | Gói dịch vụ | `074abe1`, `d6d8110` | **Chấp nhận** (luồng chính chốt thay chủ dự án, chủ dự án xem lại): gói 3D chèn block có sẵn vẫn hiện chữ mặc định của block; Claude không đặt / sửa được chữ thuộc tính | `PlanTests.KT42_*`, `plan-fixes.test.ts` |
+| KT-42 | nhẹ | Gói dịch vụ | `074abe1`, `d6d8110` | **Chấp nhận** (đã chốt 13/11/2026, chủ dự án đồng ý): gói 3D chèn block có sẵn vẫn hiện chữ mặc định của block; Claude không đặt / sửa được chữ thuộc tính | `PlanTests.KT42_*`, `plan-fixes.test.ts` |
 
 Test sau gộp vòng 2: lõi 367/367, trợ lý 215/215, build net48 / net8.0-windows / net10.0-windows và project UI test 0 lỗi,
 0 cảnh báo. CI run `43267347630` (1 lượt): **xanh**, cả UI test WPF của KT-41. Test chỉ dán thật qua clipboard khi máy CI
@@ -264,7 +264,7 @@ vẫn kiểm đúng ý, và thêm câu kiểm thư mục `{localappdata}\ClaudeC
 
 | Mã | Mức | Thread sửa | Commit | Sửa | Test / thử tay |
 | --- | --- | --- | --- | --- | --- |
-| KT-43 | nhẹ | Gói dịch vụ | `a8f0430` | Chặn như C4 (luồng chính chốt thay chủ dự án, chủ dự án xem lại): `LicenseLogic.StatusRefusal`: dòng `CCS1` cũ hơn dòng đang lưu bị từ chối; dòng dán tay cùng ngày không đè `disabled` (mã miễn kiểm tra cũ không mở lại máy đã khóa); trả lời của máy chủ chỉ cần không cũ hơn. Áp ở mọi đường dán (thẻ Kích hoạt, "Dùng mã" trên 🔒, ⚙ ▸ Dán mã), kích hoạt bằng key, kiểm tra trạng thái. Bộ cài không kiểm được chữ ký nên khi đã có `status.txt` / `plan.txt` thì ghi `status-new.txt` / `plan-new.txt`; plugin áp theo cùng luật rồi xóa | `PlanTests.KT43_*` (2), `EditionTests.KT01_*`; I5d |
+| KT-43 | nhẹ | Gói dịch vụ | `a8f0430` | Chặn như C4 (đã chốt 13/11/2026, chủ dự án đồng ý): `LicenseLogic.StatusRefusal`: dòng `CCS1` cũ hơn dòng đang lưu bị từ chối; dòng dán tay cùng ngày không đè `disabled` (mã miễn kiểm tra cũ không mở lại máy đã khóa); trả lời của máy chủ chỉ cần không cũ hơn. Áp ở mọi đường dán (thẻ Kích hoạt, "Dùng mã" trên 🔒, ⚙ ▸ Dán mã), kích hoạt bằng key, kiểm tra trạng thái. Bộ cài không kiểm được chữ ký nên khi đã có `status.txt` / `plan.txt` thì ghi `status-new.txt` / `plan-new.txt`; plugin áp theo cùng luật rồi xóa | `PlanTests.KT43_*` (2), `EditionTests.KT01_*`; I5d |
 
 ### Tổng cả 3 lượt kiểm tra độc lập
 
@@ -274,6 +274,11 @@ vẫn kiểm đúng ý, và thêm câu kiểm thư mục `{localappdata}\ClaudeC
 (KT-05, KT-27, KT-30 phần layer, KT-42), **0 lỗi còn mở**. Ba lỗi nặng (KT-01 dán mã offline ở bộ cài, KT-11 cửa sát góc,
 KT-14 dựng tầng 2) đã khỏi, có test tự động. Hệ quả của KT-43 cho chủ dự án (khóa máy rồi cấp lại mã không cần mạng trong
 cùng ngày UTC thì máy từ chối mã mới) ghi trong `activation/README.md`.
+
+**Đã chốt 13/11/2026 (chủ dự án đồng ý cả 9 quyết định luồng chính đưa ra đêm 12/11):** hộp thoại bản gốc hai nút
+"Tiếp tục / Hủy"; xóa khối 3D có trước lượt luôn hỏi (C1); chỉ nút Đồng ý trên thẻ mở khóa sửa khối 3D cũ (C2); chặn thuộc
+tính block ở gói không có 2D (C3); chỉ nhận dòng gói mới hơn (C4); giữ phương án A cho gói 3D (C5); ô dán mã ở thẻ 🔒 và ⚙
+(KT-41); chấp nhận chữ mặc định khi chèn block có sẵn ở gói 3D (KT-42); không nhận dòng trạng thái cũ hơn (KT-43).
 
 Test sau gộp vòng 3: lõi 369/369, trợ lý 215/215, build net48 / net8.0-windows / net10.0-windows và project UI test 0 lỗi,
 0 cảnh báo. CI run `43272295317` (1 lượt): **xanh**, cả `Setup.exe` với phần `.iss` mới của KT-43.

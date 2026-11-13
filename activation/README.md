@@ -71,8 +71,8 @@ Mở dự án Apps Script (từ bảng tính: Tiện ích mở rộng → Apps S
   - ⚠️ Máy không có mạng **không thu hồi được gói** nếu khách không dán dòng mới: máy giữ gói đang có. Chỉ cấp **Full**
     cho máy offline cậu tin cậy.
 - **Mã cho máy không có mạng**: dòng `CCL1|…` (giấy phép) và dòng `CCS1|…|offline|…` (mã miễn kiểm tra trạng thái), cùng dòng gói ở trên: email có **ba dòng**. Dán **đủ các dòng** vào một ô (ô nào cũng nhận nhiều dòng, KT-41): ô key của bộ cài, ô key trên thẻ Kích hoạt của khung chat, ô **Dùng mã** trên thẻ 🔒 (máy đã kích hoạt nhưng đang khóa), hoặc ⚙ ▸ Tài khoản AI ▸ **Dán mã của chủ plugin**. Máy có mã miễn kiểm tra sẽ **không bị khóa từ xa và không bị giới hạn 7 ngày** — chỉ cấp cho máy thật sự không có mạng.
-  - **Máy đã bị khóa thì mã miễn kiểm tra cũ không mở lại được** (KT-43, luồng chính chốt 12/11/2026, chủ dự án xem
-    lại): plugin chỉ nhận dòng `CCS1` không cũ hơn dòng đang lưu, và dòng dán tay (`offline` / `active` / `pending`)
+  - **Máy đã bị khóa thì mã miễn kiểm tra cũ không mở lại được** (KT-43, đã chốt 13/11/2026, chủ dự án
+    đồng ý): plugin chỉ nhận dòng `CCS1` không cũ hơn dòng đang lưu, và dòng dán tay (`offline` / `active` / `pending`)
     cùng ngày không đè được dòng `disabled`. Báo người dùng: "Mã này … cũ hơn trạng thái máy đang có; liên hệ chủ plugin
     để nhận mã mới". Muốn cho máy dùng lại: đổi `Active` (máy có mạng) hoặc cấp mã miễn kiểm tra **mới** (ngày sau ngày
     khóa). Trả lời trực tiếp của máy chủ vẫn được khóa / mở trong cùng một ngày.
@@ -106,7 +106,7 @@ Key vẫn riêng cho từng máy. Cài ngầm mà không có `/KEY=` thì plugin
   - `ToolDispatcher` từ chối lệnh ngoài gói với mã `NOT_IN_PLAN` (lệnh lẻ, từng lệnh trong `batch_execute`, macro).
   - Thuộc tính block là chữ (chốt C3, 12/11/2026): gói không có 2D bị từ chối `attributes` của `define_block` /
     `insert_block` (`PlanLogic.BlockedParam`); `set_block_attributes` thuộc nhóm 2D. Block không thuộc tính vẫn dùng được.
-    Gói 3D: chèn block có sẵn vẫn hiện chữ mặc định của block; Claude không đặt / sửa được chữ thuộc tính (chấp nhận 12/11/2026, KT-42).
+    Gói 3D: chèn block có sẵn vẫn hiện chữ mặc định của block; Claude không đặt / sửa được chữ thuộc tính (KT-42, đã chốt 13/11/2026, chủ dự án đồng ý).
   - Macro có lệnh ngoài gói (ví dụ ghi ở Full, chạy ở 3D) không chạy lệnh nào, khung chat báo tiếng Việt.
   - `SavePlan` chỉ nhận dòng gói mới hơn hoặc cùng ngày với dòng đang lưu (`LicenseLogic.AcceptPlan`).
   - Plugin gửi `context.service_plan` + `context.plan_tools` kèm mỗi tin nhắn; trợ lý chỉ nạp các lệnh đó, system prompt
