@@ -72,7 +72,7 @@ Gộp vào `full/nang-cap-tong-the` (không xung đột) theo thứ tự A `7534
 ### Lượt 2 kiểm tra độc lập
 
 29 lỗi sửa đúng, 2 chấp nhận (KT2-11 phần "cân nhắc", KT2-22 chỉ lời dặn), 1 lỗi mới nhẹ KT2-32 (đợt C, `5c244af`). Gộp
-`full/nang-cap-c` @ `5c244af` vào `full/nang-cap-tong-the`; kết quả test / CI: (ghi sau khi chạy).
+`full/nang-cap-c` @ `5c244af` vào `full/nang-cap-tong-the`: lõi **909**, trợ lý **298** xanh, build 3 bản xanh 0 cảnh báo, CI run **43478782014 xanh** ở `6b6c911` (`release: "false"`).
 
 ## Đã rà theo chiều ngang, không phải lỗi
 
