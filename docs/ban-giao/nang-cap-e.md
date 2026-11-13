@@ -47,7 +47,7 @@ Kèm theo:
   gì, schema 3 kiểu thang + 3 kiểu mái, số mặc định khớp plugin và có trong mô tả, thời gian chờ, câu system prompt, không
   qua thẻ + khối mới là "đã tạo".
 - Build net48 / net8.0-windows / net10.0-windows (Linux, `-p:EnableWindowsTargeting=true`): xanh, 0 cảnh báo.
-- CI: xem mục cuối.
+- CI: run **43461186495 xanh** ở `f4a4780` (`release: "false"`).
 
 ## Token mô tả lệnh + system prompt (~3,5 ký tự / token)
 
@@ -83,4 +83,4 @@ tầng / không có tường, `from_walls` với tường + cột; nêm quá l�
 
 ## Commit
 
-Xem lịch sử nhánh `full/nang-cap-e`.
+`f4a4780` (code 2 lệnh + test + tài liệu, CI 43461186495 xanh), sau đó một commit ghi kết quả CI vào file này (chỉ tài liệu; CI của thread con phủ nó).
