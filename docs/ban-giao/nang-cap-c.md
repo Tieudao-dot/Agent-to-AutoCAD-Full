@@ -111,6 +111,7 @@ nâng cấp" gộp và chạy CI chung).
 | KT2-16 (nhẹ) | `plot_pdf` báo `exists: true` khi file PDF cũ còn đó | Ghi thời điểm sửa file trước khi in; `exists` = file mới hoặc mới hơn (`Util2DLogic.PdfWritten`), không thì kèm `warning`. File đang mở ở chương trình khác (khóa): báo trước khi in, không in |
 | KT2-17 (nhẹ) | In nhiều layout ép mọi trang cùng khổ A3 | Không nêu `media`: mỗi trang giữ khổ giấy của layout nếu máy in PDF có khổ đó (`Util2DLogic.PickMedia`), không có thì A3; kết quả `media` là một khổ hoặc danh sách theo trang. Nêu `media` thì như cũ |
 | KT2-28 (nhẹ) | Mô tả `spacing` ghi "mặc định 8 mm × DIMSCALE" nhưng code lấy = `offset` | Sửa mô tả: "spacing between rows (default = offset)" |
+| KT2-32 (nhẹ, lượt 2) | Bản sửa KT2-02 chỉ kiểm layer khóa ở thuộc tính đầu tiên của block; thuộc tính khác trên layer khóa lại ra lỗi chung | Kiểm **mọi** chữ của đối tượng (mỗi thuộc tính của block) trước khi đổi gì (`Util2DLogic.LockedHits`); báo handle thuộc tính + tên thuộc tính + block + layer, vd `2A2 (attribute TEN of block 2A0) on KHUNG-TEN`. Test `Kt2_32_every_attribute_of_a_block_is_checked`; lõi 909, trợ lý 298, build 3 bản xanh (sau khi gộp `full/nang-cap-tong-the` @ `4487514`) |
 
 Test: `NangCapCKt2Tests.cs` (7 test); một test cũ (`NangCapCTests`, kiểm mã nguồn tìm & thay) cập nhật theo cách kiểm layer khóa
 mới. Lõi **867** xanh, trợ lý **291** xanh, build net48 / net8.0-windows / net10.0-windows xanh, 0 cảnh báo. Thử tay thêm:
