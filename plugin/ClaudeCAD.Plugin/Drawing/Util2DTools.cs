@@ -496,8 +496,13 @@ namespace ClaudeCAD.Plugin.Drawing
                     ? (types.Contains("attribute") ? AttributeHits(ar0, find, repl, matchCase, wholeWord) : new List<TextHit>())
                     : TextHits(ctx, ent, find, repl, matchCase, wholeWord, types).ToList();
                 if (hits.Count == 0) { unchanged.Add(h); continue; }
-                var lockedLayer = LockedLayerOf(ctx, hits[0].Ent);
-                if (lockedLayer != null) { locked.Add((h.ToUpperInvariant(), lockedLayer)); continue; }
+                // KT2-32: every text of the object (each attribute of a block), not only the first one
+                var lockedHere = Util2DLogic.LockedHits(hits.Select(hit => (
+                    hit.Ent is AttributeReference ? hit.Ent.Handle.ToString() : h,
+                    hit.Ent is AttributeReference ? hit.Tag : null,
+                    hit.Ent is AttributeReference ? hit.Owner : null,
+                    LockedLayerOf(ctx, hit.Ent))));
+                if (lockedHere.Count > 0) { locked.AddRange(lockedHere); continue; }
                 plan.Add((h, hits));
             }
             if (locked.Count > 0) throw new ToolException(ErrorCodes.Locked, Util2DLogic.LockedTextMessage(locked));

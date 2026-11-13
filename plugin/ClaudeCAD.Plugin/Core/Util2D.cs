@@ -219,6 +219,22 @@ namespace ClaudeCAD.Plugin.Core
                 ? "The PDF file was not updated by this plot (it still has its old date). Tell the user the plot did not write the file; check the device / paper, or plot to another name."
                 : "No PDF file was written. Tell the user the plot produced no file; check the device / paper and the folder.";
 
+        /// <summary>
+        /// KT2-32: the texts of one object that sit on a locked layer (layer null = not locked), each once: an attribute as
+        /// "&lt;attribute handle&gt; (attribute TAG of block &lt;block handle&gt;)", other texts by their handle.
+        /// </summary>
+        public static List<(string handle, string layer)> LockedHits(IEnumerable<(string handle, string tag, string block, string layer)> hits)
+        {
+            var outList = new List<(string handle, string layer)>();
+            foreach (var x in hits ?? Enumerable.Empty<(string, string, string, string)>())
+            {
+                if (x.layer == null) continue;
+                var name = (x.handle ?? "").ToUpperInvariant() + (x.tag != null ? $" (attribute {x.tag} of block {(x.block ?? "").ToUpperInvariant()})" : "");
+                if (!outList.Any(o => o.handle == name)) outList.Add((name, x.layer));
+            }
+            return outList;
+        }
+
         /// <summary>KT2-02: why a replace was refused before any change: the texts on locked layers, by handle and layer.</summary>
         public static string LockedTextMessage(IList<(string handle, string layer)> locked) =>
             $"find_replace_text: nothing was replaced: {locked.Count} of the approved object(s) are on locked layers (" +

@@ -327,7 +327,7 @@ namespace ClaudeCAD.Core.Tests
             int check = src.IndexOf("Util2DLogic.NotApproved(hs, approved)", StringComparison.Ordinal);
             int write = src.IndexOf("WriteText(w, hit);", StringComparison.Ordinal);
             Assert.True(check > 0 && write > check);
-            Assert.Contains("var lockedLayer = LockedLayerOf(ctx, hits[0].Ent);", src); // KT2-02: checked before any write, with handle + layer
+            Assert.Contains("var lockedHere = Util2DLogic.LockedHits(", src); // KT2-02 + KT2-32: every text checked before any write, with handle + layer
             // a macro replay has no card: Macros.cs strips user_confirmed
             Assert.Contains("copy.Remove(SolidLogic.UserConfirmedParam)", Src("plugin", "ClaudeCAD.Plugin", "Core", "Macros.cs"));
         }

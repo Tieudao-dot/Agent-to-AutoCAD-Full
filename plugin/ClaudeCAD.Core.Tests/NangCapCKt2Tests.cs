@@ -41,6 +41,29 @@ namespace ClaudeCAD.Core.Tests
             Assert.Contains("e is AttributeReference && ctx.Tr.GetObject(e.OwnerId, OpenMode.ForRead) is Entity owner && Locked(owner)", src);
         }
 
+        [Fact]
+        public void Kt2_32_every_attribute_of_a_block_is_checked()
+        {
+            // a block whose first attribute is fine and whose second one sits on a locked layer
+            var hits = new List<(string, string, string, string)>
+            {
+                ("2A1", "MA", "2A0", null),
+                ("2A2", "TEN", "2A0", "KHUNG-TEN"),
+                ("2A2", "TEN", "2A0", "KHUNG-TEN"),
+                ("2A3", "GHI_CHU", "2a0", "KHOA"),
+            };
+            var locked = Util2DLogic.LockedHits(hits);
+            Assert.Equal(2, locked.Count);
+            Assert.Equal(("2A2 (attribute TEN of block 2A0)", "KHUNG-TEN"), locked[0]);
+            Assert.Equal(("2A3 (attribute GHI_CHU of block 2A0)", "KHOA"), locked[1]);
+            Assert.Empty(Util2DLogic.LockedHits(new[] { ("1F", (string)null, (string)null, (string)null) }));
+            var msg = Util2DLogic.LockedTextMessage(locked);
+            Assert.Contains("2A2 (attribute TEN of block 2A0) on KHUNG-TEN", msg);
+            var src = Src("plugin", "ClaudeCAD.Plugin", "Drawing", "Util2DTools.cs");
+            Assert.DoesNotContain("LockedLayerOf(ctx, hits[0].Ent)", src);
+            Assert.Contains("Util2DLogic.LockedHits(hits.Select(", src);
+        }
+
         // ------------------------------------------------------------ KT2-04
 
         [Fact]
