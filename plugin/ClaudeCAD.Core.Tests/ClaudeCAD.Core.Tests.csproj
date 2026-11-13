@@ -32,6 +32,7 @@
     <Compile Include="..\ClaudeCAD.Plugin\Core\Solids2.cs" Link="Core\Solids2.cs" />
     <Compile Include="..\ClaudeCAD.Plugin\Core\FloorPlan.cs" Link="Core\FloorPlan.cs" />
     <Compile Include="..\ClaudeCAD.Plugin\Core\Railing.cs" Link="Core\Railing.cs" />
+    <Compile Include="..\ClaudeCAD.Plugin\Core\StairRoof.cs" Link="Core\StairRoof.cs" />
     <Compile Include="..\ClaudeCAD.Plugin\Core\SelfTestRules.cs" Link="Core\SelfTestRules.cs" />
     <Compile Include="..\ClaudeCAD.Plugin\Core\Edit2D.cs" Link="Core\Edit2D.cs" />
     <Compile Include="..\ClaudeCAD.Plugin\Core\Util2D.cs" Link="Core\Util2D.cs" />

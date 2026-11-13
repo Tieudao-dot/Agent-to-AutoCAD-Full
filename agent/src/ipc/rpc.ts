@@ -90,7 +90,7 @@ const CAPTURE_TOOLS = new Set(['capture_view']);
  * 3D builds that unite many boxes in one call (the walls of a plan, several storeys, a railing; nâng cấp đợt A): a
  * time-out while AutoCAD is still uniting would make Claude start the same build again. A dry run only reads.
  */
-const BUILD_TOOLS = new Set(['build_3d_from_plan', 'build_railing', 'build_beam', 'volume_schedule', 'export_stl']);
+const BUILD_TOOLS = new Set(['build_3d_from_plan', 'build_railing', 'build_beam', 'volume_schedule', 'export_stl', 'build_stair', 'build_roof']);
 const slowBuild = (tool: unknown, params: unknown): boolean =>
   typeof tool === 'string' && BUILD_TOOLS.has(tool) && (params as { dry_run?: unknown } | undefined)?.dry_run !== true;
 const MAX_TIMEOUT_MS = 5 * 60_000;

@@ -403,6 +403,30 @@ Còn chỉ thấy trên AutoCAD thật: hướng kéo mặt của PRESSPULL (dư
 "chưa đo được"), STL của bản vẽ đơn vị mét (phải ra mm), tường cong đi vào tường thẳng ở góc. Q13–Q17 là các lỗi của Test & sửa đợt D
 ([`ban-giao/nang-cap-d-test.md`](ban-giao/nang-cap-d-test.md)); Q13 kiểm luôn hướng kéo mặt của PRESSPULL.
 
+## R. Nâng cấp đợt E — cầu thang, mái (bản Full, gói 3D hoặc Full, ~30 phút)
+
+*13/11/2026 · từ [`ban-giao/nang-cap-e.md`](ban-giao/nang-cap-e.md). Máy ở gói `3D` hoặc `Full`, bản vẽ mm. Sau mỗi dòng
+gõ U một lần: mọi thay đổi của lượt đó mất hết. **Quan trọng nhất: R1, R2, R3, R5, R7, R8, R10.***
+
+| # | | Làm gì | Kết quả mong đợi | Đạt | Lỗi | Mã gốc |
+| --- | --- | --- | --- | --- | --- | --- |
+| R1 | ★ | Bản vẽ trống. "dựng cầu thang 1 vế từ điểm 0,0 đi lên theo trục Y, cao tầng 3000" | Một khối trên `A-STAIR-3D`; Claude báo **19 bậc, cao bậc ≈ 157,9**, rộng bậc 280, vế rộng 1000. Đỉnh bậc trên cùng ở 3000; dưới bậc có bản thang nghiêng (không đặc tới sàn). Nhìn `sw_iso` thấy bậc đều | ☐ | ☐ | E1 |
+| R2 | ★ | "dựng cầu thang chữ L rẽ trái, cao tầng 3300, bắt đầu ở 5000,0 đi theo trục X" | 21 bậc × 157,1: vế 1 có 11 bậc lên tới chiếu nghỉ vuông 1000 × 1000 ở cao 1728,6; vế 2 rẽ **trái** 10 bậc lên 3300. Một khối liền (không tách mảnh). Lặp lại "rẽ phải": vế 2 sang phải | ☐ | ☐ | E1 |
+| R3 | ★ | "dựng cầu thang chữ U cao 3300, có lan can hai bên" | Hai vế song song cách nhau khe 100, chiếu nghỉ rộng 2100 × 1000 ở giữa chiều cao; lan can (tay vịn cao 900 trên mũi bậc + trụ) dọc hai bên mỗi vế trên `A-RAIL-3D`. Chiếu nghỉ chưa có lan can (ghi chú báo) | ☐ | ☐ | E1 |
+| R4 | ○ | "cầu thang cao 3300, bậc cao 175, rộng bậc 260, vế rộng 1200" | Theo số của cậu: 19 bậc × 173,7, rộng 260, vế 1200 | ☐ | ☐ | E1 |
+| R5 | ★ | Vẽ hình chữ nhật 2600 × 5000 làm ô cầu thang. "dựng cầu thang chữ U trong ô này, cao 3300" | Cầu thang nằm gọn trong ô (tự chọn góc và hướng), báo hướng / điểm bắt đầu đã chọn | ☐ | ☐ | E1 |
+| R6 | ★ | Ô cầu thang nhỏ 1500 × 3000: "dựng cầu thang chữ U trong ô này, cao 3300" | Claude **không dựng**, báo rõ không vừa ô và kích thước cần (khoảng 3800 × 2100), gợi ý đổi kiểu / bề rộng | ☐ | ☐ | E1 |
+| R7 | ★ | Dựng 3D mặt bằng nhà chữ nhật 2 tầng (mỗi tầng 3300, đợt A). "lợp mái 4 dốc" | Một khối mái trên `A-ROOF-3D` **đặt trên đỉnh tường tầng 2** (mặt dưới mái chạm đỉnh tường đúng mép ngoài tường), dốc 30°, đua 600 ra ngoài tường, bản mái 150; Claude báo cao độ đỉnh mái, diện tích mặt mái | ☐ | ☐ | E2 |
+| R8 | ★ | Như R7: "lợp mái 2 dốc" (U trước để bỏ mái 4 dốc) | Nóc chạy theo cạnh dài, hai đầu hồi để hở (Claude nói); "nóc theo cạnh ngắn" thì đổi hướng | ☐ | ☐ | E2 |
+| R9 | ○ | Như R7: "đổ mái bằng dày 120" | Bản sàn mái 120 trên đỉnh tường, không đua (trừ khi nói) | ☐ | ☐ | E2 |
+| R10 | ★ | Nhà chữ L (đường bao polyline kín chữ L): "lợp mái 4 dốc theo đường bao này" | Claude **không dựng mái sai**: báo mái 4 dốc / 2 dốc chỉ làm được trên hình chữ nhật / hình lồi, gợi ý chia thành các hình chữ nhật (hoặc mái bằng). Chia ra rồi lợp từng phần: dựng được | ☐ | ☐ | E2 |
+| R11 | ○ | "mái 4 dốc dốc 35 độ, đua 800" | Theo số của cậu (35°, đua 800) | ☐ | ☐ | E2 |
+| R12 | ○ | Máy gói `2D`: "dựng cầu thang", "lợp mái" | Claude báo các việc này thuộc gói 3D, không làm gì | ☐ | ☐ | gói |
+| R13 | ★ | `CLAUDECHATSELFTEST` | Có dòng ✓ "Nâng cấp đợt E: cầu thang 1 vế + chữ U (chia bậc theo cao tầng), mái 4 dốc" | ☐ | ☐ | E-test |
+
+Còn chỉ thấy trên AutoCAD thật: hình bậc / bản thang sau khi xoay vào đúng hướng (dựng từ biên dạng đứng), mái cắt bằng
+các nêm (giao / trừ khối), mái trên bản vẽ đơn vị mét.
+
 ## Gửi lại gì khi lỗi
 
 1. **Mã bước** bị lỗi (ví dụ `D2`) + một dòng: đã làm gì, thấy gì khác với "kết quả mong đợi".

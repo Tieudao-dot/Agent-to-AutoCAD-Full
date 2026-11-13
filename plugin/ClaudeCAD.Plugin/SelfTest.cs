@@ -609,6 +609,62 @@ namespace ClaudeCAD.Plugin
                     : new SelfTestRules.Verdict(false, string.Join("; ", errs));
             });
 
+            // Nâng cấp đợt E: the same code paths as build_stair and build_roof
+            Check("Nâng cấp đợt E: cầu thang 1 vế + chữ U (chia bậc theo cao tầng), mái 4 dốc", () =>
+            {
+                const double dx = 90000;
+                var errs = new List<string>();
+                T Run<T>(Func<ToolContext, Transaction, T> f)
+                {
+                    using (doc.LockDocument())
+                    using (var tr = doc.TransactionManager.StartTransaction())
+                    {
+                        var r = f(new ToolContext(doc, tr, true, null), tr);
+                        tr.Commit();
+                        return r;
+                    }
+                }
+                List<object> Pt(double x, double y) => new List<object> { x, y };
+
+                // straight stair 3000 high: 19 risers of 157.9; one prism, so the solid volume is the layout volume
+                var s1 = Run((ctx, tr) => (Dictionary<string, object>)DrawingService.BuildStair(ctx, new Params("build_stair", new Dictionary<string, object>
+                {
+                    ["type"] = "straight", ["height"] = 3000.0, ["start"] = Pt(dx, 0), ["direction"] = 90.0, ["layer"] = "0",
+                })));
+                if (Convert.ToInt32(s1["risers"]) != 19) errs.Add($"thang 1 vế cao 3000: {s1["risers"]} bậc (cần 19)");
+                var v1 = SelfTestRules.CheckVolume("thang 1 vế", Convert.ToDouble(s1["volume_m3"]) * 1e9,
+                    StairLogic.Build(new StairLogic.Options { Type = "straight", Height = 3000 }).Volume);
+                if (!v1.Ok) errs.Add(v1.Detail);
+                var mx = (List<object>)s1["max"];
+                if (Math.Abs(Convert.ToDouble(mx[2]) - 3000) > 1) errs.Add($"thang 1 vế: đỉnh z {mx[2]} (cần 3000)");
+
+                // U stair 3300 with railings on both sides: one stair solid (flights + landing united), landing at 11 risers
+                var s2 = Run((ctx, tr) => (Dictionary<string, object>)DrawingService.BuildStair(ctx, new Params("build_stair", new Dictionary<string, object>
+                {
+                    ["type"] = "u", ["height"] = 3300.0, ["start"] = Pt(dx + 5000, 0), ["railing"] = "both", ["layer"] = "0", ["rail_layer"] = "0",
+                })));
+                if (s2.ContainsKey("separate_pieces")) errs.Add("thang chữ U: vế và chiếu nghỉ không cộng thành một khối");
+                if (Math.Abs(Convert.ToDouble(s2["landing_z_mm"]) - 11 * 3300.0 / 21) > 0.1) errs.Add($"thang chữ U: chiếu nghỉ ở {s2["landing_z_mm"]}");
+                if (!s2.ContainsKey("railing")) errs.Add("thang chữ U: thiếu lan can");
+
+                // hip roof over a 10 × 6 m house, wall top 3000: eaves 600, 30°, slab 150
+                var roof = Run((ctx, tr) => (Dictionary<string, object>)DrawingService.BuildRoof(ctx, new Params("build_roof", new Dictionary<string, object>
+                {
+                    ["type"] = "hip", ["outline_points"] = new List<object> { Pt(dx + 10000, 0), Pt(dx + 20000, 0), Pt(dx + 20000, 6000), Pt(dx + 10000, 6000) },
+                    ["wall_top_z"] = 3000.0, ["layer"] = "0",
+                })));
+                var lay = RoofLogic.Build(new List<double[]> { new[] { 0.0, 0 }, new[] { 10000.0, 0 }, new[] { 10000.0, 6000 }, new[] { 0.0, 6000 } }, 3000, new RoofLogic.Options { Type = "hip" });
+                var rmin = (List<object>)roof["min"]; var rmax = (List<object>)roof["max"];
+                if (Math.Abs(Convert.ToDouble(rmin[2]) - lay.EaveZ) > 1 || Math.Abs(Convert.ToDouble(rmax[2]) - lay.TopZ) > 1)
+                    errs.Add($"mái 4 dốc: z {rmin[2]}–{rmax[2]} (cần {lay.EaveZ:0}–{lay.TopZ:0})");
+                // a 150 slab over the sloped area, give or take the eave cuts and the hips
+                double approx = lay.RoofArea * 150, got = Convert.ToDouble(roof["volume_m3"]) * 1e9;
+                if (Math.Abs(got - approx) > 0.1 * approx) errs.Add($"mái 4 dốc: thể tích {got / 1e9:0.###} m³ (khoảng {approx / 1e9:0.###})");
+                return errs.Count == 0
+                    ? new SelfTestRules.Verdict(true, $"thang 1 vế 19 bậc, thang chữ U một khối + lan can, mái 4 dốc {got / 1e9:0.###} m³")
+                    : new SelfTestRules.Verdict(false, string.Join("; ", errs));
+            });
+
             string versionFile = Path.Combine(dir, "version-copy.dwg");
             Do("Bản sao phiên bản (Wblock + SaveAs)", () =>
             {

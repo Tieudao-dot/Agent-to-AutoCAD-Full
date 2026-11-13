@@ -52,8 +52,8 @@ describe('service plans × 3D', () => {
     assert.deepEqual(t2.filter((n) => G.get(n) === 'ThreeD'), []);
     assert.deepEqual(t3.filter((n) => G.get(n) === 'TwoD'), []);
     assert.deepEqual(threeDSeen.filter((n) => !t3.includes(n)), [], 'every 3D tool on the 3D plan');
-    assert.equal(threeD.length, 35, 'phases 1 + 2 + 3: 14 + 12 + 3 tools, nâng cấp đợt A: draw_solid, build_railing; đợt D: build_beam, presspull, export_stl, volume_schedule');
-    assert.equal(threeDSeen.length, 29, 'Claude sees draw_solid instead of the six primitives');
+    assert.equal(threeD.length, 37, 'phases 1 + 2 + 3: 14 + 12 + 3 tools, nâng cấp đợt A: draw_solid, build_railing; đợt D: build_beam, presspull, export_stl, volume_schedule; đợt E: build_stair, build_roof');
+    assert.equal(threeDSeen.length, 31, 'Claude sees draw_solid instead of the six primitives');
     for (const a of ALIASES) assert.ok(!all.includes(a), `${a} is a macro alias only`);
     assert.deepEqual(buildTools(bridge).map((t) => t.name).sort(), [...G.keys()].filter((t) => !ALIASES.includes(t)).sort(), 'Full = every labelled tool but the aliases');
   });
@@ -106,7 +106,7 @@ describe('confirmation gate × every 3D tool', () => {
   const COUNTED = ['align', 'extrude', 'loft', 'mirror_3d', 'revolve', 'rotate_3d', 'sweep'];
   /** Only create, read or change the view / UCS: never change existing objects. */
   const NONE = [
-    'build_3d_from_plan', 'build_beam', 'build_railing', 'check_interference', 'export_stl', 'volume_schedule', 'draw_solid', 'draw_box', 'draw_cylinder', 'draw_pyramid', 'draw_sphere', 'draw_torus', 'draw_wedge',
+    'build_3d_from_plan', 'build_beam', 'build_railing', 'build_stair', 'build_roof', 'check_interference', 'export_stl', 'volume_schedule', 'draw_solid', 'draw_box', 'draw_cylinder', 'draw_pyramid', 'draw_sphere', 'draw_torus', 'draw_wedge',
     'get_solid_info', 'projection_view', 'reset_ucs', 'section_view', 'set_ucs', 'set_view_3d', 'set_visual_style',
   ];
 
@@ -227,9 +227,9 @@ describe('3D token cut (decided 12/11/2026): no tool renamed, parameter meanings
     assert.match(THREE_D_RULES, /set_entity_props/);
   });
 
-  it('the 3D tool names Claude sees are the labels minus the macro aliases (29 tools)', () => {
+  it('the 3D tool names Claude sees are the labels minus the macro aliases (31 tools)', () => {
     assert.deepEqual(tools.filter((t) => G.get(t.name) === 'ThreeD').map((t) => t.name).sort(), threeDSeen);
-    assert.equal(threeDSeen.length, 29);
+    assert.equal(threeDSeen.length, 31);
   });
 
   it('the moved uses and examples are in the 3D skill, the rules stay in the tool parameters', () => {

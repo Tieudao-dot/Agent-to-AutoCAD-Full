@@ -99,6 +99,8 @@ namespace ClaudeCAD.Plugin.UI
             ["reset_dynamic_block"] = "Reset dynamic block",
             ["draw_solid"] = "Dựng khối 3D",
             ["build_railing"] = "Dựng lan can",
+            ["build_stair"] = "Dựng cầu thang",
+            ["build_roof"] = "Dựng mái",
             ["draw_box"] = "Dựng khối hộp",
             ["draw_cylinder"] = "Dựng khối trụ / nón",
             ["draw_sphere"] = "Dựng khối cầu",
