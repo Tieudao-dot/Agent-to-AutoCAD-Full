@@ -472,52 +472,64 @@ namespace ClaudeCAD.Plugin
             {
                 const double bx = 40000;
                 var errs = new List<string>();
-                var info = new List<string>();
-                using (doc.LockDocument())
-                using (var tr = doc.TransactionManager.StartTransaction())
+                var db = doc.Database;
+                // each edit in its own transaction, like the dispatcher runs each call (objects are opened afresh)
+                T Run<T>(Func<ToolContext, Transaction, T> f)
                 {
-                    var ctx = new ToolContext(doc, tr, true, null);
-                    var ms = (BlockTableRecord)tr.GetObject(doc.Database.CurrentSpaceId, OpenMode.ForWrite);
-                    string Add(Entity e) { var id = ms.AppendEntity(e); tr.AddNewlyCreatedDBObject(e, true); return id.Handle.ToString(); }
-                    Params P(string tool, Dictionary<string, object> d) => new Params(tool, d);
-                    List<object> Pt(double x, double y) => new List<object> { x, y };
-                    double Len(string h) { var c = (Curve)tr.GetObject(Acad.IdFromHandle(doc.Database, h), OpenMode.ForRead); return c.GetDistanceAtParameter(c.EndParam); }
-                    void Near(string what, double actual, double expected) { if (Math.Abs(actual - expected) > 1e-3) errs.Add($"{what} = {actual:0.###} (cần {expected:0.###})"); }
-
-                    // fillet r10 on a closed 100 × 50 rectangle: 300 − 8·10 + 2π·10
-                    var rect = Acad.MakePolyline(new List<double[]> { new[] { bx, 0.0 }, new[] { bx + 100, 0.0 }, new[] { bx + 100, 50.0 }, new[] { bx, 50.0 } }, true);
-                    string hr = Add(rect);
-                    var fr = (Dictionary<string, object>)DrawingService.FilletEntities(ctx, P("fillet_entities", new Dictionary<string, object> { ["handle1"] = hr, ["radius"] = 10.0 }));
-                    Near("bo góc: số góc", Convert.ToDouble(fr["corners"]), 4);
-                    Near("bo góc: chu vi", Len(hr), 220 + 20 * Math.PI);
-                    // lengthen a 100 line by 20, then break out 30..50
-                    string hl = Add(new Line(new Point3d(bx, 100, 0), new Point3d(bx + 100, 100, 0)));
-                    DrawingService.LengthenEntity(ctx, P("lengthen_entity", new Dictionary<string, object> { ["handle"] = hl, ["value"] = 20.0 }));
-                    Near("kéo dài: chiều dài", Len(hl), 120);
-                    var br = (Dictionary<string, object>)DrawingService.BreakEntity(ctx, P("break_entity", new Dictionary<string, object> { ["handle"] = hl, ["point"] = Pt(bx + 30, 100), ["point2"] = Pt(bx + 50, 100) }));
-                    var pieces = ((List<object>)br["handles"]).Cast<string>().ToList();
-                    Near("bẻ gãy: số đoạn", pieces.Count, 2);
-                    Near("bẻ gãy: tổng chiều dài", pieces.Sum(Len), 100);
-                    // divide the first piece (30) in 3: 2 points
-                    var dv = (Dictionary<string, object>)DrawingService.DivideEntity(ctx, P("divide_entity", new Dictionary<string, object> { ["handle"] = pieces[0], ["count"] = 3L, ["layer"] = "0" }));
-                    Near("chia đều: số điểm", Convert.ToDouble(dv["marks"]), 2);
-                    // join two lines 0.5 apart with tolerance 1
-                    string j1 = Add(new Line(new Point3d(bx, 200, 0), new Point3d(bx + 100, 200, 0)));
-                    string j2 = Add(new Line(new Point3d(bx + 100.5, 200, 0), new Point3d(bx + 200, 200, 0)));
-                    var jr = (Dictionary<string, object>)DrawingService.JoinForSelfTest(ctx, P("join_entities", new Dictionary<string, object> { ["handles"] = new List<object> { j1, j2 }, ["tolerance"] = 1.0 }));
-                    Near("nối có dung sai: số đối tượng nối", Convert.ToDouble(jr["joined"]), 2);
-                    Near("nối có dung sai: chiều dài", Len((string)((List<object>)jr["handles"])[0]), 200);
-                    // stretch the right side of a 100 × 50 rectangle by 50
-                    string hs = Add(Acad.MakePolyline(new List<double[]> { new[] { bx, 300.0 }, new[] { bx + 100, 300.0 }, new[] { bx + 100, 350.0 }, new[] { bx, 350.0 } }, true));
-                    DrawingService.StretchEntities(ctx, P("stretch_entities", new Dictionary<string, object>
+                    using (doc.LockDocument())
+                    using (var tr = doc.TransactionManager.StartTransaction())
                     {
-                        ["handles"] = new List<object> { hs }, ["corner1"] = Pt(bx + 80, 290), ["corner2"] = Pt(bx + 120, 360), ["displacement"] = Pt(50, 0),
-                    }));
-                    Near("kéo giãn: chu vi", Len(hs), 400);
-                    info.Add("chu vi bo góc " + Len(hr).ToString("0.###"));
-                    tr.Abort(); // nothing stays in the drawing
+                        var r = f(new ToolContext(doc, tr, true, null), tr);
+                        tr.Commit();
+                        return r;
+                    }
                 }
-                return errs.Count == 0 ? new SelfTestRules.Verdict(true, string.Join("; ", info) + "; kéo dài / bẻ gãy / chia / nối / kéo giãn đúng số")
+                Dictionary<string, object> Call(Func<ToolContext, Params, object> h, string tool, Dictionary<string, object> d) =>
+                    Run((ctx, tr) => (Dictionary<string, object>)h(ctx, new Params(tool, d)));
+                List<object> Pt(double x, double y) => new List<object> { x, y };
+                double Len(string h) => Run((ctx, tr) => { var c = (Curve)tr.GetObject(Acad.IdFromHandle(db, h), OpenMode.ForRead); return c.GetDistanceAtParameter(c.EndParam); });
+                void Near(string what, double actual, double expected) { if (Math.Abs(actual - expected) > 1e-3) errs.Add($"{what} = {actual:0.###} (cần {expected:0.###})"); }
+
+                var made = Run((ctx, tr) =>
+                {
+                    var ms = (BlockTableRecord)tr.GetObject(db.CurrentSpaceId, OpenMode.ForWrite);
+                    string Add(Entity e) { e.SetDatabaseDefaults(db); ms.AppendEntity(e); tr.AddNewlyCreatedDBObject(e, true); return e.Handle.ToString(); }
+                    return new[]
+                    {
+                        Add(Acad.MakePolyline(new List<double[]> { new[] { bx, 0.0 }, new[] { bx + 100, 0.0 }, new[] { bx + 100, 50.0 }, new[] { bx, 50.0 } }, true)),
+                        Add(new Line(new Point3d(bx, 100, 0), new Point3d(bx + 100, 100, 0))),
+                        Add(new Line(new Point3d(bx, 200, 0), new Point3d(bx + 100, 200, 0))),
+                        Add(new Line(new Point3d(bx + 100.5, 200, 0), new Point3d(bx + 200, 200, 0))),
+                        Add(Acad.MakePolyline(new List<double[]> { new[] { bx, 300.0 }, new[] { bx + 100, 300.0 }, new[] { bx + 100, 350.0 }, new[] { bx, 350.0 } }, true)),
+                    };
+                });
+                string hr = made[0], hl = made[1], j1 = made[2], j2 = made[3], hs = made[4];
+
+                // fillet r10 on a closed 100 × 50 rectangle: 300 − 8·10 + 2π·10
+                var fr = Call(DrawingService.FilletEntities, "fillet_entities", new Dictionary<string, object> { ["handle1"] = hr, ["radius"] = 10.0 });
+                Near("bo góc: số góc", Convert.ToDouble(fr["corners"]), 4);
+                Near("bo góc: chu vi", Len(hr), 220 + 20 * Math.PI);
+                // lengthen a 100 line by 20, then break out 30..50
+                Call(DrawingService.LengthenEntity, "lengthen_entity", new Dictionary<string, object> { ["handle"] = hl, ["value"] = 20.0 });
+                Near("kéo dài: chiều dài", Len(hl), 120);
+                var br = Call(DrawingService.BreakEntity, "break_entity", new Dictionary<string, object> { ["handle"] = hl, ["point"] = Pt(bx + 30, 100), ["point2"] = Pt(bx + 50, 100) });
+                var pieces = ((List<object>)br["handles"]).Cast<string>().ToList();
+                Near("bẻ gãy: số đoạn", pieces.Count, 2);
+                Near("bẻ gãy: tổng chiều dài", pieces.Sum(Len), 100);
+                // divide the first piece (30) in 3: 2 points
+                var dv = Call(DrawingService.DivideEntity, "divide_entity", new Dictionary<string, object> { ["handle"] = pieces[0], ["count"] = 3L });
+                Near("chia đều: số điểm", Convert.ToDouble(dv["marks"]), 2);
+                // join two lines 0.5 apart with tolerance 1
+                var jr = Call(DrawingService.JoinForSelfTest, "join_entities", new Dictionary<string, object> { ["handles"] = new List<object> { j1, j2 }, ["tolerance"] = 1.0 });
+                Near("nối có dung sai: số đối tượng nối", Convert.ToDouble(jr["joined"]), 2);
+                Near("nối có dung sai: chiều dài", Len((string)((List<object>)jr["handles"])[0]), 200);
+                // stretch the right side of a 100 × 50 rectangle by 50
+                Call(DrawingService.StretchEntities, "stretch_entities", new Dictionary<string, object>
+                {
+                    ["handles"] = new List<object> { hs }, ["corner1"] = Pt(bx + 80, 290), ["corner2"] = Pt(bx + 120, 360), ["displacement"] = Pt(50, 0),
+                });
+                Near("kéo giãn: chu vi", Len(hs), 400);
+                return errs.Count == 0 ? new SelfTestRules.Verdict(true, $"chu vi bo góc {Len(hr):0.###}; kéo dài / bẻ gãy / chia / nối / kéo giãn đúng số")
                                        : new SelfTestRules.Verdict(false, string.Join("; ", errs));
             });
 

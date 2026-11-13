@@ -569,7 +569,7 @@ namespace ClaudeCAD.Plugin.Drawing
         private static bool TryBridge(Polyline pl, Entity e, double tol, out double gap)
         {
             gap = 0;
-            if (!(e is Curve c)) return false;
+            if (pl.Closed || !(e is Curve c)) return false; // a closed polyline joins nothing (and its closing bulge must stay)
             var b = Edit2DLogic.Bridge(D(pl.StartPoint), D(pl.EndPoint), D(c.StartPoint), D(c.EndPoint), tol);
             if (b == null) return false;
             gap = b.Value.gap;
@@ -577,12 +577,14 @@ namespace ClaudeCAD.Plugin.Drawing
             var pt = new Point2d(target.X, target.Y);
             int n = pl.NumberOfVertices;
             int added;
+            double lastBulge = pl.GetBulgeAt(n - 1);
             if (b.Value.plStart) { pl.AddVertexAt(0, pt, 0, 0, 0); added = 0; }
             else { pl.SetBulgeAt(n - 1, 0); pl.AddVertexAt(n, pt, 0, 0, 0); added = n; }
             try { pl.JoinEntity(e); return true; }
             catch (Autodesk.AutoCAD.Runtime.Exception)
             {
                 pl.RemoveVertexAt(added);
+                pl.SetBulgeAt(n - 1, lastBulge);
                 return false;
             }
         }
