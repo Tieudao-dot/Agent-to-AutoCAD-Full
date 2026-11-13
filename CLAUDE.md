@@ -40,7 +40,13 @@ dự án gốc), `bo-cai/README.md`.
   - đọc lại một lượt như người không biết code trước khi gửi. Cậu còn hỏi lại "là sao" nghĩa là câu hỏi chưa đạt:
     giải thích lại đơn giản hơn rồi mới hỏi tiếp;
   - sub-thread nêu điểm cần chốt cũng theo quy tắc này; luồng chính viết lại cho dễ hiểu trước khi hỏi cậu.
-- Hiện mọi tác vụ đang chạy / chạy nền trong task list.
+- **Tác vụ đang chạy hiện ở thanh bên phải (task list) (chủ dự án yêu cầu 13/11/2026):**
+  - luồng chính giữ trên thanh bên phải của thread chính mỗi việc đang chạy là 1 task: tên thread / đợt + việc
+    (vd "Đợt A › Test & sửa"), dòng trạng thái là bước hiện tại (vd "CI đang chạy, run …");
+  - cập nhật task mỗi khi nhận tin cập nhật / báo cáo; xong thì đánh dấu xong; việc đã lên lịch (các đợt sau, kiểm tra
+    cuối, báo cáo) để "chờ"; việc chờ chủ dự án (thử tay, máy chủ kích hoạt…) là task riêng;
+  - sub-thread cũng hiện tác vụ của mình ở thanh bên phải của thread đó, kể cả tác vụ chạy nền (chờ CI). Tin giao việc
+    và prompt mở thread mới ghi sẵn quy tắc này.
 - Push noti khi xong một việc hoặc phải dừng chờ cậu quyết; không push cho từng bước nhỏ.
 
 ## Token và thời gian
@@ -92,6 +98,21 @@ dự án gốc), `bo-cai/README.md`.
     việc đã xong, nhánh + commit, test / CI, việc chờ cậu, thời gian. Một lần mỗi mốc.
 - Điểm cần cậu chốt phát sinh ở sub-thread: báo ngược lên tới luồng chính, luồng chính hỏi cậu bằng
   AskUserQuestion rồi chuyển câu trả lời xuống lại.
+- **Cập nhật tình hình về luồng chính (chủ dự án yêu cầu 13/11/2026):** để chủ dự án xem tình hình mọi thread ở
+  một chỗ là thread chính.
+  - Mọi sub-thread, kể cả thread con, gửi tin ngắn về luồng chính (`session_01D56HmFT5bwapmbypmLY5nr`, qua
+    `mcp__claude-code-remote__send_message`), mở đầu `[Cập nhật từ thread <tên>]`, 1–3 dòng: vừa xong gì, nhánh +
+    commit, việc tiếp theo, chi phí tới lúc đó (`usage.cost_usd` khi gọi `get_session` không tham số).
+  - Gửi ở các mốc: nhận việc và bắt đầu; viết / sửa xong, đã push, bắt đầu CI; có kết quả CI (xanh / đỏ, số run);
+    mở thread con (kèm session id); xong việc. Bị chặn, gặp lỗi lớn hoặc phải chờ quyết thì gửi ngay.
+  - Không gửi cho từng bước nhỏ: ngoài lúc bị chặn, hai tin cách nhau ít nhất khoảng 30 phút.
+  - Thread con vẫn báo cáo đầy đủ về thread cha như cũ; tin cập nhật ngắn thì gửi thẳng luồng chính.
+  - Luồng chính: mỗi tin cập nhật thì ghi 1–3 dòng tình hình trong thread chính, không push noti (chỉ push khi xong
+    việc chủ dự án giao, bị chặn hoặc cần cậu quyết). Xong mỗi đợt thì cập nhật bảng tiến độ trong
+    `docs/ke-hoach-nang-cap-lenh.md` và `docs/tong-quan-du-an.md`. Cậu hỏi "tình hình" thì luồng chính kiểm thêm các
+    thread đang chạy bằng `get_session`.
+  - Thread đang chạy đọc bản `CLAUDE.md` trên nhánh của nó (có thể là bản cũ), nên mọi tin giao việc và prompt mở
+    thread mới, kể cả prompt cho thread con, ghi sẵn quy tắc này.
 - Mở hay đóng sub-thread: chỉ khi cậu đồng ý (chuỗi 3D: cậu đã đồng ý 12/11/2026). Sub-thread mới ghi vào danh
   bạ ở cuối file; thread con ghi kèm thread cha.
 - **Được tự mở thread (chủ dự án cho phép 12/11/2026):** luồng chính và thread mỗi đợt được tự gọi
@@ -146,6 +167,8 @@ dự án gốc), `bo-cai/README.md`.
 | Kiểm tra độc lập | `session_01D56HmF7CGr1nonkGWUKkGr` | Nhánh `full/kiem-tra-doc-lap` (tách từ `full/test-tong-the` @ `9ef9db9`): agent mới test lại toàn bộ một lượt, chỉ ghi lỗi (không sửa), phân theo phần phụ trách; 1 lượt CI; sau đó soát lại các lỗi đã sửa. Báo cáo: `docs/ban-giao/kiem-tra-doc-lap.md` **Đã đóng (lưu trữ) 13/11/2026.** |
 | Bộ cài thử nội bộ | `session_01D56HmEzAMRB7RXVJqoQPnD` | Nhánh `full/ban-thu-noi-bo` (tách từ `full/test-tong-the`, **không bao giờ gộp**): bộ cài thử chỉ cho chủ dự án, bỏ qua kích hoạt, gói Full, hết hạn 10/12/2026, nhãn "BẢN THỬ NỘI BỘ"; 1 lượt CI. Bàn giao: `docs/ban-giao/ban-thu-noi-bo.md` |
 | QnA | `session_01D56HmJBDC5zZsEvTcJ4Jbt` | Hỏi đáp về plugin cho chủ dự án, đọc code / tài liệu mới nhất (`full/test-tong-the`). Không sửa code, không commit. Lỗi hoặc việc cần quyết thì chuyển về luồng chính |
+| Nâng cấp đợt A | `session_01D56HmEZnPtpeS5RWXPVPYD` | Nhánh `full/nang-cap-a` (tách từ `full/test-tong-the` @ `19944df`): gộp 6 lệnh dựng khối, `build_3d_from_plan` nhận layer tên khác, cột, nhiều tầng, lan can, `array_rect` thêm tầng. Viết xong tự mở thread con Test & sửa (`full/nang-cap-a-test`). Bàn giao: `docs/ban-giao/nang-cap-a.md`. Kế hoạch: `docs/ke-hoach-nang-cap-lenh.md` |
+| ↳ Test & sửa đợt A (con của Nâng cấp đợt A) | `session_01D56HmExJjYYvbztLiiRbdx` | Nhánh `full/nang-cap-a-test` (tách từ `full/nang-cap-a` @ `fc68469`): rà soát, thêm test tự động, sửa lỗi đợt A; 1 lượt CI. Báo về thread đợt A, tin cập nhật ngắn gửi luồng chính. Bàn giao: `docs/ban-giao/nang-cap-a-test.md` |
 
 Link mở thread: `https://claude.ai/code/<session id>`.
 
