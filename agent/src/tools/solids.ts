@@ -19,8 +19,8 @@ export const SOLID_TOOL_NAMES = [
 ] as const;
 
 /**
- * The six primitives of draw_solid (nâng cấp đợt A, 13/11/2026: one tool instead of draw_box … draw_pyramid, about 2k
- * tokens less per session). The plugin still runs the old names for recorded macros; Claude only sees draw_solid.
+ * The six primitives of draw_solid (nâng cấp đợt A, 13/11/2026: one tool instead of draw_box … draw_pyramid, about 1.1k
+ * tokens less per session, measured in docs/ban-giao/nang-cap-a.md). The plugin still runs the old names for recorded macros; Claude only sees draw_solid.
  */
 export const SOLID_SHAPES = ['box', 'cylinder', 'sphere', 'wedge', 'torus', 'pyramid'] as const;
 export const SOLID_ALIASES = ['draw_box', 'draw_cylinder', 'draw_sphere', 'draw_wedge', 'draw_torus', 'draw_pyramid'] as const;

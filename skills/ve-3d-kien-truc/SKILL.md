@@ -78,8 +78,9 @@ dày sàn, sàn tầng trên không chồng vào tường tầng dưới. Ngư�
 | `A-SECT-BACK` | nét nhìn thấy sau mặt cắt | 9 |
 | `A-ELEV` | mặt đứng 2D | 7 |
 
-`build_3d_from_plan`, `section_view`, `projection_view` tự tạo layer của mình khi thiếu. Cột, cầu thang, mái: tạo
-layer bằng `create_layer` (đúng màu ở bảng) trước khi dựng. Không dựng gì trên layer `0`. Lệnh dựng khối chỉ nhận
+`build_3d_from_plan` (cả cột), `build_railing`, `build_beam`, `build_stair`, `build_roof`, `section_view`,
+`projection_view` tự tạo layer của mình khi thiếu. Chỉ khối tự dựng bằng `draw_solid` / `extrude`… mới cần tạo layer
+bằng `create_layer` (đúng màu ở bảng) trước khi dựng. Không dựng gì trên layer `0`. Lệnh dựng khối chỉ nhận
 `layer`: khối lấy màu của layer; muốn màu / nét riêng cho vài khối thì `set_entity_props` với handle vừa dựng.
 
 ## 3. Quy trình chuẩn bị và dựng 3D từ mặt bằng

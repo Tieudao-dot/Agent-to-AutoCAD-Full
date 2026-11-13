@@ -43,3 +43,18 @@ describe('TT2-1: build_roof says where it sits on a roof slab', () => {
     assert.match(roof.description, /a roof slab on A-SLAB-3D lying on them: its top/);
   });
 });
+
+describe('kiểm tra độc lập nâng cấp (KT2)', () => {
+  it('KT2-26: the 3D rules name the tools of phases D, E and say which tools make their own layers', () => {
+    const p = systemPromptFor('3d');
+    const head = p.slice(p.indexOf('# 3D modelling ('), p.indexOf(')', p.indexOf('# 3D modelling (')));
+    for (const t of ['build_beam', 'build_stair', 'build_roof', 'presspull', 'volume_schedule', 'export_stl', 'build_railing']) assert.ok(head.includes(t), t);
+    assert.match(p, /create their own layers; create_layer first only for solids you build yourself/);
+    assert.doesNotMatch(p, /created with create_layer first; never layer 0/);
+  });
+
+  it('KT2-27: wipeouts and revision clouds are named outside the 3D plan', () => {
+    const { excluded } = scope('3d');
+    assert.match(excluded, /wipeouts and revision clouds/);
+  });
+});

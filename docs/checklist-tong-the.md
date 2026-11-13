@@ -1,8 +1,15 @@
-# Checklist tổng: thử bản Full trên AutoCAD (gói dịch vụ + 3D đợt 1, 2, 3)
+# Checklist tổng: thử bản Full trên AutoCAD (gói dịch vụ + 3D đợt 1, 2, 3 + chuỗi nâng cấp A → E)
 
-*12/11/2026 · thread "Test tổng thể", nhánh `full/test-tong-the`. Một lượt đủ ~157 phút; lượt rút gọn (phần 0–5)
-~97 phút. Chi tiết từng mục (bước, kết quả đúng đầy đủ): [`checklist-thu-that.md`](checklist-thu-that.md) phần I, J, K,
-L. File này chỉ xếp thứ tự và ghi phần cần nhìn kỹ.*
+*12/11/2026 · thread "Test tổng thể", nhánh `full/test-tong-the`; 13/11/2026 thêm khối **chuỗi nâng cấp A → E** (thread
+"Test tổng thể nâng cấp", nhánh `full/nang-cap-tong-the`, cuối file). Hai khối:*
+
+| Khối | Phần | Lượt rút gọn | Lượt đủ |
+| --- | --- | --- | --- |
+| Gói + 3D đợt 1–3 | 0–8 (mục I–M, X của `checklist-thu-that.md`) | ~97 phút (phần 0–5) | ~157 phút |
+| Chuỗi nâng cấp A → E | 9–16 (mục N–R của `checklist-thu-that.md`, V1–V8) | ~95 phút (phần 9–15) | ~3 giờ |
+
+*Cả hai khối, lượt rút gọn: ~3 giờ 15 phút; lượt đủ: ~5 giờ 40 phút. Chi tiết từng mục (bước, kết quả đúng đầy đủ):
+[`checklist-thu-that.md`](checklist-thu-that.md). File này chỉ xếp thứ tự và ghi phần cần nhìn kỹ.*
 
 Bản dùng thử AutoCAD của cậu hết khoảng **10/12/2026**: làm phần 0–5 trước.
 
@@ -149,7 +156,7 @@ nhìn kỹ. Cách ghi kết quả / báo lỗi như phần đầu file.*
 
 | Lượt | Gồm | Thời gian ước |
 | --- | --- | --- |
-| **Rút gọn** (làm trước) | S3 + V1–V8 + các mục ★ của N–R ghi dưới | **~95 phút** |
+| **Rút gọn** (làm trước) | S3 + V1–V8 + **một số** mục ★ chọn lọc của N–R ghi ở phần 11–15 (không phải mọi mục ★) | **~95 phút** |
 | Đủ | Rút gọn + mọi mục ○ của N–R | ~3 giờ (N 34, O 30, P 30, Q 35, R 30 phút + V 25 phút) |
 
 ## Ưu tiên cao nhất (hỏng thì báo ngay, chưa cần làm tiếp)
@@ -171,7 +178,7 @@ nhìn kỹ. Cách ghi kết quả / báo lỗi như phần đầu file.*
 | 13 | ★ của đợt C: P1, P3, P7, P9, P10, P11 | ~13 phút |
 | 14 | ★ của đợt D: Q1, Q3, Q5, Q8, Q11 | ~12 phút |
 | 15 | ★ của đợt E: R1, R3, R5, R7, R14 | ~11 phút |
-| 16 | Phần còn lại của N–R (mục ○ và ★ chưa làm) | ~85 phút |
+| 16 | Phần còn lại của N–R: các mục ★ chưa chọn ở phần 11–15 (N0–N2, N17, O0, O4, O6, O11–O13, P5, P6, P14, P17, Q4, Q6, Q9, Q10, Q13, R2, R6, R8, R10, R13, R15; N0, O0, Q13, R13 đã phủ bởi S3) rồi các mục ○ | ~85 phút |
 
 ### 9. Tự kiểm tra (~4 phút)
 

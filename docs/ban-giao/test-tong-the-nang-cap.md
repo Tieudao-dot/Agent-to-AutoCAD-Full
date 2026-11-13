@@ -13,6 +13,25 @@ này **giữ nhánh tích hợp** cho các bản sửa sau kiểm tra độc l�
 | TT2-2 | **Câu "gói gồm / không gồm" trong system prompt chưa có lệnh của 5 đợt.** Máy gói 3D được nhờ "kéo giãn", "tìm & thay chữ", "ghi kích thước mặt bằng" thì Claude không biết đó là việc của gói 2D (lệnh bị ẩn, câu phạm vi không nhắc) nên dễ tìm cách làm vòng thay vì nói câu "Máy này dùng gói 3D…"; gói 2D tương tự với dầm / cầu thang / mái | Câu phạm vi gói 2D thêm nhóm / chép thuộc tính / bảng / tìm & thay / STRETCH, BREAK, LENGTHEN, DIVIDE; "không gồm" thêm dầm, cầu thang, mái, lan can, STL. Gói 3D thêm cột, dầm, cầu thang, mái, lan can, PRESSPULL, STL, số liệu khối lượng / va chạm (không bảng), nhóm / chép thuộc tính (không chữ); "không gồm" thêm 4 lệnh sửa hình mới, kích thước mặt bằng, bảng block / diện tích, tìm & thay | `9f9910f` (`agent/src/agent/systemPrompt.ts`) |
 | TT2-3 | **`CLAUDECHATSELFTEST` không có bước đợt C** (A, B, D, E đều có): phần cần AutoCAD của tìm & thay (ghi TEXT / MTEXT) và bảng diện tích phòng chỉ được kiểm khi thử tay | Bước mới "Nâng cấp đợt C: tìm & thay chữ (TEXT + MTEXT, chỉ đổi khi đã duyệt), bảng diện tích phòng" ở x 32000 (không chồng chỗ bước khác): xem trước 2 đối tượng / 3 chỗ, thay khi chưa duyệt bị từ chối, thay sau duyệt đúng chữ, phòng 4 × 3 m = 12 m² có tên lấy từ chữ trong phòng. `FindReplaceText`, `AreaSchedule` đổi `private` → `internal` | `9f9910f` (`SelfTest.cs`, `Drawing/Util2DTools.cs`) |
 
+## Sau kiểm tra độc lập nâng cấp (KT2, `docs/ban-giao/kiem-tra-doc-lap-nang-cap.md` trên `full/kiem-tra-doc-lap-2`)
+
+### Phần 1: lỗi giao thread này, sửa trên `full/nang-cap-tong-the`
+
+| Mã | Lỗi | Sửa | Commit |
+| --- | --- | --- | --- |
+| KT2-01 (vừa) | Macro coi đối tượng **bị sửa** (kéo giãn theo khung, chép thuộc tính, kéo dài, dời…) là **do macro tạo**: lách được luật "macro không sửa khối 3D có sẵn" (kéo giãn khung trọn khối S rồi cắt S), và khi chạy lại, handle ghép nhầm với đối tượng khung chọn trúng ở bản vẽ mới | `MacroLogic.InPlaceTools` (lệnh sửa tại chỗ) + `NewHandles(call)` = kết quả trừ lệnh sửa tại chỗ và trừ handle chính lệnh đó nhận. Dùng cho `ExternalSolidEdits`, `ExternalHandles`, `CreatedHandles`; `Learn(map, call, replayed)` chỉ ghép handle do lệnh tạo (`ChatController` gọi bản mới) | (commit phần 1) |
+| KT2-20 | Dòng trạng thái hiện tên lệnh tiếng Anh thô cho 29 lệnh (B, C, D và 3D đợt 2–3) | Thêm nhãn tiếng Việt cho mọi lệnh có nhãn gói; test so `Plans.cs` với `ToolLabels.cs` | (commit phần 1) |
+| KT2-26 | Luật 3D chưa nêu `build_beam`, `build_stair`, `build_roof`, `presspull`, `volume_schedule`, `export_stl`; luật và skill bảo luôn `create_layer` trước dù các lệnh dựng tự tạo layer | Tiêu đề luật 3D nêu đủ; câu layer: lệnh dựng / mặt cắt tự tạo layer, `create_layer` chỉ cho khối tự dựng (`draw_solid`, `extrude`…); skill `ve-3d-kien-truc` như vậy | (commit phần 1) |
+| KT2-27 | Câu "gói 3D không gồm" thiếu wipeout / mây sửa đổi | Thêm "wipeouts and revision clouds" | (commit phần 1) |
+| KT2-29 | Ghi chú `draw_solid` ghi bớt "~2k token" | Đổi thành ~1,1k (số đo trong `nang-cap-a.md`) | (commit phần 1) |
+| KT2-31 | Đầu checklist tổng chỉ nêu khối cũ (~97 / ~157 phút); "các mục ★" của lượt rút gọn N–R là tập chọn lọc | Đầu file có bảng 2 khối + thời gian (cộng ~3 giờ 15 / ~5 giờ 40); ghi rõ "một số mục ★ chọn lọc", phần 16 liệt kê các ★ còn lại | (commit phần 1) |
+
+Test: lõi 866 (+5: `TongTheNangCapTests` KT2-01 ×3, KT2-20, KT2-29), trợ lý 293 (+2: KT2-26, KT2-27); build 3 bản xanh.
+
+### Phần 2: gộp bản sửa của 5 đợt
+
+(ghi khi gộp: lỗi → thread → commit)
+
 ## Đã rà theo chiều ngang, không phải lỗi
 
 - **Nhãn gói (phương án A):** GROUP / MATCHPROP nhãn Common; STRETCH, BREAK, LENGTHEN, DIVIDE, `dim_floor_plan`,

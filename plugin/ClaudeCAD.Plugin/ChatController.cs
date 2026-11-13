@@ -1430,7 +1430,7 @@ namespace ClaudeCAD.Plugin
                     {
                         var c = m.Calls[g[0]];
                         var resp = await RunMacroCall(c.Tool, MacroLogic.Remap(c.Params, map) as Dictionary<string, object>, ++n);
-                        if (resp.ok) { ok++; MacroLogic.Learn(map, c.ResultHandles, resp.handles); }
+                        if (resp.ok) { ok++; MacroLogic.Learn(map, c, resp.handles); }
                         else { failed++; if (firstError == null) firstError = $"{c.Tool}: {resp.error}"; }
                         continue;
                     }
@@ -1450,7 +1450,7 @@ namespace ClaudeCAD.Plugin
                     {
                         var c = m.Calls[g[k]];
                         var r = batch.results[k];
-                        if (r.ok) { ok++; MacroLogic.Learn(map, c.ResultHandles, r.handles); }
+                        if (r.ok) { ok++; MacroLogic.Learn(map, c, r.handles); }
                         else { failed++; if (firstError == null) firstError = $"{c.Tool}: {r.error}"; }
                     }
                 }
