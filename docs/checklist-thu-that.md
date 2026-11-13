@@ -341,6 +341,32 @@ O17–O20 thêm ở bước Test & sửa đợt B ([`ban-giao/nang-cap-b-test.md
 Còn chỉ thấy trên AutoCAD thật: kéo giãn kích thước / block / chữ (điểm kéo giãn của AutoCAD), cắt đường tròn / elip /
 spline kín (thứ tự các mảnh khi tách), chia đường cong spline, nhóm trên layer khóa.
 
+## P. Nâng cấp đợt C — tiện ích 2D (bản Full, gói 2D hoặc Full, ~30 phút)
+
+*13/11/2026 · từ [`ban-giao/nang-cap-c.md`](ban-giao/nang-cap-c.md). Máy ở gói `2D` hoặc `Full` (P12: gói `3D`), bản vẽ
+mặt bằng có sẵn (tường trên layer `A-WALL`, vài block cửa có thuộc tính mã, vài phòng là polyline kín có chữ tên phòng
+bên trong, 2–3 layout giấy). Sau mỗi dòng gõ U một lần: mọi thay đổi của lượt đó mất hết. **Quan trọng nhất: P1, P3, P5,
+P7, P9, P10.***
+
+| # | | Làm gì | Kết quả mong đợi | Đạt | Lỗi | Mã gốc |
+| --- | --- | --- | --- | --- | --- | --- |
+| P1 | ★ | Vẽ 4 đường khép kín thành một phòng (không dùng polyline). "hatch bê tông trong phòng này, điểm bên trong là …" (nói một điểm giữa phòng) | Phòng được tô AR-CONC kín đúng 4 cạnh; không còn đường bao thừa (chọn quanh không thấy polyline mới). Có cột / ô nhỏ bên trong thì ô đó để trống | ☐ | ☐ | C1 |
+| P2 | ○ | Xóa 1 đoạn cho hở phòng, hỏi lại như P1 | Claude báo vùng không kín (hoặc điểm nằm ngoài), không vẽ gì | ☐ | ☐ | C1 |
+| P3 | ★ | "ghi kích thước cả mặt bằng" | Chuỗi kích thước ngoài 4 phía: hàng 1 các góc tường và lỗ cửa nhìn thấy từ phía đó, hàng ngoài cùng là kích thước tổng; cách tường hợp lý (khoảng 8 mm trên giấy theo DIMSCALE), dùng kiểu kích thước hiện hành. U một lần mất hết | ☐ | ☐ | C2 |
+| P4 | ○ | Có đường trục trên layer riêng (vd `A-GRID`): "ghi kích thước mặt bằng, trục ở layer A-GRID" | Thêm một hàng kích thước trục giữa hàng chi tiết và hàng tổng | ☐ | ☐ | C2 |
+| P5 | ★ | "thống kê các block trong bản vẽ ra bảng ở góc phải" | Bảng STT / tên block / số lượng + dòng Tổng, số khớp với lệnh đếm (vd `QSELECT`); Claude cũng nói số trong chat | ☐ | ☐ | C3 |
+| P6 | ★ | "đếm cửa theo mã" (block cửa có thuộc tính mã) | Bảng thêm cột mã; D1, D2, …, D10 xếp đúng thứ tự số; cửa chưa có mã ghi "(trống)" | ☐ | ☐ | C3 |
+| P7 | ★ | "lập bảng diện tích các phòng" | Bảng tên phòng (lấy từ chữ trong phòng) / layer / diện tích m² + Tổng; phòng không có chữ ghi "(chưa có tên)". Phòng vừa có polyline vừa có hatch chỉ tính một lần | ☐ | ☐ | C4 |
+| P8 | ○ | Vẽ thêm polyline bao cả nhà trên cùng layer phòng, hỏi lại P7 | Claude không chèn bảng ngay: báo có vùng bao các vùng khác (diện tích tính chồng) và hỏi bỏ vùng đó hay giữ | ☐ | ☐ | C4 |
+| P9 | ★ | Có ≥ 3 chữ "P.NGU" (text, mtext, thuộc tính block). "thay P.NGU bằng PHÒNG NGỦ" | Claude **xem trước rồi hiện thẻ xác nhận** (số chỗ, ví dụ trước → sau), chưa đổi gì. Bấm **Đồng ý**: đổi đúng các chỗ đó; gõ U một lần thì trả lại hết | ☐ | ☐ | C5 |
+| P10 | ★ | Như P9 nhưng **gõ** "ok" thay vì bấm nút | Claude không thay, hiện lại thẻ và nhờ bấm Đồng ý. Bấm **Hủy**: không đổi gì | ☐ | ☐ | C5 |
+| P11 | ★ | "in tất cả layout ra một file PDF" | Một file PDF nhiều trang (đúng thứ tự tab layout) cạnh file bản vẽ, tên `<bản vẽ>-<n>-layouts.pdf`; layout đang mở giữ nguyên sau khi in | ☐ | ☐ | C6 |
+| P12 | ○ | Máy gói `3D`: "ghi kích thước mặt bằng", "thống kê block ra bảng", "in PDF" | Claude báo máy dùng gói 3D, các việc này thuộc gói 2D; không vẽ gì | ☐ | ☐ | gói |
+| P13 | ○ | Đặt tên layout có ký tự `/` hoặc `:` (vd `MB/T1`), "in layout MB/T1 ra PDF" | File PDF ra bình thường, ký tự lạ trong tên file đổi thành `_` | ☐ | ☐ | C6 |
+
+Còn chỉ thấy trên AutoCAD thật: dò đường bao khi điểm nằm ngoài màn hình (cần phóng tới vùng đó), in nhiều trang (khổ
+giấy từng layout), thay chữ trong MTEXT có định dạng, thuộc tính nhiều dòng, ô bảng.
+
 ## Gửi lại gì khi lỗi
 
 1. **Mã bước** bị lỗi (ví dụ `D2`) + một dòng: đã làm gì, thấy gì khác với "kết quả mong đợi".

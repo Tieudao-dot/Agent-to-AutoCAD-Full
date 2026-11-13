@@ -249,108 +249,167 @@ namespace ClaudeCAD.Plugin.Drawing
             if (PlotFactory.ProcessPlotState != ProcessPlotState.NotPlotting)
                 throw new ToolException(ErrorCodes.AcadError, "AutoCAD is already plotting. Wait until it finishes and retry.");
             var lm = LayoutManager.Current;
-            string layout = p.Str("layout", lm.CurrentLayout);
-            if (!layout.Equals("Model", StringComparison.OrdinalIgnoreCase) && !lm.LayoutExists(layout))
-                throw ToolException.Invalid($"Layout '{layout}' does not exist. Call list_layouts.");
+            // nâng cấp đợt C: several layouts (or "all") in one multi-page PDF
+            bool multi = p.Has("layouts");
+            List<string> layouts;
+            if (multi)
+            {
+                if (p.Has("layout")) throw ToolException.Invalid("plot_pdf: pass either 'layout' or 'layouts', not both.");
+                layouts = Util2DLogic.ResolveLayouts(p.Strings("layouts", 1), LayoutTabOrder(ctx));
+                if (layouts.Count > 1 && p.Str("area", "").Equals("window", StringComparison.OrdinalIgnoreCase))
+                    throw ToolException.Invalid("plot_pdf: area \"window\" plots one layout; plot several layouts with area layout / extents.");
+            }
+            else
+            {
+                string one = p.Str("layout", lm.CurrentLayout);
+                if (!one.Equals("Model", StringComparison.OrdinalIgnoreCase) && !lm.LayoutExists(one))
+                    throw ToolException.Invalid($"Layout '{one}' does not exist. Call list_layouts.");
+                layouts = new List<string> { one };
+            }
 
             string output = p.Str("output", null);
             if (string.IsNullOrEmpty(output))
             {
                 string dir = SafeString(() => Path.GetDirectoryName(ctx.Doc.Name));
                 if (string.IsNullOrEmpty(dir) || !Directory.Exists(dir)) dir = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
-                output = Path.Combine(dir, Path.GetFileNameWithoutExtension(ctx.Doc.Name) + "-" + layout + ".pdf");
+                // the layout name may hold characters a file name cannot (\ / : * ? " < > |)
+                output = Path.Combine(dir, Util2DLogic.DefaultPdfName(Path.GetFileNameWithoutExtension(ctx.Doc.Name), layouts));
             }
             if (!output.EndsWith(".pdf", StringComparison.OrdinalIgnoreCase)) throw ToolException.Invalid("plot_pdf: 'output' must end with .pdf.");
-            var outDir = Path.GetDirectoryName(Path.GetFullPath(output));
+            string full;
+            try { full = Path.GetFullPath(output); }
+            catch (Exception) { throw ToolException.Invalid($"plot_pdf: '{output}' is not a valid file path."); }
+            if (Directory.Exists(full)) throw ToolException.Invalid($"plot_pdf: '{output}' is a folder; give a file name ending in .pdf.");
+            var outDir = Path.GetDirectoryName(full);
             if (!Directory.Exists(outDir)) throw ToolException.Invalid($"plot_pdf: folder '{outDir}' does not exist.");
+            output = full;
 
             string device = p.Str("device", DefaultPdfDevice);
             string media = p.Str("media", DefaultPdfMedia);
             string styleSheet = p.Str("plot_style", "monochrome.ctb");
-            string area = p.Str("area", layout.Equals("Model", StringComparison.OrdinalIgnoreCase) ? "extents" : "layout").ToLowerInvariant();
             string scaleText = p.Str("scale", "fit");
 
             string previousLayout = lm.CurrentLayout;
             object oldBackground = AcApp.GetSystemVariable("BACKGROUNDPLOT");
+            var settings = new List<PlotSettings>();
             using (ctx.Doc.LockDocument())
             {
                 try
                 {
                     AcApp.SetSystemVariable("BACKGROUNDPLOT", (short)0);
-                    if (!previousLayout.Equals(layout, StringComparison.OrdinalIgnoreCase)) lm.CurrentLayout = layout;
+                    // a layout never opened has no viewport yet: open each once (as the single plot always did)
+                    foreach (var name in layouts)
+                        if (!lm.CurrentLayout.Equals(name, StringComparison.OrdinalIgnoreCase)) lm.CurrentLayout = name;
+                    if (multi && !lm.CurrentLayout.Equals(previousLayout, StringComparison.OrdinalIgnoreCase)) lm.CurrentLayout = previousLayout;
                     using (var tr = ctx.Doc.TransactionManager.StartTransaction())
                     {
-                        var lo = FindLayout(tr, ctx.Db, layout);
-                        using (var ps = new PlotSettings(lo.ModelType))
+                        var infos = new List<PlotInfo>();
+                        foreach (var name in layouts)
                         {
-                            ps.CopyFrom(lo);
-                            var psv = PlotSettingsValidator.Current;
-                            psv.SetPlotConfigurationName(ps, device, media);
-                            psv.SetPlotPaperUnits(ps, PlotPaperUnit.Millimeters);
-                            psv.RefreshLists(ps);
-                            switch (area)
-                            {
-                                case "layout": psv.SetPlotType(ps, Autodesk.AutoCAD.DatabaseServices.PlotType.Layout); break;
-                                case "extents": psv.SetPlotType(ps, Autodesk.AutoCAD.DatabaseServices.PlotType.Extents); break;
-                                case "display": psv.SetPlotType(ps, Autodesk.AutoCAD.DatabaseServices.PlotType.Display); break;
-                                case "window":
-                                    var w1 = p.Point("window_p1");
-                                    var w2 = p.Point("window_p2");
-                                    psv.SetPlotWindowArea(ps, new Extents2d(Math.Min(w1[0], w2[0]), Math.Min(w1[1], w2[1]), Math.Max(w1[0], w2[0]), Math.Max(w1[1], w2[1])));
-                                    psv.SetPlotType(ps, Autodesk.AutoCAD.DatabaseServices.PlotType.Window);
-                                    break;
-                                default: throw ToolException.Invalid("plot_pdf: area must be layout, extents, display or window.");
-                            }
-                            if (scaleText.Equals("fit", StringComparison.OrdinalIgnoreCase))
-                            {
-                                psv.SetUseStandardScale(ps, true);
-                                psv.SetStdScaleType(ps, StdScaleType.ScaleToFit);
-                            }
-                            else
-                            {
-                                double f = ParseScale(scaleText);
-                                psv.SetUseStandardScale(ps, false);
-                                psv.SetCustomPrintScale(ps, new CustomScale(1, 1 / f));
-                            }
-                            psv.SetPlotCentered(ps, p.Bool("center", true));
-                            try { psv.SetCurrentStyleSheet(ps, styleSheet); }
-                            catch (Autodesk.AutoCAD.Runtime.Exception) { throw ToolException.Invalid($"plot_pdf: plot style '{styleSheet}' not found. Use list_plot_media to see the available .ctb/.stb files."); }
-                            if (p.Has("landscape")) psv.SetPlotRotation(ps, p.Bool("landscape", true) ? PlotRotation.Degrees090 : PlotRotation.Degrees000);
-
+                            var lo = FindLayout(tr, ctx.Db, name);
+                            string area = p.Str("area", lo.ModelType ? "extents" : "layout").ToLowerInvariant();
+                            var ps = new PlotSettings(lo.ModelType);
+                            settings.Add(ps);
+                            ConfigurePlot(p, lo, ps, device, media, styleSheet, area, scaleText);
                             var pi = new PlotInfo { Layout = lo.ObjectId, OverrideSettings = ps };
                             var piv = new PlotInfoValidator { MediaMatchingPolicy = MatchingPolicy.MatchEnabled };
                             piv.Validate(pi);
+                            infos.Add(pi);
+                        }
 
-                            using (var pe = PlotFactory.CreatePublishEngine())
-                            using (var ppi = new PlotPageInfo())
+                        using (var pe = PlotFactory.CreatePublishEngine())
+                        {
+                            pe.BeginPlot(null, null);
+                            pe.BeginDocument(infos[0], ctx.Doc.Name, null, 1, true, output);
+                            for (int i = 0; i < infos.Count; i++)
                             {
-                                pe.BeginPlot(null, null);
-                                pe.BeginDocument(pi, ctx.Doc.Name, null, 1, true, output);
-                                pe.BeginPage(ppi, pi, true, null);
-                                pe.BeginGenerateGraphics(null);
-                                pe.EndGenerateGraphics(null);
-                                pe.EndPage(null);
-                                pe.EndDocument(null);
-                                pe.EndPlot(null);
+                                using (var ppi = new PlotPageInfo())
+                                {
+                                    pe.BeginPage(ppi, infos[i], i == infos.Count - 1, null);
+                                    pe.BeginGenerateGraphics(null);
+                                    pe.EndGenerateGraphics(null);
+                                    pe.EndPage(null);
+                                }
                             }
+                            pe.EndDocument(null);
+                            pe.EndPlot(null);
                         }
                         tr.Commit();
                     }
                 }
                 finally
                 {
+                    foreach (var ps in settings) try { ps.Dispose(); } catch { }
                     try { AcApp.SetSystemVariable("BACKGROUNDPLOT", oldBackground); } catch { }
                     try { if (!lm.CurrentLayout.Equals(previousLayout, StringComparison.OrdinalIgnoreCase)) lm.CurrentLayout = previousLayout; } catch { }
                 }
             }
-            return new Dictionary<string, object>
+            var res = new Dictionary<string, object>
             {
                 ["output"] = output,
                 ["exists"] = File.Exists(output),
-                ["layout"] = layout,
                 ["media"] = media,
                 ["scale"] = scaleText,
             };
+            if (multi) { res["layouts"] = layouts.Cast<object>().ToList(); res["pages"] = layouts.Count; }
+            else res["layout"] = layouts[0];
+            return res;
+        }
+
+        /// <summary>The layouts in tab order (Model first).</summary>
+        private static List<string> LayoutTabOrder(ToolContext ctx)
+        {
+            // plot_pdf runs without the dispatcher's transaction
+            var list = new List<(int order, string name)>();
+            using (var tr = ctx.Db.TransactionManager.StartOpenCloseTransaction())
+            {
+                var dict = (DBDictionary)tr.GetObject(ctx.Db.LayoutDictionaryId, OpenMode.ForRead);
+                foreach (DBDictionaryEntry e in dict)
+                {
+                    var lo = (Layout)tr.GetObject(e.Value, OpenMode.ForRead);
+                    list.Add((lo.TabOrder, lo.LayoutName));
+                }
+                tr.Commit();
+            }
+            return list.OrderBy(x => x.order).Select(x => x.name).ToList();
+        }
+
+        /// <summary>Device, paper, area, scale, centring, plot style and rotation of one page (from the layout's own settings).</summary>
+        private static void ConfigurePlot(Params p, Layout lo, PlotSettings ps, string device, string media, string styleSheet, string area, string scaleText)
+        {
+            ps.CopyFrom(lo);
+            var psv = PlotSettingsValidator.Current;
+            psv.SetPlotConfigurationName(ps, device, media);
+            psv.SetPlotPaperUnits(ps, PlotPaperUnit.Millimeters);
+            psv.RefreshLists(ps);
+            switch (area)
+            {
+                case "layout": psv.SetPlotType(ps, Autodesk.AutoCAD.DatabaseServices.PlotType.Layout); break;
+                case "extents": psv.SetPlotType(ps, Autodesk.AutoCAD.DatabaseServices.PlotType.Extents); break;
+                case "display": psv.SetPlotType(ps, Autodesk.AutoCAD.DatabaseServices.PlotType.Display); break;
+                case "window":
+                    var w1 = p.Point("window_p1");
+                    var w2 = p.Point("window_p2");
+                    psv.SetPlotWindowArea(ps, new Extents2d(Math.Min(w1[0], w2[0]), Math.Min(w1[1], w2[1]), Math.Max(w1[0], w2[0]), Math.Max(w1[1], w2[1])));
+                    psv.SetPlotType(ps, Autodesk.AutoCAD.DatabaseServices.PlotType.Window);
+                    break;
+                default: throw ToolException.Invalid("plot_pdf: area must be layout, extents, display or window.");
+            }
+            if (scaleText.Equals("fit", StringComparison.OrdinalIgnoreCase))
+            {
+                psv.SetUseStandardScale(ps, true);
+                psv.SetStdScaleType(ps, StdScaleType.ScaleToFit);
+            }
+            else
+            {
+                double f = ParseScale(scaleText);
+                psv.SetUseStandardScale(ps, false);
+                psv.SetCustomPrintScale(ps, new CustomScale(1, 1 / f));
+            }
+            psv.SetPlotCentered(ps, p.Bool("center", true));
+            try { psv.SetCurrentStyleSheet(ps, styleSheet); }
+            catch (Autodesk.AutoCAD.Runtime.Exception) { throw ToolException.Invalid($"plot_pdf: plot style '{styleSheet}' not found. Use list_plot_media to see the available .ctb/.stb files."); }
+            if (p.Has("landscape")) psv.SetPlotRotation(ps, p.Bool("landscape", true) ? PlotRotation.Degrees090 : PlotRotation.Degrees000);
         }
     }
 }

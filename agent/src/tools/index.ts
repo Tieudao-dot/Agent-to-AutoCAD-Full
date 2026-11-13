@@ -4,6 +4,7 @@ import { interactionTools } from './interaction.js';
 import type { AnyTool, ToolBridge } from './common.js';
 import { advancedTools } from './advanced.js';
 import { annotationTools } from './annotation.js';
+import { utility2dTools } from './utility2d.js';
 import { batchTools } from './batch.js';
 import { blockTools } from './blocks.js';
 import { captureTools } from './capture.js';
@@ -31,6 +32,7 @@ export function buildTools(bridge: ToolBridge, allowed?: readonly string[], plan
     ...layerTools(bridge),
     ...modifyTools(bridge),
     ...annotationTools(bridge),
+    ...utility2dTools(bridge),
     ...blockTools(bridge),
     ...styleTools(bridge),
     ...viewTools(bridge),

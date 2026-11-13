@@ -90,7 +90,9 @@ namespace ClaudeCAD.Plugin.Core
                 "create_text_style create_dim_style set_current_styles " +
                 "offset_entity fillet_entities chamfer_entities trim_entities extend_entities join_entities explode_entities edit_polyline " +
                 // nâng cấp đợt B (Drawing/Edit2DTools.cs): STRETCH, BREAK, LENGTHEN, DIVIDE / MEASURE
-                "stretch_entities break_entity lengthen_entity divide_entity");
+                "stretch_entities break_entity lengthen_entity divide_entity " +
+                // nâng cấp đợt C (Drawing/Util2DTools.cs): plan dimensions, block / area schedules, find & replace of text
+                "dim_floor_plan block_schedule area_schedule find_replace_text");
             // 3D phases 1, 2 and 3 (Drawing/SolidTools.cs, Solid2Tools.cs, PlanTo3dTools.cs, SectionTools.cs): only the 3D and Full plans
             Add(ToolGroup.ThreeD,
                 // draw_solid (nâng cấp đợt A) replaces the six primitives for Claude; their old names stay for recorded macros

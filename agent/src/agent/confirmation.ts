@@ -60,6 +60,9 @@ const DESTRUCTIVE: Record<string, (p: Record<string, unknown>) => number> = {
   break_entity: (p) => (typeof p.handle === 'string' ? 1 : 0),
   lengthen_entity: (p) => (typeof p.handle === 'string' ? 1 : 0),
   match_properties: (p) => len(p.handles),
+  // nâng cấp đợt C: replacing text changes existing objects (step 2, with handles); the preview changes nothing.
+  // It always needs the card's Đồng ý (REPLACE_TOOLS below), whatever the count.
+  find_replace_text: (p) => len(p.handles),
 };
 
 /**
@@ -320,6 +323,29 @@ export const USER_CONFIRMED_PARAM = 'user_confirmed';
 /** Tools whose 3D-solid confirmation the plugin checks itself (by object type), with USER_CONFIRMED_PARAM. */
 export const PLUGIN_CONFIRMED = new Set(['explode_entities', 'erase_entities']);
 
+/**
+ * Nâng cấp đợt C (13/11/2026): find_replace_text changes many existing texts at once, so replacing (a call with handles)
+ * always needs the Đồng ý button of a confirmation card that listed those handles, whatever the count; a typed yes or the
+ * plan card's "Làm" does not. The plugin checks it too (user_confirmed, added by applyUserConfirmation).
+ */
+export const REPLACE_TOOLS = new Set(['find_replace_text']);
+/** Tools that get user_confirmed (the handles on the approved card): the 3D ones above and find_replace_text. */
+const CARD_PARAM_TOOLS = new Set([...PLUGIN_CONFIRMED, ...REPLACE_TOOLS]);
+
+/** The handles of a replace call (or of the replace calls in a batch) that are not on the card the user approved. */
+export function replaceNotApproved(tool: string, params: Record<string, unknown>, g: GateState): string[] {
+  if (tool === 'batch_execute' && Array.isArray(params.calls)) {
+    const out: string[] = [];
+    for (const c of params.calls as Array<{ tool?: unknown; params?: unknown }>) {
+      if (c && typeof c.tool === 'string' && c.tool !== 'batch_execute') out.push(...replaceNotApproved(c.tool, (c.params as Record<string, unknown>) ?? {}, g));
+    }
+    return [...new Set(out)];
+  }
+  if (!REPLACE_TOOLS.has(tool) || !Array.isArray(params.handles)) return [];
+  const hs = (params.handles as unknown[]).filter((h): h is string => typeof h === 'string').map((h) => h.toUpperCase());
+  return [...new Set(hs.filter((h) => !g.cardConfirmed?.has(h)))];
+}
+
 /** The params with user_confirmed = the call's handles that are on the approved card (no parameter when none are). */
 function flagged(params: Record<string, unknown>, g: GateState): Record<string, unknown> {
   const { [USER_CONFIRMED_PARAM]: _ignored, ...rest } = params;
@@ -333,7 +359,7 @@ function flagged(params: Record<string, unknown>, g: GateState): Record<string, 
  * user_confirmed = their handles that the user approved on the confirmation card of this turn, and nothing otherwise.
  */
 export function applyUserConfirmation(tool: string, params: Record<string, unknown>, g: GateState): Record<string, unknown> {
-  if (PLUGIN_CONFIRMED.has(tool)) return flagged(params, g);
+  if (CARD_PARAM_TOOLS.has(tool)) return flagged(params, g);
   if (WINDOW_TOOLS.has(tool)) return windowLimited(params, isWindowCall(tool, params) ? windowLimit(g, 1) : undefined);
   if (tool === 'batch_execute' && Array.isArray(params.calls)) {
     let changed = false;
@@ -352,7 +378,7 @@ export function applyUserConfirmation(tool: string, params: Record<string, unkno
         changed = true;
         return { ...call, params: next };
       }
-      if (!PLUGIN_CONFIRMED.has(call.tool)) return c;
+      if (!CARD_PARAM_TOOLS.has(call.tool)) return c;
       const next = flagged(p, g);
       if (!(USER_CONFIRMED_PARAM in p) && !(USER_CONFIRMED_PARAM in next)) return c;
       changed = true;
@@ -454,6 +480,15 @@ export function confirmationError(tool: string, params: Record<string, unknown>,
       'Call request_confirmation with one Vietnamese sentence that writes every layer name exactly as in the drawing and what it is ' +
       '(e.g. "Dựng 3D với: tường = TUONG, cửa đi = CUA, cửa sổ = CUASO?"), and end your turn. ' +
       'Build after the user presses Đồng ý, with exactly the layers named on that card.'
+    );
+  }
+  const texts = replaceNotApproved(tool, params, g);
+  if (texts.length > 0) {
+    return (
+      `Confirmation required: find_replace_text would change ${texts.length} existing text object(s) that are not on a confirmation card the user approved. ` +
+      'Replacing always needs the Đồng ý button of a card listing them; a typed "ok" / "đồng ý" does not count. Do not retry now and do not work around it ' +
+      '(no edit_text / set_block_attributes one by one). Run find_replace_text without handles (preview), call request_confirmation with its match_handles and ' +
+      'one Vietnamese sentence (count, find → replace, one example), and end your turn. Replace with exactly those handles after the user presses Đồng ý.'
     );
   }
   // C2 (12/11/2026): only the Đồng ý button of a card that listed these solids unlocks them, not a typed yes

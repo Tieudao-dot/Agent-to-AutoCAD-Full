@@ -62,9 +62,11 @@ export function layoutTools(b: ToolBridge): AnyTool[] {
     cadTool(b, 'plot_pdf',
       'Plot a layout (or "Model") to a PDF file with DWG To PDF.pc3 (foreground plot). Only when the user asks for a PDF / print. ' +
         'Defaults: current layout, A3 full bleed, monochrome.ctb, scale "fit", area "layout" (Model: "extents"), output next to the drawing as ' +
-        '<drawing>-<layout>.pdf. area "window" needs window_p1/window_p2. Returns the output path.',
+        '<drawing>-<layout>.pdf. area "window" needs window_p1/window_p2. layouts: several layouts (or ["all"] = every paper layout in tab order) ' +
+        'into ONE multi-page PDF (default <drawing>-<n>-layouts.pdf). Returns the output path.',
       {
         layout: z.string().optional(),
+        layouts: z.array(z.string().min(1)).min(1).max(255).optional(),
         output: z.string().optional().describe('Full path ending in .pdf.'),
         media: z.string().optional(),
         device: z.string().optional(),

@@ -66,6 +66,7 @@ namespace ClaudeCAD.Plugin.Drawing
             RegisterTrimExtend(d);
             // nâng cấp đợt B: stretch / break / lengthen / divide (2D), group / match_properties (every plan)
             RegisterEdit2D(d);
+            RegisterUtil2D(d);
             // v0.6: Claude looks at the drawing
             RegisterCapture(d);
             // 3D phase 1 (ToolGroup.ThreeD)
