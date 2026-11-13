@@ -53,6 +53,7 @@ quy tắc làm việc và danh bạ thread: [`../CLAUDE.md`](../CLAUDE.md).
 | 13/11 | 2 commit đầu có tên model | Để nguyên trên các nhánh làm việc; khi phát hành gộp vào `main` thành một commit gọn (squash) để lịch sử `main` sạch |
 | 13/11 | Kế hoạch nâng cấp lệnh vẽ | Gộp 6 lệnh dựng khối (đợt A); nâng cấp xong mới phát hành; gói lệnh mới theo phương án A (GROUP / MATCHPROP mọi gói); thứ tự A → B → C → D → E, F sau phát hành; sau đó đổi sang chạy liền A → E, bắt đầu ngay, dừng trước phát hành. Xem [`ke-hoach-nang-cap-lenh.md`](ke-hoach-nang-cap-lenh.md) |
 | 13/11 | Đợt E: cầu thang / mái | 3 kiểu cầu thang + 3 kiểu mái; mặc định cao bậc 160, rộng bậc 280, vế 1000, mái bằng dày 150, mái dốc 30°, đua 600 (mm) |
+| 13/11 | Cập nhật tình hình | Mọi sub-thread (kể cả thread con) gửi tin ngắn `[Cập nhật từ thread …]` về luồng chính ở các mốc (bắt đầu, push + CI, kết quả CI, mở thread con, xong, bị chặn); luồng chính ghi tình hình trong thread chính, không push noti cho từng tin. Chi tiết trong `CLAUDE.md` |
 | 12/11 | Cách làm việc | Luồng chính điều phối; mỗi đợt một thread, thread đợt tự mở thread con "Test & sửa" |
 
 ## 4. Đã làm

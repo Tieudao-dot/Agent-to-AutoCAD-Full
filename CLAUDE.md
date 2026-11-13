@@ -92,6 +92,21 @@ dự án gốc), `bo-cai/README.md`.
     việc đã xong, nhánh + commit, test / CI, việc chờ cậu, thời gian. Một lần mỗi mốc.
 - Điểm cần cậu chốt phát sinh ở sub-thread: báo ngược lên tới luồng chính, luồng chính hỏi cậu bằng
   AskUserQuestion rồi chuyển câu trả lời xuống lại.
+- **Cập nhật tình hình về luồng chính (chủ dự án yêu cầu 13/11/2026):** để chủ dự án xem tình hình mọi thread ở
+  một chỗ là thread chính.
+  - Mọi sub-thread, kể cả thread con, gửi tin ngắn về luồng chính (`session_01D56HmFT5bwapmbypmLY5nr`, qua
+    `mcp__claude-code-remote__send_message`), mở đầu `[Cập nhật từ thread <tên>]`, 1–3 dòng: vừa xong gì, nhánh +
+    commit, việc tiếp theo, chi phí tới lúc đó (`usage.cost_usd` khi gọi `get_session` không tham số).
+  - Gửi ở các mốc: nhận việc và bắt đầu; viết / sửa xong, đã push, bắt đầu CI; có kết quả CI (xanh / đỏ, số run);
+    mở thread con (kèm session id); xong việc. Bị chặn, gặp lỗi lớn hoặc phải chờ quyết thì gửi ngay.
+  - Không gửi cho từng bước nhỏ: ngoài lúc bị chặn, hai tin cách nhau ít nhất khoảng 30 phút.
+  - Thread con vẫn báo cáo đầy đủ về thread cha như cũ; tin cập nhật ngắn thì gửi thẳng luồng chính.
+  - Luồng chính: mỗi tin cập nhật thì ghi 1–3 dòng tình hình trong thread chính, không push noti (chỉ push khi xong
+    việc chủ dự án giao, bị chặn hoặc cần cậu quyết). Xong mỗi đợt thì cập nhật bảng tiến độ trong
+    `docs/ke-hoach-nang-cap-lenh.md` và `docs/tong-quan-du-an.md`. Cậu hỏi "tình hình" thì luồng chính kiểm thêm các
+    thread đang chạy bằng `get_session`.
+  - Thread đang chạy đọc bản `CLAUDE.md` trên nhánh của nó (có thể là bản cũ), nên mọi tin giao việc và prompt mở
+    thread mới, kể cả prompt cho thread con, ghi sẵn quy tắc này.
 - Mở hay đóng sub-thread: chỉ khi cậu đồng ý (chuỗi 3D: cậu đã đồng ý 12/11/2026). Sub-thread mới ghi vào danh
   bạ ở cuối file; thread con ghi kèm thread cha.
 - **Được tự mở thread (chủ dự án cho phép 12/11/2026):** luồng chính và thread mỗi đợt được tự gọi
