@@ -18,14 +18,15 @@ Gói theo phương án A (chủ dự án chốt 13/11): GROUP, MATCHPROP ở **m
 | B6 | MATCHPROP | `match_properties` (mới) | Mọi gói | `Edit2DLogic.MatchProps`; `PlanLogic.TextValues` | Chép từ `source` sang `handles`: `layer`, `color`, `linetype`, `lineweight`, `linetype_scale`, `transparency`, `thickness`, `text` (kiểu chữ, cao chữ, hệ số rộng, nghiêng: chữ → chữ, TEXT ↔ MTEXT), `dimension` (kiểu kích thước: kích thước → kích thước). Mặc định chép hết. **Gói 3D:** mặc định bỏ `text` / `dimension` (báo trong `skipped`); nêu rõ `text` / `dimension` thì plugin từ chối `NOT_IN_PLAN` (cả trong `batch_execute` và macro: "match_properties (thuộc tính chữ / kích thước)") |
 | B7 | Bo / vát polyline và cung | `fillet_entities`, `chamfer_entities` (nâng cấp) | 2D | `ModifyTools.cs` (`CornerObjects`, `PolylineCorners`, `ArcCorner`); `Edit2DLogic.PolylineCorners`, `FilletArcs`, `ChamferArcs` | Hai đường thẳng: **đi đúng đường cũ** (`Geometry.FilletLines` / `ChamferLines`). Thêm: đường + cung, cung + cung (bo: chọn đường tròn bán kính r tiếp xúc cả hai gần góc nhất, tiếp điểm nằm giữa đầu giữ lại và góc; vát: khoảng đo dọc cung). Polyline: chỉ `handle1` (không `handle2`) = mọi góc giữa hai đoạn thẳng, hoặc `vertex` (chỉ số 0); sửa tại chỗ, giữ handle, giữ độ rộng đều; góc cạnh quá ngắn / sát đoạn cung / thẳng hàng bỏ qua có lý do (`skipped`), góc nêu bằng `vertex` mà không làm được thì báo lỗi. Bán kính 0 / khoảng 0 với polyline: báo lỗi (không có gì thay đổi) |
 | B8 | Offset hai phía | `offset_entity` (nâng cấp) | 2D | `ModifyTools.cs`; `Edit2DLogic.CheckOffsetSides` | `both_sides: true` = một bản mỗi bên, không cần `side_point` (`side_point` thành tùy chọn). Một bên không offset được (vd. vào trong đường tròn nhỏ) thì làm bên còn lại và ghi chú. Gọi cũ có `side_point` chạy như cũ |
-| B9 | Nối có dung sai | `join_entities` (nâng cấp) | 2D | `ModifyTools.cs` (`TryBridge`); `Edit2DLogic.Bridge` | `tolerance` (mm, mặc định 0 = như cũ): khe ≤ dung sai giữa đầu polyline và đầu đối tượng kế tiếp được nối bằng một **đoạn thẳng ngắn** (không xê dịch hình có sẵn); vẫn không nối được thì bỏ đoạn vừa thêm. Báo `bridged` (handle, khe). Hai đầu polyline cách nhau trong dung sai: để hở, ghi chú gợi ý `edit_polyline closed: true` |
+| B9 | Nối có dung sai | `join_entities` (nâng cấp) | 2D | `ModifyTools.cs` (`TryBridge`); `Edit2DLogic.Bridge` | `tolerance` (mm, mặc định 0 = như cũ): khe ≤ dung sai giữa đầu polyline và đầu đối tượng kế tiếp được nối bằng một **đoạn thẳng ngắn** (không xê dịch hình có sẵn); vẫn không nối được thì bỏ đoạn vừa thêm (trả lại bulge cũ). Polyline đã kín thì không nối thêm. Báo `bridged` (handle, khe). Hai đầu polyline cách nhau trong dung sai: để hở, ghi chú gợi ý `edit_polyline closed: true` |
 
 Kèm theo:
 
 - **`CLAUDECHATSELFTEST` thêm 1 bước** (`SelfTest.cs`): "Nâng cấp đợt B: bo 4 góc polyline, kéo dài, bẻ gãy, chia đều,
   nối có dung sai, kéo giãn". Bo R10 hình 100 × 50 (chu vi 220 + 20π ≈ 282,832), kéo dài đường 100 thêm 20, bỏ đoạn 30–50,
-  chia mảnh đầu 3 phần (2 điểm), nối 2 đường hở 0,5 với dung sai 1 (dài 200), kéo giãn cạnh phải 50 (chu vi 400). Chạy
-  trong một transaction rồi hủy: bản vẽ không giữ lại gì.
+  chia mảnh đầu 3 phần (2 điểm), nối 2 đường hở 0,5 với dung sai 1 (dài 200), kéo giãn cạnh phải 50 (chu vi 400). Mỗi
+  lệnh chạy trong một transaction riêng (mở lại đối tượng, đúng như dispatcher chạy từng lệnh), trên bản vẽ nháp của
+  self-test (đóng không lưu khi xong).
 - **Macro:** `source` của `match_properties` được ánh xạ handle khi chạy lại (`MacroLogic.IsHandleKey`). Lệnh nâng cấp
   giữ tên và tham số cũ nên macro cũ chạy như trước.
 - `ToolDispatcher.Plan` (đọc gói của máy cho `match_properties`).
@@ -57,7 +58,15 @@ Kèm theo:
   gọi cũ của 4 lệnh nâng cấp vẫn hợp lệ; tham số mới; dạng chính của lệnh mới; đếm đối tượng cho cổng xác nhận (quá 20
   hỏi, đồng ý thì qua, trong `batch_execute`); mốc chia là đối tượng mới.
 - Build net48 / net8.0-windows / net10.0-windows (Linux, `-p:EnableWindowsTargeting=true`): xanh, 0 cảnh báo.
-- CI: xem mục cuối.
+- CI: run **43408010489 xanh** ở `24c3abe` (`release: "false"`, Windows: trợ lý qua named pipe, test lõi, UI test WPF, build
+  3 bản, gói + Setup.exe; bước phát hành bỏ qua đúng). ~9,5 phút. Run 43407328829 (ở `a87741e`) tớ tự hủy để chạy lại
+  trên commit sửa self-test, không tính là lượt thứ hai.
+
+## Commit
+
+`07e6a50` (code 9 việc + test), `a87741e` (bàn giao, đo token), `24c3abe` (self-test chạy từng lệnh trong transaction
+riêng; nối-khe với polyline kín, CI xanh), sau đó một commit ghi kết quả CI vào file này (chỉ tài liệu; CI của thread con
+phủ nó).
 
 ## Token mô tả lệnh + system prompt (cùng cách đo với đợt A, ~3,5 ký tự / token)
 
