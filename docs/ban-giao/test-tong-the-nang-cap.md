@@ -74,6 +74,12 @@ Gộp vào `full/nang-cap-tong-the` (không xung đột) theo thứ tự A `7534
 29 lỗi sửa đúng, 2 chấp nhận (KT2-11 phần "cân nhắc", KT2-22 chỉ lời dặn), 1 lỗi mới nhẹ KT2-32 (đợt C, `5c244af`). Gộp
 `full/nang-cap-c` @ `5c244af` vào `full/nang-cap-tong-the`: lõi **909**, trợ lý **298** xanh, build 3 bản xanh 0 cảnh báo, CI run **43478782014 xanh** ở `6b6c911` (`release: "false"`).
 
+## Lỗi khi thử thật (chủ dự án, bộ cài thử nội bộ 0.9.4)
+
+| Mã | Lỗi (người dùng thấy gì) | Sửa | Commit |
+| --- | --- | --- | --- |
+| TT-01 (14/11) | Chạy bộ cài khi AutoCAD đang mở (DLL plugin đang nạp) hoặc tiến trình phụ của plugin còn chạy: bước "Closing applications…" hiện hộp tiếng Anh của Inno "Setup was unable to automatically close all applications…" với 3 nút Try again / Ignore / Cancel, không biết phải làm gì | `CloseApplications=no` (bỏ Restart Manager). `PrepareToInstall` (sau xử lý KT-07): thấy `acad.exe` của người dùng này đang chạy → hộp tiếng Việt "AutoCAD đang mở. Hãy lưu bản vẽ và đóng hết AutoCAD, rồi bấm Thử lại." (Thử lại / Hủy, lặp tới khi đóng; không tự tắt AutoCAD; cài ngầm thì dừng có lý do); tắt `node.exe` / `claude.exe` **có đường dẫn trong `{app}`** (WMI `Win32_Process` + `taskkill /PID`); kiểm từng `.dll` / `.exe` của bundle mở ghi được (chờ tối đa 5 giây), còn bị giữ → dừng trước khi thay gì: "… Hãy khởi động lại máy rồi chạy lại bộ cài, trước khi mở AutoCAD." Hộp thử lại khi chép file (nếu vẫn gặp) đổi chữ tiếng Việt (`[Messages]` `AbortRetryIgnore*`). Luồng thay bản gốc + "Tiếp tục / Hủy" (KT-07) giữ nguyên. Test nguồn `Installer_handles_files_in_use_in_vietnamese`; thử tay V14 | (commit TT-01) |
+
 ## Đã rà theo chiều ngang, không phải lỗi
 
 - **Nhãn gói (phương án A):** GROUP / MATCHPROP nhãn Common; STRETCH, BREAK, LENGTHEN, DIVIDE, `dim_floor_plan`,
