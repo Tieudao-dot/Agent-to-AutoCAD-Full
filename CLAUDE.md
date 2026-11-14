@@ -179,6 +179,7 @@ dự án gốc), `bo-cai/README.md`.
 | ↳ Test & sửa đợt E (con của Nâng cấp đợt E) | `session_01D56HmEVcsHK1xiof9qua9w` | Nhánh `full/nang-cap-e-test` (tách từ `full/nang-cap-e` @ `3e8a67c`): rà soát, thêm test tự động, sửa lỗi đợt E; 1 lượt CI. Báo về thread đợt E, tin cập nhật ngắn gửi luồng chính. Bàn giao: `docs/ban-giao/nang-cap-e-test.md` |
 | Test tổng thể nâng cấp | `session_01D56HmGm85zfmxQqdNwrF2N` | Nhánh `full/nang-cap-tong-the` (tách từ `full/nang-cap-e-test` @ `cdaa29b`): rà chiều ngang chuỗi nâng cấp A → E cùng gói / 3D cũ, sửa lỗi, đo token trước / sau, cập nhật `docs/checklist-tong-the.md`; 1 lượt CI. Giữ nhánh tích hợp cho bản sửa sau kiểm tra độc lập. Bàn giao: `docs/ban-giao/test-tong-the-nang-cap.md` |
 | Kiểm tra độc lập nâng cấp | `session_01D56HmHmd7iAXreWAFzYLX4` | Nhánh `full/kiem-tra-doc-lap-2` (tách từ `full/nang-cap-tong-the` @ `f1e7123`): agent mới test lại toàn bộ chuỗi nâng cấp A → E một lượt, chỉ ghi lỗi (KT2-xx), phân theo phần phụ trách; 1 lượt CI; sau đó soát lại các lỗi đã sửa. Báo cáo: `docs/ban-giao/kiem-tra-doc-lap-nang-cap.md` |
+| Bảo mật | `session_01D56HmJNNATNAVHRZejGSMu` | Trao đổi với chủ dự án về bảo mật, khóa key, máy chủ kích hoạt, quản lý thiết bị / gói, mã máy không có mạng, bộ cài thử nội bộ. Đọc code `full/nang-cap-tong-the`, không sửa code / Apps Script / bộ cài / CI; chỉ viết tài liệu `docs/` trên nhánh `full/bao-mat` khi chủ dự án yêu cầu. Lỗi / điểm yếu / việc cần quyết thì chuyển về luồng chính |
 
 Link mở thread: `https://claude.ai/code/<session id>`.
 

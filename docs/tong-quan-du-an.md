@@ -116,3 +116,5 @@ trong 5 phút chỉ tốn ~10%.
   - kiểm tra độc lập nâng cấp lượt 1: 31 lỗi (0 nặng, 7 vừa, 24 nhẹ); chuyển về 6 thread sửa; lượt 2: 29 sửa đúng,
     2 chấp nhận, 1 lỗi mới; lượt 3: sửa đúng, 0 lỗi mở. Nhánh tích hợp cuối `full/nang-cap-tong-the` @ `f7f32ad`, CI xanh;
   - bộ cài thử nội bộ build lại có đủ nâng cấp (CI 43481896536); báo cáo [`bao-cao-nang-cap-14-11.md`](bao-cao-nang-cap-14-11.md).
+- **14/11/2026 (chiều):** mở thread Bảo mật (`session_01D56HmJNNATNAVHRZejGSMu`) để chủ dự án trao đổi về khóa key, máy chủ
+  kích hoạt và quản lý thiết bị.
