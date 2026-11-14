@@ -28,7 +28,7 @@ từng đợt; kiểu cầu thang / mái đợt E đã chốt; chỉ dừng hỏ
 | C (2D) | Hatch bấm một điểm; tự ghi kích thước cả mặt bằng; thống kê block ra bảng, đếm theo thuộc tính; tổng diện tích phòng / layer ra bảng; tìm & thay chữ (có thẻ xác nhận); in nhiều layout vào một PDF | 2D / Full |
 | D (3D) | Dầm; tường cong; PRESSPULL; xuất STL; bảng khối lượng theo layer; va chạm ra bảng | 3D / Full |
 | E (lớn) | Cầu thang (1 vế / chữ L / chữ U); mái bằng / 2 mái / 4 mái. Số mặc định: điểm 6 | 3D / Full |
-| F (sau phát hành) | Mọi lệnh hiểu UCS (hiện theo WCS); vật liệu / render; block từ thư viện; bộ layout khung tên; layer state; lưu góc nhìn; bộ style chuẩn Việt Nam | — |
+| F (sau phát hành) | Mọi lệnh hiểu UCS (hiện theo WCS); vật liệu / render; block từ thư viện; bộ layout khung tên; layer state; lưu góc nhìn; bộ style chuẩn Việt Nam; nút chọn chế độ "Cả hai / 2D / 3D" cho máy gói Full (mặc định Cả hai; chọn riêng thì bớt ~1/3 token mỗi lần mở chat), quyết sau khi thử thật (chốt 14/11) | — |
 
 ## Chi phí ước
 
