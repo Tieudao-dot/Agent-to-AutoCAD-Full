@@ -10,7 +10,7 @@ quy tắc làm việc và danh bạ thread: [`../CLAUDE.md`](../CLAUDE.md).
 
 *Cập nhật 14/11/2026 ~0h40 (giờ VN).*
 
-- **Nhánh tích hợp mới nhất:** `full/nang-cap-tong-the` @ `f7f32ad` (CI 43478782014 xanh). Chứa toàn bộ: gói dịch vụ,
+- **Nhánh tích hợp mới nhất:** `full/nang-cap-tong-the` @ `b0da814` (có sửa lỗi bộ cài TT-01; CI 43613015509 xanh). Chứa toàn bộ: gói dịch vụ,
   3D đợt 1–3, test tổng thể + 4 lượt kiểm tra độc lập lần 1 (43 lỗi), bộ cài thay bản gốc + cảnh báo, và **chuỗi nâng
   cấp A → E** (13/11) + test tổng thể nâng cấp.
   - Test lõi 909, trợ lý 298, build net48 / net8 / net10 sạch.
@@ -26,9 +26,10 @@ quy tắc làm việc và danh bạ thread: [`../CLAUDE.md`](../CLAUDE.md).
 - **Chưa dùng được bộ cài thật:** `activation/activation.json` và khóa công khai trong `License.cs` vẫn là của dự án
   gốc; chờ chủ dự án dựng máy chủ kích hoạt riêng.
 - **Bộ cài thử nội bộ** (chỉ chủ dự án dùng, không gửi ai; bỏ qua kích hoạt, gói Full, hết hạn 10/12/2026, nhãn "BẢN THỬ
-  NỘI BỘ", không tự cập nhật; nhánh `full/ban-thu-noi-bo`, **không bao giờ gộp**). Bản mới 14/11 có đủ chuỗi nâng cấp:
-  `8f84973`, CI 43481896536, artifact `AgentToAutoCADFull-ThuNoiBo-nang-cap-0.9.4`
-  ([tải](https://github.com/Tieudao-dot/Agent-to-AutoCAD-Full/actions/runs/43481896536/artifacts/14065019481), tới 11/02/2027). Bản cũ 13/11 (CI 43373318854) chưa có lệnh nâng cấp.
+  NỘI BỘ", không tự cập nhật; nhánh `full/ban-thu-noi-bo`, **không bao giờ gộp**). **Bản dùng hiện tại (14/11 tối):** có đủ
+  chuỗi nâng cấp + sửa lỗi bộ cài TT-01 (hỏi đóng AutoCAD bằng tiếng Việt, tự tắt tiến trình phụ của plugin):
+  `45b45a6`, CI 43614348802, artifact `AgentToAutoCADFull-ThuNoiBo-nang-cap-2-0.9.4` ([tải](https://github.com/Tieudao-dot/Agent-to-AutoCAD-Full/actions/runs/43614348802/artifacts/14121404198), tới
+  12/02/2027). Cài đè lên bản cũ được. Các bản cũ (CI 43373318854, 43481896536) bỏ.
   Bàn giao: `docs/ban-giao/ban-thu-noi-bo.md` trên nhánh đó.
 - **Checklist thử tay:** [`checklist-tong-the.md`](checklist-tong-the.md) trên nhánh tích hợp: phần cũ I–M, X (rút gọn
   ~97 phút, đủ ~157 phút) + khối **chuỗi nâng cấp A → E** (rút gọn ~95 phút, đủ ~3 giờ; mục N–R, chéo V1–V8). Chi tiết
@@ -118,3 +119,5 @@ trong 5 phút chỉ tốn ~10%.
   - bộ cài thử nội bộ build lại có đủ nâng cấp (CI 43481896536); báo cáo [`bao-cao-nang-cap-14-11.md`](bao-cao-nang-cap-14-11.md).
 - **14/11/2026 (chiều):** mở thread Bảo mật (`session_01D56HmJNNATNAVHRZejGSMu`) để chủ dự án trao đổi về khóa key, máy chủ
   kích hoạt và quản lý thiết bị.
+- **14/11/2026 (tối):** chủ dự án thử bộ cài thử nội bộ, gặp lỗi bộ cài không đóng được ứng dụng đang dùng file (hộp tiếng
+  Anh của Inno). Thread Test tổng thể nâng cấp sửa (TT-01), thread Bộ cài thử nội bộ build lại (CI 43614348802).
