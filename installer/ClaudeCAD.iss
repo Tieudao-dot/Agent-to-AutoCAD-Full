@@ -400,7 +400,7 @@ end;
 
 { ======================================================================= TT-01 (14/11/2026): files in use
   AutoCAD keeps the plugin DLLs loaded, and the plugin's helpers (node.exe in Contents\node, claude.exe of the agent)
-  keep theirs. Setup asks to close AutoCAD (never closes it), stops only the helpers inside {app}, then checks the
+  keep theirs. Setup asks to close AutoCAD (never closes it), stops only the helpers inside the plugin folder, then checks the
   program files can be written; otherwise it stops with a Vietnamese message before anything changed. }
 
 { Running processes named Name (e.g. 'acad.exe') of this user (another user's process has no readable path) whose
