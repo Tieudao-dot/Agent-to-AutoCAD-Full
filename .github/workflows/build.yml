@@ -153,7 +153,7 @@ jobs:
 
       - uses: actions/upload-artifact@v4
         with:
-          name: AgentToAutoCADFull-ThuNoiBo-nang-cap-${{ steps.ver.outputs.version }}
+          name: AgentToAutoCADFull-ThuNoiBo-nang-cap-2-${{ steps.ver.outputs.version }}
           path: |
             bundle/out/AgentToAutoCADFull-ThuNoiBo-Setup.exe
           if-no-files-found: error

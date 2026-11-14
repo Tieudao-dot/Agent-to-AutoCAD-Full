@@ -68,7 +68,11 @@ Compression=lzma2/max
 SolidCompression=yes
 ArchitecturesAllowed=x64compatible
 ArchitecturesInstallIn64BitMode=x64compatible
-CloseApplications=yes
+; TT-01 (14/11/2026): no Restart Manager (its English "unable to automatically close all applications" box with three
+; buttons left people stuck). PrepareToInstall does it instead: asks in Vietnamese to close AutoCAD (never closes it:
+; unsaved drawings), stops the plugin's own node.exe / claude.exe in {app}, and stops with a Vietnamese message if a
+; plugin file is still in use.
+CloseApplications=no
 ; always write %TEMP%\Setup Log yyyy-mm-dd #nnn.txt — "Gửi báo cáo lỗi" in the palette attaches it
 SetupLogging=yes
 UninstallDisplayName={#AppDisplayName}
@@ -99,6 +103,11 @@ Filename: "{#ClaudeExe}"; Parameters: "auth login --claudeai"; Description: "Đ�
 #ifdef BanThuNoiBo
 WelcomeLabel2=ĐÂY LÀ BẢN THỬ NỘI BỘ, chỉ dành cho chủ dự án, không gửi cho ai.%n%n- Không cần kích hoạt, mở sẵn đủ 2D + 3D (gói Full).%n- Dùng được tới hết ngày 10/12/2026; từ 11/12/2026 khung chat không mở trợ lý nữa.%n- Không tự cập nhật.%n- Nếu máy đang có ClaudeCAD, bản này sẽ thay nó (giữ lịch sử chat, cài đặt và đăng nhập Claude). Bộ cài chính thức sau này cài đè lên được.%n%nBấm Next để cài tiếp.
 #endif
+; TT-01: should a file still be in use while copying, the retry box is Vietnamese too
+AbortRetryIgnoreSelectAction=Chọn cách xử lý
+AbortRetryIgnoreRetry=&Thử lại (sau khi đóng AutoCAD)
+AbortRetryIgnoreIgnore=&Bỏ qua lỗi và cài tiếp (không nên)
+AbortRetryIgnoreCancel=Hủy cài đặt (khởi động lại máy rồi chạy lại bộ cài)
 FinishedLabel={#AppDisplayName} đã được cài (lệnh mở khung chat: CLAUDECHAT).%n%nĐể dùng ngay: giữ ô "Đăng nhập Claude ngay" rồi bấm Finish — trình duyệt mở trang cấp quyền, cậu bấm đồng ý bằng tài khoản Claude Pro/Max (một cửa sổ đen hiện lên trong lúc đăng nhập và tự đóng khi xong). Sau đó mở AutoCAD 2022–2027 là dùng được.%n%nNếu bỏ qua bước này, lần đầu mở AutoCAD plugin sẽ tự mở trang đăng nhập.
 
 [Code]
@@ -414,11 +423,134 @@ begin
     Log('could not remove the staged update ' + Stage);
 end;
 
-{ KT-07: runs before Setup checks / closes the applications that use the bundle (CloseApplications=yes) }
+{ ======================================================================= TT-01 (14/11/2026): files in use
+  AutoCAD keeps the plugin DLLs loaded, and the plugin's helpers (node.exe in Contents\node, claude.exe of the agent)
+  keep theirs. Setup asks to close AutoCAD (never closes it), stops only the helpers inside the plugin folder, then checks the
+  program files can be written; otherwise it stops with a Vietnamese message before anything changed. }
+
+{ Running processes named Name (e.g. 'acad.exe') of this user (another user's process has no readable path) whose
+  path is inside Dir ('' = anywhere). Kill: stop them (taskkill /F). Returns how many were found. }
+function PluginProcesses(const Name, Dir: String; Kill: Boolean): Integer;
+var
+  Locator, Service, Procs, P: Variant;
+  I, Code, Pid: Integer;
+  Path, Prefix: String;
+begin
+  Result := 0;
+  Prefix := Lowercase(AddBackslash(Dir));
+  try
+    Locator := CreateOleObject('WbemScripting.SWbemLocator');
+    Service := Locator.ConnectServer('.', 'root\CIMV2');
+    Procs := Service.ExecQuery('SELECT ProcessId, ExecutablePath FROM Win32_Process WHERE Name = ''' + Name + '''');
+    for I := 0 to Procs.Count - 1 do
+    begin
+      P := Procs.ItemIndex(I);
+      if VarIsNull(P.ExecutablePath) then continue;
+      Path := P.ExecutablePath;
+      if (Dir <> '') and (Pos(Prefix, Lowercase(Path)) <> 1) then continue;
+      Result := Result + 1;
+      Pid := P.ProcessId;
+      if Kill then
+      begin
+        Exec(ExpandConstant('{sys}\taskkill.exe'), '/PID ' + IntToStr(Pid) + ' /F', '', SW_HIDE, ewWaitUntilTerminated, Code);
+        Log('stopped the plugin helper ' + Path + ' (pid ' + IntToStr(Pid) + ', taskkill ' + IntToStr(Code) + ')');
+      end;
+    end;
+  except
+    Log('could not list the running ' + Name + ': ' + GetExceptionMessage);
+  end;
+end;
+
+{ Ask to close AutoCAD until it is closed (Thử lại) or the user stops (Hủy). '' = go on, else the reason to stop. }
+function WaitForAutoCADClosed(): String;
+begin
+  Result := '';
+  while PluginProcesses('acad.exe', '', False) > 0 do
+  begin
+    Log('AutoCAD is running: the plugin files are in use');
+    if WizardSilent() then
+    begin
+      Result := 'AutoCAD đang mở nên không cài được. Hãy lưu bản vẽ, đóng hết AutoCAD rồi chạy lại bộ cài.';
+      exit;
+    end;
+    if TaskDialogMsgBox('AutoCAD đang mở.',
+                        'Hãy lưu bản vẽ và đóng hết AutoCAD, rồi bấm Thử lại.' + #13#10 +
+                        'Bộ cài không tự tắt AutoCAD để cậu không mất bản vẽ chưa lưu.',
+                        mbInformation, MB_OKCANCEL, ['Thử lại', 'Hủy'], 0) <> IDOK then
+    begin
+      Log('the user cancelled while AutoCAD was running');
+      Result := 'Đã hủy cài: AutoCAD vẫn đang mở. Máy chưa bị thay đổi gì. Đóng AutoCAD rồi chạy lại bộ cài.';
+      exit;
+    end;
+  end;
+end;
+
+{ The first program file of the installed bundle that cannot be opened for writing (still in use), or ''. }
+function FileInUse(): String;
+var
+  Dirs: array of String;
+  I: Integer;
+  F: TFindRec;
+  Ext: String;
+  S: TFileStream;
+begin
+  Result := '';
+  SetArrayLength(Dirs, 5);
+  Dirs[0] := ExpandConstant('{app}\Contents');
+  Dirs[1] := ExpandConstant('{app}\Contents\2025');
+  Dirs[2] := ExpandConstant('{app}\Contents\2027');
+  Dirs[3] := ExpandConstant('{app}\Contents\node');
+  Dirs[4] := ExpandConstant('{app}\Contents\agent\node_modules\@anthropic-ai\claude-agent-sdk-win32-x64');
+  for I := 0 to GetArrayLength(Dirs) - 1 do
+    if FindFirst(Dirs[I] + '\*', F) then
+    try
+      repeat
+        Ext := Lowercase(ExtractFileExt(F.Name));
+        if (F.Attributes and FILE_ATTRIBUTE_DIRECTORY = 0) and ((Ext = '.dll') or (Ext = '.exe')) then
+        begin
+          try
+            S := TFileStream.Create(Dirs[I] + '\' + F.Name, fmOpenReadWrite or fmShareExclusive);
+            S.Free;
+          except
+            Result := Dirs[I] + '\' + F.Name;
+            exit;
+          end;
+        end;
+      until not FindNext(F);
+    finally
+      FindClose(F);
+    end;
+end;
+
+{ KT-07: the staged update of a replaced original goes first (before anything else is checked or stopped).
+  TT-01: then AutoCAD must be closed, the plugin's helpers are stopped and the files must be free. }
 function PrepareToInstall(var NeedsRestart: Boolean): String;
+var
+  Busy: String;
+  Tries: Integer;
 begin
   Result := '';
   if ReplacesOriginal() then DropOriginalStagedUpdate();
+  Result := WaitForAutoCADClosed();
+  if Result <> '' then exit;
+  PluginProcesses('node.exe', ExpandConstant('{app}'), True);
+  PluginProcesses('claude.exe', ExpandConstant('{app}'), True);
+  { a stopped process can take a moment to let go of its files }
+  Busy := FileInUse();
+  Tries := 0;
+  while (Busy <> '') and (Tries < 10) do
+  begin
+    Sleep(500);
+    Tries := Tries + 1;
+    Busy := FileInUse();
+  end;
+  if Busy <> '' then
+  begin
+    Log('a plugin file is still in use: ' + Busy);
+    Result := 'Một file của plugin vẫn đang được dùng (' + ExtractFileName(Busy) + '), nên chưa cài được. ' +
+              'Máy chưa bị thay đổi gì.' + #13#10#13#10 +
+              'Hãy khởi động lại máy rồi chạy lại bộ cài, trước khi mở AutoCAD.';
+  end;
 end;
 
 function InitializeSetup(): Boolean;

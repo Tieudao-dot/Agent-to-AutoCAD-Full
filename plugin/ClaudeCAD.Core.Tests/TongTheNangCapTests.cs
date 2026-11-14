@@ -165,5 +165,33 @@ namespace ClaudeCAD.Core.Tests
             Assert.Contains("about 1.1k", t);
             Assert.DoesNotContain("about 2k", t);
         }
+        // TT-01 (14/11/2026, thử thật bộ cài): AutoCAD or the plugin's helpers holding files gave Inno's English
+        // three-button box. The installer now asks in Vietnamese, stops only its own helpers, never closes AutoCAD.
+        [Fact]
+        public void Installer_handles_files_in_use_in_vietnamese()
+        {
+            var iss = File.ReadAllText(Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "..", "installer", "ClaudeCAD.iss")));
+            Assert.Contains("CloseApplications=no", iss);
+            Assert.DoesNotContain("CloseApplications=yes", iss);
+            int prep = iss.IndexOf("function PrepareToInstall(var NeedsRestart: Boolean): String;", StringComparison.Ordinal);
+            var body = iss.Substring(prep, iss.IndexOf("\nend;", prep, StringComparison.Ordinal) - prep);
+            // KT-07 first, then AutoCAD, then the helpers, then the check of the files
+            int kt07 = body.IndexOf("if ReplacesOriginal() then DropOriginalStagedUpdate();", StringComparison.Ordinal);
+            int acad = body.IndexOf("WaitForAutoCADClosed()", StringComparison.Ordinal);
+            int node = body.IndexOf("PluginProcesses('node.exe', ExpandConstant('{app}'), True);", StringComparison.Ordinal);
+            int claude = body.IndexOf("PluginProcesses('claude.exe', ExpandConstant('{app}'), True);", StringComparison.Ordinal);
+            int busy = body.IndexOf("FileInUse()", StringComparison.Ordinal);
+            Assert.True(kt07 >= 0 && kt07 < acad && acad < node && node < claude && claude < busy, "order KT-07 → AutoCAD → helpers → files");
+            Assert.Contains("Hãy khởi động lại máy rồi chạy lại bộ cài, trước khi mở AutoCAD.", body);
+            // AutoCAD: asked (Thử lại / Hủy), never stopped; helpers: only inside {app}
+            Assert.Contains("PluginProcesses('acad.exe', '', False)", iss);
+            Assert.DoesNotContain("PluginProcesses('acad.exe', '', True)", iss);
+            Assert.Contains("'Hãy lưu bản vẽ và đóng hết AutoCAD, rồi bấm Thử lại.'", iss);
+            Assert.Contains("['Thử lại', 'Hủy']", iss);
+            Assert.Contains("if (Dir <> '') and (Pos(Prefix, Lowercase(Path)) <> 1) then continue;", iss);
+            // the leftover retry box (a file in use while copying) is Vietnamese too
+            Assert.Contains("AbortRetryIgnoreRetry=&Thử lại", iss);
+            Assert.Contains("AbortRetryIgnoreCancel=Hủy cài đặt", iss);
+        }
     }
 }
