@@ -6,7 +6,11 @@
 
 *13/11/2026 · thread "Bộ cài thử nội bộ" · xuất phát từ `full/test-tong-the` @ `19944df`. Chủ dự án chốt 13/11/2026.*
 
-> **Bản mới nhất (14/11/2026): `AgentToAutoCADFull-ThuNoiBo-nang-cap-2-0.9.4`** (lượt CI #35, mục "Lượt CI" cuối file).
+> **Bản mới nhất (15/11/2026): bản 3, `AgentToAutoCADFull-ThuNoiBo-nang-cap-3-0.9.4`** (lượt CI #38, mục "Lượt CI" cuối
+> file). Như bản 2 dưới đây, thêm **sửa khung chat** (`full/toi-uu-khung-chat` @ `983d4c2`): hết giật khi cuộn / gõ lúc
+> đoạn chat dài, icon nét đơn sắc kiểu AutoCAD thay emoji, chế độ thu gọn cân đối hơn. Bản 2 (`…-nang-cap-2-…`) bỏ.
+>
+> **Bản 2 (14/11/2026): `AgentToAutoCADFull-ThuNoiBo-nang-cap-2-0.9.4`** (lượt CI #35).
 > Có đủ gói dịch vụ + 3D đợt 1–3 + chuỗi nâng cấp A → E (gộp `full/nang-cap-tong-the` @ `f7f32ad`) **và bản sửa bộ cài
 > TT-01** (@ `b0da814`): không còn hộp lỗi tiếng Anh "Setup was unable to automatically close all applications…".
 > Bộ cài giờ:
@@ -46,8 +50,8 @@ Gỡ bản thử: Windows ▸ Settings ▸ Apps ▸ "Agent to AutoCAD Full: BẢ
 
 ## Cách tải và cài
 
-1. Mở trang lượt chạy CI mới: <https://github.com/Tieudao-dot/Agent-to-AutoCAD-Full/actions/runs/43614348802>. Cần đăng nhập GitHub bằng tài khoản có quyền vào repo.
-2. Kéo xuống cuối trang, mục **Artifacts**, bấm **`AgentToAutoCADFull-ThuNoiBo-nang-cap-2-0.9.4`** để tải về file `.zip`.
+1. Mở trang lượt chạy CI mới: <https://github.com/Tieudao-dot/Agent-to-AutoCAD-Full/actions/runs/43670758598>. Cần đăng nhập GitHub bằng tài khoản có quyền vào repo.
+2. Kéo xuống cuối trang, mục **Artifacts**, bấm **`AgentToAutoCADFull-ThuNoiBo-nang-cap-3-0.9.4`** để tải về file `.zip`.
 3. Giải nén zip (chuột phải ▸ Extract All), ra file `AgentToAutoCADFull-ThuNoiBo-Setup.exe`.
 4. Đóng AutoCAD (bộ cài sẽ nhắc nếu AutoCAD còn mở), chạy file đó. Trang đầu ghi rõ "ĐÂY LÀ BẢN THỬ NỘI BỘ". Bấm Next tới hết. Windows có thể cảnh báo
    "Windows protected your PC" (file chưa ký): bấm **More info ▸ Run anyway**.
@@ -134,7 +138,18 @@ test nào.
 
 ## Lượt CI
 
-**Lượt mới nhất (dùng lượt này):**
+**Bản 3 — lượt mới nhất (dùng lượt này):**
+
+- Lượt **#38**, run `43670758598`, commit `8e8a429` (gộp `full/toi-uu-khung-chat` @ `983d4c2`, không xung đột),
+  workflow_dispatch `release: "false"`: **xanh** (~8 phút).
+  Trang: <https://github.com/Tieudao-dot/Agent-to-AutoCAD-Full/actions/runs/43670758598>.
+- Artifact bộ cài: **`AgentToAutoCADFull-ThuNoiBo-nang-cap-3-0.9.4`** (~141 MB zip, chứa
+  `AgentToAutoCADFull-ThuNoiBo-Setup.exe`), tải được tới **13/02/2027**. Link tải thẳng (cần đăng nhập GitHub):
+  <https://github.com/Tieudao-dot/Agent-to-AutoCAD-Full/actions/runs/43670758598/artifacts/14143819585>.
+- Trước CI: lõi **920/920**, build 3 target xanh; UI test WPF (có test hiệu năng / icon mới) xanh trên CI. Thiết lập bản
+  thử giữ nguyên.
+
+**Bản 2 — lượt #35 (chưa có sửa khung chat, đừng dùng):**
 
 - Lượt **#35**, run `43614348802`, commit `71dd03f` (gộp `full/nang-cap-tong-the` @ `b0da814`: nâng cấp A → E + sửa bộ cài
   TT-01), workflow_dispatch `release: "false"`: **xanh** (~7 phút).

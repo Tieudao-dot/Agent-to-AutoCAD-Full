@@ -2,7 +2,8 @@
 
 > **Nhánh `full/ban-thu-noi-bo` = BẢN THỬ NỘI BỘ** (chỉ chủ dự án dùng, không gửi cho ai, hết hạn 10/12/2026, không
 > bao giờ gộp vào nhánh khác): bộ cài `AgentToAutoCADFull-ThuNoiBo-Setup.exe` lấy ở mục Artifacts của lượt CI, không
-> kích hoạt, gói Full, không tự cập nhật. Cách tải và cài:
+> kích hoạt, gói Full, không tự cập nhật. Bản mới nhất: **bản 3** (`AgentToAutoCADFull-ThuNoiBo-nang-cap-3-0.9.4`,
+> có sửa khung chat). Cách tải và cài:
 > [`../docs/ban-giao/ban-thu-noi-bo.md`](../docs/ban-giao/ban-thu-noi-bo.md).
 
 > **Bản Agent to AutoCAD Full chưa có bộ cài riêng.** Các link tải bên dưới vẫn là bộ cài ClaudeCAD của dự án gốc
