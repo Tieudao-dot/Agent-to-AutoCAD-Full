@@ -794,7 +794,7 @@ namespace ClaudeCAD.Plugin
             if (manualShort != null)
             {
                 var since = (manual.TryGetValue("since", out var sv) ? sv as string : "") == "previous" ? "từ lần chat trước" : "từ lượt chat trước";
-                var note = $"✎ Bản vẽ đã được sửa ngoài khung chat {since}: {manualShort} — Claude sẽ đọc lại các đối tượng này trước khi làm.";
+                var note = $"Bản vẽ đã được sửa ngoài khung chat {since}: {manualShort} — Claude sẽ đọc lại các đối tượng này trước khi làm.";
                 Ui.AddNote(note);
                 _transcript?.Entries.Add(new ChatEntry { Role = "note", Text = note });
             }
@@ -1169,8 +1169,8 @@ namespace ClaudeCAD.Plugin
             SaveTranscript();
             var name = string.IsNullOrEmpty(_transcript.DrawingName) ? "bản vẽ này" : _transcript.DrawingName;
             Ui.AddNote(on
-                ? $"🔒 Đã bật Chỉ xem cho {name}: Claude chỉ đọc, đo, hỏi đáp — mọi lệnh sửa bản vẽ đều bị chặn."
-                : $"🔓 Đã tắt Chỉ xem: Claude được sửa {name}.");
+                ? $"Đã bật Chỉ xem cho {name}: Claude chỉ đọc, đo, hỏi đáp — mọi lệnh sửa bản vẽ đều bị chặn."
+                : $"Đã tắt Chỉ xem: Claude được sửa {name}.");
         }
 
         private string DrawingPathOf(Document d)
@@ -1287,8 +1287,8 @@ namespace ClaudeCAD.Plugin
             try { _macroStore.Save(m); }
             catch (Exception ex) { Ui.AddErrorCard("Không lưu được macro: " + ex.Message, false); return; }
             var external = MacroLogic.ExternalHandles(m);
-            Ui.AddNote($"✓ Đã lưu macro \"{m.Name}\" ({MacroLogic.Describe(m)}). Bấm Macro ▸ ▶ Chạy để vẽ lại mà không cần Claude"
-                + (m.BasePoint != null ? ", hoặc 📍 Tại điểm để đặt ở chỗ khác." : ".")
+            Ui.AddNote($"✓ Đã lưu macro \"{m.Name}\" ({MacroLogic.Describe(m)}). Bấm Macro ▸ Chạy để vẽ lại mà không cần Claude"
+                + (m.BasePoint != null ? ", hoặc Tại điểm để đặt ở chỗ khác." : ".")
                 + (external.Count > 0 ? $" Lưu ý: macro dùng {external.Count} đối tượng có sẵn trong bản vẽ này; ở bản vẽ khác các lệnh đó sẽ báo lỗi." : ""));
             Ui.SetMacros(_macroStore.List());
             Ui.ShowToast($"Đã lưu macro \"{m.Name}\".", ChatControl.ToastKind.Success);
@@ -1361,7 +1361,7 @@ namespace ClaudeCAD.Plugin
             if (doc != _transcriptDoc) LoadTranscriptFor(doc);
             if (_transcript?.ReadOnly == true)
             {
-                Ui.AddErrorCard("Bản vẽ này đang bật 🔒 Chỉ xem — tắt Chỉ xem rồi chạy macro.", false);
+                Ui.AddErrorCard("Bản vẽ này đang bật Chỉ xem — tắt Chỉ xem rồi chạy macro.", false);
                 return;
             }
             // a macro recorded on another plan (e.g. Full) is checked whole before it runs: never half a drawing
@@ -1668,7 +1668,7 @@ namespace ClaudeCAD.Plugin
                     if (status.LoggedIn == true)
                     {
                         if (ApiKeyStore.HasKey)
-                            Ui.AddNote("✓ Đã đăng nhập Claude, nhưng plugin vẫn dùng API key đã lưu (được ưu tiên hơn tài khoản). Muốn dùng tài khoản Claude: ⚙ ▸ Dùng API key ▸ Xóa key đã lưu.", true);
+                            Ui.AddNote("✓ Đã đăng nhập Claude, nhưng plugin vẫn dùng API key đã lưu (được ưu tiên hơn tài khoản). Muốn dùng tài khoản Claude: Cài đặt ▸ Dùng API key ▸ Xóa key đã lưu.", true);
                         else if (ClaudeAuth.ApiKeyInUse)
                             Ui.AddNote("✓ Đã đăng nhập Claude, nhưng máy đang đặt biến môi trường ANTHROPIC_API_KEY (được ưu tiên hơn tài khoản). Muốn dùng tài khoản Claude: xóa biến đó trong Windows rồi mở lại AutoCAD.", true);
                         else
@@ -1805,7 +1805,7 @@ namespace ClaudeCAD.Plugin
         {
             if (ApiKeyStore.HasKey)
             {
-                Ui.AddNote("Đang dùng API key đã lưu — bấm ⚙ ▸ Dùng API key ▸ Xóa key đã lưu nếu cậu muốn dùng tài khoản Claude.", true);
+                Ui.AddNote("Đang dùng API key đã lưu — bấm Cài đặt ▸ Dùng API key ▸ Xóa key đã lưu nếu cậu muốn dùng tài khoản Claude.", true);
                 return;
             }
             Ui.AddNote("Đang đăng xuất tài khoản hiện tại...");
@@ -1823,10 +1823,10 @@ namespace ClaudeCAD.Plugin
                 if (t.Result)
                 {
                     Ui.AddNote(ApiKeyStore.HasKey
-                        ? "Đã đăng xuất tài khoản Claude trên máy này. Trợ lý vẫn chạy bằng API key đã lưu (⚙ ▸ Dùng API key ▸ Xóa key đã lưu để ngừng)."
+                        ? "Đã đăng xuất tài khoản Claude trên máy này. Trợ lý vẫn chạy bằng API key đã lưu (Cài đặt ▸ Dùng API key ▸ Xóa key đã lưu để ngừng)."
                         : ClaudeAuth.ApiKeyInUse
                             ? "Đã đăng xuất tài khoản Claude trên máy này. Trợ lý vẫn chạy bằng biến môi trường ANTHROPIC_API_KEY (xóa biến đó trong Windows để ngừng)."
-                            : "Đã đăng xuất tài khoản Claude trên máy này. Bấm ⚙ ▸ Đăng nhập Claude để đăng nhập lại.");
+                            : "Đã đăng xuất tài khoản Claude trên máy này. Bấm Cài đặt ▸ Đăng nhập Claude để đăng nhập lại.");
                     RestartSidecarQuietly();
                 }
                 else Ui.AddErrorCard("Không đăng xuất được (không thấy Claude Code đi kèm plugin hoặc lệnh bị lỗi). Xóa tay file %USERPROFILE%\\.claude\\.credentials.json nếu cần.", false);
@@ -2415,7 +2415,7 @@ namespace ClaudeCAD.Plugin
                             if (key != _rateWarnedKey)
                             {
                                 _rateWarnedKey = key;
-                                Ui.ShowToast($"Sắp hết {label}: đã dùng {(util >= 0 ? $"{util * 100:0}%" : "phần lớn")}{(reset.Length > 0 ? $", làm mới lúc {reset}" : "")}. Ưu tiên việc quan trọng, hoặc chọn model nhẹ hơn trong ⚙.", ChatControl.ToastKind.Warning, 9);
+                                Ui.ShowToast($"Sắp hết {label}: đã dùng {(util >= 0 ? $"{util * 100:0}%" : "phần lớn")}{(reset.Length > 0 ? $", làm mới lúc {reset}" : "")}. Ưu tiên việc quan trọng, hoặc chọn model nhẹ hơn trong Cài đặt.", ChatControl.ToastKind.Warning, 9);
                             }
                         }
                         break;
@@ -2543,7 +2543,7 @@ namespace ClaudeCAD.Plugin
             string label = ToolLabels.Describe(tool);
             switch (state)
             {
-                case "running": Ui.SetToolStatus("⏳ " + label + "..."); break;
+                case "running": Ui.SetToolStatus(label + "..."); break;
                 case "done": Ui.SetToolStatus("✓ " + label); break;
                 case "error": Ui.SetToolStatus("⚠ " + label + " lỗi"); break;
             }

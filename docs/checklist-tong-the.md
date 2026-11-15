@@ -180,6 +180,25 @@ nhìn kỹ. Cách ghi kết quả / báo lỗi như phần đầu file.*
 | 15 | ★ của đợt E: R1, R3, R5, R7, R14 | ~11 phút |
 | 16 | Phần còn lại của N–R: các mục ★ chưa chọn ở phần 11–15 (N0–N2, N17, O0, O4, O6, O11–O13, P5, P6, P14, P17, Q4, Q6, Q9, Q10, Q13, R2, R6, R8, R10, R13, R15; N0, O0, Q13, R13 đã phủ bởi S3) rồi các mục ○ | ~85 phút |
 
+### 8b. Khung chat mượt khi đoạn chat dài (~5 phút, thread "Tối ưu khung chat", 14/11/2026)
+
+- Mở một đoạn chat dài (vài chục lượt trở lên, có bảng, khối code). Cuộn lên xuống bằng con lăn chuột, rồi kéo thanh
+  cuộn thật nhanh từ dưới lên trên: **không giật, không thấy khoảng trống** ở chỗ tin cũ (tin hiện ra ngay khi cuộn tới).
+- Ở cuối đoạn chat dài, gõ nhanh một câu dài vài dòng vào ô nhập: **chữ hiện kịp tay**, không khựng. Lúc Claude đang
+  viết một câu trả lời dài có bảng: cuộn lên đọc tin cũ không bị kéo xuống, cuộn về cuối thì lại tự theo.
+- Bấm **A+ / A−** (cỡ chữ) và đổi giao diện sáng / tối: mọi tin, kể cả tin ở xa phía trên, đổi đúng. Bôi đen chữ
+  trong một câu trả lời cũ rồi **Ctrl+C**, dán ra Notepad: chép đủ. "Xem thêm tin cũ", "Hoàn tác lượt này",
+  "Xem kết quả" vẫn bấm được như cũ.
+
+### 8c. Icon và thu gọn khung chat (~3 phút, 14/11/2026)
+
+- Nhìn thanh công cụ và hàng nút dưới ô nhập: **icon nét mảnh một màu** giống icon palette của AutoCAD, không còn hình
+  emoji (ổ khóa, đĩa mềm, ghim màu…). Đổi giao diện AutoCAD sáng / tối: icon đổi màu theo. Rê chuột lên từng icon: có
+  chú thích.
+- Bấm nút mũi tên (Thu gọn) khi palette đang **nổi**: palette co lại vừa khít thanh công cụ + ô nhập, **nút Gửi cùng hàng
+  ô nhập**, không có khoảng trống dưới ô nhập. Gửi một yêu cầu: dòng "Đã xong…" hiện ra, palette cao thêm vừa đủ, không
+  che ô nhập. Bấm mũi tên lần nữa: mở lại đủ đoạn chat. Thử thêm khi palette **neo cạnh màn hình**: chỉ nội dung co lại.
+
 ### 9. Tự kiểm tra (~4 phút)
 
 | # | Làm gì | Kết quả đúng |

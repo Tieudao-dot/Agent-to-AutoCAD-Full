@@ -747,7 +747,7 @@ namespace ClaudeCAD.Plugin
                 return readOnly ? "mở chỉ xem, đóng được" : "mở được nhưng không ở chế độ chỉ xem";
             });
 
-            Do("Phím tắt Ctrl+Shift+Space", () => PluginApp.HotkeyEnabled ? "đã bật (thử bấm sau khi test xong)" : "đang tắt trong ⚙");
+            Do("Phím tắt Ctrl+Shift+Space", () => PluginApp.HotkeyEnabled ? "đã bật (thử bấm sau khi test xong)" : "đang tắt trong Cài đặt");
 
             UiChecks(Check, Collect);
 

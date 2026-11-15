@@ -838,7 +838,7 @@ namespace ClaudeCAD.UI.Tests
                 sendLabelIdle = send.Content as string;
 
                 // confirmation card: preview + the single accent "Đồng ý"
-                FindAll<Button>(c).First(b => (b.Content as string ?? "").StartsWith("⌖ Xem trên bản vẽ")).RaiseEvent(new RoutedEventArgs(System.Windows.Controls.Primitives.ButtonBase.ClickEvent));
+                FindAll<Button>(c).First(b => (b.Content as string ?? "").StartsWith("Xem trên bản vẽ")).RaiseEvent(new RoutedEventArgs(System.Windows.Controls.Primitives.ButtonBase.ClickEvent));
                 FindAll<Button>(c).First(b => (b.Content as string) == "Đồng ý").RaiseEvent(new RoutedEventArgs(System.Windows.Controls.Primitives.ButtonBase.ClickEvent));
                 Shot(c, "shell-xac-nhan");
 
@@ -917,7 +917,7 @@ namespace ClaudeCAD.UI.Tests
                 toggle.RaiseEvent(new RoutedEventArgs(System.Windows.Controls.Primitives.ButtonBase.ClickEvent));
                 Pump();
                 hiddenWhenCompact = c.IsCompact && middle.Visibility != Visibility.Visible;
-                glyphCompact = ((TextBlock)toggle.Content).Text;
+                glyphCompact = ((FrameworkElement)toggle.Content).Tag as string;
 
                 // a turn runs and ends while compact: one line of news, the palette stays compact
                 c.AddUserMessage(new ChatEntry { Role = "user", Text = "Thêm kích thước 4 phía" });
@@ -935,7 +935,7 @@ namespace ClaudeCAD.UI.Tests
                 line.RaiseEvent(new RoutedEventArgs(System.Windows.Controls.Primitives.ButtonBase.ClickEvent));
                 Pump();
                 openedByLine = !c.IsCompact && middle.Visibility == Visibility.Visible;
-                glyphFull = ((TextBlock)toggle.Content).Text;
+                glyphFull = ((FrameworkElement)toggle.Content).Tag as string;
                 messagesAfter = messages.Children.Count;
                 backAfterExpand = messagesAfter == messagesBefore + 2;
                 noteCleared = line.Visibility != Visibility.Visible;
@@ -949,8 +949,8 @@ namespace ClaudeCAD.UI.Tests
                 openedByConfirm = !c.IsCompact && middle.Visibility == Visibility.Visible;
             });
             Assert.True(hiddenWhenCompact, "the conversation is still shown in compact mode");
-            Assert.Equal("⌃", glyphCompact);
-            Assert.Equal("⌄", glyphFull);
+            Assert.Equal("chevron-up", glyphCompact);
+            Assert.Equal("chevron-down", glyphFull);
             Assert.True(noteShown, "no status line after a turn ended in compact mode");
             Assert.StartsWith("✓ Đã xong: Đã thêm kích thước 4 phía trên layer A-DIM.", note);
             Assert.EndsWith("bấm để xem", note);
