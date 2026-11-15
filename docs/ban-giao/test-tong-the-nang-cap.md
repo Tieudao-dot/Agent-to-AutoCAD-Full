@@ -84,6 +84,11 @@ TT-01: lõi 910, trợ lý 298 xanh. CI run 43612435107 **đỏ** ở bước In
 đóng sớm: "'BEGIN' expected"), sửa ở `64bde08`; CI run **43613015509 xanh** (`release: "false"`, có Setup.exe). Phần
 chỉ Windows thật kiểm được (WMI liệt kê tiến trình, `taskkill`, kiểm file bị giữ): thử tay V14.
 
+## Gộp thêm
+
+- 15/11/2026: gộp `full/toi-uu-khung-chat` @ `983d4c2` (fast-forward; bản vá khung chat giật / icon / thu gọn, chủ dự án
+  chốt 14/11; CI run 43669231795 xanh ở `ea7bd02`, commit sau chỉ tài liệu). Bàn giao: `docs/ban-giao/toi-uu-khung-chat.md`.
+
 ## Đã rà theo chiều ngang, không phải lỗi
 
 - **Nhãn gói (phương án A):** GROUP / MATCHPROP nhãn Common; STRETCH, BREAK, LENGTHEN, DIVIDE, `dim_floor_plan`,
