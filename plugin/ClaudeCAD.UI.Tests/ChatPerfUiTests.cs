@@ -237,12 +237,13 @@ namespace ClaudeCAD.UI.Tests
                 Layout(c);
                 Layout(c);
                 firstVisibleAtTop = children.First().Visibility == Visibility.Visible;
-                // everything within one screen of the top is shown
-                double y = 0;
+                // everything on screen and within one more screen below it is shown. Positions are in the scroll
+                // content: the message list starts after its own margin, like what the user scrolls.
+                double y = messages.Margin.Top;
                 hiddenNearTop = 0;
                 foreach (var x in children)
                 {
-                    if (y > scroll.ViewportHeight * 2) break;
+                    if (y > scroll.VerticalOffset + scroll.ViewportHeight * 2) break;
                     if (x.Visibility == Visibility.Hidden) hiddenNearTop++;
                     y += x.DesiredSize.Height;
                 }

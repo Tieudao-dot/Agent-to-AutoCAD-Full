@@ -842,9 +842,9 @@ namespace ClaudeCAD.UI.Tests
                 FindAll<Button>(c).First(b => (b.Content as string) == "Đồng ý").RaiseEvent(new RoutedEventArgs(System.Windows.Controls.Primitives.ButtonBase.ClickEvent));
                 Shot(c, "shell-xac-nhan");
 
-                // the row under the input is icons too: glyph content, "Tên — …" tooltip
+                // the row under the input is icons too: line icon content (Tag = icon name), "Tên — …" tooltip
                 var inputTips = new[] { "Chọn đối tượng — ", "Lấy điểm — ", "Ảnh — ", "Chụp — " };
-                inputIcons = FindAll<Button>(c).Count(b => b.Content is TextBlock && inputTips.Any(t => (b.ToolTip as string ?? "").StartsWith(t)));
+                inputIcons = FindAll<Button>(c).Count(b => b.Content is FrameworkElement fe && Icons.Has(fe.Tag as string) && inputTips.Any(t => (b.ToolTip as string ?? "").StartsWith(t)));
 
                 // error + sign-in cards: glyph + plain text, no red card
                 c.EndAssistant(new ChatEntry { Role = "assistant", Text = "Tớ tìm thấy các đối tượng cần xóa trên layer A-TEMP." }, false, false);
