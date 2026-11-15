@@ -54,14 +54,33 @@ Không làm (rủi ro cao hơn, đổi thứ người dùng thấy): chuyển sa
 
 ## Số đo trước / sau
 
-_(điền sau lượt CI)_
+Đo trên máy Windows của CI (run 43668498796, 15/11/2026), test
+`LongChatScrollsTypesAndStreamsFasterWithoutChangingWhatIsShown`: 315 tin (150 lượt hỏi + trả lời, bảng, khối code,
+danh sách, dòng công cụ, ghi chú), khung 420×800, mỗi bước một khung hình (layout + vẽ cả palette).
+
+| Việc | Trước (tắt tối ưu) | Sau (bật tối ưu) |
+| --- | --- | --- |
+| Dựng 300 tin + layout | 1408 ms | 1356 ms |
+| Cuộn, mỗi bước | 58,3 ms | 52,7 ms (−10%) |
+| Gõ, mỗi phím | 77,2 ms | 75,5 ms (−2%) |
+| Claude đang viết, mỗi lần cập nhật | 86,1 ms | 62,9 ms (−27%) |
+| Tin đang ẩn tạm (ngoài màn hình) | 0 | 304 |
+
+Số tin và tổng chiều cao như nhau ở hai cách (người dùng không thấy khác). Máy CI không có card đồ họa và chụp cả
+palette mỗi bước nên số tuyệt đối cao hơn máy thật; nên so tỉ lệ. Số đo lấy ở lượt CI 1: lượt 2 chỉ sửa 2 UI test
+khác, không đổi mã khung chat; log lượt 2 quá dài (bước bộ cài) nên không lấy lại được bảng.
 
 ## Build, commit, CI
 
 - Build trên Linux (`-p:EnableWindowsTargeting=true`), xóa `obj` / `bin` giữa các lần: net48, net8.0-windows,
   net10.0-windows đều xanh; `ClaudeCAD.UI.Tests` build xanh. `dotnet test plugin/ClaudeCAD.Core.Tests`: 910/910 xanh.
   Không đụng trợ lý (`agent/`).
-- Commit / CI: _(điền sau)_
+- Commit / CI: nhánh `full/toi-uu-khung-chat` (tách từ `full/nang-cap-tong-the` @ `b0da814`).
+  - `e2bea8d` bản sửa khung chat; CI run 43668498796 **đỏ**: 2 UI test cũ / mới chưa theo kịp bản sửa
+    (`RendersAutoCadStyleShell` còn tìm nút ký tự thay vì icon nét; `HiddenMessagesComeBackBeforeTheyScrollIntoView`
+    đo vị trí tin thiếu lề 6 px của danh sách tin).
+  - `ea7bd02` sửa đúng 2 test đó (không nới ngưỡng, không đổi giao diện); CI run 43669231795 **xanh** (release=false):
+    sidecar, lõi 910/910, UI test 33/33, build 3 bản plugin, bộ cài.
 
 ## Bộ icon và chế độ thu gọn (chủ dự án yêu cầu 14/11/2026, trong thread này)
 
