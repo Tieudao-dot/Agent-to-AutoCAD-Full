@@ -21,6 +21,7 @@ namespace ClaudeCAD.Plugin.UI
         public ChatPalette()
         {
             Control.CompactChanged += OnCompactChanged;
+            Control.CompactLayoutChanged += FitCompact;
         }
 
         public void Show()
@@ -76,6 +77,33 @@ namespace ClaudeCAD.Plugin.UI
         }
 
         /// <summary>
+        /// Floating + compact: palette height = toolbar + news line + input row + AutoCAD's own frame, measured, so the
+        /// input is the last thing in the palette (no empty strip under it). Docked palettes keep AutoCAD's size.
+        /// </summary>
+        private void FitCompact()
+        {
+            if (_ps == null || !Control.IsCompact) return;
+            try
+            {
+                if (_ps.Dock != DockSides.None || Control.ActualHeight <= 0) return;
+                double content = Control.CompactContentHeight();
+                if (content <= 0) return;
+                var source = System.Windows.PresentationSource.FromVisual(Control);
+                double scale = source?.CompositionTarget?.TransformToDevice.M22 ?? 1;
+                // AutoCAD's frame around the WPF content (title strip, borders), in pixels
+                int frame = Math.Max(0, _ps.Size.Height - (int)Math.Round(Control.ActualHeight * scale));
+                int height = Math.Max(90, Math.Min(320, (int)Math.Ceiling(content * scale) + frame + 1));
+                if (Math.Abs(height - _ps.Size.Height) <= 1) return;
+                _ps.MinimumSize = new Size(MinWidth, Math.Min(height, CompactHeight));
+                _ps.Size = new Size(_ps.Size.Width, height);
+            }
+            catch (Exception ex)
+            {
+                Core.Logger.Warn("compact palette fit failed: " + ex.Message);
+            }
+        }
+
+        /// <summary>
         /// Compact mode shrinks the palette where it stands. A floating palette gets a low height and its
         /// old height back on expand; a docked one keeps its column (AutoCAD owns that size) and only the
         /// content collapses.
@@ -90,7 +118,12 @@ namespace ClaudeCAD.Plugin.UI
                 {
                     _fullSize = _ps.Size;
                     _ps.MinimumSize = new Size(MinWidth, CompactHeight);
-                    if (floating) _ps.Size = new Size(_ps.Size.Width, CompactHeight);
+                    if (floating)
+                    {
+                        _ps.Size = new Size(_ps.Size.Width, CompactHeight);
+                        // then shrink / grow to exactly what is shown once WPF has laid the compact content out
+                        Control.Dispatcher.BeginInvoke(System.Windows.Threading.DispatcherPriority.Loaded, new Action(FitCompact));
+                    }
                 }
                 else
                 {
