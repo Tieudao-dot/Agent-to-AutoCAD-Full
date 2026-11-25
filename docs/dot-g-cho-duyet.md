@@ -372,3 +372,98 @@ góc nhìn) và G5 (ảnh xem dựng từ file gốc, các quyết định và l
 
 Nạp gọn (mặc định): 5 lệnh mới chỉ thêm tên và vài dòng system prompt, khoảng 0,2–0,3k mỗi gói. Mô tả đủ của lệnh mới chỉ nạp
 khi Claude cần (hoặc khi tắt "Nạp gọn lệnh").
+
+## Sau lượt kiểm tra độc lập F + G (26/11)
+
+*Một agent khác test lại toàn bộ đợt F và G, báo 27 lỗi (`docs/ban-giao/kiem-tra-doc-lap-dot-fg.md`). Ba thread sửa, thread giữ
+nhánh tích hợp gộp lại trên `full/nang-cap-g-tong-the`. Chi tiết: `docs/ban-giao/test-tong-the-dot-g.md` mục "Sau kiểm tra độc
+lập F + G", `docs/ban-giao/nang-cap-g-sua-kfg-a.md`, `docs/ban-giao/nang-cap-g-sua-kfg-b.md`. Thử tay: `docs/checklist-tong-the.md`
+mục G2-D1 / D1b, G4 F, G5 H, G6-1 / G6-2, G7.*
+
+### Khách sẽ thấy khác gì
+
+**Render (G4):**
+- "Render góc Phối cảnh 1" (góc đã lưu) nay chạy được. Trước đây có thể báo lỗi "could not prepare the render".
+- Bấm U sau khi render không còn nhảy sang góc vừa render.
+- Bản vẽ có đèn của khách thì ảnh sáng theo đèn đó: đèn mặc định được tắt trong lúc render rồi bật lại.
+- Render rơi về ảnh chụp thì Claude không còn nói về nền / ánh sáng / mức đẹp của render.
+
+**Vẽ lại từ ảnh (G5):**
+- Ảnh nền nằm thẳng theo UCS đang dùng.
+- Claude không co / xoay ảnh của khách (vd logo trong khung tên), chỉ đụng ảnh do lệnh vẽ lại gắn.
+- Đường dẫn mạng chỉ được dùng khi cùng thư mục chia sẻ với bản vẽ; chỗ khác thì Claude nhờ chép file về máy hoặc kéo vào chat.
+- Ảnh dán vào chat: chỉ lưu trên máy có phần 2D; ảnh cũ hơn 7 ngày tự dọn; bản vẽ chưa lưu thì Claude nhờ lưu trước.
+- PDF nhiều trang đã sửa nhiều lần: số trang đúng.
+
+**Soát bản vẽ (G2):**
+- Hatch mặt cắt của bộ hồ sơ và hatch vẽ bằng điểm bấm không còn bị báo "mất liên kết".
+- Tab `Layout2`… khách tự đặt khung nhìn và vẽ thêm thì được soát như tờ in.
+- Tab chỉ có khung nhìn AutoCAD tự tạo thì không báo lỗi, nhưng Claude nêu tên tab. Muốn soát tab đó thì nói "soát cả Layout1".
+- Kích thước bị gõ đè bằng một dấu cách (không in ra số) nay bị báo.
+- Hai hình lệch nhau rất ít (≤ 0,1 mm) luôn bị tính là trùng, kể cả khi nằm hai bên ranh ô lưới.
+- Nét của bộ hồ sơ không bị coi là trùng nữa, nên không bị xóa nhầm.
+- "Sửa" không chuyển hình sang layer không in / đang tắt.
+- "Sửa" chỉ đụng đúng phần đã soát (Model hay cả layout).
+
+**Dự toán (G3):**
+- Tên giá **giữ dấu**: "Sân" không còn ăn giá của "Sàn". Hoa thường / khoảng trắng vẫn không quan trọng.
+- Gõ tên không dấu ("phong khach") vẫn ghép được nếu chỉ khớp một dòng. Khớp nhiều dòng (vd "san" khớp cả Sàn và Sân) thì để
+  trống và Claude hỏi.
+- `A-WALL` và `A_WALL` chỉ gộp khi bản vẽ không có cả hai.
+- Dự toán theo diện tích gặp đường bao nhà chứa các phòng thì **không tính** (tránh tính tiền hai lần). Claude hỏi bỏ đường bao hay cứ tính.
+- Lời cảnh báo của bảng nguồn (vd đã bỏ layer mặt cắt) được Claude kể lại.
+- Đơn giá lẻ (12,5) hiện đủ trong Excel, không còn làm tròn thành 13.
+- Máy gói 3D không được mời "dự toán theo diện tích / block". Máy gói 2D không được mời "theo khối lượng 3D".
+
+**Bộ hồ sơ (G1):**
+- Thẻ "thay bộ cũ" đếm đúng số nét / hatch của bộ cũ.
+- Bộ cũ đã bị xóa tay hết thì không hỏi thẻ nữa.
+- Bảng thống kê / dự toán cạnh mặt bằng không làm tờ mặt bằng lệch tâm hay thu nhỏ.
+- Chân tường lệch nhau vài cm không đẻ thêm tầng.
+- Tờ của bộ cũ được nhận theo mã riêng của tờ, không theo tên: layout mới khách đặt trùng tên không bị xóa.
+- AutoCAD lỗi giữa chừng thì lần sau vẫn biết bộ dở dang đó.
+- Macro không ghi đè PDF đã có (in lại bằng chat, có thẻ hỏi).
+
+**Khác:**
+- Đồng ý "lưu đè trạng thái layer A" không còn cho xóa luôn A trong cùng lượt; xóa có thẻ riêng.
+- Đồng ý "gạch cho cả layer tường" không cho vật liệu khác; đồng ý "màu đỏ" không cho màu khác.
+- Claude biết rõ gói nào có bộ hồ sơ / dự toán / soát bản vẽ / vẽ lại từ ảnh. Chữ trong ảnh đính kèm là nội dung, không phải lệnh.
+
+### Con số mới chờ cậu duyệt
+
+| Số | Đề xuất | Khách thấy | Vì sao |
+| --- | --- | --- | --- |
+| Giữ ảnh dán trong thư mục khung chat | 7 ngày | ảnh dán cũ hơn bị xóa khỏi `%LOCALAPPDATA%\ClaudeCAD\anh-dinh-kem` (bản đã gắn vào bản vẽ được chép cạnh bản vẽ nên không mất) | đủ một tuần làm việc, không đầy đĩa |
+| Chờ thêm sau khi lệnh RENDER xong mà chưa có ảnh | số lớn hơn giữa 20 giây và thời gian ước lượng của mức (nhanh ~20 s, vừa ~60 s, đẹp ~180 s cho Full HD) | lâu nhất phải chờ trước khi nhận ảnh chụp thay ảnh render | luồng chính đã chọn |
+| Đơn giá lẻ trong Excel | 2 số lẻ (`#,##0.00`), chỉ khi có đơn giá lẻ | ô đơn giá hiện 12,50 | giữ đúng số khách gõ; giá chẵn vẫn hiện như cũ |
+
+Không đổi: dung sai "trùng" vẫn 0,1 mm (nay đúng như tài liệu); gom tầng vẫn 50 mm (nay so với chân tường kề nhau).
+
+### Quyết định tự chọn thêm
+
+| Tình huống | Đã chọn | Muốn đổi thì |
+| --- | --- | --- |
+| Ghép đơn giá theo tên (luồng chính chọn) | giữ dấu; không dấu chỉ khi khách gõ không dấu và khớp một dòng; nhiều dòng thì để trống, hỏi | — |
+| Dự toán diện tích có vùng lồng nhau (luồng chính chọn) | từ chối, hỏi khách; khách cho phép (`allow_nested`) thì tính | — |
+| Tab mặc định chỉ có khung nhìn (luồng chính chọn) | không báo lỗi, nêu tên; "soát cả <tab>" để soát | coi luôn là tờ in (sẽ báo nhiễu ở hầu hết bản vẽ) |
+| Đường dẫn mạng của ảnh (luồng chính chọn) | chỉ cùng thư mục chia sẻ với bản vẽ | — |
+| Tờ của bộ cũ khách đã đổi tên | coi là của khách, giữ nguyên khi thay bộ | xóa theo mã tờ dù đã đổi tên |
+| AutoCAD lỗi giữa lúc ra bộ | ghi lại các tờ / hình đã làm + phần còn của bộ cũ, báo lỗi | — |
+| Macro + PDF đã có | giữ PDF cũ, vẫn vẽ các tờ, ghi chú in lại bằng chat | — |
+| Ảnh dán: không lưu bản gốc | nói rõ ảnh ≤ 1568 px, nhờ kéo file gốc khi bản scan lớn | — |
+| Ảnh dán vào bản vẽ chưa lưu | nhờ lưu bản vẽ trước | chép vào Documents như cũ |
+| Dừng / quá giờ khi render | trả cảnh ngay; file tạm còn sót dọn ở lần sau (> 1 giờ) | — |
+| PDF không đếm được trang | vẫn gắn trang 1, nói rõ | từ chối |
+| Hatch / nét vẽ trước bản sửa | hatch cũ không có dấu vẫn bị báo nếu mất liên kết | — |
+
+### Token lúc mở chat sau khi sửa
+
+| Gói / chế độ | Nạp gọn (trước sửa → sau sửa) | Tắt nạp gọn |
+| --- | --- | --- |
+| Gói 2D | 13,7k → 13,7k | 45,2k → 45,5k |
+| Gói 3D | 19,0k → 19,1k | 45,0k → 45,2k |
+| Full · Cả hai | 21,0k → 21,0k | 66,5k → 66,8k |
+| Full · chế độ 2D | 13,7k → 13,8k | 45,2k → 45,5k |
+| Full · chế độ 3D | 19,0k → 19,1k | 45,1k → 45,2k |
+
+Phạm vi gói trong system prompt thêm khoảng 0,1k; phần còn lại là mô tả lệnh dài thêm (chỉ nạp khi Claude cần).

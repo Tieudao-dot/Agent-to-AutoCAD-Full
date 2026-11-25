@@ -101,3 +101,52 @@ Các số của G1 → G5 khớp code (`G1Numbers`, `G2Numbers`, `G3Numbers`, `G
 
 Run 45671817871 (#68) trên `4fbb2a2` (commit code cuối): **xanh**. Dùng 1 / 2 lượt. Commit sau đó chỉ là tài liệu (gộp
 `e3eda7b` bàn giao G5-test, ghi CI vào file này).
+
+## 10. Sau kiểm tra độc lập F + G (26/11)
+
+Báo cáo: `docs/ban-giao/kiem-tra-doc-lap-dot-fg.md` (27 lỗi KFG-01 … 27). Ba thread sửa; thread này sửa phần G1 / G3 / F2 /
+prompt ngay trên nhánh tích hợp (`935f9dd`), rồi gộp `full/nang-cap-g-sua-kfg-b` @ `468dc09` (`9cce7a4`, gỡ một chỗ chồng ở
+`Core/F5.cs`: giữ cả hàm mã xóa layer state lẫn hai hàm mã vật liệu) và `full/nang-cap-g-sua-kfg-a` @ `cbc1b03` (`60b9780`).
+Mỗi thread có bàn giao riêng: `nang-cap-g-sua-kfg-a.md`, `nang-cap-g-sua-kfg-b.md`; tóm tắt cho chủ dự án:
+`docs/dot-g-cho-duyet.md` mục "Sau lượt kiểm tra độc lập F + G".
+
+| Mã | Phần | Ai sửa | Commit | Cách sửa (ngắn) |
+| --- | --- | --- | --- | --- |
+| KFG-01 | G4 | Test & sửa F1 (kfg-b) | `f48747c` | góc nhìn đã lưu chép trong transaction (`Clone`), tự kiểm thêm nhánh có tên |
+| KFG-02 | G3 | thread này | `935f9dd` | diện tích có `contains_others` thì từ chối (trừ `allow_nested`); `source_warnings` chép cảnh báo bảng nguồn |
+| KFG-03 | G3 | thread này | `935f9dd` | ghép giá 3 mức: giữ dấu → bỏ `- _ .` → bỏ dấu (chỉ giá gõ không dấu); mức 2 / 3 chỉ khi khớp một dòng; `ambiguous_prices` |
+| KFG-04 | G4 | kfg-b | `f48747c` | có đèn / mặt trời: tắt đèn mặc định trong lúc render rồi trả lại |
+| KFG-05 | G5 | kfg-b | `f48747c` | ảnh nền và `straighten` theo UCS |
+| KFG-06 | G5 | kfg-b | `f48747c` | `scale` / `straighten` / `view` chỉ nhận ảnh có dấu `CLAUDECAD_TRACE` |
+| KFG-07 | G1 × G2 | thread F1 (kfg-a) | `2e1dfe2` | bỏ qua hatch layer hình suy ra; hatch không biên do `draw_hatch` có dấu |
+| KFG-08 | G2 | kfg-a | `2e1dfe2`, `cbc1b03` | layout mặc định có vật ngoài khung nhìn là tờ in; chỉ khung nhìn: ghi chú nêu tên; tham số `sheets` |
+| KFG-09 | F2 | thread này | `935f9dd` | xóa layer state dùng mã riêng `F5Confirm.DeleteLayerStateToken` |
+| KFG-10 | F5 | kfg-b | `f48747c` | mã duyệt vật liệu cả layer = layer + vật liệu; đổi màu = vật liệu + màu + độ trong |
+| KFG-11 | G5 | kfg-b | `f48747c` | đếm trang theo `/Root` → `/Count`; không biết thì `pages_note` |
+| KFG-12 | G5 | kfg-b | `f48747c` | đường dẫn ảnh trong ngữ cảnh bọc `q()` |
+| KFG-13 | G5 | kfg-b | `f48747c` | ảnh dán chỉ lưu khi có `trace_image`; dọn > 7 ngày; `pasted_note` |
+| KFG-14 | prompt / G5 | thread này + kfg-b | `935f9dd`, `f48747c` | `PLAN_SCOPE` có đợt G theo gói; chữ trong ảnh đính kèm là dữ liệu; AVIF báo đúng |
+| KFG-15 | G2 | kfg-a | `2e1dfe2` | trùng so thật "lệch ≤ 0,1 mm" (ô kề), góc / tỉ lệ so chính xác |
+| KFG-16 | G2 | kfg-a | `2e1dfe2` | `no_dimensions` đếm cả kích thước trong layout |
+| KFG-17 | G2 | kfg-a | `2e1dfe2` | `fix_drawing` có `layouts` như lần soát |
+| KFG-18 | G2 | kfg-a | `2e1dfe2` | không chuyển hình sang layer không in / tắt / đóng băng |
+| KFG-19 | G1 | thread này | `935f9dd` | danh sách rỗng bị từ chối (lõi + schema `.min(1)`) |
+| KFG-20 | G1 | thread này | `935f9dd` | thẻ ghi số nét / hatch còn trong bản vẽ |
+| KFG-21 | G1 | thread này | `935f9dd` | bộ cũ không còn tờ, không còn hình thì không hỏi thẻ |
+| KFG-22 | G1 × G3 / C | thread này | `935f9dd` | khung mặt bằng 2D bỏ `Table` |
+| KFG-23 | G1 | thread này | `935f9dd` | gom tầng so với giá trị kề (`Levels`, `StoreyCount`) |
+| KFG-24 | G1 | thread này | `935f9dd` | bản ghi lưu handle từng tờ (`L:tên` + handle), `OurLayouts`; bản ghi cũ (không handle) vẫn khớp theo tên |
+| KFG-25 | G3 | thread này | `935f9dd` | `quantities` thu hẹp theo gói (`trimForPlan`) |
+| KFG-26 | G3 | thread này | `935f9dd` | ô đơn giá `#,##0.00` khi có giá lẻ (style 4) |
+| KFG-27 | G4 | kfg-b | `f48747c` | kết quả `capture` bỏ thông tin của render |
+
+Nghi vấn G1 (thread này): lỗi AutoCAD sau khi đã xóa bộ cũ → bản ghi được viết ngay sau mỗi tờ; có lỗi thì ghi bản ghi gộp
+(phần mới + phần còn của bộ cũ) rồi báo lỗi. Macro + PDF đã có → không ghi đè, ghi chú in lại bằng chat. Nghi vấn G2 / G4 / G5:
+xem hai bàn giao kfg-a, kfg-b.
+
+Test sau gộp: lõi **1409 / 1409** (thêm 13 ở `KfgDotGTests.cs`, sửa một dòng `NangCapG3TestSuaTests` vì đơn giá lẻ nay có 2 số
+lẻ), trợ lý **407 / 407** (thêm `agent/test/kfgdotg.test.ts`), build 3 target 0 lỗi 0 cảnh báo. Token: `docs/dot-g-cho-duyet.md`
+mục trên. CI: ghi ở dưới khi có kết quả.
+
+Chưa kiểm được trên AutoCAD thật: bản ghi bộ hồ sơ có handle tờ (Xrecord), `try` / `catch` quanh lúc ra bộ, bỏ `Table` khỏi
+khung mặt bằng; phần của hai thread kia xem bàn giao của họ.
