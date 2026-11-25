@@ -149,20 +149,6 @@ namespace ClaudeCAD.Plugin.Core
 
         // ------------------------------------------------------------ geometry
 
-        /// <summary>The key of an object for "trùng": its kind, layer and the numbers of its shape rounded to the tolerance.</summary>
-        public static string ShapeKey(string kind, string layer, IEnumerable<double> numbers, double tol, string extra = null)
-        {
-            var sb = new StringBuilder(kind).Append('|').Append((layer ?? "").ToUpperInvariant());
-            foreach (var n in numbers)
-            {
-                double q = tol > 0 ? Math.Round(n / tol) : n;
-                if (q == 0) q = 0; // -0
-                sb.Append('|').Append(q.ToString("R", CultureInfo.InvariantCulture));
-            }
-            if (extra != null) sb.Append('|').Append(extra);
-            return sb.ToString();
-        }
-
         /// <summary>A line's two ends in one order (a line drawn backwards is the same line).</summary>
         public static double[] LineNumbers(double[] a, double[] b)
         {
@@ -191,7 +177,6 @@ namespace ClaudeCAD.Plugin.Core
             return fwd.ToArray();
         }
 
-        /// <summary>Indices of the extra copies: every object after the first of each key (the oldest is kept).</summary>
         /// <summary>Sửa KFG-15: one object for the copy check: its kind / layer / exact parts, and its lengths (drawing units).</summary>
         public sealed class DupItem
         {
@@ -201,23 +186,26 @@ namespace ClaudeCAD.Plugin.Core
 
         /// <summary>
         /// Sửa KFG-15: indices of the extra copies, each number within tol of an earlier object of the same group (not a rounding
-        /// to a grid of tol, which split 1000.049 / 1000.051). Candidates are found by the cell of the first number and its two
-        /// neighbours, then compared number by number; the oldest is kept.
+        /// to a grid of tol, which split 1000.049 / 1000.051); the oldest is kept. Sửa KFG-34: candidates are found by the cell of
+        /// the first two numbers (x, y of the first point) and its 8 neighbours, then compared number by number, so 20 000 lines
+        /// of one x are no longer compared pair by pair (the answer is the same: a copy is never more than one cell away).
         /// </summary>
         public static List<int> DuplicateIndices(IList<DupItem> items, double tol)
         {
-            var cells = new Dictionary<(string, long), List<int>>();
+            var cells = new Dictionary<(string, long, long), List<int>>();
             var dup = new List<int>();
             double t = tol > 0 ? tol : 1e-9;
             for (int i = 0; i < items.Count; i++)
             {
                 var it = items[i];
                 if (it?.Group == null || it.Nums == null) continue;
-                long c = it.Nums.Length > 0 ? (long)Math.Floor(it.Nums[0] / t) : 0;
+                long cx = it.Nums.Length > 0 ? (long)Math.Floor(it.Nums[0] / t) : 0;
+                long cy = it.Nums.Length > 1 ? (long)Math.Floor(it.Nums[1] / t) : 0;
                 bool isDup = false;
-                for (long k = c - 1; k <= c + 1 && !isDup; k++)
+                for (long k = cx - 1; k <= cx + 1 && !isDup; k++)
+                for (long m = cy - 1; m <= cy + 1 && !isDup; m++)
                 {
-                    if (!cells.TryGetValue((it.Group, k), out var list)) continue;
+                    if (!cells.TryGetValue((it.Group, k, m), out var list)) continue;
                     foreach (int j in list)
                     {
                         var o = items[j].Nums;
@@ -228,26 +216,16 @@ namespace ClaudeCAD.Plugin.Core
                     }
                 }
                 if (isDup) { dup.Add(i); continue; }
-                if (!cells.TryGetValue((it.Group, c), out var own)) cells[(it.Group, c)] = own = new List<int>();
+                if (!cells.TryGetValue((it.Group, cx, cy), out var own)) cells[(it.Group, cx, cy)] = own = new List<int>();
                 own.Add(i);
             }
             return dup;
         }
 
         /// <summary>Sửa KFG-15: exact parts of a shape (angles, scales, bulges, texts) written rounded, never by the length tolerance.</summary>
-        public static string Exact(params double[] v) => string.Join("/", v.Select(x => Math.Round(x, 6).ToString("R", CultureInfo.InvariantCulture)));
-
-        public static List<int> DuplicateIndices(IList<string> keys)
-        {
-            var seen = new HashSet<string>(StringComparer.Ordinal);
-            var dup = new List<int>();
-            for (int i = 0; i < keys.Count; i++)
-            {
-                if (keys[i] == null) continue;
-                if (!seen.Add(keys[i])) dup.Add(i);
-            }
-            return dup;
-        }
+        public static string Exact(params double[] v) =>
+            // lượt 2: -0 (a bulge negated for a polyline drawn backwards) is 0, else the two ways never matched
+            string.Join("/", v.Select(x => { double r = Math.Round(x, 6); return (r == 0 ? 0.0 : r).ToString("R", CultureInfo.InvariantCulture); }));
 
         /// <summary>Value at share q (0..1) of the sorted values.</summary>
         public static double Percentile(List<double> sorted, double q)
@@ -367,7 +345,6 @@ namespace ClaudeCAD.Plugin.Core
             return h.ToString("X16", CultureInfo.InvariantCulture);
         }
 
-        /// <summary>The target layer of layer_zero / defpoints: given, and neither 0 nor Defpoints.</summary>
         /// <summary>Sửa KFG-18: a target layer that does not print (off, frozen, not plotted — e.g. X-ANH-GOC) would only move the problem.</summary>
         public static string TargetLayerStateError(string fix, string layer, bool off, bool frozen, bool plottable)
         {
@@ -376,6 +353,7 @@ namespace ClaudeCAD.Plugin.Core
             return $"fix_drawing {fix}: layer '{layer}' is {why}, so the objects would still not print. Choose a layer that is on and plotted (ask the user).";
         }
 
+        /// <summary>The target layer of layer_zero / defpoints: given, and neither 0 nor Defpoints.</summary>
         public static string TargetLayerError(string fix, string layer)
         {
             bool needs = fix == "layer_zero" || fix == "defpoints";

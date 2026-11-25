@@ -26,8 +26,7 @@ namespace ClaudeCAD.Core.Tests
         public void Two_lines_0_002_mm_apart_across_a_grid_line_are_copies()
         {
             double tol = G2Numbers.DuplicateTolMm;
-            // before: the grid of 0.1 put 1000.049 and 1000.051 in two cells (two keys), so no copy was found
-            Assert.NotEqual(DrawingCheckLogic.ShapeKey("line", "A", new[] { 1000.049 }, tol), DrawingCheckLogic.ShapeKey("line", "A", new[] { 1000.051 }, tol));
+            // before: a grid of 0.1 put 1000.049 and 1000.051 in two cells (two keys), so no copy was found
             var items = new List<DrawingCheckLogic.DupItem>
             {
                 D("M|A|line|", 1000.049, 0, 0, 4000, 0, 0),
@@ -52,7 +51,7 @@ namespace ClaudeCAD.Core.Tests
         {
             Assert.True(Util2DLogic.IsDerivedViewLayer(SectionLogic.ElevationLayer));
             Assert.True(Util2DLogic.IsDerivedViewLayer(SectionLogic.OutlineLayer));
-            Assert.Contains("if (Util2DLogic.IsDerivedViewLayer(e.Layer)) return null;", Tools);
+            Assert.Contains("if (Util2DLogic.IsDerivedViewLayer(e.Layer) || IsViewLine(e)) return null;", Tools); // lượt 2: + the mark (KFG-32)
         }
 
         // ------------------------------------------------------------ KFG-07: hatches that never had a boundary
@@ -143,6 +142,58 @@ namespace ClaudeCAD.Core.Tests
             Assert.False(DrawingCheckLogic.HidesMeasurement(""));
             Assert.False(DrawingCheckLogic.HidesMeasurement(null));
             Assert.False(DrawingCheckLogic.HidesMeasurement("<> TT"));
+        }
+
+        // ------------------------------------------------------------ lượt 2: KFG-38 (polyline backwards), KFG-34, KFG-32
+
+        [Fact]
+        public void An_open_polyline_drawn_backwards_is_a_copy_through_DupItem()
+        {
+            var v = new List<double[]> { new[] { 0.0, 0 }, new[] { 1000.0, 0 }, new[] { 1000.0, 500 } };
+            var rv = new List<double[]> { v[2], v[1], v[0] };
+            DrawingCheckLogic.DupItem Pl(List<double[]> verts, List<double> bulges)
+            {
+                var n = DrawingCheckLogic.PolylineNumbers(verts, bulges, false);
+                return new DrawingCheckLogic.DupItem
+                {
+                    Group = "M|A-WALL|pline|o" + DrawingCheckLogic.Exact(n.Where((_, i) => i % 3 == 2).ToArray()),
+                    Nums = n.Where((_, i) => i % 3 != 2).ToArray(),
+                };
+            }
+            var fwd = Pl(v, new List<double> { 0.5, 0, 0 });
+            var back = Pl(rv, new List<double> { 0, -0.5, 0 });
+            var other = Pl(v, new List<double> { 0, 0, 0 }); // straight instead of the arc: not a copy
+            Assert.Equal(new List<int> { 1 }, DrawingCheckLogic.DuplicateIndices(new[] { fwd, back, other }, G2Numbers.DuplicateTolMm));
+            Assert.Contains("var xy = nums.Where((_, i) => i % 3 != 2)", Tools); // the plugin splits the same way
+            Assert.Equal(DrawingCheckLogic.Exact(0.0), DrawingCheckLogic.Exact(-0.0)); // the bulge negated backwards
+        }
+
+        [Fact]
+        public void Twenty_thousand_lines_of_one_x_are_checked_fast_and_give_the_same_answer()
+        {
+            var items = new List<DrawingCheckLogic.DupItem>();
+            for (int i = 0; i < 20000; i++) items.Add(D("M|A|line|", 0, i * 10.0, 0, 3000, i * 10.0, 0));
+            items.Add(D("M|A|line|", 0.05, 50.05, 0, 3000, 50, 0));   // a copy of line 5 (≤ 0.1 mm)
+            items.Add(D("M|A|line|", 0, 70.2, 0, 3000, 70.2, 0));     // 0.2 from line 7: not a copy
+            var sw = System.Diagnostics.Stopwatch.StartNew();
+            var dup = DrawingCheckLogic.DuplicateIndices(items, G2Numbers.DuplicateTolMm);
+            sw.Stop();
+            Assert.Equal(new List<int> { 20000 }, dup);
+            Assert.True(sw.ElapsedMilliseconds < 1000, $"took {sw.ElapsedMilliseconds} ms");
+        }
+
+        [Fact]
+        public void Lines_and_hatches_of_a_view_on_a_layer_of_the_users_choice_are_marked()
+        {
+            var sec = Src("plugin", "ClaudeCAD.Plugin", "Drawing", "SectionTools.cs");
+            Assert.Contains("MarkViewLine(ctx, c);", sec);                 // every line section_view / projection_view add (AddCurve)
+            Assert.Contains("MarkPlainHatch(ctx, hatch); // Sửa KFG-32", sec); // the section hatch
+            var t = Tools;
+            Assert.Contains("if (Util2DLogic.IsDerivedViewLayer(e.Layer) || IsViewLine(e)) return null;", t);
+            Assert.Contains("internal const string ViewLineApp = \"CLAUDECAD_VIEW\";", t);
+            // the old rounded keys are gone
+            Assert.DoesNotContain("ShapeKey(", Src("plugin", "ClaudeCAD.Plugin", "Core", "DrawingCheck.cs"));
+            Assert.DoesNotContain("DuplicateIndices(IList<string>", Src("plugin", "ClaudeCAD.Plugin", "Core", "DrawingCheck.cs"));
         }
     }
 }

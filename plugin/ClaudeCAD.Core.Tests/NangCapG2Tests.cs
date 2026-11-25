@@ -98,16 +98,14 @@ namespace ClaudeCAD.Core.Tests
         public void A_line_drawn_backwards_is_the_same_line_and_a_tiny_shift_too()
         {
             double tol = G2Numbers.DuplicateTolMm;
-            var a = DrawingCheckLogic.ShapeKey("line", "A-WALL", DrawingCheckLogic.LineNumbers(new[] { 0.0, 0, 0 }, new[] { 3000.0, 0, 0 }), tol);
-            var b = DrawingCheckLogic.ShapeKey("line", "a-wall", DrawingCheckLogic.LineNumbers(new[] { 3000.0, 0, 0 }, new[] { 0.0, 0, 0 }), tol);
-            var c = DrawingCheckLogic.ShapeKey("line", "A-WALL", DrawingCheckLogic.LineNumbers(new[] { 0.0, 0.01, 0 }, new[] { 3000.0, 0, 0 }), tol);
-            var d = DrawingCheckLogic.ShapeKey("line", "A-WALL", DrawingCheckLogic.LineNumbers(new[] { 0.0, 5, 0 }, new[] { 3000.0, 0, 0 }), tol);
-            var e = DrawingCheckLogic.ShapeKey("line", "A-DOOR", DrawingCheckLogic.LineNumbers(new[] { 0.0, 0, 0 }, new[] { 3000.0, 0, 0 }), tol);
-            Assert.Equal(a, b);
-            Assert.Equal(a, c);
-            Assert.NotEqual(a, d);
-            Assert.NotEqual(a, e); // another layer is not a copy
-            Assert.Equal(new List<int> { 1, 2 }, DrawingCheckLogic.DuplicateIndices(new[] { a, b, c, d, null, e }));
+            // Sửa KFG-38: through DupItem, the copy check the plugin uses (the old rounded keys are gone)
+            DrawingCheckLogic.DupItem L(string layer, double[] p, double[] q) => new DrawingCheckLogic.DupItem { Group = "M|" + layer.ToUpperInvariant() + "|line|", Nums = DrawingCheckLogic.LineNumbers(p, q) };
+            var a = L("A-WALL", new[] { 0.0, 0, 0 }, new[] { 3000.0, 0, 0 });
+            var b = L("a-wall", new[] { 3000.0, 0, 0 }, new[] { 0.0, 0, 0 });  // drawn backwards
+            var c = L("A-WALL", new[] { 0.0, 0.01, 0 }, new[] { 3000.0, 0, 0 }); // 0.01 mm off
+            var d = L("A-WALL", new[] { 0.0, 5, 0 }, new[] { 3000.0, 0, 0 });
+            var e = L("A-DOOR", new[] { 0.0, 0, 0 }, new[] { 3000.0, 0, 0 });   // another layer is not a copy
+            Assert.Equal(new List<int> { 1, 2 }, DrawingCheckLogic.DuplicateIndices(new[] { a, b, c, d, null, e }, tol));
         }
 
         [Fact]
