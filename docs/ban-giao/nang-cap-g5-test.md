@@ -90,7 +90,9 @@ Số kỹ thuật mới, khách không thấy:
 
 ## 6. CI
 
-Xem báo cáo gửi luồng chính.
+- Sau lần sửa cuối: lõi 1364 / 1364 xanh (thêm 8), trợ lý 400 / 400 xanh (thêm 2). Build `net48`, `net8.0-windows`,
+  `net10.0-windows` (xóa `obj` / `bin` giữa các lần) không lỗi, không cảnh báo.
+- CI run 45670027419 (#67) trên `464b6e5` (code cuối): **xanh**. Dùng 1 / 2 lượt. Commit sau đó chỉ sửa tài liệu này.
 
 ## 7. Chưa kiểm được (cần AutoCAD / Claude thật)
 
