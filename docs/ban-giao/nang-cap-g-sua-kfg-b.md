@@ -119,6 +119,6 @@ link vào project test lõi; thêm `FolderForTests` chỉ để test).
 - Không có con số mới (7 ngày, 50 MB như trước). Số kỹ thuật mới: file chép dở bị dọn sau 1 giờ.
 - Không đổi luồng chạy của khung chat (chỉ bỏ việc chép khi gửi) nên không chạy CI riêng.
 - Test: lõi **1442** (1436 sau gộp + 6 `SuaKfgB3Tests.cs`); 3 test cũ của lượt 1 / 2 sửa đúng một dòng (tên hàm `LocalFile` → `UserFile`);
-  trợ lý: xem dòng dưới; build 3 target 0 cảnh báo. Thử tay: `docs/checklist-dot-g5.md` mục J.
+  trợ lý **407** (không đổi code trợ lý); build 3 target 0 cảnh báo; chạy lại sau lần sửa cuối (`0dd8945`). Thử tay: `docs/checklist-dot-g5.md` mục J.
 - Chưa kiểm được: chép từ NAS thật (tốc độ, rút mạng giữa chừng), kéo file vào khung chat WPF trên Windows.
 
