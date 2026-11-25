@@ -47,6 +47,55 @@ namespace ClaudeCAD.Plugin.Core
             return true;
         }
 
+        /// <summary>
+        /// KTF-01 (kiểm tra độc lập đợt F): a right-angled outline drawn by hand or turned and rounded is off by a little
+        /// (IsRightAngled takes edges within StairLogic.SquareTol, ~20 mm over 10 m), and the grid of MaximalRectangles
+        /// then found near-twin rectangles: thin slivers, a "slightly wider" rectangle taken as a wing, a wrong gable.
+        /// The outline is squared first: the frame is the length-weighted mean direction of all edges (folded to 90°),
+        /// every edge becomes exactly horizontal / vertical in it at the mean of its two ends, and each corner takes the
+        /// x of its vertical edge and the y of its horizontal one. Moves a corner by about the drawing error only.
+        /// Null when the edges do not alternate across / along (then the outline is not a right-angled one).
+        /// </summary>
+        public static List<double[]> SquareUp(IList<double[]> pts)
+        {
+            int n = pts.Count;
+            if (n < 4 || n % 2 != 0) return null;
+            double sx = 0, sy = 0;
+            for (int i = 0; i < n; i++)
+            {
+                var a = pts[i]; var b = pts[(i + 1) % n];
+                double dx = b[0] - a[0], dy = b[1] - a[1], l = Math.Sqrt(dx * dx + dy * dy);
+                if (l < 1e-9) return null;
+                double t4 = 4 * Math.Atan2(dy, dx); // edge directions folded to 90°: the same for along / across
+                sx += l * Math.Cos(t4); sy += l * Math.Sin(t4);
+            }
+            double th = Math.Atan2(sy, sx) / 4, c = Math.Cos(th), s = Math.Sin(th);
+            var loc = pts.Select(q => new[] { q[0] * c + q[1] * s, -q[0] * s + q[1] * c }).ToList();
+            // edge i (from corner i to i + 1) is along x or along y in the frame
+            var alongX = new bool[n];
+            for (int i = 0; i < n; i++)
+            {
+                var a = loc[i]; var b = loc[(i + 1) % n];
+                alongX[i] = Math.Abs(b[0] - a[0]) >= Math.Abs(b[1] - a[1]);
+                if (i > 0 && alongX[i] == alongX[i - 1]) return null;
+            }
+            if (alongX[n - 1] == alongX[0]) return null;
+            var lvl = new double[n]; // y of an edge along x, x of an edge along y
+            for (int i = 0; i < n; i++)
+            {
+                var a = loc[i]; var b = loc[(i + 1) % n];
+                lvl[i] = alongX[i] ? (a[1] + b[1]) / 2 : (a[0] + b[0]) / 2;
+            }
+            var res = new List<double[]>(n);
+            for (int k = 0; k < n; k++)
+            {
+                int prev = (k - 1 + n) % n; // corner k sits between edge k - 1 and edge k
+                double x = alongX[k] ? lvl[prev] : lvl[k], y = alongX[k] ? lvl[k] : lvl[prev];
+                res.Add(new[] { x * c - y * s, x * s + y * c });
+            }
+            return res;
+        }
+
         private static double[] Dir(double[] a, double[] b)
         {
             double dx = b[0] - a[0], dy = b[1] - a[1], l = Math.Sqrt(dx * dx + dy * dy);

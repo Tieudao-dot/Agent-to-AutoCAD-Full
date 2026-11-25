@@ -55,6 +55,10 @@ namespace ClaudeCAD.Plugin.Drawing
 
             // the material: ByLayer / ByBlock, an existing one, a preset (made once), or a new custom one with color
             var preset = MaterialLogic.Find(requested);
+            // kiểm tra độc lập đợt F: a material of that very name already in the drawing ("Glass", "Metal"…) is the user's: it is
+            // used as it is, never swapped for the preset of the same meaning
+            if (preset != null && dict.Contains(requested.Trim()) && !string.Equals(requested.Trim(), preset.Name, StringComparison.OrdinalIgnoreCase))
+                preset = null;
             string name = preset?.Name ?? requested.Trim();
             bool reset = MaterialLogic.Builtin.Take(2).Any(b => b.Equals(name, StringComparison.OrdinalIgnoreCase));
             ObjectId matId = ObjectId.Null;

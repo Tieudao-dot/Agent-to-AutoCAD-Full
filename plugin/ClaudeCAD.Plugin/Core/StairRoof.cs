@@ -799,6 +799,11 @@ namespace ClaudeCAD.Plugin.Core
                 if (pts.Count > MaxRightAngledCorners)
                     throw ToolException.Invalid($"{tool}: a sloped roof over a right-angled outline takes at most {MaxRightAngledCorners} corners (this one has {pts.Count}). Nothing was built. Tell the user; options: type flat, or build the roof in parts.");
                 ortho = true;
+                // KTF-01: square the outline (hand-drawn / turned and rounded corners) before it is cut into rectangles
+                var sq = SquareUp(pts);
+                if (sq == null || SelfIntersects(sq))
+                    throw ToolException.Invalid($"{tool}: the outline is almost right-angled but its corners could not be squared. Nothing was built. Tell the user; options: type flat, or redraw the outline with right angles.");
+                pts = sq;
             }
             var eave = Offset(pts, oh);
             if (SelfIntersects(eave)) throw ToolException.Invalid($"{tool}: with an overhang of {oh} mm the roof edge crosses itself (narrow inward corners). Nothing was built. Use a smaller overhang.");

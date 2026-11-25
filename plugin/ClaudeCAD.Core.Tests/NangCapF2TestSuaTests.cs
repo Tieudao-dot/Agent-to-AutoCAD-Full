@@ -178,7 +178,8 @@ namespace ClaudeCAD.Core.Tests
             // every SetDatabaseDefaults of the F2 tools is followed by ByLayer (block definitions, frame, title block insert, viewport)
             int defaults = System.Text.RegularExpressions.Regex.Matches(t, @"SetDatabaseDefaults\(").Count;
             int bylayer = System.Text.RegularExpressions.Regex.Matches(t, @"SetDatabaseDefaults\([^)]*\);\s*ByLayer\(").Count;
-            Assert.Equal(5, defaults);
+            // kiểm tra độc lập đợt F: + the library block reference (6 places, each still followed by ByLayer)
+            Assert.Equal(6, defaults);
             Assert.Equal(defaults, bylayer);
             Assert.Contains("e.ColorIndex = 256;", t);
             Assert.Contains("e.LineWeight = LineWeight.ByLayer;", t);

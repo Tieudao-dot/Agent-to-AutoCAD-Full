@@ -31,7 +31,7 @@ Mở bản vẽ trống (đơn vị mm).
      Bấm **Hủy**: `VN-100` vẫn là 3.5. Làm lại và bấm **Đồng ý**: `VN-100` về 2.5.
    - Gõ tay "đồng ý" thay vì bấm nút: **không** được ghi đè.
 5. Bản vẽ đơn vị **mét** (`INSUNITS` = 6): "thiết lập style chuẩn 1:100".
-   - Đạt: tạo `VN-100-M`; ghi kích thước đoạn dài 4 (mét) hiện **4.00** và chữ cao khoảng 0,25.
+   - Đạt: tạo `VN-100-M`; ghi kích thước đoạn dài 4 (mét) hiện **4** (đoạn 4,5 m hiện **4.5**: số 0 thừa bị bỏ) và chữ cao khoảng 0,25.
 6. Đặt `LTSCALE` = 20 trước, rồi chạy lại: Claude báo giữ LTSCALE của cậu và nói số nên dùng (không tự đổi).
 
 ## B. Trang in có khung tên

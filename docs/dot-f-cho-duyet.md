@@ -37,7 +37,7 @@ Mọi số nằm ở một chỗ: `F2Numbers` trong `plugin/ClaudeCAD.Plugin/Cor
 | Chữ kích thước | Cao 2,5 mm khi in (tỉ lệ 1:100 → cao 250 trong bản vẽ) | Skill kiến trúc sẵn có |
 | Đầu kích thước | Gạch chéo 1,2 mm | Skill kiến trúc |
 | Đường gióng, đường kích thước | Đường gióng cách vật 2 mm, thò qua đường kích thước 1,5 mm; đường kích thước thò qua đường gióng 1 mm; chữ cách đường 0,8 mm | Skill kiến trúc |
-| Số lẻ của kích thước | Bản vẽ mm: không có số lẻ; cm: 1 số lẻ; mét: 2 số lẻ (vd 4.00) | Theo thông lệ |
+| Số lẻ của kích thước | Bản vẽ mm: không có số lẻ; cm: tối đa 1 số lẻ; mét: tối đa 2 số lẻ, số 0 thừa bị bỏ (vd đoạn 4 m hiện "4", 4,5 m hiện "4.5", 4,25 m hiện "4.25") — sửa sau kiểm tra độc lập (KTF-07): trước ghi nhầm "4.00" | Theo thông lệ |
 | Font chữ | Arial, bề rộng chữ 0,85 | Skill kiến trúc |
 | Chiều cao chữ khi in | Tiêu đề 5 mm; tên phòng 3,5; ghi chú 2,5; chữ nhỏ 1,8 | 3,5 và 2,5 từ skill; còn lại theo thông lệ |
 | Tỉ lệ nét đứt (LTSCALE) | Mẫu số tỉ lệ × 0,5 (1:100 → 50); chỉ đặt khi bản vẽ còn để mặc định 1 | Theo thông lệ |
@@ -264,6 +264,12 @@ cỡ ảnh 384–1568 và luật ghi đè ảnh). Không đổi số nào trong 
 
 - **Ghi đè có hai kiểu**: style / trạng thái layer (F2) phải bấm Đồng ý trên thẻ; góc nhìn trùng tên, file STL / Excel /
   PNG trùng tên (F3, F4, đợt D) thì Claude hỏi trong chat rồi mới ghi đè. Muốn một kiểu cho tất cả thì nói (việc nhỏ).
+- **Kích thước bản vẽ mét hiện "4", không phải "4.00"** (KTF-07): kiểu kích thước bỏ số 0 thừa (4 m hiện "4", 4,5 m hiện
+  "4.5"). Muốn luôn hiện đủ 2 số lẻ ("4.00") thì phải đổi cài đặt bỏ số 0 thừa của kiểu kích thước (việc nhỏ, đổi trong
+  code tạo kiểu kích thước).
+- **Block thư viện trùng tên block có sẵn nhưng khác cỡ** (sau kiểm tra độc lập): không dùng lại block cũ (sai cỡ) mà tạo
+  block thư viện tên thêm đuôi `-TV` (vd `CUA-DI-900-TV`; dựng 3D từ mặt bằng vẫn nhận là cửa). Cùng cỡ (lệch ≤ 2 %) thì
+  dùng block có sẵn như trước.
 - **In PDF ghi đè file PDF trùng tên không hỏi** (cách làm có từ trước chuỗi nâng cấp), khác STL / Excel / PNG. Muốn hỏi
   trước thì nói.
 

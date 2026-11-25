@@ -488,6 +488,11 @@ namespace ClaudeCAD.Plugin.Drawing
         {
             string name = LibraryBlocks.BlockName(it, w, d);
             var bt = (BlockTable)ctx.Tr.GetObject(ctx.Db.BlockTableId, OpenMode.ForRead);
+            // kiểm tra độc lập đợt F: a block of the same name drawn at another size (another drawing unit, the user's own
+            // drawing) is not reused: the library one goes under "<name>-TV" (still CUA-DI-… / CUA-SO-… for build_3d_from_plan)
+            var wantBox = LibraryBlocks.Box(LibraryBlocks.Build(it, w, d));
+            if (bt.Has(name) && !SameSize(ctx, bt[name], (wantBox[2] - wantBox[0]) / f, (wantBox[3] - wantBox[1]) / f))
+                name = LibraryBlocks.OtherSizeName(name);
             reused = bt.Has(name);
             if (reused) return bt[name];
             var btr = new BlockTableRecord { Name = name, Origin = Point3d.Origin, Comments = LibraryBlocks.DefinitionNote + ": " + it.Name };
@@ -524,6 +529,23 @@ namespace ClaudeCAD.Plugin.Drawing
             return id;
         }
 
+        /// <summary>The block definition's extents are w × h drawing units (within LibraryBlocks.SizeTol), or it has no extents.</summary>
+        private static bool SameSize(ToolContext ctx, ObjectId btrId, double w, double h)
+        {
+            var btr = (BlockTableRecord)ctx.Tr.GetObject(btrId, OpenMode.ForRead);
+            Extents3d? box = null;
+            foreach (ObjectId id in btr)
+            {
+                if (!(ctx.Tr.GetObject(id, OpenMode.ForRead) is Entity e) || e is AttributeDefinition) continue;
+                var x = EntityInfo.Extents(e);
+                if (!x.HasValue) continue;
+                if (box.HasValue) { var b = box.Value; b.AddExtents(x.Value); box = b; } else box = x;
+            }
+            if (!box.HasValue) return true;
+            double bw = box.Value.MaxPoint.X - box.Value.MinPoint.X, bh = box.Value.MaxPoint.Y - box.Value.MinPoint.Y;
+            return LibraryBlocks.SameSize(bw, bh, w, h);
+        }
+
         internal static object InsertLibraryBlock(ToolContext ctx, Params p)
         {
             if (!p.Has("name"))
@@ -548,7 +570,10 @@ namespace ClaudeCAD.Plugin.Drawing
             foreach (var pos in positions)
             {
                 var br = new BlockReference(Acad.P3(pos), defId) { ScaleFactors = scale, Rotation = rot };
-                ids.Add(Acad.Add(ctx, br, pp));
+                // kiểm tra độc lập đợt F: the reference itself ByLayer too (not the current colour), like the frame / title block
+                br.SetDatabaseDefaults(ctx.Db);
+                ByLayer(br);
+                ids.Add(Acad.Add(ctx, br, pp, defaults: false));
             }
             var r = Acad.Handles(ids);
             r["block"] = LibraryBlocks.BlockName(it, w, d);
@@ -557,7 +582,7 @@ namespace ClaudeCAD.Plugin.Drawing
             if (it.HasDepth) r[it.DepthMeaning.Replace(' ', '_') + "_mm"] = d;
             r["layer"] = layer;
             r["base_point"] = it.Base;
-            if (reused) r["note"] = "The drawing already had a block with this name; it was inserted as it is (not redefined).";
+            if (reused) r["note"] = "The drawing already had a block with this name and size; it was inserted as it is (not redefined).";
             if (f != 1) r["units"] = unitName;
             return r;
         }

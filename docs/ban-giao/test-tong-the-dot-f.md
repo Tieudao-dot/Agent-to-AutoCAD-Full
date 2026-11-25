@@ -88,3 +88,32 @@ Không đổi số nào trong code.
 
 - Run **#49** (`45614706040`, `release=false`) trên `7aa74c0` (code cuối): **xanh** (build 3 target, test lõi, trợ lý, UI test WPF). 1 lượt CI.
 - Commit sau CI chỉ thêm mục này (tài liệu).
+
+## Sau kiểm tra độc lập (KTF, 25/11/2026)
+
+Kiểm tra độc lập (`session_01D56HmHz4EXXJceBgkmjcap`) soát `afdaa68`, ghi 8 lỗi. Phần F1 (UCS) và F4 (Excel, khởi động sẵn)
+— KTF-02 → 06 — do thread F1 sửa trên `full/nang-cap-f-sua-ktf`, gộp vào đây khi có commit. Phần F3 / F2 / tài liệu sửa
+trực tiếp trên nhánh này:
+
+| Mã | Mô tả | Sửa | Test |
+| --- | --- | --- | --- |
+| KTF-01 (nặng, F3) | Mái 2 dốc / 4 dốc nhà L / T / U có đường bao lệch nhỏ (vẽ tay, xoay rồi làm tròn ~1 mm): phép thử góc vuông nhận lệch tới ~20 mm / 10 m nhưng lưới hình chữ nhật chỉ gộp tọa độ trong 0,5 mm → mảnh gần trùng, cánh "rộng hơn chút" có nóc chạy ngang mái chính (T lệch 1 mm: 5 mảnh, đỉnh 6603 thay 4293), mảnh mỏng < 1 mm ở mái 4 dốc | Đường bao được **nắn về góc vuông** trước khi chia (`RoofLogic.SquareUp`): khung = hướng trung bình theo chiều dài của mọi cạnh (gấp về 90°), mỗi cạnh nằm đúng ngang / dọc ở trung bình hai đầu, mỗi góc lấy x của cạnh dọc và y của cạnh ngang. Góc chỉ dời cỡ sai số vẽ; đường bao đã vuông giữ nguyên | `KiemTraDocLapDotFTests`: T lệch 1 mm = 2 mảnh, đỉnh 4293; T 37° / 133°, U 13° / 133° / 270°, L cánh hẹp 37°, T 90° xoay + làm tròn: cùng số mảnh và đỉnh như bản vuông, không mảnh nào hẹp < 500 mm, cả 2 dốc và 4 dốc. Bỏ dòng nắn thì 4 test đỏ (đã thử) |
+| KTF-07 (nhẹ, tài liệu F2) | `dot-f-cho-duyet.md`, checklist tổng F3-5, `checklist-dot-f2.md` ghi bản vẽ mét hiện "4.00"; code bỏ số 0 thừa (DIMZIN 8) nên khách thấy "4" | Sửa tài liệu ("4", "4.5"); thêm điểm để chủ dự án xem: muốn "4.00" thì đổi cài đặt này. Không đổi code | test tài liệu |
+| KTF-08 (nhẹ, skill F2) | `skills/ve-mep/SKILL.md` có hai bước "4." | Đánh số lại 1 → 5 | test số bước |
+
+Nghi vấn đã kiểm:
+
+| Nghi vấn | Kết quả |
+| --- | --- |
+| F3: tên vật liệu mẫu đè vật liệu của khách ("Glass", "Metal", "tile", "granite" là tên phụ của vật liệu mẫu) | **Đúng** (khách có "Glass" mà nhờ gán "Glass" thì nhận vật liệu mẫu "Kính"). Sửa: vật liệu đúng tên đã có trong bản vẽ được dùng nguyên. Đổi màu vật liệu khách đã có không qua thẻ: thread F5 làm |
+| F3: ảnh PNG từ góc nhìn đã lưu bỏ zoom / độ xoay / phối cảnh | **Đúng**, theo thiết kế (bộ chụp off-screen chỉ nhận hướng nhìn và khung). Không sửa (cần viết lại bộ chụp): mô tả lệnh nói rõ "giữ hướng, không giữ độ phóng to; khung cả công trình hoặc handles"; checklist F6-11 ghi rõ |
+| F2: `insert_library_block` không đặt ByLayer cho block tham chiếu | **Đúng** (Properties hiện màu hiện hành). Sửa: block tham chiếu ByLayer như khung / khung tên (test F2-test cập nhật 5 → 6 chỗ, mỗi chỗ vẫn ByLayer) |
+| F2: tên block không ghi đơn vị, block cùng tên khác cỡ bị dùng lại sai cỡ | **Đúng.** Sửa: block cùng tên mà cỡ lệch > 2 % thì không dùng lại, tạo block thư viện tên `<tên>-TV` (vẫn `CUA-DI-…` / `CUA-SO-…` cho dựng 3D) |
+| F2: hoàn tác sau khi xóa / ghi đè trạng thái layer | Chưa kiểm được ngoài AutoCAD: thêm mục thử tay F4-8 |
+
+Số kỹ thuật bên trong (không cần duyệt): nắn góc không có ngưỡng riêng (dùng ngưỡng góc vuông `StairLogic.SquareTol` = 2e-3
+sẵn có); lệch cỡ block cho dùng lại `LibraryBlocks.SizeTol` = 2 %.
+
+Quyết định tự chọn: tên block thư viện khi trùng tên khác cỡ là `<tên>-TV` (khách thấy tên này trong danh sách block; ghi
+vào `dot-f-cho-duyet.md`). Thử tay thêm: F4-8, F4-9, F6-12 (checklist tổng, khối "Đợt F").
+
