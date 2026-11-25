@@ -157,6 +157,24 @@ Chủ dự án chọn làm tiếp cả 5 tính năng mới luồng chính đề 
 - Thread: dùng lại ba thread đã lưu được lên GitHub (thread F1, Test & sửa F1, F2); thread mới chỉ dùng cho kiểm tra độc lập
   (không cần lưu).
 - Con số và quyết định tự chọn của đợt G gom vào một file riêng `docs/dot-g-cho-duyet.md`.
+- **Giao bộ cài (chủ dự án chốt 25/11 ~21h35):** chỉ gửi **một lần khi xong hết**. Bộ cài thử bản 4 (đợt F + F5) vẫn build
+  làm mốc kiểm nội bộ nhưng không gửi. Cuối đợt G: **một agent khác test lại toàn bộ tính năng đợt F và đợt G một lượt**
+  (chủ dự án yêu cầu), lỗi sửa xong và được soát lại, rồi build bộ cài thử bản 5; sau đó mới tạo thread **"Lưu trữ bộ
+  cài"** và gửi link / file bộ cài vào đó, rồi báo chủ dự án. Con số đợt F (`docs/dot-f-cho-duyet.md`) và đợt G đưa duyệt
+  chung một lần ở báo cáo cuối.
+- **Đã bắt đầu 25/11 21h25** (chủ dự án dặn "triển khai cho hoàn thành"): G1 và G2 xuất phát từ nhánh tích hợp đợt F đã
+  chốt `full/nang-cap-f-tong-the` @ `a6da118`, chạy cùng lúc với bước build bộ cài thử bản 4.
+
+### Tiến độ đợt G
+
+| Đợt | Thread viết | Thread rà | Nhánh | Trạng thái |
+| --- | --- | --- | --- | --- |
+| G1 | Thread đợt F2 `session_01D56HmFcYrzsme7GoBm8tNC` (giao 25/11 21h25) | Giao sau khi viết xong | `full/nang-cap-g1` (từ `a6da118`) | Đang viết |
+| G2 | Thread đợt F1 `session_01D56HmFAo4dZ7c8sbeNB9eh` (giao 25/11 21h27) | Giao sau khi viết xong | `full/nang-cap-g2` (từ `a6da118`) | Đang viết |
+| G3 | — | — | — | Chờ G1 + G2 |
+| G4 | — | — | — | Chờ G1 + G2 |
+| G5 | — | — | — | Chờ G3 + G4 |
+| Cuối | — | — | — | Test tổng thể, agent khác test lại toàn bộ F + G, bộ cài thử bản 5, thread "Lưu trữ bộ cài" |
 
 ### Số mặc định chủ dự án xác nhận 25/11/2026
 

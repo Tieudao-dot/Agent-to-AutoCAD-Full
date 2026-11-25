@@ -84,6 +84,8 @@ quy tắc làm việc và danh bạ thread: [`../CLAUDE.md`](../CLAUDE.md).
 | 25/11 | Số mặc định lan can | Xác nhận giữ: cao 1100; khe giữa các song ≤ 100; trụ cách nhau ≤ 1500; tay vịn và trụ 50 × 50; song 20 × 20; thanh dưới cách sàn 100; tấm kín dày 20 (mm) |
 | 25/11 | Cách chạy đợt F | Sau F1: F2 và F3 chạy cùng lúc, mỗi đợt có Test & sửa riêng; thread F4 gộp hai nhánh, CI xanh rồi mới làm F4. Nhanh hơn ~1,5 giờ, thêm ~$5–10 |
 | 25/11 | Chạy liền, không hỏi lại | Chủ dự án dặn cứ triển khai đợt F theo kế hoạch, không hỏi lại. Con số: thread dùng số đề xuất, gom bảng "Con số chờ chủ dự án duyệt"; quyết định khác ghi "Quyết định tự chọn"; chủ dự án duyệt một lần ở báo cáo cuối. Vẫn dừng trước phát hành |
+| 25/11 | Làm tiếp đợt F5 và đợt G | Chủ dự án chọn làm cả hai nhóm luồng chính đề xuất: F5 (ô nạp gọn trong ⚙, thẻ xác nhận đồng bộ, ghi chú có mũi tên) và đợt G (ra bộ hồ sơ, soát lỗi bản vẽ, bảng dự toán, render thật, vẽ lại từ ảnh / PDF scan; ước $150–200). Chạy liền như đợt F; G1 cùng lúc G2, G3 cùng lúc G4 |
+| 25/11 | Giao bộ cài | Chỉ gửi một lần khi xong hết (bản 5, sau đợt G). Trước khi gửi: một agent khác test lại toàn bộ tính năng một lượt. Gửi bằng cách tạo thread "Lưu trữ bộ cài" và đưa link / file bộ cài vào đó. Bản 4 chỉ là mốc kiểm nội bộ, không gửi |
 | 12/11 | Cách làm việc | Luồng chính điều phối; mỗi đợt một thread, thread đợt tự mở thread con "Test & sửa" |
 
 ## 4. Đã làm
