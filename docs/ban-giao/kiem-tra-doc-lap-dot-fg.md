@@ -334,3 +334,13 @@ Quyết định luồng chính chọn khi giao (cách rẻ, an toàn, đổi l�
   / thư mục chia sẻ với bản vẽ đang mở; đường dẫn mạng khác bị từ chối kèm hướng dẫn chép file về máy.
 - **Nghi vấn G4 (render chạy tiếp sau khi lệnh kết thúc):** thời gian chờ thêm sau khi lệnh kết thúc lấy bằng số lớn hơn giữa
   20 giây và thời gian ước lượng của mức render đó, thay vì luôn 20 giây.
+- **KFG-08 (chọn thêm 26/11 01h52, sau bản sửa đầu của thread đợt F1):** tab tên mặc định (`Layout1`, `Layout2`…) mà chỉ
+  có khung nhìn, không có vật nào khác thì coi là tab chưa dùng: không báo lỗi, nhưng kết quả có ghi chú nêu tên các tab đó
+  và lý do. Lý do: khách chỉ vẽ trong Model nhưng từng bấm vào tab Layout1 là AutoCAD tự tạo một khung nhìn; kiểm như tờ in
+  sẽ báo nhiễu ở gần như mọi bản vẽ. Tab mặc định có thêm vật khác, và mọi tab đã đổi tên, vẫn kiểm đầy đủ.
+
+## Tiến độ sửa
+
+| Thread | Kết quả |
+| --- | --- |
+| Thread đợt F1 (G2) | 26/11 01h50: sửa hết KFG-07, 08, 15, 16, 17, 18 và 3 nghi vấn, `full/nang-cap-g-sua-kfg-a` @ `2e1dfe2`, lõi 1375, trợ lý 400, ≈ $6. Đang chỉnh thêm KFG-08 theo quyết định trên |
