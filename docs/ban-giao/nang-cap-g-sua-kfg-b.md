@@ -98,3 +98,27 @@ Gộp `full/nang-cap-g-tong-the` @ `20e3812` vào trước. Nguồn: mục "Soá
 - Chưa kiểm được: kéo file mạng vào khung chat trên Windows thật (WPF), `DriveInfo` ổ mạng, PDF xoay theo UCS (khung góc), thời gian đếm
   trang trên máy khách.
 
+## 9. Lượt 3 (sau soát lại lượt 2, 26/11)
+
+Gộp `full/nang-cap-g-tong-the` @ `fff7ffe` vào trước. Nguồn: mục "Soát lại lượt 2" của `docs/ban-giao/kiem-tra-doc-lap-dot-fg.md`
+(`claude/inspiring-cray-58xsmt` @ `3990d6e`).
+
+| Mã | Đã sửa thế nào | Test |
+| --- | --- | --- |
+| KFG-40 | **Không chép gì lúc gửi tin**: khung chat chỉ ghi nhớ file khách kéo / chọn (`ChatAttachments.UserFile`, danh sách trong bộ nhớ, chỉ khung chat thêm vào) và gửi đường dẫn gốc. Khi Claude gọi `trace_image attach` với đúng file đó và file ở mạng / ổ mạng / dạng thiết bị: chép lúc đó (`CopyForTrace`) rồi dùng bản chép. File quá 50 MB, đã mất, hay chép lỗi: `attach` từ chối kèm lý do (số MB, mất mạng…) để Claude nói với khách. | `SuaKfgB3Tests` (Kfg40_…) |
+| KFG-39 | Bản chép `tep-…` đặt ngày sửa = lúc chép (dùng lại thì làm mới), nên giữ 7 ngày tính từ lúc chép; chép vào tên tạm `….dang-chep-…`, kiểm đủ dung lượng rồi mới đổi tên; file tạm sót được dọn sau 1 giờ; mỗi phiên bản file (đường dẫn + cỡ + ngày) một tên riêng (`TraceLogic.NetworkCopyName`). | `Kfg39_…`, `A_copy_older_than_seven_days_…`, `Same_name_…`, `A_half_copy_…` |
+
+Soát lại đường đi (lần thứ ba): nhiều file một tin (cả hai còn), file trùng tên khác thư mục / file đổi nội dung (bản chép riêng), mất
+mạng giữa chừng (không để file dở dùng lại), gói không có 2D (không ghi nhớ, không gửi đường dẫn: như lượt 1), dọn 7 ngày (chỉ bản chép
+cũ không dùng; bản đã gắn được chép cạnh bản vẽ nên không mất). Các test trên chạy thật trên thư mục tạm (`ChatAttachments.cs` được
+link vào project test lõi; thêm `FolderForTests` chỉ để test).
+
+- Quyết định tự chọn thêm: (8) chép lúc `attach` thay vì chép nền lúc gửi tin: ít đổi luồng khung chat nhất (không cần CI riêng), không
+  chép file khách không định vẽ lại; đổi lại AutoCAD có thể chờ lúc Claude gắn một file mạng lớn (đúng lúc khách nhờ vẽ lại). (9) Danh
+  sách file khách đã kéo chỉ giữ trong phiên AutoCAD: mở lại AutoCAD thì cần kéo lại file mạng.
+- Không có con số mới (7 ngày, 50 MB như trước). Số kỹ thuật mới: file chép dở bị dọn sau 1 giờ.
+- Không đổi luồng chạy của khung chat (chỉ bỏ việc chép khi gửi) nên không chạy CI riêng.
+- Test: lõi **1442** (1436 sau gộp + 6 `SuaKfgB3Tests.cs`); 3 test cũ của lượt 1 / 2 sửa đúng một dòng (tên hàm `LocalFile` → `UserFile`);
+  trợ lý: xem dòng dưới; build 3 target 0 cảnh báo. Thử tay: `docs/checklist-dot-g5.md` mục J.
+- Chưa kiểm được: chép từ NAS thật (tốc độ, rút mạng giữa chừng), kéo file vào khung chat WPF trên Windows.
+

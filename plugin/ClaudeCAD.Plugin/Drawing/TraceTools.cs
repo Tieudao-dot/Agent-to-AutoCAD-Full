@@ -58,6 +58,13 @@ namespace ClaudeCAD.Plugin.Drawing
             var db = ctx.Db;
             string path = (p.Str("path", null) ?? "").Trim().Trim('"');
             string chatDir = AttachmentFolder();
+            // KFG-29 / 40: a network file the user dragged / chose in the chat is copied to this computer now (only when traced),
+            // and the copy is used; the reason goes to Claude when it cannot be copied
+            if (UI.ChatAttachments.IsUserFile(path) && TraceLogic.NeedsLocalCopy(path, OnNetworkDrive(path)))
+            {
+                try { path = UI.ChatAttachments.CopyForTrace(path); }
+                catch (Exception ex) { throw ToolException.Invalid($"{tool}: the picture the user attached from the network could not be used: {ex.Message}. Tell the user, and ask them to copy it to this computer (e.g. Desktop) and attach it again."); }
+            }
             CheckPathAllowed(ctx, path, chatDir, tool); // the raw path (before Windows touches it)
             bool exists = false;
             long bytes = 0;
@@ -261,6 +268,17 @@ namespace ClaudeCAD.Plugin.Drawing
             catch (Exception) { }
             var refusal = TraceLogic.PathRefusal(path, drawing, network, same, tool);
             if (refusal != null) throw ToolException.Invalid(refusal);
+        }
+
+        /// <summary>A path on a mapped network drive (also written "\\?\Z:\…").</summary>
+        private static bool OnNetworkDrive(string path)
+        {
+            try
+            {
+                var plain = TraceLogic.PlainPath(path);
+                return plain != null && TraceLogic.IsAbsoluteDrivePath(plain) && new DriveInfo(plain.Substring(0, 1)).DriveType == DriveType.Network;
+            }
+            catch (Exception) { return false; }
         }
 
         private static string AttachmentFolder()

@@ -136,6 +136,16 @@ namespace ClaudeCAD.Plugin.Core
             return null;
         }
 
+        /// <summary>KFG-39: the name of the local copy of a network file: one per file version (path, size, date), never mixed up with another.</summary>
+        public static string NetworkCopyName(string path, long length, long writeTicks)
+        {
+            var p = path ?? "";
+            int cut = Math.Max(p.LastIndexOf('\\'), p.LastIndexOf('/'));
+            int dot = p.LastIndexOf('.');
+            var ext = dot > cut ? p.Substring(dot).ToLowerInvariant() : "";
+            return "tep-" + F5Confirm.FileToken(p.Trim().ToUpperInvariant() + "|" + length + "|" + writeTicks).Substring(0, 12) + ext;
+        }
+
         /// <summary>A picture pasted in the chat ("anh-…", ≤ 1568 px), not a network file copied whole ("tep-…").</summary>
         public static bool IsPastedName(string path)
         {
