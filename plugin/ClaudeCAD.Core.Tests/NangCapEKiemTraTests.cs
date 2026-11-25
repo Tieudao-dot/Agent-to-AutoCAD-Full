@@ -55,26 +55,29 @@ namespace ClaudeCAD.Core.Tests
         [Fact]
         public void KT2_08_split_roofs_overlap_and_the_user_is_told_first()
         {
+            // nâng cấp đợt F3: an L house takes a hip / gable roof as one solid, so there is no overlap to warn about any more
             var ell = new List<double[]> { new[] { 0.0, 0 }, new[] { 8000.0, 0 }, new[] { 8000.0, 4000 }, new[] { 4000.0, 4000 }, new[] { 4000.0, 8000 }, new[] { 0.0, 8000 } };
             foreach (var type in new[] { "hip", "gable" })
             {
-                var m = Assert.Throws<ToolException>(() => RoofLogic.Build(ell, 3000, new RoofLogic.Options { Type = type })).Message;
-                Assert.Contains("overlap at the joint", m);
-                Assert.Contains("twice", m);
-                Assert.Contains("type flat", m);
+                var lay = RoofLogic.Build(ell, 3000, new RoofLogic.Options { Type = type });
+                Assert.Equal(2, lay.Pieces.Count);
             }
-            var skill = Src("skills", "ve-3d-kien-truc", "SKILL.md");
-            Assert.Contains("**báo trước** khách là hai mái sẽ chồng nhau ở chỗ nối", skill);
-            Assert.Contains("overlap at the joint", Src("agent", "src", "tools", "solids3.ts"));
+            Assert.DoesNotContain("chồng nhau ở chỗ nối", Src("skills", "ve-3d-kien-truc", "SKILL.md"));
+            Assert.DoesNotContain("overlap at the joint", Src("agent", "src", "tools", "solids3.ts"));
+            // an outline that is not right-angled is still refused, with type flat as the way out
+            var arrow = new List<double[]> { new[] { 0.0, 0 }, new[] { 8000.0, 0 }, new[] { 8000.0, 8000 }, new[] { 4000.0, 3000 }, new[] { 0.0, 8000 } };
+            foreach (var type in new[] { "hip", "gable" })
+                Assert.Contains("type flat", Assert.Throws<ToolException>(() => RoofLogic.Build(arrow, 3000, new RoofLogic.Options { Type = type })).Message);
         }
 
         [Fact]
         public void KT2_09_hip_error_no_longer_suggests_gable_and_landing_limits_match()
         {
-            var ell = new List<double[]> { new[] { 0.0, 0 }, new[] { 8000.0, 0 }, new[] { 8000.0, 4000 }, new[] { 4000.0, 4000 }, new[] { 4000.0, 8000 }, new[] { 0.0, 8000 } };
-            var m = Assert.Throws<ToolException>(() => RoofLogic.Build(ell, 3000, new RoofLogic.Options { Type = "hip" })).Message;
+            // nâng cấp đợt F3: an L house is built; a concave outline that is not right-angled is refused without "use gable"
+            var arrow = new List<double[]> { new[] { 0.0, 0 }, new[] { 8000.0, 0 }, new[] { 8000.0, 8000 }, new[] { 4000.0, 3000 }, new[] { 0.0, 8000 } };
+            var m = Assert.Throws<ToolException>(() => RoofLogic.Build(arrow, 3000, new RoofLogic.Options { Type = "hip" })).Message;
             Assert.DoesNotContain("use type gable", m);
-            Assert.Contains("gable needs a rectangle too", m);
+            Assert.Contains("right-angled", m);
             // the landing: 600–10000 in the plugin and in the schema of the assistant
             Assert.Equal(600, StairLogic.MinLanding);
             Assert.Contains("landing", Assert.Throws<ToolException>(() => StairLogic.Build(new StairLogic.Options { Type = "u", Height = 3300, Landing = 550 })).Message);

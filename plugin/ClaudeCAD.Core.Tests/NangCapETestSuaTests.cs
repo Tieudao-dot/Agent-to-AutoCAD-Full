@@ -191,9 +191,11 @@ namespace ClaudeCAD.Core.Tests
             Assert.Equal(4, hip.Eave.Count);
             var gable = RoofLogic.Build(pts, 3000, new RoofLogic.Options { Type = "gable" });
             Assert.Equal(11200, gable.RidgeLength, 0);
-            // a real 300 mm step is still an L house for a hip roof
+            // a real 300 mm step is still an L house for a hip roof (nâng cấp đợt F3: built as one solid from its pieces)
             var step = new List<double[]> { new[] { 0.0, 0 }, new[] { 10000.0, 0 }, new[] { 10000.0, 6000 }, new[] { 4000.0, 6000 }, new[] { 4000.0, 6300 }, new[] { 0.0, 6300 } };
-            Assert.Throws<ToolException>(() => RoofLogic.Build(step, 3000, new RoofLogic.Options { Type = "hip" }));
+            var stepped = RoofLogic.Build(step, 3000, new RoofLogic.Options { Type = "hip" });
+            Assert.False(stepped.Rectangle);
+            Assert.Equal(2, stepped.Pieces.Count);
             // a spike (going out and straight back) is dropped as before; a short real corner stays
             Assert.Equal(4, RoofLogic.Clean(new List<double[]> { new[] { 0.0, 0 }, new[] { 10000.0, 0 }, new[] { 10000.0, 6000 }, new[] { 0.0, 6000 }, new[] { 0.0, 3000 }, new[] { -0.5, 3000 }, new[] { 0.0, 3000 } }).Count);
             Assert.Equal(5, RoofLogic.Clean(new List<double[]> { new[] { 0.0, 0 }, new[] { 10000.0, 0 }, new[] { 10000.0, 6000 }, new[] { 50.0, 6000 }, new[] { 0.0, 5950 } }).Count);
@@ -219,7 +221,7 @@ namespace ClaudeCAD.Core.Tests
             var l = RoofLogic.Build(pts, 3000, new RoofLogic.Options { Type = "gable" });
             Assert.Equal(11200, l.RidgeLength, 3);
             double tan = Math.Tan(Math.PI / 6);
-            Assert.Equal(3000 - 600 * tan + 3600 * tan + 150 / Math.Cos(Math.PI / 6), l.TopZ, 1);
+            Assert.Equal(3000 - 600 * tan + 3600 * tan + RoofLogic.DefaultSlopedThickness / Math.Cos(Math.PI / 6), l.TopZ, 1); // F3: 120
         }
 
         [Theory]

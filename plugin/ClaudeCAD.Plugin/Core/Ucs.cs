@@ -308,6 +308,8 @@ namespace ClaudeCAD.Plugin.Core
             "create_layer", "list_layers", "set_current_layer", "set_layer_props",
             "create_text_style", "create_dim_style", "set_current_styles", "list_styles",
             "list_xrefs", "reload_xref", "detach_xref", "bind_xref", "export_stl",
+            // nâng cấp đợt F3: no coordinates (materials; views are saved / shown as they are)
+            "set_material", "named_view",
         };
 
         /// <summary>Params that are directions / displacements (turned, not moved) in Ref mode, any tool.</summary>

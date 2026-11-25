@@ -74,12 +74,14 @@ describe('nâng cấp đợt E: stairs and roofs', () => {
     // kiểm tra độc lập KT2-09: the landing limits are the same on both sides
     assert.match(src, new RegExp(`MinLanding = ${E.MinLanding}, MaxLanding = ${E.MaxLanding};`));
     assert.match(src, new RegExp(`Layer3d = "${E.StairLayer}";`));
-    assert.match(src, new RegExp(`DefaultThickness = ${E.DefaultRoofThickness}, DefaultSlopeDeg = ${E.DefaultSlopeDeg}, DefaultOverhang = ${E.DefaultOverhang};`));
+    // nâng cấp đợt F3 (25/11/2026): flat and sloped roofs have their own default slab
+    assert.match(src, new RegExp(`DefaultFlatThickness = ${E.DefaultFlatRoofThickness}, DefaultSlopedThickness = ${E.DefaultSlopedRoofThickness};`));
+    assert.match(src, new RegExp(`DefaultSlopeDeg = ${E.DefaultSlopeDeg}, DefaultOverhang = ${E.DefaultOverhang};`));
     assert.match(src, new RegExp(`MinThickness = ${E.MinRoofThickness}, MaxThickness = ${E.MaxRoofThickness}, MinSlopeDeg = ${E.MinSlopeDeg}, MaxSlopeDeg = ${E.MaxSlopeDeg}, MaxOverhang = ${E.MaxOverhang};`));
     assert.match(src, new RegExp(`Layer3d = "${E.RoofLayer}";`));
     const d = new Map(buildTools(bridge).map((t) => [t.name, t.description]));
     for (const n of ['160', '280', '1000']) assert.match(d.get('build_stair')!, new RegExp(n));
-    for (const n of ['150', '30°', '600']) assert.match(d.get('build_roof')!, new RegExp(n));
+    for (const n of ['150', '120', '30°', '600']) assert.match(d.get('build_roof')!, new RegExp(n));
   });
 
   it('they get the long time-out and a line in the system prompt', () => {

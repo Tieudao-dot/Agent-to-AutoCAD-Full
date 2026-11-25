@@ -88,7 +88,8 @@ namespace ClaudeCAD.Plugin.Core
     {
         public const double DefaultRiser = 160, DefaultTread = 280, DefaultWidth = 1000;
         /// <summary>Waist (bản thang) and landing slab thickness; the gap between the two flights of a U stair.</summary>
-        public const double DefaultWaist = 150, DefaultGap = 100;
+        // nâng cấp đợt F3 (chủ dự án chốt 25/11/2026): stair waist / landing slab 150 → 120 mm; the U gap stays 100
+        public const double DefaultWaist = 120, DefaultGap = 100;
         public const double MinRiser = 100, MaxRiser = 250, MinTread = 150, MaxTread = 500;
         public const double MinWidth = 500, MaxWidth = 5000, MinHeight = 200, MaxHeight = 20000;
         public const double MinWaist = 50, MaxWaist = 500, MaxGap = 5000;
@@ -539,9 +540,11 @@ namespace ClaudeCAD.Plugin.Core
     /// planes) − (∩ the wedges under the underside planes). The underside meets the wall top at the wall line; the
     /// eave overhangs the walls and ends with a plumb cut. Gable needs a rectangle, hip a convex outline.
     /// </summary>
-    public static class RoofLogic
+    public static partial class RoofLogic
     {
-        public const double DefaultThickness = 150, DefaultSlopeDeg = 30, DefaultOverhang = 600;
+        // nâng cấp đợt F3 (chủ dự án chốt 25/11/2026): the sloped roof slab is 120 mm, the flat roof slab stays 150 (13/11)
+        public const double DefaultFlatThickness = 150, DefaultSlopedThickness = 120;
+        public const double DefaultSlopeDeg = 30, DefaultOverhang = 600;
         public const double MinThickness = 30, MaxThickness = 1000, MinSlopeDeg = 5, MaxSlopeDeg = 60, MaxOverhang = 3000;
         public const int MaxPoints = 200;
         public const string Layer3d = "A-ROOF-3D";
@@ -567,7 +570,9 @@ namespace ClaudeCAD.Plugin.Core
         public sealed class Options
         {
             public string Type = "hip";
-            public double Thickness = DefaultThickness, SlopeDeg = DefaultSlopeDeg;
+            /// <summary>mm; NaN = the default of the type (flat DefaultFlatThickness, sloped DefaultSlopedThickness), set by Check.</summary>
+            public double Thickness = double.NaN;
+            public double SlopeDeg = DefaultSlopeDeg;
             public double? Overhang;           // default 0 for flat, DefaultOverhang for sloped
             public string Ridge = "long";       // gable: the ridge runs along the long or the short side
         }
@@ -582,10 +587,17 @@ namespace ClaudeCAD.Plugin.Core
             public double EaveZ, RidgeZ, TopZ, Overhang, PlanArea, RoofArea, RidgeLength;
             public bool Rectangle;
             public List<string> Notes = new List<string>();
+            /// <summary>
+            /// Nâng cấp đợt F3: a sloped roof over a right-angled outline (L / T / U…) as one solid: the union of the pieces'
+            /// tops minus the union of their undersides (Base / Outer / Inner unused). Empty for the other roofs.
+            /// </summary>
+            public List<RoofPiece> Pieces = new List<RoofPiece>();
 
             /// <summary>True when the point (mm) is inside the roof (for tests).</summary>
             public bool Contains(double[] p) =>
-                Base.Contains(p) && Outer.All(q => q.Contains(p)) && !(Inner.Count > 0 && Inner.All(q => q.Contains(p)));
+                Pieces.Count > 0
+                    ? Pieces.Any(k => k.InTop(p)) && !Pieces.Any(k => k.InUnder(p))
+                    : Base.Contains(p) && Outer.All(q => q.Contains(p)) && !(Inner.Count > 0 && Inner.All(q => q.Contains(p)));
         }
 
         public static string NormalizeType(string type, string tool = "build_roof")
@@ -749,8 +761,10 @@ namespace ClaudeCAD.Plugin.Core
         public static void Check(Options o, string tool = "build_roof")
         {
             o.Type = NormalizeType(o.Type, tool);
+            double def = o.Type == "flat" ? DefaultFlatThickness : DefaultSlopedThickness;
+            if (double.IsNaN(o.Thickness)) o.Thickness = def;
             if (!(o.Thickness >= MinThickness && o.Thickness <= MaxThickness))
-                throw ToolException.Invalid($"{tool}: thickness must be {MinThickness}–{MaxThickness} mm (got {o.Thickness}; default {DefaultThickness}).");
+                throw ToolException.Invalid($"{tool}: thickness must be {MinThickness}–{MaxThickness} mm (got {o.Thickness}; default {def} for a {(o.Type == "flat" ? "flat" : "sloped")} roof).");
             if (o.Type != "flat" && !(o.SlopeDeg >= MinSlopeDeg && o.SlopeDeg <= MaxSlopeDeg))
                 throw ToolException.Invalid($"{tool}: slope must be {MinSlopeDeg}–{MaxSlopeDeg} degrees (got {o.SlopeDeg}; default {DefaultSlopeDeg}).");
             if (o.Overhang.HasValue && !(o.Overhang.Value >= 0 && o.Overhang.Value <= MaxOverhang))
@@ -771,10 +785,19 @@ namespace ClaudeCAD.Plugin.Core
             if (SelfIntersects(pts)) throw ToolException.Invalid($"{tool}: the outline crosses itself. Nothing was built.");
             double oh = o.Overhang ?? (o.Type == "flat" ? 0 : DefaultOverhang);
             var lay = new Layout { Type = o.Type, Overhang = oh, Rectangle = IsRectangle(pts) };
-            if (o.Type == "hip" && !IsConvex(pts))
-                throw ToolException.Invalid($"{tool}: a hip roof (4 dốc) is only built over a convex outline (a rectangle or a polygon with no inward corner); this outline has inward corners (an L / T / U house). Nothing was built. Tell the user; options: type flat (any outline), or split the outline into rectangles and build a roof on each (before building, tell the user the roofs will overlap at the joint and need fixing by hand, and that volume_schedule counts the overlap twice). Type gable needs a rectangle too.");
-            if (o.Type == "gable" && !lay.Rectangle)
-                throw ToolException.Invalid($"{tool}: a gable roof (2 dốc) is only built over a rectangle; this outline has {pts.Count} corners or is not square. Nothing was built. Tell the user; options: type flat, type hip (convex outline), or split it into rectangles and build a roof on each (before building, tell the user the roofs will overlap at the joint and need fixing by hand, and that volume_schedule counts the overlap twice).");
+            // nâng cấp đợt F3: hip over a concave outline, gable over anything but a rectangle: built as one solid when the
+            // outline is right-angled (L / T / U…), else refused with the options
+            bool ortho = false;
+            if ((o.Type == "hip" && !IsConvex(pts)) || (o.Type == "gable" && !lay.Rectangle))
+            {
+                if (!IsRightAngled(pts))
+                    throw ToolException.Invalid(o.Type == "hip"
+                        ? $"{tool}: a hip roof (4 dốc) is built over a convex outline or a right-angled one (L / T / U house, every corner 90°); this outline has inward corners that are not 90°. Nothing was built. Tell the user; options: type flat (any outline), or redraw the outline with right angles."
+                        : $"{tool}: a gable roof (2 dốc) is built over a rectangle or a right-angled outline (L / T / U house, every corner 90°); this outline is neither. Nothing was built. Tell the user; options: type flat, type hip (convex outline), or redraw the outline with right angles.");
+                if (pts.Count > MaxRightAngledCorners)
+                    throw ToolException.Invalid($"{tool}: a sloped roof over a right-angled outline takes at most {MaxRightAngledCorners} corners (this one has {pts.Count}). Nothing was built. Tell the user; options: type flat, or build the roof in parts.");
+                ortho = true;
+            }
             var eave = Offset(pts, oh);
             if (SelfIntersects(eave)) throw ToolException.Invalid($"{tool}: with an overhang of {oh} mm the roof edge crosses itself (narrow inward corners). Nothing was built. Use a smaller overhang.");
             lay.Eave = eave;
@@ -790,6 +813,13 @@ namespace ClaudeCAD.Plugin.Core
             double th = o.SlopeDeg * Math.PI / 180, tan = Math.Tan(th), cos = Math.Cos(th);
             double up = o.Thickness / cos;           // vertical thickness of the slab
             double ze = wallTop - oh * tan;          // underside at the eave line
+            if (ortho)
+            {
+                double dx = eave.Max(q => q[0]) - eave.Min(q => q[0]), dy = eave.Max(q => q[1]) - eave.Min(q => q[1]);
+                BuildRightAngled(lay, eave, o, ze, up, tan, Math.Sqrt(dx * dx + dy * dy), tool);
+                lay.RoofArea = lay.PlanArea / cos;
+                return lay;
+            }
             var edges = new List<int>();
             if (o.Type == "hip") for (int i = 0; i < eave.Count; i++) edges.Add(i);
             else

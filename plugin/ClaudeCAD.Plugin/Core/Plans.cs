@@ -107,7 +107,9 @@ namespace ClaudeCAD.Plugin.Core
                 // nâng cấp đợt D (Drawing/Solid3Tools.cs): beams, PRESSPULL, STL export, volume schedule by layer
                 "build_beam presspull export_stl volume_schedule " +
                 // nâng cấp đợt E (Drawing/StairRoofTools.cs): stairs, roofs
-                "build_stair build_roof");
+                "build_stair build_roof " +
+                // nâng cấp đợt F3 (Drawing/RenderTools.cs): materials, named views (+ a PNG with the materials)
+                "set_material named_view");
             return d;
         }
 

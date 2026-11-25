@@ -65,6 +65,9 @@ const DESTRUCTIVE: Record<string, (p: Record<string, unknown>) => number> = {
   // nâng cấp đợt C: replacing text changes existing objects (step 2, with handles); the preview changes nothing.
   // It always needs the card's Đồng ý (REPLACE_TOOLS below), whatever the count.
   find_replace_text: (p) => len(p.handles),
+  // nâng cấp đợt F3: a material on existing objects (the 20-object rule, like set_entity_props); deleting a named view
+  set_material: (p) => (p.list === true ? 0 : len(p.handles)),
+  named_view: (p) => (p.action === 'delete' || p.replace === true ? 1 : 0),
 };
 
 /**
