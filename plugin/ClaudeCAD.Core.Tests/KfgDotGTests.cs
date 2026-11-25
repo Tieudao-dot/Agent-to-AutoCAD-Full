@@ -64,6 +64,31 @@ namespace ClaudeCAD.Core.Tests
         }
 
         [Fact]
+        public void KFG30_an_unaccented_pattern_on_names_differing_only_in_accents_is_ambiguous()
+        {
+            var r = EstimateLogic.Build(new[] { R("Sân phơi"), R("Sàn gỗ") }, new[] { P("San*", 9) }, null);
+            Assert.All(r.Lines, l => Assert.Null(l.UnitPrice));
+            Assert.All(r.Lines, l => Assert.Contains("differ only in accents", l.Note));
+            Assert.Single(r.Ambiguous);
+            Assert.Equal("San*", r.Ambiguous[0].price);
+            Assert.Equal(2, r.Ambiguous[0].items.Count);
+            // one accent spelling only: the unaccented pattern fits as before
+            var one = EstimateLogic.Build(new[] { R("Sàn gỗ"), R("Sàn đá") }, new[] { P("san*", 9) }, null);
+            Assert.All(one.Lines, l => Assert.Equal(9, l.UnitPrice));
+            Assert.Empty(one.Ambiguous);
+            // the part under '*' may differ in accents ("Sàn gỗ" / "Sàn đá" above); an accented pattern keeps its accents
+            var acc = EstimateLogic.Build(new[] { R("Sân phơi"), R("Sàn gỗ") }, new[] { P("Sàn*", 9) }, null);
+            Assert.Null(acc.Lines[0].UnitPrice);
+            Assert.Equal(9, acc.Lines[1].UnitPrice);
+            Assert.Empty(acc.Ambiguous);
+            // patterns without letters that differ: block names as before
+            var doors = EstimateLogic.Build(new[] { R("CUA-DI-01"), R("CUA-DI-02") }, new[] { P("CUA-DI-*", 3_500_000) }, null);
+            Assert.All(doors.Lines, l => Assert.Equal(3_500_000, l.UnitPrice));
+            Assert.Equal("sân*", EstimateLogic.WildFixedPart("San*", "Sân phơi")); // the fixed parts, "*" between
+            Assert.Null(EstimateLogic.WildFixedPart("Tuong*", "Sân phơi"));
+        }
+
+        [Fact]
         public void KFG03_the_description_and_skills_say_accents_count()
         {
             Assert.Contains("ambiguous_prices", Src("agent", "src", "tools", "estimate.ts"));
@@ -170,6 +195,10 @@ namespace ClaudeCAD.Core.Tests
             Assert.Contains("record.Layouts.Add(s.Number);", t); // record survives an error part way
             Assert.Contains("try { WriteSetRecord(doc, db, keep); }", t);
             Assert.Contains("a macro does not overwrite it", t); // macro + existing PDF
+            // KFG-33: the error path keeps only our old sheets, and a sheet that is gone is never written with an empty handle
+            Assert.Contains("record.Layouts.Concat(oldLayouts)", t);
+            Assert.Contains("var alive = r.Layouts.Where(n => layouts.Contains(n))", t);
+            Assert.DoesNotContain(": \"\");", t);
         }
 
         // ---- KFG-09: deleting a layer state has its own token ----

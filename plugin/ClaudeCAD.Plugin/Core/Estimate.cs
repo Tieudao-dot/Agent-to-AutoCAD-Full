@@ -177,9 +177,33 @@ namespace ClaudeCAD.Plugin.Core
             var wild = prices.Where(p => p.Item.Contains("*") && (HasAccents(p.Item) ? Wild(KeySep(item), KeySep(p.Item)) : Wild(Key(item), Key(p.Item)))).ToList();
             fitting = wild;
             if (wild.Count == 0) return null;
+            // KFG-30: a pattern typed without accents ("San*") that fits names whose fixed letters differ only in accents
+            // ("Sân phơi", "Sàn gỗ") is ambiguous, as a plain name is: no price, ask which
+            var amb = wild.Where(p => !HasAccents(p.Item) && WildAccentClash(p.Item, allItems)).ToList();
+            if (amb.Count > 0) { note = "the price pattern fits names that differ only in accents (" + string.Join(", ", amb.Select(p => p.Item)) + "): ask which"; return null; }
             if (wild.Select(p => p.UnitPrice).Distinct().Count() > 1) { note = "several price patterns fit (" + string.Join(", ", wild.Select(p => p.Item)) + ")"; return null; }
             return wild[0];
         }
+
+        /// <summary>
+        /// KFG-30: the accented letters of a name where an unaccented pattern's fixed parts fall ("San*" on "Sân phơi" → "sân").
+        /// null = the pattern does not fit.
+        /// </summary>
+        public static string WildFixedPart(string pattern, string item)
+        {
+            var s = KeySep(item);
+            var m = new StringBuilder(s.Length);
+            foreach (var ch in s) { var k = Key(ch.ToString()); m.Append(k.Length == 1 ? k[0] : char.ToLowerInvariant(ch)); }
+            var parts = Key(pattern).Split('*');
+            var rx = "^" + string.Join("(?:.*)", parts.Select(x => "(" + Regex.Escape(x) + ")")) + "$";
+            var hit = Regex.Match(m.ToString(), rx, RegexOptions.CultureInvariant);
+            if (!hit.Success) return null;
+            return string.Join("*", Enumerable.Range(1, parts.Length).Select(g => s.Substring(hit.Groups[g].Index, hit.Groups[g].Length)));
+        }
+
+        /// <summary>KFG-30: an unaccented pattern fits items whose fixed letters differ in accents.</summary>
+        public static bool WildAccentClash(string pattern, IEnumerable<string> items) =>
+            (items ?? Enumerable.Empty<string>()).Select(i => WildFixedPart(pattern, i)).Where(f => f != null).Distinct().Count() > 1;
 
         public static double RoundMoney(double v) => Math.Round(v, G3Numbers.MoneyDecimals, MidpointRounding.AwayFromZero);
 
@@ -224,6 +248,12 @@ namespace ClaudeCAD.Plugin.Core
             r.Total = r.Subtotal + r.Percents.Sum(x => x.Amount);
             r.Unused = prices.Where(p => !used.Contains(p)).Select(p => p.Item).ToList();
             // KFG-03: the price names that fit several items, and those items (Claude asks which one is meant)
+            // KFG-30: and the patterns typed without accents that fit names differing only in accents
+            foreach (var p in prices.Where(p => p.Item.Contains("*") && !HasAccents(p.Item)))
+            {
+                var its = rows.Select(x => x.Item).Where(i => WildFixedPart(p.Item, i) != null).Distinct().ToList();
+                if (WildAccentClash(p.Item, its)) r.Ambiguous.Add((p.Item, its));
+            }
             foreach (var p in prices.Where(p => !p.Item.Contains("*")))
             {
                 foreach (var key in new Func<string, string>[] { KeySep, Key })

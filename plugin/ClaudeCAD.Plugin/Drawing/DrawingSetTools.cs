@@ -374,7 +374,7 @@ namespace ClaudeCAD.Plugin.Drawing
                 // nghi vấn G1: an AutoCAD error part way (after the old set was removed): what was made, and what is left of the
                 // old set, stay in the record, so the next run (or its card) still knows them
                 var keep = new DrawingSetLogic.Record();
-                keep.Layouts.AddRange(record.Layouts.Concat(last.Layouts).Distinct(StringComparer.OrdinalIgnoreCase));
+                keep.Layouts.AddRange(record.Layouts.Concat(oldLayouts).Distinct(StringComparer.OrdinalIgnoreCase));
                 keep.Handles.AddRange(record.Handles.Concat(last.Handles).Distinct(StringComparer.OrdinalIgnoreCase));
                 try { WriteSetRecord(doc, db, keep); } catch (Exception) { }
                 throw;
@@ -493,8 +493,13 @@ namespace ClaudeCAD.Plugin.Drawing
                 var nod = (DBDictionary)tr.GetObject(db.NamedObjectsDictionaryId, OpenMode.ForWrite);
                 // KFG-24: keep each sheet's layout handle, so a sheet the user renamed (or a new one with the old name) is told apart
                 var layouts = (DBDictionary)tr.GetObject(db.LayoutDictionaryId, OpenMode.ForRead);
+                // KFG-33: a sheet that is gone (the old set's, removed before an error) is left out, never kept with an empty
+                // handle: an empty handle matches by name, so the user's own layout of that name would be taken for ours
+                var alive = r.Layouts.Where(n => layouts.Contains(n)).Distinct(StringComparer.OrdinalIgnoreCase).ToList();
+                r.Layouts.Clear();
+                r.Layouts.AddRange(alive);
                 r.LayoutHandles.Clear();
-                foreach (var name in r.Layouts) r.LayoutHandles.Add(layouts.Contains(name) ? Acad.H(layouts.GetAt(name)) : "");
+                foreach (var name in alive) r.LayoutHandles.Add(Acad.H(layouts.GetAt(name)));
                 var rb = new ResultBuffer(DrawingSetLogic.Encode(r).Select(s => new TypedValue((int)DxfCode.Text, s)).ToArray());
                 if (nod.Contains(DrawingSetLogic.RecordKey))
                 {
