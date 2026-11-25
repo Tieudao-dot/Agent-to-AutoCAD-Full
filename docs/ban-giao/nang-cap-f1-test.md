@@ -34,6 +34,17 @@ Không đổi thứ chủ dự án nhìn thấy ngoài việc sửa đúng các 
   điểm, `build_3d_from_plan`, mái theo tường, cầu thang theo ô thang vẫn làm trên mặt bằng WCS (như bàn giao F1).
 - `sweep` với `path_points` đúng ở mọi UCS (đường 3D khi điểm không cùng cao độ WCS).
 
+## Con số (quy tắc "số phải được chủ dự án xác nhận", 25/11/2026)
+
+- **Số khách gặp / làm đổi kết quả, đợt F1 thêm hoặc đổi: không có.** Đổi tọa độ UCS là phép đổi chính xác (không số chọn
+  tay); không thêm kích thước, độ dày, chiều cao, góc, cỡ chữ, tỉ lệ, ngưỡng hay giới hạn mới. Chế độ mặc định "Cả hai"
+  (không phải số) chủ dự án đã chốt 14/11/2026.
+- Thấy được nhưng không đổi kết quả: nút chế độ cao 22 px, rộng tối thiểu 24 px, cách 4 px — theo cỡ các nút sẵn có
+  trên thanh trên cùng (22 × 24). Đã báo luồng chính 25/11; chưa có yêu cầu đổi.
+- Số kỹ thuật bên trong: UCS coi là World khi lệch ≤ 1e-9; trục bằng 0 khi dài < 1e-12; khung mặt bằng theo UCS so có dung
+  sai 1e-6 mm (TS-F1-01, mới); UCS lưu trong macro làm tròn gốc 6 chữ số thập phân, trục 12 chữ số; góc trả về quy về
+  0–360°. Giới hạn 1000 điểm của khung đa giác `stretch_entities` có từ trước F1.
+
 ## Test
 
 - Lõi `dotnet test plugin/ClaudeCAD.Core.Tests`: **973** (952 + 21 `NangCapF1TestSuaTests.cs`: khung mặt bằng theo UCS
