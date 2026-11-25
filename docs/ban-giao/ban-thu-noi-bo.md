@@ -6,7 +6,10 @@
 
 *13/11/2026 · thread "Bộ cài thử nội bộ" · xuất phát từ `full/test-tong-the` @ `19944df`. Chủ dự án chốt 13/11/2026.*
 
-> **Bản mới nhất (15/11/2026): bản 3, `AgentToAutoCADFull-ThuNoiBo-nang-cap-3-0.9.4`** (lượt CI #38, mục "Lượt CI" cuối
+> **Bản mới nhất (25/11/2026): bản 4, `AgentToAutoCADFull-ThuNoiBo-nang-cap-4-0.9.4`** (lượt CI #55, mục "Bản 4" ngay
+> dưới). Như bản 3, thêm **đợt F (F1 → F5)**. Bản 3 bỏ.
+>
+> **Bản 3 (15/11/2026): `AgentToAutoCADFull-ThuNoiBo-nang-cap-3-0.9.4`** (lượt CI #38, mục "Lượt CI" cuối
 > file). Như bản 2 dưới đây, thêm **sửa khung chat** (`full/toi-uu-khung-chat` @ `983d4c2`): hết giật khi cuộn / gõ lúc
 > đoạn chat dài, icon nét đơn sắc kiểu AutoCAD thay emoji, chế độ thu gọn cân đối hơn. Bản 2 (`…-nang-cap-2-…`) bỏ.
 >
@@ -19,6 +22,52 @@
 > - file còn bị giữ thì bảo khởi động lại máy rồi chạy lại.
 >
 > Các bộ cài cũ (`…-0.9.4` lượt #16, `…-nang-cap-0.9.4` lượt #32): **đừng dùng nữa**.
+
+## Bản 4 (25/11/2026): có đợt F
+
+**Có gì mới so với bản 3.** Gộp nhánh tích hợp đợt F `full/nang-cap-f-tong-the` @ `a6da118` (code cuối `7fe215c`):
+- F1: UCS + nút chế độ làm việc;
+- F2: style chuẩn VN, khung tên, block thư viện, trạng thái layer;
+- F3: mái liền khối, vật liệu, góc nhìn;
+- F4: mở chat nhanh (Claude khởi động sẵn) + xuất Excel;
+- F5: ô **Nạp gọn lệnh** trong ⚙, thẻ xác nhận ghi đè, ghi chú có mũi tên;
+- 9 lỗi kiểm tra độc lập đã sửa.
+
+Thiết lập bản thử giữ nguyên: không kích hoạt, luôn gói Full, **vẫn hết hạn sau 10/12/2026**, không tự cập nhật, không
+phát hành được.
+
+**Tải.** Lượt CI **#55**, run `45632787564`, commit `5c75b77`, `release: "false"`: **xanh** (~8 phút).
+- Trang run: <https://github.com/Tieudao-dot/Agent-to-AutoCAD-Full/actions/runs/45632787564>
+- Artifact **`AgentToAutoCADFull-ThuNoiBo-nang-cap-4-0.9.4`** (id `15031114800`, ~141 MB zip, trong có
+  `AgentToAutoCADFull-ThuNoiBo-Setup.exe`), tải được tới **23/02/2027**. Link tải thẳng (cần đăng nhập GitHub):
+  <https://github.com/Tieudao-dot/Agent-to-AutoCAD-Full/actions/runs/45632787564/artifacts/15031114800>
+
+**Cài đè lên bản 3.** Không cần gỡ.
+1. Đóng AutoCAD. Bộ cài nhắc bằng tiếng Việt nếu AutoCAD còn mở: đóng rồi bấm Thử lại.
+2. Giải nén zip, chạy `AgentToAutoCADFull-ThuNoiBo-Setup.exe`, Next tới hết.
+3. Lịch sử chat, cài đặt, skill, macro và đăng nhập Claude được giữ.
+4. Mở AutoCAD, gõ `CLAUDECHAT`, bấm **Chat mới** một lần trước khi thử (cuộc chat cũ vẫn mở được).
+
+**Thử tay.** Khối **"Đợt F (F1 → F5)"** ở cuối `docs/checklist-tong-the.md`, khoảng **2 giờ**, làm theo thứ tự trong đó.
+- Làm trước: F0-1 (`CLAUDECHATSELFTEST`, các dòng đợt F2–F5 đều ✓).
+- Không thử được trên bản này: các mục cột "Cần" ghi **Máy khác** (F10-1 … F10-3: máy chưa kích hoạt, máy gói 2D / 3D),
+  vì bản thử luôn là gói Full và luôn coi là đã kích hoạt.
+- Nút chế độ (F1) luôn hiện, vì máy luôn gói Full.
+
+**Công tắc tắt nạp gọn.** Có hai cách, chọn một:
+- trong ⚙ ▸ "Cách Claude làm việc" ▸ bỏ chọn ô **Nạp gọn lệnh** (mục F11);
+- hoặc tạo file trống `tool-search-off` (không có đuôi `.txt`) trong `%LocalAppData%\ClaudeCAD` (mục F9).
+
+**Bật / tắt công tắc xong thì bấm Chat mới**: thay đổi chỉ áp dụng từ cuộc chat mới. Cuộc chat đang dở vẫn chạy như cũ,
+và có thể báo lỗi nếu cứ nhắn tiếp trong đó.
+
+**Kỹ thuật.**
+- Xung đột gộp duy nhất ở `ChatController.ShowPlan`: bản thử luôn hiện ô gói `Full` và nút chế độ F1. Bản thật chỉ hiện
+  khi có máy chủ kích hoạt và máy đã kích hoạt.
+- Các phần đợt F hỏi trạng thái máy: tự mở Claude sẵn hỏi `Activation.IsAllowed` (bản thử: chưa hết hạn), nút chế độ và
+  thẻ macro hỏi `Activation.Plan` (bản thử: Full). Cả hai chạy đúng như máy Full đã kích hoạt; hết hạn thì không mở sẵn
+  Claude.
+- Test: lõi **1227/1227**, trợ lý **364/364**, build 3 target xanh, UI test WPF trên CI xanh. Không loại trừ test nào.
 
 ## Bản này là gì
 
