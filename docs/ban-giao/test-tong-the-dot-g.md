@@ -200,3 +200,21 @@ Checklist: G5 mục J, G5 mục I.1 sửa theo cách chép mới. `dot-g-cho-duy
 mới). Không đổi prompt.
 
 Test sau gộp lượt 3: lõi **1445 / 1445**, trợ lý **407 / 407**, build 3 target (xóa `obj` / `bin` giữa các lần) 0 lỗi 0 cảnh báo.
+
+Ghi thêm về `6586923` (ghi là tối ưu tốc độ): có đổi kết quả ở một ca. Khi các dòng đều đã có giá theo đúng tên mà danh sách giá có
+thêm một mẫu không dấu (vd "San*") không còn dòng nào cần, mẫu đó nay chỉ nằm ở `unused_prices`, không còn ở `ambiguous_prices`
+(mẫu chỉ được xét khi một dòng thật sự đi tới bước so mẫu). Vô hại: không dòng nào đổi giá; 11 ca còn lại agent kiểm tra ra giống hệt.
+
+CI lượt 3: run 45709641174 (#71) trên `e255376` bị **hủy** chủ ý khi luồng chính chốt nhánh (sau đó chỉ thêm tài liệu), để chạy một
+lượt trên commit cuối (ghi ở dưới).
+
+### Chốt nhánh sau ba lượt soát lại (26/11)
+
+Kết luận kiểm tra độc lập (`docs/ban-giao/kiem-tra-doc-lap-dot-fg.md`, đã gộp từ nhánh luồng chính @ `6f5118a`): 43 lỗi đã ghi, 42
+sửa đúng, không còn lỗi mức vừa trở lên.
+
+| Mã | Phần | Quyết định | Ghi chú |
+| --- | --- | --- | --- |
+| KFG-43 (nhẹ) | G2 | **biết, chấp nhận, không sửa ở đợt này** (luồng chính quyết) | so trùng ~5,8 s với 20 000 point / block cùng x, y khác z; có giới hạn quét 20 000 nên không treo. Hướng sửa sau: băm thêm z trong `Cell` của `Core/DrawingCheck.cs` |
+
+Commit code cuối: `e1455fb` (gộp lượt 3). Sau đó chỉ có tài liệu.

@@ -515,3 +515,33 @@ Không có con số mới cho khách (7 ngày, 50 MB như trước). Quyết đ�
 | --- | --- | --- |
 | Lúc nào chép file mạng khách kéo vào chat | lúc Claude gắn ảnh (không chép file khách không định vẽ lại) | chép nền ngay lúc gửi tin |
 | Danh sách file khách đã kéo vào chat | chỉ nhớ trong một phiên AutoCAD; mở lại AutoCAD thì kéo lại file mạng | lưu ra đĩa |
+
+### Kết luận sau ba lượt soát lại (26/11)
+
+Agent kiểm tra độc lập soát lại ba lượt: tổng 43 lỗi đã ghi, 42 đã sửa đúng, không còn lỗi mức vừa trở lên.
+
+**Lỗi nhẹ đã biết, chấp nhận (không sửa ở đợt này):** "soát bản vẽ" chậm khoảng 6 giây với bản vẽ có khoảng 20 000 điểm hoặc
+block nằm chồng thẳng đứng (cùng vị trí trên mặt bằng, khác cao độ). Rất hiếm. Lệnh có giới hạn 20 000 hình mỗi lần quét nên
+không treo máy. Sửa sau: tính thêm cao độ khi chia ô so trùng (`Cell` trong `Core/DrawingCheck.cs`). Luồng chính quyết không sửa
+thêm code sau lượt soát cuối, vì phần sửa mới sẽ không còn được kiểm độc lập.
+
+**Số mới của ba lượt sửa (chờ cậu duyệt):**
+
+| Số | Đề xuất | Khách thấy |
+| --- | --- | --- |
+| Ảnh dán / file mạng chép về giữ bao lâu | 7 ngày | ảnh cũ hơn tự xóa khỏi thư mục ảnh đính kèm (bản đã gắn vào bản vẽ thì còn cạnh bản vẽ) |
+| File mạng lớn nhất được chép khi gắn | 50 MB (như trước) | file lớn hơn: Claude báo, nhờ chép về máy |
+| Chờ thêm sau khi lệnh RENDER xong mà chưa có ảnh | số lớn hơn giữa 20 giây và thời gian ước lượng của mức | lâu nhất phải chờ trước khi nhận ảnh chụp thay ảnh render |
+| Đơn giá lẻ trong Excel | 2 số lẻ, chỉ khi có đơn giá lẻ | ô đơn giá hiện 12,50 |
+
+**Bốn điểm luồng chính giữ nguyên, chờ cậu xem (thử thật rồi chốt):**
+
+1. **Chờ sau khi lệnh RENDER kết thúc:** như bảng trên. Cần cậu render mức "đẹp" trên máy thật xem AutoCAD có còn chạy tiếp sau
+   khi dòng lệnh đã về `Command:` không (checklist G4 mục F.3). Đổi ở một chỗ (`RenderLogic.EndGrace`).
+2. **Nét hình chiếu bị chép vẫn mang dấu:** nếu cậu COPY một nét của hình mặt cắt / hình chiếu rồi đặt đè lên chính nó, lần soát
+   không báo trùng (bản chép mang cùng dấu của lệnh vẽ hình chiếu). Chỉ xảy ra với nét do hai lệnh đó vẽ.
+3. **AutoCAD chờ khi gắn file mạng lớn:** file kéo vào chat từ ổ mạng chỉ được chép lúc Claude gắn ảnh, nên file lớn / mạng chậm làm
+   AutoCAD đứng chờ đúng lúc đó (tối đa 50 MB).
+4. **Danh sách file cậu kéo vào chat chỉ nhớ trong một phiên AutoCAD:** mở lại AutoCAD thì cần kéo lại file nằm ở ổ mạng.
+
+Quyết định tự chọn của cả ba lượt: các bảng "Quyết định tự chọn thêm" ở trên (lượt 1, lượt 2, lượt 3).
