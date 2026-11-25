@@ -170,4 +170,61 @@ chữ U và D6 vật liệu Global).
 
 ## Đợt F4 (mở chat nhanh, xuất Excel)
 
-*Đang chạy từ 25/11 17h40 (thread đợt F1 viết, nhánh `full/nang-cap-f4`). Bảng số và quyết định sẽ ghi ở đây khi có báo cáo.*
+*Theo báo cáo của thread viết (25/11 18h20); thread rà đang soát lại. Chi tiết: `docs/ban-giao/nang-cap-f4.md` trên nhánh
+`full/nang-cap-f4`.*
+
+### Con số chờ duyệt
+
+Xuất Excel (khách thấy trong file):
+
+| Nhóm | Số đề xuất | Vì sao |
+| --- | --- | --- |
+| Tên file mặc định | `<tên bản vẽ>-thong-ke-block.xlsx`, `-dien-tich.xlsx`, `-khoi-luong.xlsx`, `-va-cham.xlsx`, lưu cạnh bản vẽ | Không dấu để mở được ở mọi máy / ổ mạng; giống kiểu tên file PDF, STL |
+| Tên tab trong file | "Thống kê block", "Diện tích", "Khối lượng 3D", "Va chạm khối 3D" | Theo tiêu đề bảng trong bản vẽ |
+| Độ rộng cột | Bằng chữ dài nhất + 2 ký tự, trong khoảng 6–60 ký tự | Đọc được ngay, không phải kéo cột |
+| Kiểu chữ | Calibri 11, hàng tiêu đề in đậm | Mặc định của Excel |
+| Số lẻ | Giữ đúng giá trị của bảng, Excel hiện gọn (bảng ghi 12.50 thì Excel hiện 12.5) | Để cộng được; khách tự chỉnh số lẻ trong Excel |
+| Giới hạn | Tối đa 100 000 dòng | Chặn trường hợp lỗi chạy mãi; bảng thật ít hơn nhiều |
+
+Mở chat nhanh (khách không thấy trực tiếp, nhưng ảnh hưởng tốc độ):
+
+| Nhóm | Số đề xuất | Vì sao |
+| --- | --- | --- |
+| Khởi động sẵn | Đợi 3 giây sau khi trợ lý sẵn sàng | Để AutoCAD mở xong trước, không bị chậm thêm |
+| Tự dựng lại | Sau 5 giây, tối đa 3 lần liền khi chưa có lượt chat nào | Máy cài hỏng thì không lặp mãi |
+| Lệnh nạp sẵn | 25 lệnh hay dùng (+ 5 lệnh thẻ xác nhận); lệnh khác Claude tự tìm khi cần | Giảm token mở chat khoảng 55–67 % (ước tính) |
+
+Token mở chat theo ước tính của thread viết (số thật phải đo trên máy thật):
+
+| Gói / chế độ | Trước F4 | Sau F4 |
+| --- | --- | --- |
+| Gói 2D | 40,5k | 13,4k |
+| Gói 3D | 41,8k | 18,8k |
+| Full · Cả hai | 60,5k | 20,6k |
+| Full · chế độ 2D | 40,6k | 13,5k |
+| Full · chế độ 3D | 41,8k | 18,8k |
+
+### Quyết định tự chọn
+
+| Tình huống | Đã chọn |
+| --- | --- |
+| Cách giảm mô tả lệnh | Dùng tính năng tìm lệnh có sẵn của Claude Code: lệnh ít dùng chỉ hiện tên, Claude nạp mô tả khi cần. Đổi lại: lần đầu dùng một lệnh ít gặp có thêm một bước tìm (một lần mỗi cuộc chat) |
+| Bộ lệnh nạp sẵn | Một bộ 25 lệnh chung cho mọi gói (lệnh ngoài gói tự bỏ) |
+| Khởi động sẵn khi nào | Khi mở AutoCAD, đổi chế độ, đổi gói, bấm "Chat mới", chuyển bản vẽ. Chỉ trên máy đã kích hoạt. Không gửi gì cho Claude nên không tốn token trước tin đầu |
+| Xuất Excel | Là tùy chọn thêm của 4 bảng có sẵn (thống kê block, diện tích, khối lượng 3D, va chạm), không thêm lệnh mới |
+| File Excel đã có | Không ghi đè ngay: Claude hỏi khách trong chat rồi mới ghi đè (như xuất STL), không hiện thẻ xác nhận |
+| Số viết dạng chữ trong bảng | Thành số khi là số thường ("12", "12.50"); giữ là chữ khi có số 0 đầu ("007"), dấu phẩy hay đơn vị |
+| Bản vẽ chưa lưu | File Excel vào thư mục Documents (như STL) |
+| Máy gói 3D | Không vẽ bảng trong bản vẽ được (như cũ) nhưng xuất Excel bảng 3D được |
+
+Luồng chính dặn người rà thêm: một công tắc tắt việc nạp gọn (nạp đủ như trước) không cần build lại, để có đường lui nếu
+thử thật thấy Claude tìm sót lệnh.
+
+### Chưa kiểm được (cần AutoCAD / Claude thật)
+
+- Claude thật có tìm đúng lệnh chưa nạp không, và số token thật của tin đầu.
+- Thời gian tới câu trả lời đầu; AutoCAD mở có chậm hơn không.
+- Trợ lý khởi động sẵn có thật sự không gọi Claude trước tin đầu (mới theo thiết kế của bộ thư viện).
+- File `.xlsx` mở bằng Excel thật (test mới đọc lại cấu trúc file).
+
+Danh sách thử tay: `docs/checklist-dot-f4.md` trên nhánh `full/nang-cap-f4`.

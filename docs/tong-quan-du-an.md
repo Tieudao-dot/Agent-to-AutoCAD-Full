@@ -155,3 +155,5 @@ trong 5 phút chỉ tốn ~10%.
   - 17h35: đợt F3 xong (2 lỗi sửa, ~$14, `full/nang-cap-f3-test` @ `53e18b5`, CI 45595009744 xanh).
   - 17h40: giao đợt F4 cho thread F1 (nhánh `full/nang-cap-f4`): gộp F2 + F3 trước, rồi mở chat nhanh + xuất Excel.
     Con số và quyết định chờ chủ dự án duyệt gom ở [`dot-f-cho-duyet.md`](dot-f-cho-duyet.md).
+  - 18h20: F4 viết xong (`full/nang-cap-f4` @ `d6c15d6`, CI 45601966332 xanh, $14,6); 18h22 giao thread Test & sửa F1 rà
+    trên `full/nang-cap-f4-test`.
