@@ -109,4 +109,6 @@ lúc khách nhờ dự toán Claude nạp mô tả lệnh (~0,8k) một lần.
 
 ## 8. CI
 
-(điền sau khi chạy)
+- Bước gộp G1 + G2: run 45643804481 (#60) trên `395c313`: **xanh**.
+- G3: run 45646666421 (#61) trên `ec03a77` (commit code cuối): **xanh**. Sau đó chỉ commit tài liệu (gộp `99aaab7` bàn giao
+  G1-test, ghi CI vào file này).
