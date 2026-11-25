@@ -175,7 +175,7 @@ nhánh chốt.
 | Thứ | Ở đâu |
 | --- | --- |
 | Mã chốt đợt F + G | `full/nang-cap-g-tong-the` @ `547d6af` (CI 45710924398) |
-| Bộ cài thử bản 5 | `full/ban-thu-noi-bo` @ `c901952` (bàn giao `859ae9a`), CI 45713707097 xanh, test lõi 1455, trợ lý 407. Nhánh này không bao giờ gộp |
+| Bộ cài thử bản 5 | `full/ban-thu-noi-bo` @ `c901952` (bàn giao `39ca53b`, chỉ thêm tài liệu), CI 45713707097 xanh, test lõi 1455, trợ lý 407. Nhánh này không bao giờ gộp |
 | Checklist thử tay | `docs/checklist-tong-the.md` trên nhánh chốt (khối "Đợt F", "Đợt G") |
 | Con số chờ duyệt | [`dot-f-cho-duyet.md`](dot-f-cho-duyet.md), [`dot-g-cho-duyet.md`](dot-g-cho-duyet.md) |
 | Kế hoạch và tiến độ | [`ke-hoach-nang-cap-lenh.md`](ke-hoach-nang-cap-lenh.md) mục "Đợt F", "Đợt G" |
