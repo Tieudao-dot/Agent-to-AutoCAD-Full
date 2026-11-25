@@ -33,6 +33,11 @@ namespace ClaudeCAD.Plugin.Core
         public const int PollMs = 2000;
         /// <summary>Seconds the output file must stay the same size before it counts as written (not seen).</summary>
         public const double StableSeconds = 1.5;
+        /// <summary>
+        /// Test & sửa G4: seconds after the RENDER command ended with no picture written before it counts as failed (the
+        /// way back starts then, not at the max wait). Not seen by the user.
+        /// </summary>
+        public const double EndGraceSeconds = 20;
     }
 
     /// <summary>
@@ -119,19 +124,56 @@ namespace ClaudeCAD.Plugin.Core
         /// <summary>The temporary file AutoCAD renders into (copied to the user's file once finished): no spaces in its own name.</summary>
         public static string TempFile(string tempDir, string token) => Path.Combine(tempDir ?? "", "claudecad-render-" + token + ".png");
 
-        public enum State { Running, Done, TooLong, Cancelled, Failed }
+        public enum State { Running, Done, TooLong, Cancelled, Failed, NoFile }
 
         /// <summary>
         /// Where a render is: the file written and its size unchanged for StableSeconds = done; the user pressed Esc / the
         /// command failed = cancelled / failed; past the max wait = too long (stop, save a capture instead); else running.
         /// </summary>
-        public static State StateOf(double elapsed, int maxWait, long fileSize, long sizeBefore, double sameSizeFor, bool cancelled, bool failed)
+        public static State StateOf(double elapsed, int maxWait, long fileSize, long sizeBefore, double sameSizeFor, bool cancelled, bool failed) =>
+            StateOf(elapsed, maxWait, fileSize, sizeBefore, sameSizeFor, cancelled, failed, -1);
+
+        /// <summary>
+        /// Test & sửa G4: endedFor = seconds since the RENDER command ended (negative: still running). Ended with no picture
+        /// (none, or an empty file) for EndGraceSeconds = NoFile: the way back starts at once instead of at the max wait.
+        /// </summary>
+        public static State StateOf(double elapsed, int maxWait, long fileSize, long sizeBefore, double sameSizeFor, bool cancelled, bool failed, double endedFor)
         {
             if (fileSize > 0 && fileSize == sizeBefore && sameSizeFor >= G4Numbers.StableSeconds) return State.Done;
             if (cancelled) return State.Cancelled;
             if (failed) return State.Failed;
+            if (endedFor >= G4Numbers.EndGraceSeconds && fileSize <= 0) return State.NoFile;
             if (elapsed > maxWait) return State.TooLong;
             return State.Running;
+        }
+
+        /// <summary>
+        /// Test & sửa G4: an "unknown command" AutoCAD reports during a render that is one of the answers typed to -RENDER
+        /// (not the command itself): -RENDER ended before all its answers were used, so it asked its questions in another
+        /// order than CommandScript expects. The render is given up at once (the way back), not after the max wait.
+        /// </summary>
+        public static bool IsOurAnswer(string unknown, Quality q, int w, int h, string file)
+        {
+            var u = (unknown ?? "").Trim().TrimStart('_').Trim();
+            if (u.Length == 0) return false;
+            var answers = new[] { q.Preset, "R", w.ToString(CultureInfo.InvariantCulture), h.ToString(CultureInfo.InvariantCulture), "Y", (file ?? "").Replace("\"", "") };
+            return answers.Any(a => a.Length > 0 && (string.Equals(u, a, StringComparison.OrdinalIgnoreCase)
+                || (a.Length > 3 && a.StartsWith(u, StringComparison.OrdinalIgnoreCase) && u.Length >= 3)));
+        }
+
+        /// <summary>
+        /// Test & sửa G4: a folder for the temporary render file whose path is typed safely at the command line: ASCII letters,
+        /// digits and \ / : . _ - ~ only (a space would end the answer and type the rest as commands; accents may not survive).
+        /// The first candidate that qualifies, or null (then no render is tried: the picture of F3 at once).
+        /// </summary>
+        public static string SafeTempDir(IEnumerable<string> candidates)
+        {
+            foreach (var c in candidates ?? Enumerable.Empty<string>())
+            {
+                if (string.IsNullOrWhiteSpace(c)) continue;
+                if (c.All(ch => ch < 128 && (char.IsLetterOrDigit(ch) || "\\/:._-~".IndexOf(ch) >= 0))) return c;
+            }
+            return null;
         }
 
         /// <summary>One Vietnamese line of progress for the palette ("Đang render 20 s / khoảng 60 s").</summary>
@@ -148,6 +190,7 @@ namespace ClaudeCAD.Plugin.Core
             switch (s)
             {
                 case State.TooLong: return "the render took longer than the maximum wait and was stopped";
+                case State.NoFile: return "the RENDER command ended without writing the picture" + (string.IsNullOrWhiteSpace(error) ? "" : " (" + error + ")");
                 case State.Failed: return "AutoCAD could not render (" + (string.IsNullOrWhiteSpace(error) ? "the RENDER command failed" : error) + ")";
                 default: return string.IsNullOrWhiteSpace(error) ? "the render did not run" : error;
             }
@@ -241,9 +284,12 @@ namespace ClaudeCAD.Plugin.Core
         }
 
         /// <summary>The words of the result: which way the material came and how to get the library one.</summary>
-        public static string Note(string source, bool libraryInstalled, string presetName)
+        public static string Note(string source, bool libraryInstalled, string presetName, string materialName = null)
         {
-            if (source == "library") return "Used the Autodesk library material already in the drawing.";
+            // Test & sửa G4: the match is by name only (a user's own material named "Brick wall" matches too): say so
+            if (source == "library")
+                return "Used the material " + (string.IsNullOrWhiteSpace(materialName) ? "" : "'" + materialName + "' ") +
+                       "already in the drawing whose name matches (usually an Autodesk library material brought in from the Materials Browser). It was used as it is, not changed.";
             if (libraryInstalled)
                 return $"Simple material '{presetName}' (colour only): the Autodesk library is installed but none of its {presetName} materials is in this drawing. " +
                        "To use one: open the Materials Browser (MATBROWSEROPEN), drag a material into the drawing, then call set_material again.";

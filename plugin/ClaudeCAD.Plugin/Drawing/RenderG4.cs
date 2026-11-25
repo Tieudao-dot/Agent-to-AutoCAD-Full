@@ -30,6 +30,8 @@ namespace ClaudeCAD.Plugin.Drawing
             public long LastSize = -1;
             public DateTime LastSizeChange;
             public volatile bool Cancelled, Failed;
+            /// <summary>Test & sửa G4: when the RENDER command ended (CommandEnded), or MinValue while it runs.</summary>
+            public DateTime EndedAt = DateTime.MinValue;
             public string Error;
             public Vector3d Direction;
             public string Background, Lighting, LightWords;
@@ -42,6 +44,26 @@ namespace ClaudeCAD.Plugin.Drawing
         }
 
         private static RenderJob _render;
+        /// <summary>
+        /// Test & sửa G4: the last answer of a finished render. A render_status the assistant gave up waiting for (AutoCAD busy
+        /// rendering) may have finished the job meanwhile: the next render_status still gets that answer (file, render / capture).
+        /// </summary>
+        private static Dictionary<string, object> _lastRenderResult;
+
+        private static Dictionary<string, object> Remember(Dictionary<string, object> r) { _lastRenderResult = r; return r; }
+
+        /// <summary>Test & sửa G4: the folder of the temporary render file: no space / accent in its path (typed at the command line).</summary>
+        private static string RenderTempDir()
+        {
+            var cands = new List<string> { Path.GetTempPath() };
+            try
+            {
+                var pd = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData), "ClaudeCAD", "render");
+                if (RenderLogic.SafeTempDir(new[] { pd }) != null) { Directory.CreateDirectory(pd); cands.Add(pd); }
+            }
+            catch (Exception) { }
+            return RenderLogic.SafeTempDir(cands);
+        }
 
         private static string RenderToken() => Guid.NewGuid().ToString("N").Substring(0, 12);
 
@@ -90,12 +112,20 @@ namespace ClaudeCAD.Plugin.Drawing
             if (!Directory.Exists(Path.GetDirectoryName(file))) throw ToolException.Invalid($"{tool}: folder '{Path.GetDirectoryName(file)}' does not exist.");
             RequireOverwriteCard(ctx, p, tool, file, File.Exists(file), $"{tool}: '{file}' already exists. Pass replace: true to overwrite it (ask the user first), or another output.", "replace", "overwrite");
 
+            _lastRenderResult = null;
+            var tempDir = RenderTempDir();
             var job = new RenderJob
             {
-                Doc = doc, File = file, Temp = RenderLogic.TempFile(Path.GetTempPath(), RenderToken()), ViewName = name,
+                Doc = doc, File = file, Temp = RenderLogic.TempFile(tempDir ?? Path.GetTempPath(), RenderToken()), ViewName = name,
                 Quality = q, Width = w, Height = h, Estimate = RenderLogic.Estimate(q, w, h), Started = DateTime.UtcNow,
                 Background = background, Lighting = lighting,
             };
+            if (tempDir == null)
+            {
+                // Test & sửa G4: no folder whose path can be typed safely (spaces / accents): no -RENDER, the picture at once
+                using (var cur = doc.Editor.GetCurrentView()) job.Direction = (named?.ViewDirection) ?? cur.ViewDirection;
+                return RenderFallback(job, "no temporary folder without spaces or accents for the render file", 0, tool);
+            }
             try
             {
                 using (doc.LockDocument())
@@ -121,6 +151,7 @@ namespace ClaudeCAD.Plugin.Drawing
             doc.CommandCancelled += OnRenderCancelled;
             doc.CommandFailed += OnRenderFailed;
             doc.UnknownCommand += OnRenderUnknown;
+            doc.CommandEnded += OnRenderEnded;
             try { if (File.Exists(job.Temp)) File.Delete(job.Temp); } catch (Exception) { }
             doc.SendStringToExecute(RenderLogic.CommandScript(q, w, h, job.Temp), true, false, false);
 
@@ -206,7 +237,7 @@ namespace ClaudeCAD.Plugin.Drawing
         private static EntityColor Rgb(int[] c) => new EntityColor((byte)c[0], (byte)c[1], (byte)c[2]);
 
         /// <summary>Puts back the background, lighting and view of a render, and forgets it.</summary>
-        private static void FinishRender(RenderJob job)
+        private static void FinishRender(RenderJob job, bool keepTemp = false)
         {
             if (job == null) return;
             if (ReferenceEquals(_render, job)) _render = null;
@@ -216,8 +247,11 @@ namespace ClaudeCAD.Plugin.Drawing
                 doc.CommandCancelled -= OnRenderCancelled;
                 doc.CommandFailed -= OnRenderFailed;
                 doc.UnknownCommand -= OnRenderUnknown;
+                doc.CommandEnded -= OnRenderEnded;
             }
             catch (Exception) { }
+            // Test & sửa G4: a cancelled / failed render leaves no temporary file behind
+            if (!keepTemp && !string.IsNullOrEmpty(job.Temp)) { try { if (File.Exists(job.Temp)) File.Delete(job.Temp); } catch (Exception) { } }
             if (doc == null || doc.IsDisposed) return;
             try
             {
@@ -238,7 +272,7 @@ namespace ClaudeCAD.Plugin.Drawing
                                 if (job.BackgroundChanged)
                                 {
                                     if (vtr.Background == job.MadeBackground) vtr.Background = job.OldBackground;
-                                    if (!job.MadeBackground.IsNull && !job.MadeBackground.IsErased)
+                                    if (job.MadeBackground.IsValid && !job.MadeBackground.IsErased)
                                     {
                                         var o = tr.GetObject(job.MadeBackground, OpenMode.ForWrite);
                                         var dict = (DBDictionary)tr.GetObject(o.OwnerId, OpenMode.ForWrite);
@@ -255,13 +289,20 @@ namespace ClaudeCAD.Plugin.Drawing
                         }
                         doc.Editor.UpdateTiledViewportsFromDatabase();
                     }
-                    if (job.OldView != null) { doc.Editor.SetCurrentView(job.OldView); job.OldView.Dispose(); job.OldView = null; }
                 }
             }
             catch (Exception ex)
             {
                 Logger.Error("render: putting back the scene failed", ex);
             }
+            // Test & sửa G4: the view comes back even when putting back the background / light failed
+            try
+            {
+                if (job.OldView != null)
+                    using (doc.LockDocument()) doc.Editor.SetCurrentView(job.OldView);
+            }
+            catch (Exception ex) { Logger.Error("render: putting back the view failed", ex); }
+            finally { if (job.OldView != null) { job.OldView.Dispose(); job.OldView = null; } }
         }
 
         private static bool IsRender(string globalName) => (globalName ?? "").TrimStart('_', '.', '-').Equals("RENDER", StringComparison.OrdinalIgnoreCase);
@@ -275,7 +316,21 @@ namespace ClaudeCAD.Plugin.Drawing
 
         private static void OnRenderUnknown(object sender, UnknownCommandEventArgs e)
         {
-            if (_render != null && IsRender(e.GlobalCommandName)) { _render.Failed = true; _render.Error = "this AutoCAD has no RENDER command"; }
+            var job = _render;
+            if (job == null) return;
+            if (IsRender(e.GlobalCommandName)) { job.Failed = true; job.Error = "this AutoCAD has no RENDER command"; }
+            // Test & sửa G4: one of our answers typed at the command prompt: -RENDER asked its questions in another order
+            else if (RenderLogic.IsOurAnswer(e.GlobalCommandName, job.Quality, job.Width, job.Height, job.Temp))
+            {
+                job.Failed = true;
+                job.Error = "-RENDER asked its questions in another order than the plugin expects (an answer reached the command line)";
+            }
+        }
+
+        private static void OnRenderEnded(object sender, CommandEventArgs e)
+        {
+            var job = _render;
+            if (job != null && IsRender(e.GlobalCommandName) && job.EndedAt == DateTime.MinValue) job.EndedAt = DateTime.UtcNow;
         }
 
         /// <summary>The Stop button of the chat (or render_stop): stops the render, puts the scene back, writes nothing.</summary>
@@ -296,10 +351,16 @@ namespace ClaudeCAD.Plugin.Drawing
         internal static object RenderStatus(ToolContext ctx, Params p, string tool, bool stop)
         {
             var job = _render;
-            if (job == null) return new Dictionary<string, object> { ["running"] = false, ["note"] = "No render is running." };
+            if (job == null)
+            {
+                // Test & sửa G4: the answer of a render that ended while nobody was asking (a status that timed out)
+                if (!stop && _lastRenderResult != null) { var last = _lastRenderResult; _lastRenderResult = null; return last; }
+                return new Dictionary<string, object> { ["running"] = false, ["note"] = "No render is running." };
+            }
             if (stop)
             {
                 StopRender();
+                _lastRenderResult = null;
                 return new Dictionary<string, object> { ["running"] = false, ["cancelled"] = true, ["note"] = "The render was stopped; no file was written. Background, lighting and view are as before." };
             }
             double elapsed = (DateTime.UtcNow - job.Started).TotalSeconds;
@@ -307,7 +368,8 @@ namespace ClaudeCAD.Plugin.Drawing
             try { if (File.Exists(job.Temp)) size = new FileInfo(job.Temp).Length; } catch (Exception) { }
             if (size != job.LastSize) { job.LastSize = size; job.LastSizeChange = DateTime.UtcNow; }
             double same = (DateTime.UtcNow - job.LastSizeChange).TotalSeconds;
-            var state = RenderLogic.StateOf(elapsed, job.Quality.MaxWaitSeconds, size, job.LastSize, size > 0 ? same : 0, job.Cancelled, job.Failed);
+            double endedFor = job.EndedAt == DateTime.MinValue ? -1 : (DateTime.UtcNow - job.EndedAt).TotalSeconds;
+            var state = RenderLogic.StateOf(elapsed, job.Quality.MaxWaitSeconds, size, job.LastSize, size > 0 ? same : 0, job.Cancelled, job.Failed, endedFor);
             switch (state)
             {
                 case RenderLogic.State.Running:
@@ -321,11 +383,11 @@ namespace ClaudeCAD.Plugin.Drawing
                     };
                 case RenderLogic.State.Done:
                 {
-                    FinishRender(job);
+                    FinishRender(job, keepTemp: true);
                     try { File.Copy(job.Temp, job.File, true); }
                     catch (Exception ex) { throw ToolException.Invalid($"{tool}: the render is finished but '{job.File}' could not be written ({ex.Message}). The picture is at '{job.Temp}'."); }
                     try { File.Delete(job.Temp); } catch (Exception) { }
-                    return new Dictionary<string, object>
+                    return Remember(new Dictionary<string, object>
                     {
                         ["running"] = false,
                         ["method"] = "render",
@@ -337,17 +399,17 @@ namespace ClaudeCAD.Plugin.Drawing
                         ["lighting"] = job.LightWords,
                         ["background"] = job.Background,
                         ["note"] = "A real AutoCAD render. Background, lighting and view are back as before. Tell the user where the file is.",
-                    };
+                    });
                 }
                 case RenderLogic.State.Cancelled:
                     FinishRender(job);
-                    return new Dictionary<string, object> { ["running"] = false, ["cancelled"] = true, ["note"] = "The user stopped the render (Esc); no file was written. Background, lighting and view are as before." };
+                    return Remember(new Dictionary<string, object> { ["running"] = false, ["cancelled"] = true, ["note"] = "The user stopped the render (Esc); no file was written. Background, lighting and view are as before." });
                 default: // too long / failed: stop and save the picture of F3 instead
                 {
                     if (IsRender(job.Doc?.CommandInProgress)) { try { job.Doc.SendStringToExecute("\x03\x03", true, false, false); } catch (Exception) { } }
                     FinishRender(job);
                     string why = RenderLogic.FallbackReason(state, job.Error);
-                    return RenderFallback(job, why, (int)elapsed, tool);
+                    return Remember((Dictionary<string, object>)RenderFallback(job, why, (int)elapsed, tool));
                 }
             }
         }

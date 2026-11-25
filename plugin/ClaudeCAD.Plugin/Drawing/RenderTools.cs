@@ -67,7 +67,7 @@ namespace ClaudeCAD.Plugin.Drawing
                 foreach (DBDictionaryEntry e0 in dict) names0.Add(e0.Key);
                 var lib = p.Bool("library", true) ? MaterialLibraryLogic.Match(preset.Key, names0) : null;
                 source = lib != null ? "library" : "simple";
-                libraryNote = MaterialLibraryLogic.Note(source, LibraryInstalled(), preset.Name);
+                libraryNote = MaterialLibraryLogic.Note(source, LibraryInstalled(), preset.Name, lib);
                 if (lib != null) { requested = lib; preset = null; }
             }
             string name = preset?.Name ?? requested.Trim();

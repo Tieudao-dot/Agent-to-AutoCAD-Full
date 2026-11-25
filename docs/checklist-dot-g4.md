@@ -43,6 +43,30 @@ Trên máy cài AutoCAD **không** kèm thư viện vật liệu Autodesk (hoặ
 4. Ghi lại nếu AutoCAD hỏi thêm câu nào ở dòng lệnh khi render (lệnh `-RENDER` có thể hỏi theo thứ tự khác ở bản AutoCAD
    này): chụp dòng lệnh gửi tớ.
 
+## F. Thứ tự câu hỏi của `-RENDER` (Test & sửa G4, ~5 phút, quan trọng nhất)
+
+Plugin trả lời `-RENDER` theo thứ tự **viết theo trí nhớ, chưa ai kiểm trên AutoCAD thật**: mức đẹp (`_Low` / `_Medium` /
+`_High`) → nơi hiện (`_R` = cửa sổ Render) → rộng → cao → lưu file (`_Y`) → tên file. Cần biết bản AutoCAD của cậu hỏi
+đúng thứ tự đó không.
+
+1. Tự gõ `-RENDER` ở dòng lệnh (không qua Claude). Chụp từng câu AutoCAD hỏi và các lựa chọn trong ngoặc vuông, tới khi
+   lệnh xong (Esc nếu nó render). Gửi tớ ảnh / chữ của dòng lệnh. **Đây là bước để sửa `RenderLogic.CommandScript` nếu khác.**
+2. Gõ "render góc hiện tại chất lượng nhanh". Mở dòng lệnh (F2) xem lại:
+   - đúng thứ tự: có ảnh render, Claude nói "ảnh render";
+   - sai thứ tự mà một câu trả lời lọt ra dòng lệnh ("Unknown command 1920", "Unknown command Y"…): Claude phải báo **ảnh
+     chụp** với lý do "-RENDER asked its questions in another order…", **ngay**, không chờ hết thời gian tối đa;
+   - lệnh RENDER xong mà không ra file: sau khoảng 20 giây Claude báo ảnh chụp, lý do "the RENDER command ended without
+     writing the picture";
+   - lệnh còn đứng chờ nhập (dòng lệnh vẫn đang hỏi): đây là trường hợp duy nhất phải chờ tới thời gian tối đa (nhanh 2 phút,
+     vừa 5 phút, đẹp 15 phút); bấm **Dừng** hoặc Esc để thôi sớm. Sau đó dòng lệnh phải trống (không còn lệnh dở).
+   Ghi lại trường hợp nào xảy ra.
+3. Sau mỗi lần ở bước 2: nền khung nhìn, góc nhìn như trước; không còn file `claudecad-render-*.png` trong thư mục Temp
+   (`%TEMP%`) hay `C:\ProgramData\ClaudeCAD\render`.
+4. Máy có tên người dùng có dấu cách / dấu tiếng Việt (vd `C:\Users\Nguyen Van A`): render vẫn chạy (file tạm đặt ở
+   `C:\ProgramData\ClaudeCAD\render`), không có chữ lạ bị gõ vào dòng lệnh. Không có thư mục nào hợp lệ: Claude lưu ảnh chụp
+   ngay và nói rõ.
+5. Render góc nhìn có tên chứa dấu tiếng Việt / dấu cách ("Phối cảnh 1"), lưu vào thư mục có dấu cách: file ra đúng tên.
+
 ## E. Tự kiểm
 
 Bấm "Tự kiểm" trong khung chat: bước "Nâng cấp đợt G4" phải đạt (nền trắng + đèn đặt tạm rồi trả lại, đường lui ảnh chụp,

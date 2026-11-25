@@ -82,6 +82,8 @@ Tất cả ở `Core/Render.cs` (`G4Numbers`, `RenderLogic.Qualities`, `Material
 | Tên gọi thêm | "sơn", "son", "paint" → vữa trắng; "kim loại", "kim loai" → thép | — | yêu cầu đợt G4 |
 
 Số kỹ thuật (khách không thấy): hỏi trạng thái mỗi 2 000 ms; file coi là ghi xong khi cỡ không đổi 1,5 s; phòng hờ thêm 60 s.
+*(Test & sửa G4 thêm: lệnh RENDER đã xong mà chưa có file sau 20 s → đường lui ngay, `G4Numbers.EndGraceSeconds`; thư mục
+file tạm chỉ chữ / số ASCII không dấu cách, xem `docs/ban-giao/nang-cap-g4-test.md`.)*
 
 ## 7. Quyết định tự chọn
 

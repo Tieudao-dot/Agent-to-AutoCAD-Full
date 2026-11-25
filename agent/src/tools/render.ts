@@ -58,6 +58,13 @@ export async function runRender(b: ToolBridge, params: Record<string, unknown>, 
     const st = await b.call('named_view', { action: 'render_status' });
     if (!st.ok) {
       if (/cancel/i.test(st.error.message)) await stop('stopped by the user (Dừng)');
+      // Test & sửa G4: AutoCAD busy rendering in the foreground does not answer in time; that is not the end of the
+      // render: keep asking (its answer waits in the plugin), within the safety limit
+      if (st.error.code === 'TIMEOUT' && (now() - t0) / 1000 <= maxWait + 60) {
+        b.status('named_view', 'running', { summary: 'AutoCAD đang bận render, chờ thêm…' });
+        continue;
+      }
+      if (st.error.code === 'TIMEOUT') return stop('AutoCAD did not answer before the maximum wait');
       return st;
     }
     const r = st.result as Record<string, unknown>;
