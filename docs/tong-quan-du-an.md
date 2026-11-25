@@ -13,7 +13,9 @@ quy tắc làm việc và danh bạ thread: [`../CLAUDE.md`](../CLAUDE.md).
 - **Đợt F đang chạy (từ 25/11):** chủ dự án đã thử thật bộ cài thử bản 3, chạy ổn, và chốt nâng cấp tiếp 4 đợt nối tiếp
   F1 → F4 (UCS + nút chế độ; 2D dùng hằng ngày; 3D đẹp và đúng hơn; mở chat nhanh + xuất Excel), rồi test tổng thể, kiểm
   tra độc lập và bộ cài thử bản 4. Chi tiết và tiến độ: [`ke-hoach-nang-cap-lenh.md`](ke-hoach-nang-cap-lenh.md) mục
-  "Đợt F". Nhánh gốc của đợt F: `full/nang-cap-f-goc` @ `2dbeee2` (nhánh tích hợp + file quyền).
+  "Đợt F". Nhánh gốc của đợt F: `full/nang-cap-f-goc` @ `2dbeee2` (nhánh tích hợp + file quyền). **Tới 25/11 17h40:**
+  F1, F2, F3 xong (viết + rà, CI xanh); F4 đang chạy trên `full/nang-cap-f4`. Chưa phần nào của đợt F chạy trên AutoCAD
+  thật.
 
 - **Nhánh tích hợp mới nhất:** `full/nang-cap-tong-the` @ `012ed29` (có sửa lỗi bộ cài TT-01 và bản sửa khung chat 15/11; CI 43669231795 xanh trên mã khung chat). Chứa toàn bộ: gói dịch vụ,
   3D đợt 1–3, test tổng thể + 4 lượt kiểm tra độc lập lần 1 (43 lỗi), bộ cài thay bản gốc + cảnh báo, và **chuỗi nâng
@@ -147,3 +149,9 @@ trong 5 phút chỉ tốn ~10%.
   - 15h51: đợt F1 xong (viết + Test & sửa, 4 lỗi sửa, ~$21, `full/nang-cap-f1-test` @ `b2e6431`, CI 45578496260 xanh).
     Chủ dự án chốt thêm: con số phải xác nhận; bản thang và bản mái dốc 120 mm; F2 + F3 chạy cùng lúc; chạy liền không
     hỏi lại. 15h53 mở F2 (`session_01D56HmFcYrzsme7GoBm8tNC`) và F3 (`session_01D56HmFBfQ8mQ37WLtVFweF`).
+  - Ba thread mở mới sau 15h53 (F3 lần 1, F3 lần 2, Test & sửa F2) bị chế độ Auto từ chối `git commit`, cho dừng. Việc
+    chuyển cho các thread đã lưu được: thread Test & sửa F1 viết F3, thread F1 rà F2, thread F2 rà F3.
+  - 17h08: đợt F2 xong (7 lỗi sửa, ~$23, `full/nang-cap-f2-test` @ `c9fdc08`, CI 45590233177 xanh).
+  - 17h35: đợt F3 xong (2 lỗi sửa, ~$14, `full/nang-cap-f3-test` @ `53e18b5`, CI 45595009744 xanh).
+  - 17h40: giao đợt F4 cho thread F1 (nhánh `full/nang-cap-f4`): gộp F2 + F3 trước, rồi mở chat nhanh + xuất Excel.
+    Con số và quyết định chờ chủ dự án duyệt gom ở [`dot-f-cho-duyet.md`](dot-f-cho-duyet.md).

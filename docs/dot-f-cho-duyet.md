@@ -105,8 +105,8 @@ feet bị gắn tên kiểu kích thước của cm; "liệt kê trạng thái l
 
 ## Đợt F3 (3D đẹp và đúng hơn)
 
-*Theo báo cáo của thread viết (25/11 17h12); thread rà đang soát lại. Chi tiết: `docs/ban-giao/nang-cap-f3.md` trên nhánh
-`full/nang-cap-f3`.*
+*Theo báo cáo của thread viết (25/11 17h12) và thread rà (17h35; người rà không đổi số nào). Chi tiết:
+`docs/ban-giao/nang-cap-f3.md` và `docs/ban-giao/nang-cap-f3-test.md` trên nhánh `full/nang-cap-f3-test`.*
 
 ### Con số chờ duyệt
 
@@ -117,6 +117,9 @@ Số mới của đợt F3:
 | Giới hạn mái dốc nhà góc vuông | Tối đa 40 góc tường, 12 mảnh mái; quá thì báo và gợi ý mái bằng | Giới hạn kỹ thuật do thread chọn |
 | Vật liệu mẫu | 8 loại: bê tông, gạch, vữa trắng, kính, gỗ, ngói, thép, đá; mỗi loại một màu; kính trong 35 %; tên vật liệu tiếng Việt | Theo thông lệ |
 | Ảnh xuất ra | File PNG, cạnh dài 1568 px; mặc định nhìn chéo từ góc Tây Nam; kiểu hiển thị Realistic; tên file `<bản vẽ>-<góc nhìn>.png`, lưu cạnh bản vẽ | Do thread chọn |
+| Màu layer mái | Layer mái `A-ROOF-3D` tự tạo có màu cam (mã màu 30 của AutoCAD) | Do thread chọn; người rà bổ sung vào bảng |
+
+Người rà xác nhận: các số F3 đều theo thông lệ, không viện dẫn tiêu chuẩn nào.
 
 Số có từ đợt E, chưa được duyệt, **không đổi** trong F3:
 
@@ -140,12 +143,31 @@ Lưu ý: tay vịn cầu thang cao 900, trong khi lan can (đợt A, đã duyệ
 | Đối tượng trên layer khóa khi gán vật liệu | Bỏ qua và báo lại, không tự mở khóa |
 | Gán vật liệu cho đối tượng có sẵn | Hỏi bằng thẻ khi sửa quá 20 đối tượng (luật chung đang có) |
 | Lưu góc nhìn trùng tên | Phải nói rõ là ghi đè |
+| Mái 2 dốc nhà chữ U (người rà) | Phần mái hẹp hơn dừng ở nóc của mái rộng hơn mà nó chạy vào; hai mái rộng bằng nhau thì mái chính thắng |
+| Vật liệu "Global" (người rà) | Không cho đổi màu hay độ trong (đây là vật liệu mặc định của mọi layer, đổi là cả bản vẽ đổi màu); vẫn gán cho khối / layer được |
+
+### Điểm để cậu xem lại
+
+Người rà nêu, giữ nguyên như F3 đã chọn:
+
+- **Gán vật liệu cho cả layer không hiện thẻ xác nhận**, dù layer có rất nhiều khối. Luật "hỏi bằng thẻ khi sửa quá 20 đối
+  tượng" chỉ tính khối được chọn từng cái. Claude vẫn hỏi trước trong chat và hoàn tác được.
+- **Xóa hoặc ghi đè góc nhìn đã lưu không hiện thẻ xác nhận.** Claude hỏi trước trong chat, hoàn tác được.
+
+Muốn chặt hơn thì thêm thẻ xác nhận cho hai trường hợp này (việc nhỏ).
+
+### Lỗi người rà đã sửa (2)
+
+- Mái 2 dốc nhà chữ U: tam giác đầu hồi của phần nối nhô ra trên sườn mái cánh bên kia (đỉnh 4004 mm thay vì 3139 mm ở ví
+  dụ thử), quay hướng nào cũng bị.
+- Lệnh gán vật liệu đổi được màu của vật liệu "Global", làm đổi màu cả bản vẽ.
 
 ### Chưa kiểm được (cần AutoCAD thật)
 
 Toàn bộ phần F3 mới qua test tự động. Bước tự kiểm `CLAUDECHATSELFTEST` mới (mái chữ L, vật liệu, góc nhìn, ảnh) chưa chạy.
-Danh sách thử tay: `docs/checklist-dot-f3.md` (khoảng 30 phút).
+Danh sách thử tay: `docs/checklist-dot-f3.md` trên nhánh `full/nang-cap-f3-test` (khoảng 30 phút; người rà thêm mục B8 mái
+chữ U và D6 vật liệu Global).
 
 ## Đợt F4 (mở chat nhanh, xuất Excel)
 
-*Chưa chạy.*
+*Đang chạy từ 25/11 17h40 (thread đợt F1 viết, nhánh `full/nang-cap-f4`). Bảng số và quyết định sẽ ghi ở đây khi có báo cáo.*
