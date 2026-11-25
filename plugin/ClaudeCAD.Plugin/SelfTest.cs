@@ -1132,6 +1132,41 @@ namespace ClaudeCAD.Plugin
                 return errs.Count == 0 ? new SelfTestRules.Verdict(true, "1 dòng có giá, 1 dòng thiếu; Excel có công thức") : new SelfTestRules.Verdict(false, string.Join("; ", errs));
             });
 
+            // Nâng cấp đợt G4: the scene of a render set and put back, the way back (a capture), a library material taken
+            Check("Nâng cấp đợt G4: render (nền trắng + đèn mặc định đặt tạm rồi trả lại), đường lui ảnh chụp, vật liệu thư viện có sẵn", () =>
+            {
+                var errs = DrawingService.SelfTestRenderScene(doc, Path.Combine(dir, "g4-render.png"), out string info);
+                const string libName = "Masonry - Brick - SelfTest";
+                using (doc.LockDocument())
+                using (var tr = doc.TransactionManager.StartTransaction())
+                {
+                    var md = (DBDictionary)tr.GetObject(doc.Database.MaterialDictionaryId, OpenMode.ForWrite);
+                    if (!md.Contains(libName))
+                    {
+                        var mat = new Autodesk.AutoCAD.DatabaseServices.Material { Name = libName };
+                        md.SetAt(libName, mat);
+                        tr.AddNewlyCreatedDBObject(mat, true);
+                    }
+                    var ms = (BlockTableRecord)tr.GetObject(SymbolUtilityServices.GetBlockModelSpaceId(doc.Database), OpenMode.ForWrite);
+                    var box = new Solid3d();
+                    box.CreateBox(1000, 1000, 1000);
+                    box.TransformBy(Matrix3d.Displacement(new Vector3d(160000, 0, 500)));
+                    box.SetDatabaseDefaults(doc.Database);
+                    ms.AppendEntity(box);
+                    tr.AddNewlyCreatedDBObject(box, true);
+                    var r = (Dictionary<string, object>)DrawingService.SetMaterial(new ToolContext(doc, tr, true, null), new Params("set_material", new Dictionary<string, object>
+                    {
+                        ["material"] = "gạch", ["handles"] = new List<object> { box.Handle.ToString() },
+                    }));
+                    if ((string)r["source"] != "library" || box.Material != libName) errs.Add($"vật liệu thư viện: dùng '{box.Material}' ({r["source"]})");
+                    box.Erase();
+                    tr.Commit();
+                }
+                return errs.Count == 0
+                    ? new SelfTestRules.Verdict(true, info + "; gạch → " + libName)
+                    : new SelfTestRules.Verdict(false, string.Join("; ", errs));
+            });
+
             string versionFile = Path.Combine(dir, "version-copy.dwg");
             Do("Bản sao phiên bản (Wblock + SaveAs)", () =>
             {

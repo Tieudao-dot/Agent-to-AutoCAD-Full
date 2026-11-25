@@ -988,6 +988,7 @@ namespace ClaudeCAD.Plugin
             ReturnQueuedToInput(); // stopping means rethinking: do not fire the queued message on its own
             Ui.SetToolStatus("Đang dừng...");
             _ipc.Send(new Dictionary<string, object> { ["type"] = "cancel" });
+            MainThread.Post(() => Drawing.DrawingService.StopRender()); // nâng cấp đợt G4: Dừng also stops a running render
             Task.Delay(CancelGrace).ContinueWith(_ =>
             {
                 if (_busy && seq == _turnSeq) EndTurn("Đã dừng lượt (trợ lý không phản hồi lệnh dừng).", false);
@@ -2634,7 +2635,8 @@ namespace ClaudeCAD.Plugin
                 var a = _assistant;
                 if (a != null)
                 {
-                    int idx = state == "running" ? -1 : a.Tools.FindIndex(x => x.State == "running" && x.Tool == tool);
+                    // nâng cấp đợt G4: a running status with a summary (render progress) updates the running row
+                    int idx = state == "running" && entry.Summary == null ? -1 : a.Tools.FindIndex(x => x.State == "running" && x.Tool == tool);
                     if (idx >= 0) a.Tools[idx] = entry; else a.Tools.Add(entry);
                 }
             }
@@ -2642,7 +2644,7 @@ namespace ClaudeCAD.Plugin
             string label = ToolLabels.Describe(tool);
             switch (state)
             {
-                case "running": Ui.SetToolStatus(label + "..."); break;
+                case "running": Ui.SetToolStatus(label + (string.IsNullOrEmpty(entry.Summary) ? "..." : ": " + entry.Summary)); break;
                 case "done": Ui.SetToolStatus("✓ " + label); break;
                 case "error": Ui.SetToolStatus("⚠ " + label + " lỗi"); break;
             }
