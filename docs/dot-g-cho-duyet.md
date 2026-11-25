@@ -124,3 +124,55 @@ gói 3D mã thẻ "thay bộ cũ" giống nhau ở mọi bản vẽ; ô khung t�
 ### Token lúc mở chat sau G1 + G2 (ước tính)
 
 Bật "Nạp gọn lệnh": mỗi gói thêm khoảng 0,1k (Full 20,7k → 20,8k). Tắt: thêm khoảng 1,1k cho mỗi đợt.
+
+## G3: bảng dự toán
+
+Khách nói "lập dự toán" hoặc "tính tiền theo khối lượng". Claude lấy khối lượng từ các bảng đã có (thể tích khối 3D theo
+layer, số block, diện tích phòng / layer), nhân với **đơn giá do khách đưa**, ra thành tiền từng dòng, dòng Cộng và Tổng
+cộng. Xuất được file Excel có công thức (khách sửa giá trong Excel thì tiền tự nhảy) và vẽ được bảng trong bản vẽ.
+
+Claude không tự đặt giá và không lấy giá tham khảo. Dòng nào chưa có giá thì để trống, không tính vào tổng, và Claude kể tên
+các dòng đó để hỏi khách.
+
+Máy gói 3D dự toán từ khối lượng khối 3D (số liệu + Excel, không vẽ bảng); máy gói 2D từ số block và diện tích; máy Full đủ
+cả.
+
+Bàn giao đầy đủ: `docs/ban-giao/nang-cap-g3.md` trên nhánh `full/nang-cap-g3`.
+
+### Con số
+
+Mọi số ở `G3Numbers` (`Core/Estimate.cs`).
+
+| Số / chữ | Khách thấy gì | Vì sao đề xuất |
+| --- | --- | --- |
+| Đơn vị tiền mặc định **"đồng"** (khách đổi được, vd USD) | tiêu đề cột "Đơn giá (đồng)", "Thành tiền (đồng)" | khách Việt Nam |
+| Thành tiền làm tròn **đến đồng** (nửa đồng thì làm tròn lên) | số tiền | tiền đồng không có số lẻ |
+| Trong Excel số tiền có dấu tách hàng nghìn (`#,##0`) | dấu chấm hay phẩy hiện theo cài đặt của máy khách | dễ đọc số lớn |
+| Trong bảng vẽ: viết **1.234.567**, số lẻ dùng dấu phẩy **12,5** | số trong bảng | cách viết số Việt Nam, như các bảng đợt C / D |
+| Khối lượng giữ **3** số lẻ | cột Khối lượng | như bảng khối lượng đợt D |
+| Đơn vị: **m³** (khối), **m²** (diện tích), **cái** (block) | cột Đơn vị | đơn vị của bảng nguồn |
+| Cột: STT, Hạng mục, Đơn vị, Khối lượng, Đơn giá, Thành tiền; dòng "Cộng", "Tổng cộng"; tiêu đề "BẢNG DỰ TOÁN"; tab Excel "Dự toán" | bảng và file | mẫu bảng dự toán quen dùng |
+| Tên file **`<bản vẽ>-du-toan.xlsx`** | tên file | không dấu, như các file Excel đợt F4 |
+| Tối đa **5** dòng phần trăm (thuế, chi phí khác) và **500** đơn giá một lần | nhiều hơn thì lệnh từ chối | chặn trường hợp lỗi |
+| Thể tích mặc định là thể tích **thực** (phần hai khối chồng nhau chỉ tính một lần) | số m³ | đúng khối lượng thi công; khách muốn tính gộp thì nói |
+
+### Quyết định tự chọn
+
+| Tình huống | Đã chọn | Ghi chú |
+| --- | --- | --- |
+| Lưu bảng đơn giá để dùng lại | không lưu trong plugin; khách đưa giá mỗi lần, file Excel là nơi khách giữ và sửa giá | lưu hoặc đọc giá từ file Excel là việc thêm, làm sau được |
+| Thuế / chi phí khác | không tự thêm; chỉ khi khách nói phần trăm | |
+| Làm tròn | làm tròn từng dòng rồi mới cộng (Excel dùng cùng công thức) | muốn chỉ làm tròn tổng thì đổi công thức |
+| Tên hạng mục và tên trong bảng giá lệch nhau | coi là một khi chỉ khác dấu, chữ hoa / thường, gạch nối; khách dùng được mẫu có `*`; không đoán "gần giống" | |
+| Hai giá khác nhau cùng khớp một dòng | để trống dòng đó và hỏi lại, không chọn hộ | |
+| Giá khách đưa là 0 | coi là một giá (thành tiền 0), không coi là thiếu | |
+| Giá ghi đơn vị khác đơn vị của dòng (vd giá theo m² cho dòng m³) | vẫn tính, kèm ghi chú nhắc kiểm | muốn chặn hẳn thì đổi thành từ chối dòng đó |
+| Giá khách đưa mà không khớp dòng nào | kể lại trong kết quả | |
+| Chế độ "Chỉ xem" | tính và xuất Excel được; vẽ bảng vào bản vẽ bị chặn | file Excel nằm ngoài bản vẽ, như các bảng đợt F4 |
+| Macro | không ghi lại file Excel khi phát lại | như đợt F4 |
+
+### Chưa kiểm được
+
+- Chưa chạy trên AutoCAD thật (bảng vẽ, thẻ ghi đè, macro).
+- Chưa mở file bằng Excel thật, LibreOffice hay Google Sheets (công thức tính lại, dấu tách hàng nghìn theo máy).
+- Chưa thử với Claude thật xem có giữ đúng luật "không tự đặt giá" khi khách ép không.
