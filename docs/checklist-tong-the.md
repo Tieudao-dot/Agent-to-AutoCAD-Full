@@ -760,8 +760,8 @@ này ghi một trong hai câu: "AutoCAD có vẽ ảnh nền khi chụp", hoặc
 *Nhánh `full/nang-cap-g-sua-kfg-b` lượt 2. Chi tiết: `docs/ban-giao/nang-cap-g-sua-kfg-b.md` mục 8.*
 
 1. **KFG-29:** kéo một ảnh từ thư mục mạng (khác thư mục của bản vẽ, vd `\\nas\anh\scan.jpg`) vào khung chat, gõ "vẽ lại bản này":
-   phải gắn được. File được chép một lần vào `%LOCALAPPDATA%\ClaudeCAD\anh-dinh-kem` (tên `tep-…`) rồi chép cạnh bản vẽ; Claude
-   không tự mở file trên máy mạng. Làm theo lời khuyên khi bị từ chối (kéo vào khung chat) thì qua được.
+   phải gắn được. *(sửa lượt 3)* Lúc gửi tin không chép gì; lúc Claude gắn ảnh, file mới được chép vào
+   `%LOCALAPPDATA%\ClaudeCAD\anh-dinh-kem` (tên `tep-…`) rồi chép cạnh bản vẽ. Làm theo lời khuyên khi bị từ chối (kéo vào khung chat) thì qua được.
 2. **KFG-28:** nhờ Claude "vẽ lại `\\.\UNC\máy-khác\x\a.png`", "`\\?\GLOBALROOT\Device\Mup\máy-khác\x\a.png`", hoặc
    "`\\?\Z:\a.png`" (Z: là ổ mạng, bản vẽ ở C:): đều bị từ chối. "`\\?\C:\…\a.png`" (ổ của máy): được.
 3. Đường dẫn không đầy đủ ("vẽ lại `scan.png`"): Claude nhờ đường dẫn đầy đủ hoặc kéo file vào chat (không đọc thư mục hiện tại).
@@ -771,6 +771,19 @@ này ghi một trong hai câu: "AutoCAD có vẽ ảnh nền khi chụp", hoặc
 7. **KFG-31:** "render lại góc Phối cảnh 1" khi PNG đã có → thẻ ghi đè → Hủy, làm vài lần: AutoCAD không báo lỗi lạ.
 8. **KFG-35:** gắn một PDF rất lớn (vài chục MB): AutoCAD không đứng quá ~2 giây ở bước đếm trang; nếu không đếm được, Claude nói
    đã gắn trang 1.
+
+### J. Sau sửa lỗi lượt 3 (KFG-39, 40, ~8 phút)
+
+*Nhánh `full/nang-cap-g-sua-kfg-b` lượt 3. Chi tiết: `docs/ban-giao/nang-cap-g-sua-kfg-b.md` mục 9.*
+
+1. **KFG-39:** kéo **hai** ảnh mạng cũ (sửa hơn 7 ngày trước) vào **cùng một tin**, "vẽ lại cả hai": cả hai gắn được (bản chép không
+   bị dọn mất). Làm lại với một ảnh mạng cũ, rồi tin sau dán một ảnh khác, rồi mới "vẽ lại ảnh lúc nãy": vẫn gắn được.
+2. **KFG-40:** kéo một ảnh trên ổ mạng chậm vào chat, gửi tin: khung chat gửi ngay, AutoCAD không đứng. Lúc Claude gắn ảnh, AutoCAD có
+   thể chờ trong lúc chép (bình thường vài giây); ghi lại thời gian.
+3. File mạng hơn 50 MB kéo vào chat: Claude báo file quá lớn (có số MB), nhờ scan nhỏ hơn. Rút dây mạng / tắt NAS giữa lúc Claude gắn:
+   Claude báo không chép được; trong thư mục `anh-dinh-kem` không còn file dở dùng lại được (file `*.dang-chep-*` bị dọn sau 1 giờ).
+4. Khởi động lại AutoCAD rồi "vẽ lại" một ảnh mạng kéo vào từ trước: Claude nhờ kéo lại file vào chat (danh sách file cậu đã kéo chỉ
+   giữ trong phiên AutoCAD đó).
 
 ## G6. Chéo giữa các đợt (test tổng thể đợt G, ~10 phút)
 

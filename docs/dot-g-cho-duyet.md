@@ -392,7 +392,8 @@ mục G2-D1 / D1b, G4 F, G5 H, G6-1 / G6-2, G7.*
 - Ảnh nền nằm thẳng theo UCS đang dùng.
 - Claude không co / xoay ảnh của khách (vd logo trong khung tên), chỉ đụng ảnh do lệnh vẽ lại gắn.
 - Ảnh ghi bằng đường dẫn mạng chỉ được mở khi cùng máy chủ + thư mục chia sẻ với bản vẽ. Chỗ khác thì Claude nhờ **kéo file vào
-  khung chat** (khung chat tự chép file về máy, tên `tep-…`, dọn sau 7 ngày) hoặc chép về máy. Các dạng đường dẫn đặc biệt
+  khung chat** hoặc chép về máy. File kéo vào chat từ ổ mạng: lúc gửi tin không chép gì; lúc Claude gắn ảnh mới chép về máy (tên `tep-…`,
+  giữ 7 ngày từ lúc chép; file quá 50 MB, đã mất hay mất mạng giữa chừng thì Claude báo lý do). Các dạng đường dẫn đặc biệt
   (`\\.\…`, `\\?\…`) chỉ nhận khi trỏ về một ổ của máy; dạng khác bị từ chối. Bản vẽ mở từ ổ mạng ánh xạ (vd Z:) thì ghi
   đường dẫn ảnh theo ổ đó.
 - Ảnh dán vào chat: chỉ lưu trên máy có phần 2D; ảnh cũ hơn 7 ngày tự dọn; bản vẽ chưa lưu thì Claude nhờ lưu trước.
@@ -497,3 +498,20 @@ Không có con số mới cho khách. Quyết định tự chọn thêm:
 
 Vẫn giữ, cần cậu thử thật rồi chốt: chờ thêm sau khi lệnh RENDER xong = số lớn hơn giữa 20 giây và thời gian ước lượng của mức
 (một chỗ đổi: `RenderLogic.EndGrace`).
+
+### Lượt 3 (sau lần soát lại thứ hai, 26/11)
+
+Lần soát lại thứ hai thấy các lỗi lượt 2 đã sửa đúng, còn 4 lỗi nhỏ (KFG-39 … 42), đã sửa hết:
+
+- **Soát bản vẽ:** đường gần thẳng đứng lệch rất ít nay được nhận là trùng dù vẽ theo chiều nào; bản vẽ có rất nhiều nét chung một
+  điểm (kiểu nan quạt) soát vẫn nhanh.
+- **Vẽ lại từ ảnh, file kéo từ ổ mạng:** gửi tin không còn phải chờ chép file. File chỉ được chép khi Claude gắn ảnh (đúng lúc cậu
+  nhờ vẽ lại), nên file mạng lớn có thể làm AutoCAD chờ lúc đó. Bản chép giữ 7 ngày tính từ lúc chép; mất mạng giữa chừng không để
+  lại file dở.
+
+Không có con số mới cho khách (7 ngày, 50 MB như trước). Quyết định tự chọn thêm:
+
+| Tình huống | Đã chọn | Muốn đổi thì |
+| --- | --- | --- |
+| Lúc nào chép file mạng khách kéo vào chat | lúc Claude gắn ảnh (không chép file khách không định vẽ lại) | chép nền ngay lúc gửi tin |
+| Danh sách file khách đã kéo vào chat | chỉ nhớ trong một phiên AutoCAD; mở lại AutoCAD thì kéo lại file mạng | lưu ra đĩa |

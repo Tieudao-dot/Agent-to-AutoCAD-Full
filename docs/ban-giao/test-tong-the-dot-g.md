@@ -178,3 +178,25 @@ máy). Checklist: G5 mục I, G6-1 (KFG-32), G7-15, G7-16. Không đổi prompt 
 
 Test sau gộp lượt 2: lõi **1436 / 1436**, trợ lý **407 / 407**, build 3 target (xóa `obj` / `bin` giữa các lần) 0 lỗi 0 cảnh báo. CI: ghi ở dưới. Chưa
 kiểm được trên AutoCAD thật: như lượt 1, cộng phần của hai bàn giao kfg-a mục 7, kfg-b mục 8.
+
+CI lượt 2: run 45685933989 (#70) trên `fff7ffe`: **xanh**.
+
+### Lượt 3 (sau soát lại lượt 2, 26/11)
+
+Soát lại lượt 2 (`docs/ban-giao/kiem-tra-doc-lap-dot-fg.md` mục "Soát lại lượt 2", nhánh luồng chính @ `3990d6e`): KFG-07, 28, 30 … 38
+sửa đúng; còn KFG-39 … 42. Thread này sửa kèm nhận xét dự toán (`6586923`: mẫu `*` không dấu kiểm một lần mỗi mẫu; khóa tên chỉ
+dựng khi cần, bỏ một vòng O(dòng²); test 3000 dòng < 2 s), gộp `full/nang-cap-g-sua-kfg-a` @ `3d68e9f` (`8f14bc0`) và
+`full/nang-cap-g-sua-kfg-b` @ `47faaf2` (`e1455fb`), cả hai gộp sạch. Chữ "lệch ≤ 0,1 mm luôn bị tính là trùng" trong
+`dot-g-cho-duyet.md` giữ nguyên vì KFG-41 đã sửa.
+
+| Mã | Phần | Ai sửa | Commit | Cách sửa (ngắn) |
+| --- | --- | --- | --- | --- |
+| KFG-39 | G5 | kfg-b | `0dd8945` | bản chép `tep-…` giữ 7 ngày từ lúc chép; chép vào tên tạm rồi đổi tên; file dở dọn sau 1 giờ |
+| KFG-40 | G5 | kfg-b | `0dd8945` | không chép lúc gửi tin; khung chat nhớ file khách kéo; `attach` mới chép file mạng (quá 50 MB / mất / lỗi: từ chối kèm lý do) |
+| KFG-41 | G2 | kfg-a | `3d68e9f` | line / polyline hở mang cả hai chiều đọc, so theo cả hai |
+| KFG-42 | G2 | kfg-a | `3d68e9f` | băm thêm điểm giữa / điểm cuối, xét ô kề |
+
+Checklist: G5 mục J, G5 mục I.1 sửa theo cách chép mới. `dot-g-cho-duyet.md`: câu đường dẫn mạng, mục "Lượt 3" (2 quyết định
+mới). Không đổi prompt.
+
+Test sau gộp lượt 3: lõi **1445 / 1445**, trợ lý **407 / 407**, build 3 target (xóa `obj` / `bin` giữa các lần) 0 lỗi 0 cảnh báo.
