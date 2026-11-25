@@ -51,6 +51,7 @@ Mọi số nằm ở một chỗ: `F2Numbers` trong `plugin/ClaudeCAD.Plugin/Cor
 | Chọn tỉ lệ khi khách không nói | Tỉ lệ chuẩn chi tiết nhất mà bản vẽ vẫn vừa giấy, trong dãy 1:1 … 1:5000 | — |
 | Cỡ block mặc định (mm) | Cửa đi 900; cửa 2 cánh 1400; cửa trượt 1800; cửa sổ 1200 (cửa trượt và cửa sổ tính tường dày 220); bồn cầu 400 × 700; lavabo 500 × 420; bồn tắm 1700 × 750; khay tắm 900 × 900; giường 1600 × 2000; sofa 2000 × 850; bàn 1200 × 800; ghế 450 × 450; tủ 1200 × 600; bếp 700 × 450; cây đường kính 3000. Mỗi loại có giới hạn nhỏ nhất / lớn nhất | Theo thông lệ |
 | Layer mới | `KHUNG` (khung và khung tên), `KHUNG-VP` (viền khung nhìn, không in); block chèn vào `A-DOOR`, `A-WIND`, `A-FIXT`, `A-FURN`, `L-PLNT`; tên block dạng `CUA-DI-900`, `CUA-SO-1200` | — |
+| Màu layer mới (chỉ khi layer chưa có) *(Test tổng thể đợt F bổ sung: có trong code, chưa có trong bảng)* | `KHUNG` màu 7 (trắng / đen), `KHUNG-VP` 8 (xám); `A-DOOR` 4 (xanh lơ), `A-WIND` 5 (xanh dương), `A-FIXT` 6 (tím), `A-FURN` 8 (xám), `L-PLNT` 3 (xanh lá) | Theo thông lệ |
 
 ### Ghi chú của người rà về nguồn các con số (thread rà F2, 25/11)
 
@@ -115,8 +116,8 @@ Số mới của đợt F3:
 | Nhóm | Số đề xuất | Nguồn |
 | --- | --- | --- |
 | Giới hạn mái dốc nhà góc vuông | Tối đa 40 góc tường, 12 mảnh mái; quá thì báo và gợi ý mái bằng | Giới hạn kỹ thuật do thread chọn |
-| Vật liệu mẫu | 8 loại: bê tông, gạch, vữa trắng, kính, gỗ, ngói, thép, đá; mỗi loại một màu; kính trong 35 %; tên vật liệu tiếng Việt | Theo thông lệ |
-| Ảnh xuất ra | File PNG, cạnh dài 1568 px; mặc định nhìn chéo từ góc Tây Nam; kiểu hiển thị Realistic; tên file `<bản vẽ>-<góc nhìn>.png`, lưu cạnh bản vẽ | Do thread chọn |
+| Vật liệu mẫu | 8 loại: bê tông, gạch, vữa trắng, kính, gỗ, ngói, thép, đá; mỗi loại một màu (RGB: bê tông 165,165,160; gạch 170,74,50; vữa trắng 236,232,222; kính 150,200,220; gỗ 150,100,60; ngói 180,80,45; thép 120,130,140; đá 140,135,125 — Test tổng thể đợt F ghi thêm số); kính trong 35 %; tên vật liệu tiếng Việt | Theo thông lệ |
+| Ảnh xuất ra | File PNG, cạnh dài 1568 px (khách / Claude chọn được 384–1568); mặc định nhìn chéo từ góc Tây Nam; kiểu hiển thị Realistic; tên file `<bản vẽ>-<góc nhìn>.png`, lưu cạnh bản vẽ; file trùng tên: Claude hỏi rồi mới ghi đè | Do thread chọn |
 | Màu layer mái | Layer mái `A-ROOF-3D` tự tạo có màu cam (mã màu 30 của AutoCAD) | Do thread chọn; người rà bổ sung vào bảng |
 
 Người rà xác nhận: các số F3 đều theo thông lệ, không viện dẫn tiêu chuẩn nào.
@@ -244,3 +245,36 @@ Người rà cũng đã đối chiếu: cách hoãn lệnh khớp với bộ th�
 - Công tắc tắt nạp gọn; báo lỗi khi file Excel đang mở (khóa file chỉ có trên Windows).
 
 Danh sách thử tay: `docs/checklist-dot-f4.md` trên nhánh `full/nang-cap-f4-test` (người rà thêm mục C).
+
+## Test tổng thể đợt F (25/11/2026)
+
+*Nhánh `full/nang-cap-f-tong-the`. Chi tiết: `docs/ban-giao/test-tong-the-dot-f.md`.*
+
+Soát file này so với code: các số đã ghi khớp code; bổ sung 3 chỗ ở trên (màu layer mới của F2, mã màu RGB vật liệu F3,
+cỡ ảnh 384–1568 và luật ghi đè ảnh). Không đổi số nào trong code.
+
+### Lỗi đã sửa
+
+- Bước tự kiểm F4 (xuất Excel) phụ thuộc bước tự kiểm F2 (cần block cửa do bước F2 chèn): bước F2 hỏng thì bước F4 báo
+  sai. Bước F4 giờ tự tạo block riêng.
+- Checklist tổng (phần đợt E) còn ghi bản thang / bản mái dốc **150 mm**: sửa thành 120 (đợt F3 đã đổi).
+- Xuất ảnh PNG chỉ nhận `replace` để ghi đè file, các lệnh xuất khác (STL, Excel) dùng `overwrite`: giờ nhận cả hai.
+
+### Điểm để cậu xem lại (giữ nguyên, chưa đổi)
+
+- **Ghi đè có hai kiểu**: style / trạng thái layer (F2) phải bấm Đồng ý trên thẻ; góc nhìn trùng tên, file STL / Excel /
+  PNG trùng tên (F3, F4, đợt D) thì Claude hỏi trong chat rồi mới ghi đè. Muốn một kiểu cho tất cả thì nói (việc nhỏ).
+- **In PDF ghi đè file PDF trùng tên không hỏi** (cách làm có từ trước chuỗi nâng cấp), khác STL / Excel / PNG. Muốn hỏi
+  trước thì nói.
+
+### Token mở chat (ước tính, cùng cách đo các đợt trước)
+
+| Gói / chế độ | Trước đợt F | Sau đợt F, nạp gọn (mặc định) | Sau đợt F, tắt nạp gọn |
+| --- | --- | --- | --- |
+| Gói 2D | 38,8k | 13,4k | 40,8k |
+| Gói 3D | 39,8k | 18,8k | 42,0k |
+| Full · Cả hai | 57,7k | 20,6k | 61,0k |
+| Full · chế độ 2D | (chưa có chế độ) | 13,5k | 40,8k |
+| Full · chế độ 3D | (chưa có chế độ) | 18,8k | 42,1k |
+
+Thử tay cả đợt F: khối "Đợt F" cuối `docs/checklist-tong-the.md` (~2 giờ, xếp dễ trước khó sau).

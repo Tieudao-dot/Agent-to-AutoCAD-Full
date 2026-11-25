@@ -1,5 +1,7 @@
 # Checklist thử tay đợt F2 — 2D dùng hằng ngày
 
+> **Đã gộp vào [`docs/checklist-tong-the.md`](checklist-tong-the.md), khối "Đợt F" (25/11/2026).** Thử theo checklist tổng; file này giữ để tra mã mục cũ (F2-…).
+
 Dành cho người thử trên AutoCAD thật (không cần biết code). Mỗi mục: **làm gì** → **thấy gì là đạt**. Ghi ✓ / ✗ và
 chụp ảnh khi ✗. Cài bản thử của nhánh `full/nang-cap-f2` (hoặc `full/nang-cap-f2-test`), máy gói **Full**, chế độ
 **Cả hai**, trừ khi mục ghi khác.

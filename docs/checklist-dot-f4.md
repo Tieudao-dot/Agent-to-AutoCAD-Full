@@ -1,12 +1,14 @@
 # Checklist thử tay đợt F4 — mở chat nhanh hơn, xuất bảng ra Excel
 
+> **Đã gộp vào [`docs/checklist-tong-the.md`](checklist-tong-the.md), khối "Đợt F" (25/11/2026).** Thử theo checklist tổng; file này giữ để tra mã mục cũ (F4-…).
+
 *Nhánh `full/nang-cap-f4`. Chi tiết: `docs/ban-giao/nang-cap-f4.md`. Cần bộ cài build từ nhánh này, máy **gói Full** (bộ
 cài thử nội bộ là Full) và Excel (hoặc LibreOffice / Google Sheets) để mở file. ~25 phút.*
 
 ## 0. Tự kiểm nhanh (~3 phút)
 
 1. Mở một bản vẽ trống, gõ `CLAUDECHATSELFTEST`. Đạt: dòng **"Nâng cấp đợt F4: thống kê block xuất file Excel (.xlsx)
-   đọc lại được"** có dấu ✓ (dòng F2 ngay trên cũng ✓, vì F4 dùng block cửa của bước F2).
+   đọc lại được"** có dấu ✓ (bước này tự tạo block riêng, không cần bước F2).
 
 ## A. Mở chat nhanh hơn (~10 phút)
 

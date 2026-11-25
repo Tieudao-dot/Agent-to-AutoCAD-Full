@@ -873,6 +873,30 @@ namespace ClaudeCAD.Plugin
             Check("Nâng cấp đợt F4: thống kê block xuất file Excel (.xlsx) đọc lại được", () =>
             {
                 string xlsx = Path.Combine(dir, "selftest-f4.xlsx");
+                // test tổng thể đợt F: its own block (not the door block of the F2 step), so this step needs no other step
+                const string blockName = "SELFTEST-F4";
+                using (doc.LockDocument())
+                using (var tr = doc.TransactionManager.StartTransaction())
+                {
+                    var bt = (BlockTable)tr.GetObject(doc.Database.BlockTableId, OpenMode.ForRead);
+                    ObjectId bid;
+                    if (bt.Has(blockName)) bid = bt[blockName];
+                    else
+                    {
+                        var btr = new BlockTableRecord { Name = blockName };
+                        bt.UpgradeOpen();
+                        bid = bt.Add(btr);
+                        tr.AddNewlyCreatedDBObject(btr, true);
+                        var ln = new Line(Point3d.Origin, new Point3d(500, 0, 0));
+                        btr.AppendEntity(ln);
+                        tr.AddNewlyCreatedDBObject(ln, true);
+                    }
+                    var ms = (BlockTableRecord)tr.GetObject(SymbolUtilityServices.GetBlockModelSpaceId(doc.Database), OpenMode.ForWrite);
+                    var br = new BlockReference(new Point3d(160000, 0, 0), bid);
+                    ms.AppendEntity(br);
+                    tr.AddNewlyCreatedDBObject(br, true);
+                    tr.Commit();
+                }
                 Dictionary<string, object> r;
                 using (doc.LockDocument())
                 using (var tr = doc.TransactionManager.StartTransaction())
@@ -885,10 +909,10 @@ namespace ClaudeCAD.Plugin
                 string sheet;
                 using (var zip = System.IO.Compression.ZipFile.OpenRead(xlsx))
                 using (var rd = new StreamReader(zip.GetEntry("xl/worksheets/sheet1.xml").Open(), Encoding.UTF8)) sheet = rd.ReadToEnd();
-                bool ok = sheet.Contains("Tên block") && sheet.Contains("CUA-DI-900");
+                bool ok = sheet.Contains("Tên block") && sheet.Contains(blockName);
                 var ex = (Dictionary<string, object>)r["excel"];
                 return ok ? new SelfTestRules.Verdict(true, $"{ex["rows"]} dòng → {Path.GetFileName(xlsx)}")
-                          : new SelfTestRules.Verdict(false, "file Excel thiếu tiêu đề cột hoặc block CUA-DI-900");
+                          : new SelfTestRules.Verdict(false, "file Excel thiếu tiêu đề cột hoặc block " + blockName);
             });
 
             string versionFile = Path.Combine(dir, "version-copy.dwg");

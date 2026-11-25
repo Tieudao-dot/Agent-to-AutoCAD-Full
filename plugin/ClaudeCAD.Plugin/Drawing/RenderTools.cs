@@ -264,7 +264,8 @@ namespace ClaudeCAD.Plugin.Drawing
             try { stem = Path.GetFileNameWithoutExtension(ctx.Doc.Name); } catch (Exception) { }
             var file = MaterialLogic.ImagePath(p.Str("output", null), drawingDir, stem, name ?? v.Name);
             if (!Directory.Exists(Path.GetDirectoryName(file))) throw ToolException.Invalid($"{tool}: folder '{Path.GetDirectoryName(file)}' does not exist.");
-            if (File.Exists(file) && !p.Bool("replace", false))
+            // test tổng thể đợt F: overwrite (the word of export_stl / the Excel export) works here too
+            if (File.Exists(file) && !p.Bool("replace", false) && !p.Bool("overwrite", false))
                 throw ToolException.Invalid($"{tool}: '{file}' already exists. Pass replace: true to overwrite it (ask the user first), or another output.");
             var r = Capture.Render(ctx.Doc, min, max, size, min.HasValue ? "handles" : "extents", v, style);
             try { File.WriteAllBytes(file, r.Png); }

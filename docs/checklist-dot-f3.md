@@ -1,5 +1,7 @@
 # Thử tay đợt F3: mái nhà chữ L / T, vật liệu, ảnh, góc nhìn, số mặc định mới
 
+> **Đã gộp vào [`docs/checklist-tong-the.md`](checklist-tong-the.md), khối "Đợt F" (25/11/2026).** Thử theo checklist tổng; file này giữ để tra mã mục cũ (F3-…).
+
 *Nhánh `full/nang-cap-f3`. Chi tiết: `docs/ban-giao/nang-cap-f3.md`. Cần máy **gói 3D hoặc Full** (bộ cài thử nội bộ là
 Full), một bản vẽ trống đơn vị mm. Khoảng 30 phút.*
 
