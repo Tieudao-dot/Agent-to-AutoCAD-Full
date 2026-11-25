@@ -139,3 +139,16 @@ WCS trên Model, đơn vị giấy trên layout), `paperPoint` (vị trí viewpo
 - Mọi thứ trên AutoCAD thật: hình vào đúng UCS (nhất là kích thước, bảng, mleader, block có thuộc tính sau
   `TransformBy`), đọc UCS / tên UCS ở khung nhìn đang dùng, điểm bấm chọn, macro ghi / chạy trong UCS, nút chế độ trên
   palette thật, Claude thật trả lời đúng câu "đổi chế độ" (không mời mua gói). Xem khối thử tay "Đợt F1".
+
+## CI
+
+- Run **#39** (`45573567269`, `release=false`) trên `bce0fc7`: **xanh**. Build 3 target, lõi 952, trợ lý, UI test WPF 37
+  (có 4 test `NangCapF1ModeUiTests`). Ảnh nút chế độ: artifact `palette-screenshots` của run này (`mode-2d-dark.png`,
+  `mode-2d-light.png`, `mode-3d-compact.png`, `mode-menu.png`).
+- Commit sau CI chỉ thêm mục này (tài liệu).
+
+## Đã kiểm trước khi báo
+
+- Đọc lại toàn bộ diff so với `2dbeee2` một lượt; sửa thêm sau khi đọc: mô tả điểm của các lệnh cố ý giữ WCS / giấy
+  (`wcsPoint`, `paperPoint`), `set_view_3d` chuyển sang Ref (hướng nhìn tùy chọn theo UCS).
+- Sau lần sửa code cuối: build lại 3 target (xóa obj / bin), lõi 952 xanh, trợ lý 307 xanh, UI test build được, rồi CI #39.
