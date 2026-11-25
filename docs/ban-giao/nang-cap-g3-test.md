@@ -77,7 +77,10 @@ Không đổi số nào của G3.
 
 ## 6. CI
 
-Xem báo cáo gửi luồng chính.
+- Sau lần sửa cuối: lõi 1292 / 1292 xanh (thêm 10), trợ lý 379 / 379 xanh. Build `net48`, `net8.0-windows`,
+  `net10.0-windows` (xóa `obj` / `bin` giữa các lần) không lỗi, không cảnh báo.
+- CI run 45649649749 (#63) trên `d6b4a60` (code cuối): **xanh**. Dùng 1 / 2 lượt (lần gọi đầu GitHub trả 502, không tạo
+  run). Commit sau đó chỉ sửa tài liệu này.
 
 ## 7. Chưa kiểm được
 
