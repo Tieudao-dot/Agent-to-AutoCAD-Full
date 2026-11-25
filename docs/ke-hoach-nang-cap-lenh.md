@@ -129,7 +129,7 @@ tiếp; đợt sau xuất phát từ commit cuối của bước Test & sửa đ
 | --- | --- | --- | --- | --- |
 | F1 | `session_01D56HmFAo4dZ7c8sbeNB9eh` (25/11 14h27 → 15h19, $14,8) | `session_01D56HmFrL65iF9oJokvqXw5` (15h19 → 15h51, $6,3; 4 lỗi sửa) | `full/nang-cap-f1` @ `8110e45`, CI 45573567269 xanh → `full/nang-cap-f1-test` @ `b2e6431`, CI 45578496260 xanh (lõi 973, trợ lý 311) | **Xong**, ~$21, 1 giờ 24 phút. Token mở chat Full 58k → 39k (2D) / 40k (3D) khi chọn chế độ riêng. Không có con số nào cần duyệt |
 | F2 | `session_01D56HmFcYrzsme7GoBm8tNC` (mở 25/11 15h53) | — | `full/nang-cap-f2` (từ `b2e6431`) | Đang viết, cùng lúc với F3 |
-| F3 | `session_01D56HmFBfQ8mQ37WLtVFweF` (mở 25/11 15h53) | — | `full/nang-cap-f3` (từ `b2e6431`) | Đang viết, cùng lúc với F2 |
+| F3 | `session_01D56HmGHrzJYuxkoVZZ8MxA` (mở 25/11 15h57; thread lần 1 `session_01D56HmFBfQ8mQ37WLtVFweF` bị chặn lưu, đã dừng) | — | `full/nang-cap-f3` (từ `b2e6431`) | Đang viết, cùng lúc với F2 |
 | F4 | — | — | — | Chờ F2 và F3; thread F4 gộp hai nhánh trước |
 | Cuối | — | — | — | Chờ F4 |
 
