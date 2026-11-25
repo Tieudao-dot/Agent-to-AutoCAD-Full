@@ -83,7 +83,9 @@ Không đổi số nào của G1.
 
 ## 6. CI
 
-Xem báo cáo gửi luồng chính.
+- Sau lần sửa cuối: lõi 1237 / 1237 xanh (thêm 9), trợ lý 367 / 367 xanh. Build `net48`, `net8.0-windows`,
+  `net10.0-windows` (xóa `obj` / `bin` giữa các lần) không lỗi, không cảnh báo.
+- CI run 45642708237 (#59) trên `9c7c95f` (code cuối): **xanh**. Dùng 1 / 2 lượt. Commit sau đó chỉ sửa tài liệu này.
 
 ## 7. Chưa kiểm được
 
