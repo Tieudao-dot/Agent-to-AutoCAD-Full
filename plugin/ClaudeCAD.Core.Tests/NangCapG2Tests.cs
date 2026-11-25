@@ -99,7 +99,7 @@ namespace ClaudeCAD.Core.Tests
         {
             double tol = G2Numbers.DuplicateTolMm;
             // Sửa KFG-38: through DupItem, the copy check the plugin uses (the old rounded keys are gone)
-            DrawingCheckLogic.DupItem L(string layer, double[] p, double[] q) => new DrawingCheckLogic.DupItem { Group = "M|" + layer.ToUpperInvariant() + "|line|", Nums = DrawingCheckLogic.LineNumbers(p, q) };
+            DrawingCheckLogic.DupItem L(string layer, double[] p, double[] q) => DrawingCheckLogic.LineItem("M|" + layer.ToUpperInvariant() + "|", p, q); // lượt 3
             var a = L("A-WALL", new[] { 0.0, 0, 0 }, new[] { 3000.0, 0, 0 });
             var b = L("a-wall", new[] { 3000.0, 0, 0 }, new[] { 0.0, 0, 0 });  // drawn backwards
             var c = L("A-WALL", new[] { 0.0, 0.01, 0 }, new[] { 3000.0, 0, 0 }); // 0.01 mm off
@@ -115,8 +115,11 @@ namespace ClaudeCAD.Core.Tests
             var bulges = new List<double> { 0.5, 0, 0 };
             var rv = new List<double[]> { v[2], v[1], v[0] };
             var rb = new List<double> { 0, -0.5, 0 };
-            Assert.Equal(DrawingCheckLogic.PolylineNumbers(v, bulges, false), DrawingCheckLogic.PolylineNumbers(rv, rb, false));
-            Assert.NotEqual(DrawingCheckLogic.PolylineNumbers(v, bulges, false), DrawingCheckLogic.PolylineNumbers(v, new List<double> { 0, 0, 0 }, false));
+            // lượt 3: through PolylineItem (both ways), the copy check the plugin uses
+            var a = DrawingCheckLogic.PolylineItem("M|A|", v, bulges, false, 0);
+            var b = DrawingCheckLogic.PolylineItem("M|A|", rv, rb, false, 0);
+            var straight = DrawingCheckLogic.PolylineItem("M|A|", v, new List<double> { 0, 0, 0 }, false, 0);
+            Assert.Equal(new List<int> { 1 }, DrawingCheckLogic.DuplicateIndices(new[] { a, b, straight }, G2Numbers.DuplicateTolMm));
         }
 
         [Fact]

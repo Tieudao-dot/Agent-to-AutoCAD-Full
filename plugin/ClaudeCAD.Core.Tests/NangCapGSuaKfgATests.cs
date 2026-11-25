@@ -151,20 +151,12 @@ namespace ClaudeCAD.Core.Tests
         {
             var v = new List<double[]> { new[] { 0.0, 0 }, new[] { 1000.0, 0 }, new[] { 1000.0, 500 } };
             var rv = new List<double[]> { v[2], v[1], v[0] };
-            DrawingCheckLogic.DupItem Pl(List<double[]> verts, List<double> bulges)
-            {
-                var n = DrawingCheckLogic.PolylineNumbers(verts, bulges, false);
-                return new DrawingCheckLogic.DupItem
-                {
-                    Group = "M|A-WALL|pline|o" + DrawingCheckLogic.Exact(n.Where((_, i) => i % 3 == 2).ToArray()),
-                    Nums = n.Where((_, i) => i % 3 != 2).ToArray(),
-                };
-            }
+            DrawingCheckLogic.DupItem Pl(List<double[]> verts, List<double> bulges) => DrawingCheckLogic.PolylineItem("M|A-WALL|", verts, bulges, false, 0);
             var fwd = Pl(v, new List<double> { 0.5, 0, 0 });
             var back = Pl(rv, new List<double> { 0, -0.5, 0 });
             var other = Pl(v, new List<double> { 0, 0, 0 }); // straight instead of the arc: not a copy
             Assert.Equal(new List<int> { 1 }, DrawingCheckLogic.DuplicateIndices(new[] { fwd, back, other }, G2Numbers.DuplicateTolMm));
-            Assert.Contains("var xy = nums.Where((_, i) => i % 3 != 2)", Tools); // the plugin splits the same way
+            Assert.Contains("return DrawingCheckLogic.PolylineItem(g, verts, bulges, pl.Closed, pl.Elevation);", Tools); // the plugin builds it the same way
             Assert.Equal(DrawingCheckLogic.Exact(0.0), DrawingCheckLogic.Exact(-0.0)); // the bulge negated backwards
         }
 
@@ -194,6 +186,43 @@ namespace ClaudeCAD.Core.Tests
             // the old rounded keys are gone
             Assert.DoesNotContain("ShapeKey(", Src("plugin", "ClaudeCAD.Plugin", "Core", "DrawingCheck.cs"));
             Assert.DoesNotContain("DuplicateIndices(IList<string>", Src("plugin", "ClaudeCAD.Plugin", "Core", "DrawingCheck.cs"));
+        }
+
+        // ------------------------------------------------------------ lượt 3: KFG-41, KFG-42
+
+        [Fact]
+        public void A_nearly_vertical_line_meets_its_copy_whichever_way_each_was_drawn()
+        {
+            double tol = G2Numbers.DuplicateTolMm;
+            // KFG-41: A (0,0)→(0,1000), B (0.00001,0)→(0,1000): sorting the ends by x turned B round but not A
+            var a = DrawingCheckLogic.LineItem("M|A|", new[] { 0.0, 0, 0 }, new[] { 0.0, 1000, 0 });
+            var b = DrawingCheckLogic.LineItem("M|A|", new[] { 0.00001, 0, 0 }, new[] { 0.0, 1000, 0 });
+            var c = DrawingCheckLogic.LineItem("M|A|", new[] { 0.0, 1000, 0 }, new[] { 0.00002, 0, 0 }); // drawn the other way
+            var d = DrawingCheckLogic.LineItem("M|A|", new[] { 0.0, 0, 0 }, new[] { 0.0, 1000.5, 0 });  // 0.5 off: not a copy
+            Assert.Equal(new List<int> { 1, 2 }, DrawingCheckLogic.DuplicateIndices(new[] { a, b, c, d }, tol));
+            // the same for an open polyline drawn backwards with a tiny shift
+            var p = DrawingCheckLogic.PolylineItem("M|A|", new List<double[]> { new[] { 0.0, 0 }, new[] { 0.0, 1000 } }, new List<double> { 0, 0 }, false, 0);
+            var q = DrawingCheckLogic.PolylineItem("M|A|", new List<double[]> { new[] { 0.00001, 1000 }, new[] { 0.0, 0.00001 } }, new List<double> { 0, 0 }, false, 0);
+            Assert.Equal(new List<int> { 1 }, DrawingCheckLogic.DuplicateIndices(new[] { p, q }, tol));
+            // a closed loop is read one way only (as before)
+            Assert.Null(DrawingCheckLogic.PolylineItem("M|A|", new List<double[]> { new[] { 0.0, 0 }, new[] { 1.0, 0 }, new[] { 1.0, 1 } }, null, true, 0).Alt);
+        }
+
+        [Fact]
+        public void A_fan_of_twenty_thousand_lines_from_one_point_is_checked_fast()
+        {
+            var items = new List<DrawingCheckLogic.DupItem>();
+            for (int i = 0; i < 20000; i++)
+            {
+                double ang = i * 2 * Math.PI / 20000;
+                items.Add(DrawingCheckLogic.LineItem("M|A|", new[] { 0.0, 0, 0 }, new[] { 10000 * Math.Cos(ang), 10000 * Math.Sin(ang), 0 }));
+            }
+            items.Add(DrawingCheckLogic.LineItem("M|A|", new[] { 10000.0, 0.05, 0 }, new[] { 0.0, 0, 0 })); // a copy of line 0, drawn back
+            var sw = System.Diagnostics.Stopwatch.StartNew();
+            var dup = DrawingCheckLogic.DuplicateIndices(items, G2Numbers.DuplicateTolMm);
+            sw.Stop();
+            Assert.Equal(new List<int> { 20000 }, dup);
+            Assert.True(sw.ElapsedMilliseconds < 1000, $"took {sw.ElapsedMilliseconds} ms");
         }
     }
 }

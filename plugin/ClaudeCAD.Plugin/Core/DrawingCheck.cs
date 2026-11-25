@@ -149,74 +149,94 @@ namespace ClaudeCAD.Plugin.Core
 
         // ------------------------------------------------------------ geometry
 
-        /// <summary>A line's two ends in one order (a line drawn backwards is the same line).</summary>
-        public static double[] LineNumbers(double[] a, double[] b)
-        {
-            bool swap = a[0] > b[0] || (a[0] == b[0] && (a[1] > b[1] || (a[1] == b[1] && a[2] > b[2])));
-            return swap ? new[] { b[0], b[1], b[2], a[0], a[1], a[2] } : new[] { a[0], a[1], a[2], b[0], b[1], b[2] };
-        }
-
-        /// <summary>A polyline's vertices (x, y, bulge…) in the order that sorts first (drawn backwards = the same; bulges negated).</summary>
-        public static double[] PolylineNumbers(IList<double[]> verts, IList<double> bulges, bool closed)
-        {
-            int n = verts.Count;
-            var fwd = new List<double>();
-            for (int i = 0; i < n; i++) { fwd.Add(verts[i][0]); fwd.Add(verts[i][1]); fwd.Add(bulges != null && i < bulges.Count ? bulges[i] : 0); }
-            if (closed) return fwd.ToArray(); // a closed loop started elsewhere is not looked for
-            var back = new List<double>();
-            for (int i = n - 1; i >= 0; i--)
-            {
-                back.Add(verts[i][0]); back.Add(verts[i][1]);
-                back.Add(i > 0 && bulges != null && i - 1 < bulges.Count ? -bulges[i - 1] : 0);
-            }
-            for (int i = 0; i < fwd.Count; i++)
-            {
-                if (fwd[i] < back[i]) return fwd.ToArray();
-                if (fwd[i] > back[i]) return back.ToArray();
-            }
-            return fwd.ToArray();
-        }
-
         /// <summary>Sửa KFG-15: one object for the copy check: its kind / layer / exact parts, and its lengths (drawing units).</summary>
         public sealed class DupItem
         {
             public string Group;
             public double[] Nums;
+            /// <summary>Lượt 3 (KFG-41): the same shape read the other way (a line / open polyline end to start), or null.</summary>
+            public string AltGroup;
+            public double[] Alt;
+        }
+
+        /// <summary>Lượt 3 (KFG-41): a line as a copy item, both ways (a nearly vertical line 0.00001 off still meets its copy).</summary>
+        public static DupItem LineItem(string prefix, double[] a, double[] b) => new DupItem
+        {
+            Group = prefix + "line|", Nums = new[] { a[0], a[1], a[2], b[0], b[1], b[2] },
+            AltGroup = prefix + "line|", Alt = new[] { b[0], b[1], b[2], a[0], a[1], a[2] },
+        };
+
+        /// <summary>
+        /// Lượt 3 (KFG-41): a polyline as a copy item: x, y of the vertices (+ elevation) compared within the tolerance, the bulges
+        /// exactly; an open one both ways (backwards: vertices reversed, bulges shifted and negated).
+        /// </summary>
+        public static DupItem PolylineItem(string prefix, IList<double[]> verts, IList<double> bulges, bool closed, double elevation)
+        {
+            int n = verts.Count;
+            double B(int i) => bulges != null && i < bulges.Count ? bulges[i] : 0;
+            var fxy = new List<double>();
+            var fb = new List<double>();
+            for (int i = 0; i < n; i++) { fxy.Add(verts[i][0]); fxy.Add(verts[i][1]); fb.Add(B(i)); }
+            fxy.Add(elevation);
+            var it = new DupItem { Group = prefix + "pline|" + (closed ? "c" : "o") + Exact(fb.ToArray()), Nums = fxy.ToArray() };
+            if (closed) return it; // a closed loop started elsewhere is not looked for
+            var bxy = new List<double>();
+            var bb = new List<double>();
+            for (int i = n - 1; i >= 0; i--) { bxy.Add(verts[i][0]); bxy.Add(verts[i][1]); bb.Add(i > 0 ? -B(i - 1) : 0); }
+            bxy.Add(elevation);
+            it.AltGroup = prefix + "pline|o" + Exact(bb.ToArray());
+            it.Alt = bxy.ToArray();
+            return it;
         }
 
         /// <summary>
         /// Sửa KFG-15: indices of the extra copies, each number within tol of an earlier object of the same group (not a rounding
-        /// to a grid of tol, which split 1000.049 / 1000.051); the oldest is kept. Sửa KFG-34: candidates are found by the cell of
-        /// the first two numbers (x, y of the first point) and its 8 neighbours, then compared number by number, so 20 000 lines
-        /// of one x are no longer compared pair by pair (the answer is the same: a copy is never more than one cell away).
+        /// to a grid of tol); the oldest is kept. Candidates come from the cells of two points of the shape (KFG-34: the first;
+        /// lượt 3, KFG-42: also the middle one, so a fan of 20 000 lines from one point is not compared pair by pair) and their
+        /// neighbours, then are compared number by number. Lượt 3, KFG-41: a shape with a reverse reading (Alt) is also looked
+        /// up that way, so the way it was drawn never matters.
         /// </summary>
         public static List<int> DuplicateIndices(IList<DupItem> items, double tol)
         {
-            var cells = new Dictionary<(string, long, long), List<int>>();
+            var groupIds = new Dictionary<string, int>(StringComparer.Ordinal);
+            var cells = new Dictionary<(int, long, long, long, long), List<int>>();
             var dup = new List<int>();
             double t = tol > 0 ? tol : 1e-9;
+            long C(double v) => (long)Math.Floor(v / t);
+            (long, long, long, long) Cell(double[] v)
+            {
+                int h = v.Length >= 4 ? v.Length / 2 : -1;
+                return (v.Length > 0 ? C(v[0]) : 0, v.Length > 1 ? C(v[1]) : 0, h >= 0 ? C(v[h]) : 0, h >= 0 ? C(v[h + 1]) : 0);
+            }
+            int Gid(string g) { if (!groupIds.TryGetValue(g, out var id)) groupIds[g] = id = groupIds.Count; return id; }
+            bool Same(double[] a, double[] b)
+            {
+                if (a.Length != b.Length) return false;
+                for (int n = 0; n < a.Length; n++) if (Math.Abs(a[n] - b[n]) > t * (1 + 1e-9)) return false;
+                return true;
+            }
+            bool Find(string group, double[] nums)
+            {
+                if (group == null || nums == null || !groupIds.TryGetValue(group, out var g)) return false;
+                var (a, b, c, d) = Cell(nums);
+                for (long i = a - 1; i <= a + 1; i++)
+                for (long j = b - 1; j <= b + 1; j++)
+                for (long k = c - 1; k <= c + 1; k++)
+                for (long l = d - 1; l <= d + 1; l++)
+                {
+                    if (!cells.TryGetValue((g, i, j, k, l), out var list)) continue;
+                    foreach (int x in list) if (Same(items[x].Nums, nums)) return true;
+                }
+                return false;
+            }
             for (int i = 0; i < items.Count; i++)
             {
                 var it = items[i];
                 if (it?.Group == null || it.Nums == null) continue;
-                long cx = it.Nums.Length > 0 ? (long)Math.Floor(it.Nums[0] / t) : 0;
-                long cy = it.Nums.Length > 1 ? (long)Math.Floor(it.Nums[1] / t) : 0;
-                bool isDup = false;
-                for (long k = cx - 1; k <= cx + 1 && !isDup; k++)
-                for (long m = cy - 1; m <= cy + 1 && !isDup; m++)
-                {
-                    if (!cells.TryGetValue((it.Group, k, m), out var list)) continue;
-                    foreach (int j in list)
-                    {
-                        var o = items[j].Nums;
-                        if (o.Length != it.Nums.Length) continue;
-                        bool same = true;
-                        for (int n = 0; n < o.Length && same; n++) same = Math.Abs(o[n] - it.Nums[n]) <= t * (1 + 1e-9);
-                        if (same) { isDup = true; break; }
-                    }
-                }
-                if (isDup) { dup.Add(i); continue; }
-                if (!cells.TryGetValue((it.Group, cx, cy), out var own)) cells[(it.Group, cx, cy)] = own = new List<int>();
+                if (Find(it.Group, it.Nums) || Find(it.AltGroup, it.Alt)) { dup.Add(i); continue; }
+                var (a, b, c, d) = Cell(it.Nums);
+                var key = (Gid(it.Group), a, b, c, d);
+                if (!cells.TryGetValue(key, out var own)) cells[key] = own = new List<int>();
                 own.Add(i);
             }
             return dup;

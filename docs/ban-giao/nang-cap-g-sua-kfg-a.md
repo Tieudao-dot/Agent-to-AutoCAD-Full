@@ -71,3 +71,14 @@ Giới hạn: XData đi theo đối tượng khi chép. Nếu khách chép (COPY
 mang dấu và không bị báo trùng. Chỉ ảnh hưởng nét do hai lệnh hình chiếu / mặt cắt vẽ ra.
 
 Test sau lượt 2: lõi **1412 / 1412**, trợ lý **407 / 407** (gồm test của hai thread kia sau khi gộp), build 3 target không lỗi, không cảnh báo. Không chạy CI riêng.
+
+## 8. Lượt 3 (sau lượt soát lại 2, 26/11)
+
+Gộp `full/nang-cap-g-tong-the` @ `fff7ffe` trước khi sửa.
+
+| Mã | Lỗi | Đã sửa thế nào | Test |
+| --- | --- | --- | --- |
+| KFG-41 (nhẹ, có từ trước) | Đường gần thẳng đứng lệch rất ít không bị nhận là trùng. Chiều hai đầu được chọn bằng phép so x tuyệt đối, không có dung sai: A (0,0)→(0,1000) giữ nguyên, B (0,00001,0)→(0,1000) bị đảo. | Không chọn chiều nữa. Mỗi line / polyline hở mang cả hai cách đọc (`DupItem.Alt` / `AltGroup`: đầu → cuối và cuối → đầu, với polyline thì bulge dời chỗ và đổi dấu), và lần so tìm theo cả hai. Polyline kín giữ như cũ, một cách đọc. `LineNumbers` / `PolylineNumbers` được thay bằng `LineItem` / `PolylineItem`, test cũ chuyển theo, kết quả không đổi. | `A_nearly_vertical_line_meets_its_copy_whichever_way_each_was_drawn` |
+| KFG-42 (nhẹ) | 20 000 đường chung một điểm đầu (nan quạt) vẫn phải so từng cặp, mất 1,9 s. | Băm thêm điểm giữa của dãy số (với line là điểm cuối), xét ô kề. Kết quả không đổi, vì một bản trùng không bao giờ cách quá một ô ở mỗi số. | `A_fan_of_twenty_thousand_lines_from_one_point_is_checked_fast` (dưới 1 s), cùng các test KFG-15 / KFG-34 |
+
+Test sau lượt 3: lõi **1438 / 1438**, trợ lý **407 / 407**, build 3 target không lỗi, không cảnh báo. Không chạy CI riêng.
