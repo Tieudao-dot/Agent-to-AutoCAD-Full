@@ -36,6 +36,7 @@ nhà đã dựng ở các đợt trước.
 | C6 | "Ra bộ hồ sơ, cắt dọc qua cầu thang" (chỉ vị trí cắt) | Mặt cắt theo đường Claude đặt qua cầu thang |
 | C7 | Xoay UCS 30° (`UCS` → `Z` → 30), ra bộ hồ sơ | Mặt bằng xoay theo UCS (trục x của UCS nằm ngang trên tờ); mặt đứng trước nhìn theo trục y của UCS |
 | C8 | Bản vẽ đơn vị m (INSUNITS = 6) có nhà dựng 3D, ra bộ hồ sơ | Tỉ lệ vẫn 1:100, hình vừa khung |
+| C9 | *(Test & sửa G1)* "Ra bộ hồ sơ khổ A4, tỉ lệ 1:20" (nhà ~10 m) | Bộ vẫn ra, Claude nói các hình lớn hơn tờ ở tỉ lệ đó nên tờ chỉ thấy phần giữa, gợi ý tỉ lệ / khổ lớn hơn |
 
 ## D. Gói, chế độ, trường hợp thiếu (~8 phút)
 

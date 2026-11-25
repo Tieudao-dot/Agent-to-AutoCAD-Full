@@ -90,6 +90,10 @@ namespace ClaudeCAD.Plugin.Drawing
             bool wantPdf = p.Bool("pdf", false);
             var userFields = new Dictionary<string, object>(p.ObjOpt("fields")?.Raw ?? new Dictionary<string, object>(), StringComparer.OrdinalIgnoreCase);
             foreach (var k in new[] { "title", "sheet_no", "scale", "paper" }) userFields.Remove(k);
+            // Test & sửa G1: an unknown field made every create_sheet fail after the old set was already removed
+            var badFields = DrawingSetLogic.UnknownFields(userFields.Keys);
+            if (badFields.Count > 0)
+                throw ToolException.Invalid($"{tool}: unknown title field(s) {string.Join(", ", badFields)}. Fields: {string.Join(", ", SheetLogic.Fields.Select(x => x.field))}. Nothing was changed.");
 
             // ---- what the drawing has
             double f;
@@ -140,6 +144,9 @@ namespace ClaudeCAD.Plugin.Drawing
                 req.SolidMax = new[] { solids.Max(s => s.Max[0]), solids.Max(s => s.Max[1]), solids.Max(s => s.Max[2]) };
                 var walls = solids.Where(s => DrawingSetLogic.IsWallLayer(s.Layer)).Select(s => (s.Min[2], s.Max[2] - s.Min[2])).ToList();
                 req.Levels = DrawingSetLogic.StoreyLevels(walls, f);
+                int storeys = DrawingSetLogic.StoreyCount(walls, f);
+                if (storeys > req.Levels.Count)
+                    notes.Add($"The model has {storeys} storeys; the set has plans of the lowest {req.Levels.Count} (at most {G1Numbers.MaxLevels}).");
             }
             req.Min2d = min2;
             req.Max2d = max2;
@@ -158,6 +165,8 @@ namespace ClaudeCAD.Plugin.Drawing
             }
             var sheet = SheetLogic.Build(paper, land);
             DrawingSetLogic.ChooseScales(set, sheet, f, givenScale);
+            foreach (var t in DrawingSetLogic.NotFitting(set, sheet, f))
+                notes.Add($"{t}: the view is larger than the sheet at its scale, so the sheet shows only its middle (give a larger scale or paper).");
             bool makeSheets = ab.Sheets;
             if (!makeSheets) notes.Add(DrawingSetLogic.SheetsMissing(mode, plan) + ": the views are drawn in model space only.");
             if (wantPdf && !(makeSheets && ab.Pdf)) { notes.Add("No PDF: " + DrawingSetLogic.SheetsMissing(mode, plan) + "."); wantPdf = false; }
@@ -185,7 +194,7 @@ namespace ClaudeCAD.Plugin.Drawing
             var what = new List<string>();
             if (hadSet)
             {
-                tokens.Add(DrawingSetLogic.ReplaceToken(last.Layouts));
+                tokens.Add(DrawingSetLogic.ReplaceToken(last.Layouts, last.Handles)); // Test & sửa G1: with the views it drew
                 what.Add($"replace the drawing set made before (layouts {string.Join(", ", oldLayouts.DefaultIfEmpty("—"))} and the {last.Handles.Count} views it drew; edits made on them are lost)");
             }
             if (pdfPath != null && File.Exists(pdfPath))

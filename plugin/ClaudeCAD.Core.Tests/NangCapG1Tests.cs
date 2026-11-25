@@ -239,7 +239,7 @@ namespace ClaudeCAD.Core.Tests
             Assert.Contains("using (UcsScope.Suspend())", t);
             // the card before replacing the last set or the PDF; a macro never replaces a set
             Assert.Contains("RequireCard(ctx, p, tool, string.Join(\" and \", what), tokens)", t);
-            Assert.Contains("DrawingSetLogic.ReplaceToken(last.Layouts)", t);
+            Assert.Contains("DrawingSetLogic.ReplaceToken(last.Layouts, last.Handles)", t); // Test & sửa G1: the token also covers the views drawn
             Assert.Contains("F5Confirm.FileToken(pdfPath)", t);
             Assert.Contains("MacroRunning == true)\n                throw", t.Replace("\r\n", "\n"));
             // the plan of the machine (with the F1 work mode) decides the parts

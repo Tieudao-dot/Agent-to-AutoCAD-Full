@@ -139,6 +139,17 @@ namespace ClaudeCAD.Plugin.Core
             return Levels(walls.Where(w => w.height * f >= LevelMinWallMm).Select(w => w.bottom), LevelTolMm / f);
         }
 
+        /// <summary>Test & sửa G1: how many storeys the walls have before the MaxLevels cut (to say when some are left out).</summary>
+        public static int StoreyCount(IEnumerable<(double bottom, double height)> walls, double mmPerUnit)
+        {
+            var f = mmPerUnit > 0 ? mmPerUnit : 1;
+            var z = walls.Where(w => w.height * f >= LevelMinWallMm).Select(w => w.bottom).Where(v => !double.IsNaN(v) && !double.IsInfinity(v)).OrderBy(v => v).ToList();
+            int n = 0;
+            double lastZ = double.NegativeInfinity;
+            foreach (var v in z) if (n == 0 || v - lastZ > LevelTolMm / f) { n++; lastZ = v; }
+            return n;
+        }
+
         /// <summary>A wall solid by its layer (A-WALL-3D of build_3d_from_plan, or a name with WALL / TUONG).</summary>
         public static bool IsWallLayer(string layer)
         {
@@ -349,6 +360,14 @@ namespace ClaudeCAD.Plugin.Core
         }
 
         /// <summary>
+        /// Test & sửa G1: the views that do not fit their viewport at the chosen scale (a scale given too small, or a model
+        /// larger than the largest standard scale): the sheet then shows only part of the view, so the result says so.
+        /// </summary>
+        public static List<string> NotFitting(Plan p, SheetLogic.Sheet sheet, double mmPerUnit) =>
+            p.Sheets.Where(s => s.Kind != SheetKind.Perspective && s.Scale > 0 && !SheetLogic.Fits(sheet, s.Scale, mmPerUnit, s.W, s.H))
+                .Select(s => s.Title).ToList();
+
+        /// <summary>
         /// Where each 2D view is drawn in model space: a row to the right of everything (startX), each view in a slot as wide
         /// as its viewport shows (plus a gap), so no neighbour shows on a sheet. Returns the lower-left corner of each view.
         /// </summary>
@@ -422,6 +441,20 @@ namespace ClaudeCAD.Plugin.Core
             ulong h = 14695981039346656037UL;
             foreach (byte b in Encoding.UTF8.GetBytes(key)) { h ^= b; h *= 1099511628211UL; }
             return h.ToString("X16", CultureInfo.InvariantCulture);
+        }
+
+        /// <summary>
+        /// Test & sửa G1: the token of replacing the last set, with the views it drew: a set without sheets (a 3D machine) has
+        /// no layout, so its token would be the same for every drawing and every run.
+        /// </summary>
+        public static string ReplaceToken(IEnumerable<string> layouts, IEnumerable<string> handles) =>
+            ReplaceToken(layouts.Concat((handles ?? Enumerable.Empty<string>()).Select(h => "#" + h.Trim().ToUpperInvariant())));
+
+        /// <summary>Test & sửa G1: the title fields the user gave that create_sheet would refuse (checked before anything changes).</summary>
+        public static List<string> UnknownFields(IEnumerable<string> keys)
+        {
+            var known = new HashSet<string>(SheetLogic.Fields.Select(x => x.field), StringComparer.OrdinalIgnoreCase);
+            return (keys ?? Enumerable.Empty<string>()).Where(k => !known.Contains(k)).ToList();
         }
 
         /// <summary>Layout names of the new set that exist and are not the last set's: the user's own layouts, never touched.</summary>
