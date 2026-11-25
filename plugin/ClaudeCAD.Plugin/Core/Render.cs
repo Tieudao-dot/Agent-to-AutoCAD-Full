@@ -137,12 +137,27 @@ namespace ClaudeCAD.Plugin.Core
         /// Test & sửa G4: endedFor = seconds since the RENDER command ended (negative: still running). Ended with no picture
         /// (none, or an empty file) for EndGraceSeconds = NoFile: the way back starts at once instead of at the max wait.
         /// </summary>
-        public static State StateOf(double elapsed, int maxWait, long fileSize, long sizeBefore, double sameSizeFor, bool cancelled, bool failed, double endedFor)
+        public static State StateOf(double elapsed, int maxWait, long fileSize, long sizeBefore, double sameSizeFor, bool cancelled, bool failed, double endedFor) =>
+            StateOf(elapsed, maxWait, fileSize, sizeBefore, sameSizeFor, cancelled, failed, endedFor, 0);
+
+        /// <summary>
+        /// Sửa KFG (nghi vấn G4): the wait after the RENDER command ended, for a render that goes on in the Render Window after
+        /// the command: the larger of EndGraceSeconds and the estimate of this quality / size (a medium / high render is not
+        /// given up at 20 s). "Unknown command" (another order of questions) still gives up at once (Failed).
+        /// </summary>
+        /// <summary>Temporary render files left by a stopped render are removed after this many hours (not seen by the user).</summary>
+        public const double OldTempHours = 1;
+
+        public static bool IsOldTemp(DateTime writtenUtc, DateTime nowUtc) => (nowUtc - writtenUtc).TotalHours >= OldTempHours;
+
+        public static double EndGrace(int estimateSeconds) => Math.Max(G4Numbers.EndGraceSeconds, estimateSeconds);
+
+        public static State StateOf(double elapsed, int maxWait, long fileSize, long sizeBefore, double sameSizeFor, bool cancelled, bool failed, double endedFor, int estimateSeconds)
         {
             if (fileSize > 0 && fileSize == sizeBefore && sameSizeFor >= G4Numbers.StableSeconds) return State.Done;
             if (cancelled) return State.Cancelled;
             if (failed) return State.Failed;
-            if (endedFor >= G4Numbers.EndGraceSeconds && fileSize <= 0) return State.NoFile;
+            if (endedFor >= EndGrace(estimateSeconds) && fileSize <= 0) return State.NoFile;
             if (elapsed > maxWait) return State.TooLong;
             return State.Running;
         }
@@ -211,7 +226,8 @@ namespace ClaudeCAD.Plugin.Core
                     if (!hasSun) return (defaultLightOn ? (bool?)null : true, null);
                     return (defaultLightOn ? false : (bool?)null, sunOn ? (bool?)null : true);
                 default: // auto
-                    if (userLights > 0 || sunOn) return (null, null);
+                    // KFG-04: AutoCAD ignores the drawing's lights and sun while its default light is on: turned off for the render
+                    if (userLights > 0 || sunOn) return (defaultLightOn ? false : (bool?)null, null);
                     return (defaultLightOn ? (bool?)null : true, null);
             }
         }

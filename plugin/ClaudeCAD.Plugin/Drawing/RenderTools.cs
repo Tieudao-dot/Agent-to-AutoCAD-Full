@@ -86,7 +86,7 @@ namespace ClaudeCAD.Plugin.Drawing
                     if (matId.IsNull && preset == null && rgb == null)
                         throw ToolException.Invalid($"{tool}: no material '{requested}' in the drawing. Use a preset ({string.Join(", ", MaterialLogic.PresetKeys)}), list: true, or give color [r, g, b] to make it.");
                     // nâng cấp đợt F5 (kiểm tra độc lập đợt F): changing an existing material recolours every object using it: the card first
-                    if (!matId.IsNull) RequireCard(ctx, p, tool, $"change the color / opacity of the existing material '{name}' (every solid and layer using it changes)", new[] { Acad.H(matId) });
+                    if (!matId.IsNull) RequireCard(ctx, p, tool, $"change the color / opacity of the existing material '{name}' (every solid and layer using it changes)", new[] { F5Confirm.MaterialLookToken(Acad.H(matId), rgb, opacity) }); // KFG-10
                     created = matId.IsNull;
                     matId = MakeMaterial(ctx, dict, name, rgb ?? (preset != null ? new double[] { preset.R, preset.G, preset.B } : null), opacity ?? preset?.Opacity, matId, tool);
                 }
@@ -110,7 +110,7 @@ namespace ClaudeCAD.Plugin.Drawing
             {
                 // nâng cấp đợt F5: a whole layer (all its objects, now and later) only after the card's Đồng ý (the layers' handles)
                 var lids = p.Strings("layers", 1).Select(ln => Acad.LayerId(ctx, ln)).ToList();
-                RequireCard(ctx, p, tool, $"give the material to every object of the layer(s) {string.Join(", ", p.Strings("layers", 1))}", lids.Select(Acad.H));
+                RequireCard(ctx, p, tool, $"give the material to every object of the layer(s) {string.Join(", ", p.Strings("layers", 1))}", lids.Select(l => F5Confirm.LayerMaterialToken(Acad.H(l), name))); // KFG-10: layer + material
             }
             if (hasLayers)
                 foreach (var ln in p.Strings("layers", 1))

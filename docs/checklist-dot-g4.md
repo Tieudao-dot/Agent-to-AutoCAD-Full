@@ -73,3 +73,20 @@ Plugin trả lời `-RENDER` theo thứ tự **viết theo trí nhớ, chưa ai 
 
 Bấm "Tự kiểm" trong khung chat: bước "Nâng cấp đợt G4" phải đạt (nền trắng + đèn đặt tạm rồi trả lại, đường lui ảnh chụp,
 vật liệu thư viện có sẵn được dùng).
+
+## G. Sau sửa lỗi kiểm tra độc lập (KFG, ~12 phút)
+
+1. **KFG-01:** lưu một góc nhìn ("Phối cảnh 1"), gõ "render góc Phối cảnh 1": phải render được (trước đây có thể báo "could not
+   prepare the render"). Xong, góc nhìn của cậu trở lại; bấm U một lần **không** nhảy sang góc "Phối cảnh 1".
+2. **KFG-04:** bản vẽ có đèn (lệnh `POINTLIGHT` đặt 1 – 2 đèn) hoặc bật mặt trời: "render góc hiện tại". Ảnh phải sáng theo đèn
+   của cậu (đèn mặc định được tắt trong lúc render rồi bật lại); sau render, đèn mặc định trở lại như trước. Đèn nằm trong
+   block cũng được tính.
+3. **Render chạy tiếp sau khi lệnh xong (quan trọng):** render mức "đẹp" 1920 × 1080. Mở dòng lệnh (F2) quan sát:
+   - dòng lệnh trở về `Command:` **trước** khi ảnh render xong (cửa sổ Render vẫn chạy)? Ghi lại;
+   - nếu có: Claude phải chờ tới khi ảnh xong (tối đa thời gian ước lượng của mức đó, ~3 phút cho mức đẹp), **không** chuyển sang
+     ảnh chụp sau 20 giây, và nền / đèn chỉ trả lại sau khi ảnh xong;
+   - ghi thời gian thật từ lúc gõ tới lúc có file.
+4. **KFG-27:** làm cho render rơi về ảnh chụp (vd bước D2 / F2): kết quả Claude báo không còn nhắc nền / ánh sáng / mức đẹp của
+   render.
+5. Dừng giữa chừng rồi đợi 1 giờ, render lại: thư mục tạm không còn file `claudecad-render-*.png` cũ.
+

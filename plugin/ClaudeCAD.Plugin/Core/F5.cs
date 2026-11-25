@@ -61,6 +61,22 @@ namespace ClaudeCAD.Plugin.Core
         /// </summary>
         public static string DeleteViewToken(string viewHandle) => Fnv("delete-view:" + (viewHandle ?? "").Trim().ToUpperInvariant());
 
+        /// <summary>
+        /// Sửa KFG-10: the token of giving a material to a whole layer: the layer's handle and the material's name, so the Đồng ý
+        /// of "gạch for A-WALL" never lets the same turn give A-WALL another material.
+        /// </summary>
+        public static string LayerMaterialToken(string layerHandle, string material) =>
+            Fnv("layer-material:" + (layerHandle ?? "").Trim().ToUpperInvariant() + "|" + (material ?? "").Trim().ToUpperInvariant());
+
+        /// <summary>
+        /// Sửa KFG-10: the token of changing an existing material: its handle and the new colour / opacity (as asked; null = not
+        /// changed), so the Đồng ý of "red" never lets another colour through.
+        /// </summary>
+        public static string MaterialLookToken(string materialHandle, double[] rgb, double? opacity) =>
+            Fnv("material-look:" + (materialHandle ?? "").Trim().ToUpperInvariant() + "|" +
+                (rgb == null ? "-" : string.Join(",", rgb.Select(v => Math.Round(v).ToString(CultureInfo.InvariantCulture)))) + "|" +
+                (opacity.HasValue ? Math.Round(opacity.Value, 3).ToString(CultureInfo.InvariantCulture) : "-"));
+
         private static string Fnv(string s)
         {
             ulong h = 14695981039346656037UL;

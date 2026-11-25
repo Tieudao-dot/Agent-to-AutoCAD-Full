@@ -35,6 +35,17 @@ const realSleep = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
  * says the file is written, or a capture was saved instead (too long / failed), or the user stopped it. Dừng in the chat
  * (the call fails as cancelled, or the signal aborts) sends render_stop. A safety stop a minute past the max wait.
  */
+/** Start keys that describe the render itself: wrong on a capture (the way back), so left out then (KFG-27). */
+export const RENDER_ONLY_KEYS = ['background', 'lighting', 'changed_for_render', 'estimate_seconds', 'max_wait_seconds', 'quality'] as const;
+
+/** The final answer: the start parameters Claude may need (file, size) joined with the end; a capture keeps only its own. */
+export function finalRenderResult(start: Record<string, unknown>, end: Record<string, unknown>): Record<string, unknown> {
+  const base: Record<string, unknown> = { ...start };
+  delete base.render_started;
+  if (end.method === 'capture') for (const k of RENDER_ONLY_KEYS) delete base[k];
+  return { ...base, ...end };
+}
+
 export async function runRender(b: ToolBridge, params: Record<string, unknown>, o: RenderWaitOptions = {}): Promise<ToolResponse> {
   const sleep = o.sleep ?? realSleep;
   const now = o.now ?? Date.now;
@@ -70,7 +81,7 @@ export async function runRender(b: ToolBridge, params: Record<string, unknown>, 
     const r = st.result as Record<string, unknown>;
     if (r?.running !== true) {
       // the start parameters Claude may need (file, quality) join the final answer
-      return { ...st, result: { ...start, ...r, render_started: undefined } };
+      return { ...st, result: finalRenderResult(start, r) };
     }
     if (typeof r.progress === 'string') b.status('named_view', 'running', { summary: r.progress });
     if ((now() - t0) / 1000 > maxWait + 60) return stop('the plugin did not finish the render in time');

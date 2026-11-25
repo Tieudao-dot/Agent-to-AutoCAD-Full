@@ -38,6 +38,11 @@ namespace ClaudeCAD.Plugin.Core
         /// <summary>Grid steps (mm), the smallest giving at most GridLinesTarget lines is used.</summary>
         public static readonly double[] GridStepsMm = { 100, 200, 250, 500, 1000, 2000, 2500, 5000, 10000, 20000, 50000 };
 
+        /// <summary>Sửa KFG-13: days a picture pasted in the chat is kept in the palette's folder (its traced copy lives next to the drawing).</summary>
+        public const double PastedKeepDays = 7;
+        /// <summary>A pasted picture is saved as sent to Claude: at most this long side (px, ImageAttachment.MaxSide).</summary>
+        public const int PastedMaxSide = 1568;
+
         /// <summary>Wall thickness (mm) the skill takes when the scan does not show it (said in the result).</summary>
         public const double DefaultWallMm = 200;
     }
@@ -70,10 +75,49 @@ namespace ClaudeCAD.Plugin.Core
             if (bytes <= 0) throw ToolException.Invalid($"{tool}: '{Path.GetFileName(path)}' is empty.");
             if (G5Numbers.RasterExtensions.Contains(ext)) return "raster";
             if (ext == G5Numbers.PdfExtension) return "pdf";
-            string hint = ext == ".webp" || ext == ".heic" || ext == ".heif" ? " Ask the user to save it as JPG or PNG (phone photos: share / export as JPG)." :
+            string hint = ext == ".webp" || ext == ".heic" || ext == ".heif" || ext == ".avif" ? " Ask the user to save it as JPG or PNG (phone photos: share / export as JPG)." :
                 ext == ".dwg" || ext == ".dxf" ? " It is already a drawing: open or insert it instead of tracing." :
                 " Ask the user for a picture (PNG / JPG / TIF / BMP / GIF) or a PDF.";
             throw ToolException.Invalid($"{tool}: '{Path.GetFileName(path)}' ({(ext.Length == 0 ? "no extension" : ext)}) cannot be attached.{hint}");
+        }
+
+        public static bool IsOldPasted(DateTime writtenUtc, DateTime nowUtc) => (nowUtc - writtenUtc).TotalDays >= G5Numbers.PastedKeepDays;
+
+        /// <summary>"\\server\share" of a network path (also "\\?\UNC\…" and forward slashes), upper case; null for a local path.</summary>
+        public static string UncShare(string path)
+        {
+            var p = (path ?? "").Trim().Replace('/', '\\');
+            if (p.StartsWith(@"\\?\UNC\", StringComparison.OrdinalIgnoreCase)) p = @"\\" + p.Substring(8);
+            else if (p.StartsWith(@"\\?\", StringComparison.Ordinal) || p.StartsWith(@"\\.\", StringComparison.Ordinal)) return null;
+            if (!p.StartsWith(@"\\", StringComparison.Ordinal)) return null;
+            var parts = p.Substring(2).Split(new[] { '\\' }, StringSplitOptions.RemoveEmptyEntries);
+            return parts.Length >= 2 ? (@"\\" + parts[0] + @"\" + parts[1]).ToUpperInvariant() : (parts.Length == 1 ? @"\\" + parts[0].ToUpperInvariant() : @"\\");
+        }
+
+        /// <summary>
+        /// Sửa KFG (nghi vấn G5, bảo mật): which files trace_image may open. Windows may send the user's sign-in to the computer of
+        /// a network path, so only: a drive of this computer, a picture attached in the chat, or a network path on the same server
+        /// and share as the open drawing (a mapped network drive: the same drive as the drawing). Null = allowed, else the refusal.
+        /// </summary>
+        public static string PathRefusal(string path, string drawingPath, bool onNetworkDrive, bool sameDriveAsDrawing, string tool = "trace_image")
+        {
+            string share = UncShare(path);
+            if (share != null)
+            {
+                if (share == UncShare(drawingPath)) return null;
+                return $"{tool}: '{path}' is on another computer of the network ({share}). For safety only files on this computer, pictures attached in the chat, or files in the same network folder as the open drawing are opened. Ask the user to copy the file to this computer (e.g. Desktop) or attach it in the chat.";
+            }
+            if (onNetworkDrive && !sameDriveAsDrawing)
+                return $"{tool}: '{path}' is on a network drive. For safety only files on this computer, pictures attached in the chat, or files on the same drive as the open drawing are opened. Ask the user to copy the file to this computer or attach it in the chat.";
+            return null;
+        }
+
+        /// <summary>A file inside a folder (prefix with the separator: "…\\anh" does not hold "…\\anh-2\\x.png").</summary>
+        public static bool IsInside(string file, string folder)
+        {
+            if (string.IsNullOrEmpty(file) || string.IsNullOrEmpty(folder)) return false;
+            var f = folder.TrimEnd('\\', '/') + "\\";
+            return file.Replace('/', '\\').StartsWith(f.Replace('/', '\\'), StringComparison.OrdinalIgnoreCase);
         }
 
         /// <summary>Pages of a PDF, counted from its page objects (0 = could not tell).</summary>
@@ -81,9 +125,16 @@ namespace ClaudeCAD.Plugin.Core
         {
             if (content == null || content.Length == 0) return 0;
             var s = Encoding.ASCII.GetString(content);
-            // a compressed object stream hides the page objects: then the /Count of the page tree, if readable
+            // Sửa KFG-11: the /Count of the root page tree (the last version of each object: a PDF saved again appends them)
+            int root = RootPageCount(s);
+            if (root > 0) return root;
+            // else the page objects, each counted once (a page appended again by an incremental save is the same object)
+            var ids = new HashSet<string>();
+            foreach (Match m in Regex.Matches(s, @"(\d+)\s+(\d+)\s+obj\s*<<(?:(?!endobj).){0,4000}?/Type\s*/Page(?![a-zA-Z])", RegexOptions.Singleline))
+                ids.Add(m.Groups[1].Value + " " + m.Groups[2].Value);
+            if (ids.Count > 0) return ids.Count;
             int pages = Regex.Matches(s, @"/Type\s*/Page(?![a-zA-Z])").Count;
-            if (pages > 0) return pages;
+            if (pages > 0 && !Regex.IsMatch(s, @"\d+\s+\d+\s+obj")) return pages;
             var counts = Regex.Matches(s, @"/Type\s*/Pages\b[^>]*?/Count\s+(\d+)|/Count\s+(\d+)[^>]*?/Type\s*/Pages\b");
             int best = 0;
             foreach (Match m in counts)
@@ -92,6 +143,28 @@ namespace ClaudeCAD.Plugin.Core
                 if (int.TryParse(g, NumberStyles.Integer, CultureInfo.InvariantCulture, out var n)) best = Math.Max(best, n);
             }
             return best;
+        }
+
+        /// <summary>The /Count of the page tree the trailer's /Root points to (0 = not readable, e.g. inside a compressed stream).</summary>
+        private static int RootPageCount(string s)
+        {
+            var roots = Regex.Matches(s, @"/Root\s+(\d+)\s+(\d+)\s+R");
+            if (roots.Count == 0) return 0;
+            var r = roots[roots.Count - 1];
+            var cat = LastObject(s, r.Groups[1].Value, r.Groups[2].Value);
+            if (cat == null) return 0;
+            var pg = Regex.Match(cat, @"/Pages\s+(\d+)\s+(\d+)\s+R");
+            if (!pg.Success) return 0;
+            var tree = LastObject(s, pg.Groups[1].Value, pg.Groups[2].Value);
+            if (tree == null) return 0;
+            var c = Regex.Match(tree, @"/Count\s+(\d+)");
+            return c.Success && int.TryParse(c.Groups[1].Value, NumberStyles.Integer, CultureInfo.InvariantCulture, out var n) ? n : 0;
+        }
+
+        private static string LastObject(string s, string num, string gen)
+        {
+            var all = Regex.Matches(s, @"(?<![0-9])" + num + @"\s+" + gen + @"\s+obj(.*?)endobj", RegexOptions.Singleline);
+            return all.Count == 0 ? null : all[all.Count - 1].Groups[1].Value;
         }
 
         /// <summary>
@@ -145,10 +218,18 @@ namespace ClaudeCAD.Plugin.Core
         /// The turn (radians, counter-clockwise) that brings p1→p2 onto the axis: "horizontal", "vertical" or "auto" (the
         /// nearer one). A turn over 45° is refused (it would mean the wrong pair of points).
         /// </summary>
-        public static double StraightenAngle(double[] p1, double[] p2, string axis, string tool = "trace_image")
+        public static double StraightenAngle(double[] p1, double[] p2, string axis, string tool = "trace_image") => StraightenAngle(p1, p2, axis, 0, tool);
+
+        /// <summary>
+        /// Sửa KFG-05: the same in a UCS turned ucsAngleDeg in plan (p1, p2 in WCS): the wall is brought onto the UCS axis, not
+        /// the WCS one. The turn is the same in both (a turn about z).
+        /// </summary>
+        public static double StraightenAngle(double[] p1, double[] p2, string axis, double ucsAngleDeg, string tool = "trace_image")
         {
             if (Dist(p1, p2) < 1e-9) throw ToolException.Invalid($"{tool}: the two points are the same; give two points along a wall that should be straight.");
-            double a = Math.Atan2(p2[1] - p1[1], p2[0] - p1[0]); // -π..π
+            double a = Math.Atan2(p2[1] - p1[1], p2[0] - p1[0]) - ucsAngleDeg * Math.PI / 180; // in the UCS
+            while (a <= -Math.PI) a += 2 * Math.PI;
+            while (a > Math.PI) a -= 2 * Math.PI;
             double Norm(double x) { while (x > Math.PI / 2) x -= Math.PI; while (x <= -Math.PI / 2) x += Math.PI; return x; }
             double toH = -Norm(a), toV = -Norm(a - Math.PI / 2);
             string ax = (axis ?? "auto").Trim().ToLowerInvariant();
@@ -252,12 +333,15 @@ namespace ClaudeCAD.Plugin.Core
         {
             if (head == null || head.Length < 4) return null;
             bool At(int i, params byte[] b) { if (head.Length < i + b.Length) return false; for (int k = 0; k < b.Length; k++) if (head[i + k] != b[k]) return false; return true; }
-            if (At(0, 0x89, 0x50, 0x4E, 0x47) || At(0, 0xFF, 0xD8, 0xFF) || At(0, 0x42, 0x4D) || At(0, 0x49, 0x49, 0x2A, 0x00) || At(0, 0x4D, 0x4D, 0x00, 0x2A) || At(0, 0x47, 0x49, 0x46, 0x38)) return "raster";
+            if (At(0, 0x89, 0x50, 0x4E, 0x47) || At(0, 0xFF, 0xD8, 0xFF) || At(0, 0x42, 0x4D) || At(0, 0x49, 0x49, 0x2A, 0x00) || At(0, 0x4D, 0x4D, 0x00, 0x2A) ||
+                At(0, 0x49, 0x49, 0x2B, 0x00) || At(0, 0x4D, 0x4D, 0x00, 0x2B) || // Sửa KFG (nghi vấn G5): BigTIFF (AutoCAD says if it cannot read it)
+                 At(0, 0x47, 0x49, 0x46, 0x38)) return "raster";
             if (At(0, 0x52, 0x49, 0x46, 0x46) && At(8, 0x57, 0x45, 0x42, 0x50)) return "webp";
             if (At(4, 0x66, 0x74, 0x79, 0x70) && head.Length >= 12)
             {
                 var brand = Encoding.ASCII.GetString(head, 8, 4).ToLowerInvariant();
-                if (brand.StartsWith("hei") || brand.StartsWith("mif") || brand == "heix" || brand == "hevc" || brand == "avif") return "heic";
+                if (brand == "avif" || brand == "avis") return "avif"; // Sửa KFG-14: AVIF is not HEIC
+                if (brand.StartsWith("hei") || brand.StartsWith("mif") || brand == "heix" || brand == "hevc") return "heic";
             }
             // a PDF may have a few bytes before its header
             var s = Encoding.ASCII.GetString(head, 0, Math.Min(head.Length, 1024));
@@ -271,7 +355,7 @@ namespace ClaudeCAD.Plugin.Core
             var real = KindFromContent(head);
             if (real == kindByName) return;
             string name = Path.GetFileName(path);
-            if (real == "webp" || real == "heic")
+            if (real == "webp" || real == "heic" || real == "avif")
                 throw ToolException.Invalid($"{tool}: '{name}' is really a {real.ToUpperInvariant()} picture (its name says otherwise), which AutoCAD cannot attach. Ask the user to save it as JPG or PNG (phone photos: share / export as JPG).");
             if (real == "raster" || real == "pdf")
                 throw ToolException.Invalid($"{tool}: '{name}' is really a {(real == "pdf" ? "PDF" : "picture")} although its name ends otherwise. Ask the user to rename it with the right extension, then attach it.");
@@ -339,6 +423,12 @@ namespace ClaudeCAD.Plugin.Core
             for (int y = ay; y <= by; y++) for (int x = ax; x <= bx; x++) { n++; if (!Near(bgra, (y * w + x) * 4, bg)) drawn++; }
             return n == 0 ? 0 : (double)drawn / n;
         }
+
+        /// <summary>
+        /// Sửa KFG (nghi vấn G5): the background of AutoCAD's off-screen look (Capture: RGB 33, 40, 48), as B, G, R. Known, so a
+        /// look zoomed inside the picture (its border all picture) is never taken as blank.
+        /// </summary>
+        public static readonly int[] LookBackgroundBgr = { 48, 40, 33 };
 
         /// <summary>Below this share of drawn pixels over the picture, the look is taken as showing no picture.</summary>
         public const double BlankShare = 0.005;

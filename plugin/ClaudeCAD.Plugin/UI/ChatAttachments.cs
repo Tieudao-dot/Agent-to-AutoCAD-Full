@@ -12,6 +12,20 @@ namespace ClaudeCAD.Plugin.UI
     {
         public static string Folder => Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "ClaudeCAD", "anh-dinh-kem");
 
+        /// <summary>
+        /// Sửa KFG-13: pasted pictures older than G5Numbers.PastedKeepDays are removed (a traced one was copied next to its
+        /// drawing at attach).
+        /// </summary>
+        private static void CleanOld()
+        {
+            try
+            {
+                foreach (var f in Directory.GetFiles(Folder, "anh-*.*"))
+                    try { if (Core.TraceLogic.IsOldPasted(File.GetLastWriteTimeUtc(f), DateTime.UtcNow)) File.Delete(f); } catch (Exception) { }
+            }
+            catch (Exception) { }
+        }
+
         /// <summary>The file of a pasted picture (null when it cannot be written: the message goes without a path).</summary>
         public static string Save(string base64, string mediaType)
         {
@@ -21,8 +35,10 @@ namespace ClaudeCAD.Plugin.UI
                 if (bytes.Length == 0) return null;
                 string ext = mediaType == "image/jpeg" ? ".jpg" : mediaType == "image/gif" ? ".gif" : ".png";
                 Directory.CreateDirectory(Folder);
+                CleanOld();
                 var file = Path.Combine(Folder, "anh-" + Core.F5Confirm.FileToken(base64).Substring(0, 12) + ext);
                 if (!File.Exists(file)) File.WriteAllBytes(file, bytes);
+                else File.SetLastWriteTimeUtc(file, DateTime.UtcNow); // used again: kept again
                 return file;
             }
             catch (Exception)
