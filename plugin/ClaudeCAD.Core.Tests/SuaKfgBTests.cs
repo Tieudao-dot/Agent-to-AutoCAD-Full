@@ -236,7 +236,8 @@ namespace ClaudeCAD.Core.Tests
             Assert.False(TraceLogic.IsOldPasted(now.AddDays(-1), now));
             var c = Src("plugin", "ClaudeCAD.Plugin", "ChatController.cs");
             Assert.Contains("PlanLogic.Allowed(WorkModeLogic.EffectivePlan(Activation.Plan, WorkModeLogic.Normalize(_settings.WorkMode)), \"trace_image\")", c);
-            Assert.Contains("var path = tracePaths ? i.SourcePath ?? UI.ChatAttachments.Save(i.Base64, i.MediaType) : null;", c);
+            // lượt 2 (KFG-29): a network file the user attached is copied here first
+            Assert.Contains("var path = tracePaths ? (i.SourcePath != null ? UI.ChatAttachments.LocalFile(i.SourcePath) : UI.ChatAttachments.Save(i.Base64, i.MediaType)) : null;", c);
             Assert.Contains("CleanOld();", Src("plugin", "ClaudeCAD.Plugin", "UI", "ChatAttachments.cs"));
             Assert.Contains("res[\"pasted_note\"]", Trace());
             Assert.False(PlanLogic.Allowed(WorkModeLogic.EffectivePlan("3d", null), "trace_image"));

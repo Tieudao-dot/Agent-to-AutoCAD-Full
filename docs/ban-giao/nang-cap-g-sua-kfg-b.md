@@ -8,7 +8,7 @@ Không chạy CI riêng (thread giữ nhánh tích hợp chạy sau khi gộp); 
 
 | Mã | Đã sửa thế nào | Test |
 | --- | --- | --- |
-| KFG-01 (nặng) | Góc nhìn đã lưu được **sao chép trong transaction** (`NamedViewCopy`, `rec.Clone()`), bản sao dùng cho `SetCurrentView` và hướng nhìn của đường lui, `Dispose` ở mọi nhánh. Bước tự kiểm G4 thêm nhánh có tên: lưu góc nhìn, lấy bản sao, hiện rồi trả lại, xóa. | `SuaKfgBTests.Kfg01_…` |
+| KFG-01 (nặng) | Góc nhìn đã lưu được **sao chép trong transaction** (`NamedViewCopy`, `rec.Clone()`), bản sao dùng cho `SetCurrentView` và hướng nhìn của đường lui. (Lượt 1 ghi "Dispose ở mọi nhánh" là chưa đúng: nhánh từ chối để hỏi thẻ chưa Dispose; sửa ở lượt 2, KFG-31.) Bước tự kiểm G4 thêm nhánh có tên: lưu góc nhìn, lấy bản sao, hiện rồi trả lại, xóa. | `SuaKfgBTests.Kfg01_…` |
 | KFG-04 | `lighting: auto` khi bản vẽ có đèn / mặt trời: **tắt đèn mặc định trong lúc render** (AutoCAD bỏ qua đèn của khách khi đèn mặc định bật), trả lại sau render như mọi thay đổi tạm. | `Kfg04_…`; test cũ không đổi |
 | KFG-27 | Kết quả cuối khi `method: "capture"` bỏ `background`, `lighting`, `changed_for_render`, `estimate_seconds`, `max_wait_seconds`, `quality` của lúc bắt đầu (`finalRenderResult`); render thật giữ nguyên. | `agent/test/suakfgb.test.ts` |
 | KFG-10 (F5) | Mã duyệt "vật liệu cho cả layer" = layer + tên vật liệu (`F5Confirm.LayerMaterialToken`); "đổi màu / độ trong vật liệu có sẵn" = vật liệu + màu + độ trong (`MaterialLookToken`). Duyệt "gạch cho A-WALL" không còn cho "kính", duyệt màu đỏ không cho màu khác. | `Kfg10_…`; test F5 cũ sửa đúng một dòng (mã cũ là handle layer) |
@@ -71,3 +71,30 @@ cấp.
 - AutoCAD thật: `ViewTableRecord.Clone()` + `SetCurrentView` bản sao, tắt ghi hoàn tác khi đổi góc nhìn, `DefaultLightingOn` tắt / bật
   lại, render có chạy tiếp sau khi lệnh kết thúc không, ảnh nền theo UCS xoay (ảnh và PDF), `DriveInfo` của ổ mạng, `IsNamedDrawing`,
   bước tự kiểm G4 (nhánh góc nhìn đã lưu). Thử tay: `docs/checklist-dot-g4.md` mục G, `docs/checklist-dot-g5.md` mục H.
+
+## 8. Lượt 2 (sau soát lại lượt 1, 26/11)
+
+Gộp `full/nang-cap-g-tong-the` @ `20e3812` vào trước. Nguồn: mục "Soát lại lượt 1" của `docs/ban-giao/kiem-tra-doc-lap-dot-fg.md`
+(`claude/inspiring-cray-58xsmt` @ `22e660d`).
+
+| Mã | Đã sửa thế nào | Test |
+| --- | --- | --- |
+| KFG-28 (bảo mật) | `\\.\UNC\…` nhận như `\\?\UNC\…` (đường dẫn mạng); `\\?\<ổ>:\…` / `\\.\<ổ>:\…` đổi về `<ổ>:\…` rồi kiểm loại ổ như thường; mọi dạng `\\?\` / `\\.\` khác (`GLOBALROOT`, `pipe`, volume GUID, ổ vật lý…) bị từ chối (`TraceLogic.PlainPath`). Luật vẫn: ổ của máy, file khách đính kèm, hoặc cùng máy chủ + thư mục chia sẻ với bản vẽ. | `SuaKfgB2Tests` (Unc_device_forms…, Device_prefixes…, Kfg28_…) |
+| KFG-29 | File khách kéo / chọn vào chat từ đường dẫn mạng / ổ mạng / dạng thiết bị: khung chat **chép một lần** vào `%LOCALAPPDATA%\ClaudeCAD\anh-dinh-kem` (tên `tep-…`, dọn sau 7 ngày như ảnh dán) và đưa Claude bản chép (`ChatAttachments.LocalFile`). Lời khuyên khi từ chối: "kéo file vào khung chat (khung chat chép về máy) hoặc chép về máy" (`TraceLogic.Advice`); checklist G5 sửa theo. Bản chép đủ độ phân giải, không bị gọi là "ảnh dán ≤ 1568 px". | `Kfg29_…`; 2 test cũ sửa đúng một dòng (cách lấy đường dẫn ảnh trong `ChatController`) |
+| Nhận xét: đường tương đối | Đường dẫn không đầy đủ (không có ổ, không phải mạng) bị từ chối **trước** khi đọc file, kèm lời nhờ đường dẫn đầy đủ / kéo file vào chat. | `A_relative_path_…` |
+| Nhận xét: bản vẽ mở từ ổ mạng ánh xạ | Giữ từ chối (đổi Z: ra máy chủ + share cần gọi Windows, không làm); lời báo nói rõ "bản vẽ mở từ ổ Z:, ghi đường dẫn của file theo ổ Z:". | `A_drawing_on_a_mapped_drive_…` |
+| KFG-31 | `RequireOverwriteCard` (và kiểm thư mục, tên file) bọc trong `try / catch` Dispose bản sao góc nhìn rồi ném tiếp; nhánh không có thư mục tạm cũng Dispose cả khi lấy góc nhìn lỗi. | `Kfg31_…` |
+| KFG-35 | Đếm trang PDF có thời hạn chung 2 s (`TraceLogic.PdfScanSeconds`, mọi regex dùng thời gian còn lại); hết giờ = không đếm được → gắn trang 1 kèm `pages_note` (đã có). | `Kfg35_…` (PDF giả 15 000 object) |
+| KFG-36 | Chỗ đặt mặc định tính trong UCS: khung bản vẽ nhìn trong UCS, ảnh đặt bên phải theo trục x của UCS (`TraceLogic.InsertPointInUcs`). | `Kfg36_…` (0°, 30°, 60°, 90°, −45°) |
+| KFG-37 | PDF giữ khung góc của nó (gốc, vectơ rộng, vectơ cao) trong dấu trace; `scale` / `straighten` dời khung theo cùng phép biến đổi; `min` / `max` của `scale`, `straighten`, `info` là hai góc ảnh (trả theo UCS), cả ảnh raster ở `info`. PDF gắn trước bản sửa (dấu cũ không có khung): như trước (khung WCS). | `Kfg37_…` |
+
+- Giữ nguyên: thời gian chờ sau khi lệnh render kết thúc = số lớn hơn giữa 20 s và ước lượng (`RenderLogic.EndGrace`).
+- Không có con số mới cho khách. Số kỹ thuật mới: thời hạn đếm trang PDF 2 s.
+- Quyết định tự chọn thêm: (6) file mạng khách đính kèm được **chép về máy** (cách an toàn, không mở file trên máy mạng lúc vẽ); (7) bản vẽ
+  trên ổ mạng ánh xạ + ảnh ghi theo máy chủ: **giữ từ chối**, lời báo hướng dẫn ghi theo ổ.
+- Chưa sửa (ngoài phạm vi): dòng tương ứng trong `docs/checklist-tong-the.md` (mục G5 3) và `docs/dot-g-cho-duyet.md` (~394) vẫn ghi "chép
+  file về máy hoặc kéo vào chat" theo thứ tự cũ: ý vẫn đúng; thread giữ nhánh tích hợp sửa khi gộp nếu muốn.
+- Test: lõi **1432** (1409 sau gộp + 23 `SuaKfgB2Tests.cs`); trợ lý **407** (không đổi code trợ lý ở lượt 2), chạy lại sau lần sửa cuối (`271ae04`); build 3 target 0 cảnh báo. Thử tay: `docs/checklist-dot-g5.md` mục I.
+- Chưa kiểm được: kéo file mạng vào khung chat trên Windows thật (WPF), `DriveInfo` ổ mạng, PDF xoay theo UCS (khung góc), thời gian đếm
+  trang trên máy khách.
+

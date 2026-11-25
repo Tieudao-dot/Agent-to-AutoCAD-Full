@@ -129,10 +129,18 @@ namespace ClaudeCAD.Plugin.Drawing
             }
 
             ViewTableRecord named = name != null ? NamedViewCopy(db, name, tool) : null;
-
-            var file = MaterialLogic.ImagePath(p.Str("output", null), DrawingFolder(ctx), DrawingStem(ctx), RenderLogic.Tail(name));
-            if (!Directory.Exists(Path.GetDirectoryName(file))) throw ToolException.Invalid($"{tool}: folder '{Path.GetDirectoryName(file)}' does not exist.");
-            RequireOverwriteCard(ctx, p, tool, file, File.Exists(file), $"{tool}: '{file}' already exists. Pass replace: true to overwrite it (ask the user first), or another output.", "replace", "overwrite");
+            string file;
+            try
+            {
+                file = MaterialLogic.ImagePath(p.Str("output", null), DrawingFolder(ctx), DrawingStem(ctx), RenderLogic.Tail(name));
+                if (!Directory.Exists(Path.GetDirectoryName(file))) throw ToolException.Invalid($"{tool}: folder '{Path.GetDirectoryName(file)}' does not exist.");
+                RequireOverwriteCard(ctx, p, tool, file, File.Exists(file), $"{tool}: '{file}' already exists. Pass replace: true to overwrite it (ask the user first), or another output.", "replace", "overwrite");
+            }
+            catch
+            {
+                named?.Dispose(); // KFG-31: the copy of the view is disposed on a refusal too (e.g. the first call asks the card)
+                throw;
+            }
 
             _lastRenderResult = null;
             var tempDir = RenderTempDir();
@@ -146,8 +154,11 @@ namespace ClaudeCAD.Plugin.Drawing
             if (tempDir == null)
             {
                 // Test & sửa G4: no folder whose path can be typed safely (spaces / accents): no -RENDER, the picture at once
-                using (var cur = doc.Editor.GetCurrentView()) job.Direction = (named?.ViewDirection) ?? cur.ViewDirection;
-                try { return RenderFallback(job, "no temporary folder without spaces or accents for the render file", 0, tool); }
+                try
+                {
+                    using (var cur = doc.Editor.GetCurrentView()) job.Direction = (named?.ViewDirection) ?? cur.ViewDirection;
+                    return RenderFallback(job, "no temporary folder without spaces or accents for the render file", 0, tool);
+                }
                 finally { named?.Dispose(); }
             }
             try

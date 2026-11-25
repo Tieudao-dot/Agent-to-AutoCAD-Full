@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using System.Linq;
 
 namespace ClaudeCAD.Plugin.UI
 {
@@ -20,10 +21,44 @@ namespace ClaudeCAD.Plugin.UI
         {
             try
             {
-                foreach (var f in Directory.GetFiles(Folder, "anh-*.*"))
+                foreach (var f in Directory.GetFiles(Folder, "anh-*.*").Concat(Directory.GetFiles(Folder, "tep-*.*"))) // pasted, network copies
                     try { if (Core.TraceLogic.IsOldPasted(File.GetLastWriteTimeUtc(f), DateTime.UtcNow)) File.Delete(f); } catch (Exception) { }
             }
             catch (Exception) { }
+        }
+
+        /// <summary>
+        /// KFG-29: the file to give Claude for a picture the user dragged / chose. A file of the network (\\server\share, a mapped
+        /// network drive, a device path) is copied here first, so trace_image only ever opens a file of this computer: the user
+        /// chose that file themselves, and Claude never reaches the network computer. Null when the copy fails (no path sent).
+        /// </summary>
+        public static string LocalFile(string path)
+        {
+            if (string.IsNullOrEmpty(path)) return null;
+            bool network = false;
+            try
+            {
+                var plain = Core.TraceLogic.PlainPath(path);
+                if (plain != null && Core.TraceLogic.IsAbsoluteDrivePath(plain))
+                    network = new DriveInfo(plain.Substring(0, 1)).DriveType == DriveType.Network;
+            }
+            catch (Exception) { }
+            if (!Core.TraceLogic.NeedsLocalCopy(path, network)) return path;
+            try
+            {
+                var info = new FileInfo(path);
+                if (!info.Exists || info.Length > Core.G5Numbers.MaxFileMb * 1024 * 1024) return null;
+                Directory.CreateDirectory(Folder);
+                CleanOld();
+                var file = Path.Combine(Folder, "tep-" + Core.F5Confirm.FileToken(path + "|" + info.Length + "|" + info.LastWriteTimeUtc.Ticks).Substring(0, 12) + Path.GetExtension(path).ToLowerInvariant());
+                if (!File.Exists(file)) File.Copy(path, file);
+                else File.SetLastWriteTimeUtc(file, DateTime.UtcNow);
+                return file;
+            }
+            catch (Exception)
+            {
+                return null;
+            }
         }
 
         /// <summary>The file of a pasted picture (null when it cannot be written: the message goes without a path).</summary>

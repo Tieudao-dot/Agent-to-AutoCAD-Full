@@ -74,8 +74,8 @@ này ghi một trong hai câu: "AutoCAD có vẽ ảnh nền khi chụp", hoặc
    song lưới UCS); `straighten` theo một tường nằm dọc trục x của UCS thì gần như không xoay.
 2. **KFG-06:** bản vẽ có một ảnh của cậu (logo trong khung tên). Nhờ Claude "co ảnh logo này" bằng trace: Claude phải báo ảnh đó
    không do lệnh vẽ lại gắn, không co / xoay nó.
-3. **Đường dẫn mạng:** "vẽ lại `\\máy-khác\thư-mục\scan.png`" (máy khác với chỗ lưu bản vẽ): Claude từ chối, nhờ chép file về máy
-   hoặc kéo vào khung chat. File cùng thư mục mạng với bản vẽ đang mở: được.
+3. **Đường dẫn mạng:** "vẽ lại `\\máy-khác\thư-mục\scan.png`" (máy khác với chỗ lưu bản vẽ): Claude từ chối, nhờ kéo file vào
+   khung chat hoặc chép về máy. File cùng thư mục mạng với bản vẽ đang mở: được.
 4. **KFG-11:** một PDF nhiều trang đã sửa / lưu lại nhiều lần (vd ký, ghi chú bằng Acrobat): Claude hỏi trang, số trang đúng.
    PDF nén (Claude báo "không đọc được số trang"): Claude nói đã gắn trang 1 và hỏi lại nếu cần.
 5. **KFG-13:** máy gói 3D (hoặc chế độ "3D"): dán ảnh vào chat, không có file mới trong `%LOCALAPPDATA%\ClaudeCAD\anh-dinh-kem`.
@@ -83,4 +83,19 @@ này ghi một trong hai câu: "AutoCAD có vẽ ảnh nền khi chụp", hoặc
    khi bản scan lớn, chữ nhỏ.
 6. Bản vẽ **chưa lưu** + ảnh dán: Claude nhờ lưu bản vẽ trước (không còn chép ảnh vào Documents).
 7. Phóng to vào giữa một trang PDF (`view` với `p1` / `p2` nằm trong trang): không còn cảnh báo nhầm "ảnh xem không có ảnh".
+
+## I. Sau sửa lỗi lượt 2 (KFG-28 … 37, ~10 phút)
+
+1. **KFG-29:** kéo một ảnh từ thư mục mạng (khác thư mục của bản vẽ, vd `\\nas\anh\scan.jpg`) vào khung chat, gõ "vẽ lại bản này":
+   phải gắn được. File được chép một lần vào `%LOCALAPPDATA%\ClaudeCAD\anh-dinh-kem` (tên `tep-…`) rồi chép cạnh bản vẽ; Claude
+   không tự mở file trên máy mạng. Làm theo lời khuyên khi bị từ chối (kéo vào khung chat) thì qua được.
+2. **KFG-28:** nhờ Claude "vẽ lại `\\.\UNC\máy-khác\x\a.png`", "`\\?\GLOBALROOT\Device\Mup\máy-khác\x\a.png`", hoặc
+   "`\\?\Z:\a.png`" (Z: là ổ mạng, bản vẽ ở C:): đều bị từ chối. "`\\?\C:\…\a.png`" (ổ của máy): được.
+3. Đường dẫn không đầy đủ ("vẽ lại `scan.png`"): Claude nhờ đường dẫn đầy đủ hoặc kéo file vào chat (không đọc thư mục hiện tại).
+4. Bản vẽ mở từ ổ mạng Z: (= `\\nas\duan`) và ảnh ghi `\\nas\duan\…`: bị từ chối kèm lời nhắc ghi đường dẫn theo ổ Z:.
+5. **KFG-36:** UCS xoay 60° hoặc 90°, bản vẽ có sẵn hình, gắn ảnh không chỉ chỗ: ảnh nằm bên phải bản vẽ theo UCS, không đè lên hình.
+6. **KFG-37:** UCS xoay 30°, gắn một trang PDF, `scale` rồi `info`: `min` / `max` là hai góc của trang theo UCS (khớp lưới UCS).
+7. **KFG-31:** "render lại góc Phối cảnh 1" khi PNG đã có → thẻ ghi đè → Hủy, làm vài lần: AutoCAD không báo lỗi lạ.
+8. **KFG-35:** gắn một PDF rất lớn (vài chục MB): AutoCAD không đứng quá ~2 giây ở bước đếm trang; nếu không đếm được, Claude nói
+   đã gắn trang 1.
 
