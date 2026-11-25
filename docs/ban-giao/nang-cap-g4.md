@@ -113,7 +113,8 @@ Số kỹ thuật (khách không thấy): hỏi trạng thái mỗi 2 000 ms; fi
 
 ## 10. CI
 
-- Run **#62** (`45649202227`, `release=false`) trên `7ddbf12` (commit code cuối): xem mục cập nhật cuối file.
+- Run **#62** (`45649202227`, `release=false`) trên `7ddbf12` (commit code cuối): **xanh** (job `windows`: build 3 target, lõi,
+  trợ lý, UI test WPF). Dùng 1 / 2 lượt. Commit sau đó chỉ thêm tài liệu bàn giao.
 
 ## 11. Chưa kiểm được
 
