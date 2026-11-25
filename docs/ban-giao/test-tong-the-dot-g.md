@@ -99,4 +99,5 @@ Các số của G1 → G5 khớp code (`G1Numbers`, `G2Numbers`, `G3Numbers`, `G
 
 ## 9. CI
 
-(điền sau khi chạy)
+Run 45671817871 (#68) trên `4fbb2a2` (commit code cuối): **xanh**. Dùng 1 / 2 lượt. Commit sau đó chỉ là tài liệu (gộp
+`e3eda7b` bàn giao G5-test, ghi CI vào file này).
