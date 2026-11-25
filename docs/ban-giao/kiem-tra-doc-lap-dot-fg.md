@@ -665,3 +665,11 @@ Kết quả lượt soát lại 2: KFG-07 (phần còn lại) và 10 / 11 lỗi 
 
 Luồng chính chốt cách dừng vòng soát: lượt soát lại 3 chỉ soát bốn lỗi này và phần code vừa sửa. Hết lỗi mức vừa trở lên thì
 chốt nhánh; lỗi nhẹ còn lại (nếu có) hoặc sửa ngay nếu rẻ, hoặc ghi vào danh sách "biết, chấp nhận" kèm lý do cho chủ dự án.
+
+### Tiến độ sửa lượt 3
+
+| Thread | Kết quả |
+| --- | --- |
+| Thread đợt F1 (G2) | 26/11 02h37: sửa KFG-41, 42 ở `full/nang-cap-g-sua-kfg-a` @ `3d68e9f`, lõi 1438, trợ lý 407, ≈ $3 |
+| Thread Test & sửa F1 (G5) | 02h37: sửa KFG-39, 40 ở `full/nang-cap-g-sua-kfg-b` @ `47faaf2` (code `0dd8945`), lõi 1442, trợ lý 407. Cách làm đổi: lúc gửi tin không chép gì; khung chat ghi nhớ file khách kéo / chọn, đến lúc gắn ảnh mới chép file mạng về máy (giữ 7 ngày tính từ lúc chép). Quyết định mới: AutoCAD có thể chờ khi gắn file mạng lớn; danh sách file khách đã kéo chỉ giữ trong một phiên AutoCAD |
+| Thread đợt F2 (giữ nhánh tích hợp) | CI 45685933989 (#70) của bản gộp lượt 2 + tài liệu (`fff7ffe`) xanh. Thread dừng 02h43 vì chạm giới hạn sử dụng 5 giờ (cả luồng chính cũng dừng tới 04h55); 04h56 luồng chính cho chạy tiếp: gộp hai nhánh lượt 3, tài liệu, CI |
