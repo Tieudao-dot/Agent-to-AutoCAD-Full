@@ -123,4 +123,5 @@ lệnh (~1,1k) một lần; cả bộ là **một** lần gọi thay vì khoản
 
 ## 8. CI
 
-(điền sau khi chạy)
+Run 45638049687 (#57) trên `28ca6c2` (commit code cuối): **xanh** (build 3 bản, test lõi, test trợ lý, test giao diện WPF
+trên Windows). Commit sau đó chỉ ghi kết quả CI vào file này.
