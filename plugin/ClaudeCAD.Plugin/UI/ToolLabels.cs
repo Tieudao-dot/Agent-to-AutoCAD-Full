@@ -151,6 +151,7 @@ namespace ClaudeCAD.Plugin.UI
             ["create_sheet"] = "Tạo trang in có khung tên",
             ["insert_library_block"] = "Chèn block thư viện",
             ["layer_state"] = "Trạng thái layer",
+            ["create_drawing_set"] = "Ra bộ hồ sơ", // nâng cấp đợt G1
         };
 
         public static string Describe(string tool)

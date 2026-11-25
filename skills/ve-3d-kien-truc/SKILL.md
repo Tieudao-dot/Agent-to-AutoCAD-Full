@@ -208,3 +208,7 @@ Gán theo layer cho nhanh (vd `A-ROOF-3D` → ngói). Xem: `capture_view` với 
   `capture_view` `top` với handles của kết quả. Đặt nhiều hình: kết quả trả `size` và `frame` (điểm mô hình → điểm trên
   bản vẽ) để căn hình sau theo hình trước.
 - Máy gói 3D không có lệnh ghi kích thước / chữ: chỉ dựng hình; muốn ghi kích thước thì cần gói Full.
+- **Cả bộ hồ sơ** (mặt bằng từng tầng, 4 mặt đứng, 2 mặt cắt, phối cảnh lên các tờ có khung tên, in một PDF): một lệnh
+  `create_drawing_set`, không gọi từng `section_view` / `projection_view` / `create_sheet`. Mặt bằng mặc định là mặt cắt
+  ngang cao 1,2 m trên sàn mỗi tầng; khách chỉ vị trí cắt thì `sections` với `line`. Máy gói 3D: hình vẽ trong model, không
+  có tờ in (báo khách phần này cần gói Full / 2D). Chạy lại: thẻ xác nhận thay bộ cũ.

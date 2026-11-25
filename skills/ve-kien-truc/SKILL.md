@@ -71,6 +71,8 @@ Khi cùng một loại cửa dùng nhiều lần: dùng `insert_library_block` (
 
 Trang in: `create_sheet` (khổ A3 / A1…, khung tên điền công trình, hạng mục, tên bản vẽ, người vẽ, số bản vẽ), rồi `plot_pdf`.
 
+Cả bộ hồ sơ ("ra bộ hồ sơ", "xuất hồ sơ bản vẽ"): một lệnh `create_drawing_set` (mặt bằng, mặt đứng, mặt cắt, phối cảnh, mỗi hình một tờ KT-01…, `pdf: true` khi khách muốn file PDF), không làm từng tờ. Hỏi khách tên công trình, người vẽ… cho khung tên (`fields`) nếu khách chưa nói; mặt bằng có kích thước / chữ 2D thì `plan_source: "2d"` (nhiều tầng vẽ cạnh nhau: `plan_areas`).
+
 ## 6. Chữ trong phòng
 
 - Tên phòng (IN HOA, ví dụ "PHÒNG NGỦ") ở tâm phòng, `add_text` justify `middle_center`, cao theo bảng mục 4, layer `A-TEXT`, style `KT-ARIAL`.

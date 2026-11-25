@@ -977,6 +977,47 @@ namespace ClaudeCAD.Plugin
                     : new SelfTestRules.Verdict(false, string.Join("; ", errs));
             });
 
+            // Nâng cấp đợt G1: a drawing set of a box (one elevation + the perspective), then again: refused until the card, replaced after it (not run on CI)
+            Check("Nâng cấp đợt G1: ra bộ hồ sơ (mặt đứng + phối cảnh), chạy lại cần thẻ", () =>
+            {
+                var errs = new List<string>();
+                using (doc.LockDocument())
+                using (var tr = doc.TransactionManager.StartTransaction())
+                {
+                    var box = new Solid3d();
+                    box.CreateBox(3000, 2000, 2500);
+                    box.TransformBy(Matrix3d.Displacement(new Vector3d(300000, 0, 1250)));
+                    var ms = (BlockTableRecord)tr.GetObject(SymbolUtilityServices.GetBlockModelSpaceId(doc.Database), OpenMode.ForWrite);
+                    ms.AppendEntity(box);
+                    tr.AddNewlyCreatedDBObject(box, true);
+                    tr.Commit();
+                }
+                var args = new Dictionary<string, object>
+                {
+                    ["kinds"] = new List<object> { "elevation", "perspective" }, ["elevations"] = new List<object> { "front" }, ["prefix"] = "STG1",
+                };
+                var r1 = (Dictionary<string, object>)DrawingService.CreateDrawingSet(new ToolContext(doc, null, true, null), new Params("create_drawing_set", new Dictionary<string, object>(args)));
+                var sheets = (List<object>)r1["sheets"];
+                if (sheets.Count != 2) errs.Add($"lần 1: {sheets.Count} tờ (cần 2)");
+                if (!LayoutManager.Current.LayoutExists("STG1-01") || !LayoutManager.Current.LayoutExists("STG1-02")) errs.Add("thiếu layout STG1-01 / STG1-02");
+                string token = null;
+                try { DrawingService.CreateDrawingSet(new ToolContext(doc, null, true, null), new Params("create_drawing_set", new Dictionary<string, object>(args))); errs.Add("lần 2: thay bộ cũ không cần thẻ"); }
+                catch (ToolException ex)
+                {
+                    var m = System.Text.RegularExpressions.Regex.Match(ex.Message, "\\[\"([0-9A-F]+)\"");
+                    token = m.Success ? m.Groups[1].Value : null;
+                    if (token == null) errs.Add("lần 2: thẻ không ghi mã: " + ex.Message);
+                }
+                if (token != null)
+                {
+                    var a2 = new Dictionary<string, object>(args) { [SolidLogic.UserConfirmedParam] = new List<object> { token } };
+                    var r2 = (Dictionary<string, object>)DrawingService.CreateDrawingSet(new ToolContext(doc, null, true, null), new Params("create_drawing_set", a2));
+                    if (!r2.ContainsKey("replaced")) errs.Add("lần 3: không báo replaced");
+                    if (((List<object>)r2["sheets"]).Count != 2) errs.Add("lần 3: số tờ khác 2");
+                }
+                return errs.Count == 0 ? new SelfTestRules.Verdict(true, "STG1-01 mặt đứng, STG1-02 phối cảnh; chạy lại qua thẻ") : new SelfTestRules.Verdict(false, string.Join("; ", errs));
+            });
+
             string versionFile = Path.Combine(dir, "version-copy.dwg");
             Do("Bản sao phiên bản (Wblock + SaveAs)", () =>
             {

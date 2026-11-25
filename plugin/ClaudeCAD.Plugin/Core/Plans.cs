@@ -82,6 +82,8 @@ namespace ClaudeCAD.Plugin.Core
                 "group_entities match_properties " +
                 // nâng cấp đợt F2 (Drawing/Standards2DTools.cs): library blocks and layer states, like the block / layer tools
                 "insert_library_block layer_state " +
+                // nâng cấp đợt G1 (Drawing/DrawingSetTools.cs): the drawing set; each part inside needs its own tool's group
+                "create_drawing_set " +
                 // basic curves: 3D uses them as profiles and paths
                 "draw_line draw_polyline draw_circle draw_arc draw_spline draw_ellipse draw_rectangle draw_polygon draw_point draw_ray draw_xline");
             Add(ToolGroup.TwoD,

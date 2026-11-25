@@ -10,6 +10,7 @@ import { batchTools } from './batch.js';
 import { blockTools } from './blocks.js';
 import { captureTools } from './capture.js';
 import { drawTools } from './draw.js';
+import { drawingSetTools } from './drawingset.js';
 import { layerTools } from './layers.js';
 import { layoutTools } from './layouts.js';
 import { MATCH_PROPS_GENERAL, MATCH_PROPS_TEXT_DESC, modifyTools } from './modify.js';
@@ -66,6 +67,7 @@ export function buildTools(bridge: ToolBridge, allowed?: readonly string[], plan
     ...layoutTools(bridge),
     ...advancedTools(bridge),
     ...standards2dTools(bridge),
+    ...drawingSetTools(bridge), // nâng cấp đợt G1
     ...systemTools(bridge),
   ];
   const kept = allowed ? all.filter((t) => new Set(allowed).has(t.name)) : all;
