@@ -343,5 +343,5 @@ Quyết định luồng chính chọn khi giao (cách rẻ, an toàn, đổi l�
 
 | Thread | Kết quả |
 | --- | --- |
-| Thread đợt F1 (G2) | 26/11 01h50: sửa hết KFG-07, 08, 15, 16, 17, 18 và 3 nghi vấn, `full/nang-cap-g-sua-kfg-a` @ `2e1dfe2`, lõi 1375, trợ lý 400, ≈ $6. Đang chỉnh thêm KFG-08 theo quyết định trên |
+| Thread đợt F1 (G2) | 26/11 01h50: sửa hết KFG-07, 08, 15, 16, 17, 18 và 3 nghi vấn, `full/nang-cap-g-sua-kfg-a` @ `2e1dfe2`, lõi 1375, trợ lý 400, ≈ $6. 01h56: chỉnh xong KFG-08 theo quyết định trên @ `cbc1b03` (có thêm tham số `sheets` để khách nhờ soát cả tab mặc định), lõi 1376, trợ lý 400, ≈ $2 |
 | Thread Test & sửa F1 (G4, G5, F5) | 26/11 01h54: sửa hết KFG-01, 04, 05, 06, 10, 11, 12, 13, 27, phần `Trace.cs` của KFG-14 và các nghi vấn G4 / G5, `full/nang-cap-g-sua-kfg-b` @ `468dc09` (code `f48747c`), lõi 1388, trợ lý 404. Số mới chờ duyệt: giữ ảnh dán 7 ngày; chờ sau khi lệnh render kết thúc = số lớn hơn giữa 20 giây và thời gian ước lượng. Quyết định mới: ảnh dán vào bản vẽ chưa lưu thì nhờ khách lưu bản vẽ trước (không chép vào Documents nữa); đường dẫn mạng lạ bị chặn lúc gắn ảnh |
