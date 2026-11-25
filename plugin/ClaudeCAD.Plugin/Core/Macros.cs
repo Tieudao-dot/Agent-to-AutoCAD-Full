@@ -81,6 +81,8 @@ namespace ClaudeCAD.Plugin.Core
         public static readonly HashSet<string> NotRecorded = new HashSet<string>(StringComparer.Ordinal)
         {
             "zoom_extents", "zoom_window", "set_view_3d", "set_visual_style", "set_ucs", "reset_ucs", "regen", "save_drawing", "purge_unused", "undo_last_turn", "batch_execute",
+            // nâng cấp đợt G2: a repair is for the objects the user saw on the card, never replayed on another drawing
+            "fix_drawing",
         };
 
         public const int MaxCalls = 2000;

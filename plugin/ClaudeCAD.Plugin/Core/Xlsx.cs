@@ -27,6 +27,7 @@ namespace ClaudeCAD.Plugin.Core
             ["area_schedule"] = "dien-tich",
             ["volume_schedule"] = "khoi-luong",
             ["check_interference"] = "va-cham",
+            ["check_drawing"] = "soat-ban-ve", // nâng cấp đợt G2
         };
         /// <summary>Sheet names (the drawing table's title, shortened to Excel's 31 characters when needed).</summary>
         public static readonly IReadOnlyDictionary<string, string> SheetName = new Dictionary<string, string>(StringComparer.Ordinal)
@@ -35,6 +36,7 @@ namespace ClaudeCAD.Plugin.Core
             ["area_schedule"] = "Diện tích",
             ["volume_schedule"] = "Khối lượng 3D",
             ["check_interference"] = "Va chạm khối 3D",
+            ["check_drawing"] = "Soát bản vẽ", // nâng cấp đợt G2
         };
     }
 

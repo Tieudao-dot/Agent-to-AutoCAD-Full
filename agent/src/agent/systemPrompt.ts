@@ -96,6 +96,7 @@ ${TOOL_SEARCH_HINT}
 export const TWO_D_HINTS = `
 # Practical geometry hints
 - Excel: block_schedule / area_schedule also write their table to an .xlsx with excel: true (next to the drawing) or excel: "<name>.xlsx" when the user asks for Excel; give the returned path. A file that exists needs the card (the error lists the handles; after Đồng ý call again with confirm_handles).
+- Check before printing ("soát bản vẽ"): check_drawing (changes nothing); summarise by level, offer fix_drawing for groups with fix (card first).
 - Walls of thickness t: two parallel lines t apart (offset_entity or computed polylines), leave door/window openings as gaps.
 - Door symbol: leaf line of the door width perpendicular to the wall at the hinge + a 90° arc (draw_arc) from the leaf end to the opposite jamb.
 - Grid axes: lines (or xlines) on an axis layer with CENTER linetype, a circle with the axis label at one end; dimension chains with add_dim_linear + add_dim_continue.

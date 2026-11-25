@@ -110,3 +110,4 @@ Kết thúc bằng `zoom_extents` và một câu báo cáo: số đối tượng
 - Mọi đối tượng nằm đúng layer trong bảng mục 2 (không vẽ gì trên layer `0`).
 - Chữ và dim đúng chiều cao theo tỷ lệ in.
 - Lỗ cửa đúng bề rộng, cánh cửa và cung khớp hai mép lỗ.
+- Người dùng nói "soát bản vẽ" / "kiểm tra trước khi in": gọi `check_drawing`, tóm theo mức (nên sửa trước), mỗi nhóm một dòng (tên nhóm, số lượng); nhóm có `fix` thì hỏi có sửa không, rồi gọi `fix_drawing` (layer 0 / Defpoints: hỏi chuyển sang layer nào trong bảng mục 2). Lệnh sửa tự hiện thẻ Đồng ý.

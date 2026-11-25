@@ -43,6 +43,7 @@
     <Compile Include="..\ClaudeCAD.Plugin\Core\Standards2D.cs" Link="Core\Standards2D.cs" />
     <Compile Include="..\ClaudeCAD.Plugin\Core\F5.cs" Link="Core\F5.cs" />
     <Compile Include="..\ClaudeCAD.Plugin\Core\DrawingSet.cs" Link="Core\DrawingSet.cs" />
+    <Compile Include="..\ClaudeCAD.Plugin\Core\DrawingCheck.cs" Link="Core\DrawingCheck.cs" />
     <Compile Include="..\ClaudeCAD.Plugin\Core\Solids3.cs" Link="Core\Solids3.cs" />
   </ItemGroup>
   <ItemGroup>

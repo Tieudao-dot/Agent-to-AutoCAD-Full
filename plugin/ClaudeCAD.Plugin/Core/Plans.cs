@@ -98,7 +98,9 @@ namespace ClaudeCAD.Plugin.Core
                 // nâng cấp đợt C (Drawing/Util2DTools.cs): plan dimensions, block / area schedules, find & replace of text
                 "dim_floor_plan block_schedule area_schedule find_replace_text " +
                 // nâng cấp đợt F2 (Drawing/Standards2DTools.cs): text / dimension styles of a standard, sheets with a title block
-                "setup_standards create_sheet");
+                "setup_standards create_sheet " +
+                // nâng cấp đợt G2 (Drawing/DrawingCheckTools.cs): check the drawing before printing, repair after the card
+                "check_drawing fix_drawing");
             // 3D phases 1, 2 and 3 (Drawing/SolidTools.cs, Solid2Tools.cs, PlanTo3dTools.cs, SectionTools.cs): only the 3D and Full plans
             Add(ToolGroup.ThreeD,
                 // draw_solid (nâng cấp đợt A) replaces the six primitives for Claude; their old names stay for recorded macros

@@ -6,6 +6,7 @@ import type { AnyTool, ToolBridge } from './common.js';
 import { advancedTools } from './advanced.js';
 import { annotationTools } from './annotation.js';
 import { utility2dTools } from './utility2d.js';
+import { drawingCheckTools } from './drawingCheck.js';
 import { batchTools } from './batch.js';
 import { blockTools } from './blocks.js';
 import { captureTools } from './capture.js';
@@ -68,6 +69,7 @@ export function buildTools(bridge: ToolBridge, allowed?: readonly string[], plan
     ...advancedTools(bridge),
     ...standards2dTools(bridge),
     ...drawingSetTools(bridge), // nâng cấp đợt G1
+    ...drawingCheckTools(bridge), // nâng cấp đợt G2
     ...systemTools(bridge),
   ];
   const kept = allowed ? all.filter((t) => new Set(allowed).has(t.name)) : all;
