@@ -82,7 +82,10 @@ namespace ClaudeCAD.Plugin.Drawing
                 var mx = ext.Value.MaxPoint;
                 if (WinFrame != null)
                 {
-                    var (bmin, bmax) = WinFrame.BoxFromWcs(new[] { mn.X, mn.Y, mn.Z }, new[] { mx.X, mx.Y, mx.Z });
+                    // KTF-03: the entity's own box in the UCS (re-boxing its WCS box grows at angles other than 90°)
+                    var ub = Acad.ExtentsInUcs(e, WinFrame);
+                    if (!ub.HasValue) return false;
+                    var (bmin, bmax) = ub.Value;
                     mn = new Point3d(bmin[0], bmin[1], bmin[2]);
                     mx = new Point3d(bmax[0], bmax[1], bmax[2]);
                 }

@@ -148,7 +148,13 @@ async function main(): Promise<void> {
         process.kill(parentPid, 0);
       } catch {
         log('parent process gone; exiting');
-        process.exit(0);
+        // KTF (nghi vấn F4): close the (prewarmed) Claude process too, so none is left behind without AutoCAD
+        try {
+          session.close();
+        } catch {
+          /* exiting anyway */
+        }
+        setTimeout(() => process.exit(0), 200);
       }
     }, 5000).unref();
   }

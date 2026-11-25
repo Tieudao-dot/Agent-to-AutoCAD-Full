@@ -75,8 +75,9 @@ namespace ClaudeCAD.Core.Tests
             var src = Plugin("Drawing", "PlanTo3dTools.cs");
             Assert.Contains("var areaFrame = amin != null ? UcsScope.Input : null;", src);
             Assert.Contains("amin = areaFrame.FromWcs(amin); amax = areaFrame.FromWcs(amax);", src);
-            Assert.Contains("areaFrame.PlanBoxInside(", src);
-            Assert.Equal(2, src.Split(new[] { "InArea(EntityInfo.Extents(e), amin, amax, areaFrame)" }, StringSplitOptions.None).Length - 1);
+            // KTF-03 (sửa KTF đợt F): tested with the object's own box in the UCS (was PlanBoxInside of its WCS box)
+            Assert.Contains("UcsFrame.UcsBoxInside(ub.Value.min, ub.Value.max, amin, amax)", src);
+            Assert.Equal(2, src.Split(new[] { "InArea(e, amin, amax, areaFrame)" }, StringSplitOptions.None).Length - 1);
             // World (UcsScope.Input null): the very same test as before F1
             Assert.Contains("return e.MinPoint.X >= amin[0] && e.MinPoint.Y >= amin[1] && e.MaxPoint.X <= amax[0] && e.MaxPoint.Y <= amax[1];", src);
         }
