@@ -135,4 +135,10 @@ Chế độ 2D / 3D của máy Full = gói 2D / 3D + ~220 ký tự (đoạn "Wor
 
 ## CI
 
-*(điền sau khi chạy)*
+- Run **#41** (`45584939266`, `release=false`) trên `75b4232`: **xanh** (build 3 target, test lõi, trợ lý, UI test WPF).
+- Commit sau CI chỉ thêm mục này (tài liệu).
+
+## Đã kiểm trước khi báo
+
+- Đọc lại diff so với `b2e6431`; sau lần sửa code cuối (bỏ khung nhìn mặc định của layout mới): build lại 3 target (xóa
+  obj / bin), lõi 1021 xanh, trợ lý 319 xanh, rồi CI #41.
