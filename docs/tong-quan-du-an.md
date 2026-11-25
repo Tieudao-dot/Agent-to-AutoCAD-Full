@@ -13,10 +13,9 @@ quy tắc làm việc và danh bạ thread: [`../CLAUDE.md`](../CLAUDE.md).
 - **Đợt F đang chạy (từ 25/11):** chủ dự án đã thử thật bộ cài thử bản 3, chạy ổn, và chốt nâng cấp tiếp 4 đợt nối tiếp
   F1 → F4 (UCS + nút chế độ; 2D dùng hằng ngày; 3D đẹp và đúng hơn; mở chat nhanh + xuất Excel), rồi test tổng thể, kiểm
   tra độc lập và bộ cài thử bản 4. Chi tiết và tiến độ: [`ke-hoach-nang-cap-lenh.md`](ke-hoach-nang-cap-lenh.md) mục
-  "Đợt F". Nhánh gốc của đợt F: `full/nang-cap-f-goc` @ `2dbeee2` (nhánh tích hợp + file quyền). **Tới 25/11 19h20:**
-  F1 → F4 xong (viết + rà, CI xanh; bản mới nhất `full/nang-cap-f4-test` @ `1cdf8d4`); đang test tổng thể đợt F trên
-  `full/nang-cap-f-tong-the`, sau đó kiểm tra độc lập và bộ cài thử bản 4. Chưa phần nào của đợt F chạy trên AutoCAD
-  thật.
+  "Đợt F". Nhánh gốc của đợt F: `full/nang-cap-f-goc` @ `2dbeee2` (nhánh tích hợp + file quyền). **Tới 25/11 19h45:**
+  F1 → F4 và test tổng thể đợt F xong (CI xanh; nhánh tích hợp đợt F `full/nang-cap-f-tong-the` @ `afdaa68`); đang kiểm
+  tra độc lập bằng agent mới, sau đó bộ cài thử bản 4. Chưa phần nào của đợt F chạy trên AutoCAD thật.
 
 - **Nhánh tích hợp mới nhất:** `full/nang-cap-tong-the` @ `012ed29` (có sửa lỗi bộ cài TT-01 và bản sửa khung chat 15/11; CI 43669231795 xanh trên mã khung chat). Chứa toàn bộ: gói dịch vụ,
   3D đợt 1–3, test tổng thể + 4 lượt kiểm tra độc lập lần 1 (43 lỗi), bộ cài thay bản gốc + cảnh báo, và **chuỗi nâng
@@ -161,3 +160,5 @@ trong 5 phút chỉ tốn ~10%.
   - 18h21–18h50: các thread dừng vì chạm giới hạn sử dụng 5 giờ; chủ dự án cho chạy tiếp sau khi giới hạn đặt lại.
   - 19h17: đợt F4 xong (3 lỗi sửa, ~$25, `full/nang-cap-f4-test` @ `1cdf8d4`, CI 45610810220 xanh). 19h20 giao thread F2
     làm test tổng thể đợt F trên `full/nang-cap-f-tong-the`.
+  - 19h44: test tổng thể đợt F xong (3 lỗi nhẹ sửa, ~$10, `full/nang-cap-f-tong-the` @ `afdaa68`, CI 45614706040 xanh).
+    19h45 mở thread Kiểm tra độc lập đợt F (`session_01D56HmHz4EXXJceBgkmjcap`).
