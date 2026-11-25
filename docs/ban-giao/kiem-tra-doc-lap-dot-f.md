@@ -230,3 +230,23 @@ nguyên kiểu nạp tới Chat mới" (cách an toàn, tránh hẳn tình huố
 điểm này.
 
 Tổng chi phí thread kiểm tra độc lập tới lượt này: ~$13,3.
+
+## Soát bổ sung (25/11 21h09, trên `7fe215c`, nhánh tích hợp đã chốt)
+
+Người soát chạy lại: lõi 1217 / 1217, trợ lý 364 / 364, build `net8.0-windows` 0 lỗi.
+
+- **KTF-09: đã sửa đúng.** 7 hình × mái 2 dốc / 4 dốc, mỗi hình 160 lần (nhiễu ±1–4 mm mỗi góc, xoay 8 góc + làm tròn, gốc
+  tọa độ lớn, 2 hạt ngẫu nhiên), tổng 4480 ca gồm lại 1680 ca của KTF-01: sai 0, bị từ chối 0. Hình đúng góc vuông không
+  đổi. Tường xiên thật vẫn bị từ chối (tường ngoài nghiêng 30–1000 mm trên 6 m, tường trong bẻ xiên, cạnh 1,5 m nghiêng từ
+  30 mm).
+- **Ô "Nạp gọn lệnh" giữ theo cuộc chat: đúng.** Cách nạp chốt ở tin đầu, lưu trong file chat; "Chat mới" mới lấy lại theo
+  ô ⚙. Không còn đường nào nối tiếp cuộc chat bằng ô ⚙ với kiểu nạp khác lúc đầu (đổi ô lúc đang chạy / lúc rảnh, chuyển
+  bản vẽ, trợ lý tự chạy lại, file chat cũ).
+- **Tài liệu: khớp code.**
+- **Nghi vấn nhẹ còn lại (không chặn bộ cài):** công tắc khẩn cấp (biến môi trường / file `tool-search-off`) vẫn thắng cả
+  kiểu nạp của cuộc chat đang dở, nên bật công tắc rồi nhắn tiếp trong cuộc chat cũ đã dùng ToolSearch có thể gặp đúng tình
+  huống vừa tránh cho ô ⚙; chỉ Claude thật trả lời được. Xử lý: tài liệu và checklist ghi "sau khi bật / tắt công tắc, bấm
+  Chat mới", thêm mục thử tay với Claude thật.
+
+**Kết luận kiểm tra độc lập đợt F (kèm F5):** 9 lỗi (1 nặng, 3 vừa, 5 nhẹ), 9 đã sửa và được soát lại đúng; 0 lỗi mở. Các
+nghi vấn chưa chứng minh đã xử lý hoặc ghi vào checklist thử tay. Tổng chi phí thread kiểm tra độc lập: ~$15,2.
