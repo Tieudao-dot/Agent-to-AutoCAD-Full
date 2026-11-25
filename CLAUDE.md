@@ -163,6 +163,11 @@ dự án gốc), `bo-cai/README.md`.
     <nhánh>` là ba lần gọi riêng, dạng đơn giản; không gộp với tạo nhánh hay ghi file, không dùng heredoc hay `$(…)`;
     file tạo bằng công cụ Write. Bị từ chối thì không thử lại, báo luồng chính ngay. Thread F3 lần 1 gộp tất cả vào một
     lệnh nên bị từ chối dù đã có file quyền; luồng chính cho dừng và mở thread thay thế. Prompt mở thread ghi sẵn cách này.
+  - **Thực tế 25/11:** ba thread mở mới sau 15h54 (F3 lần 1, F3 lần 2, Test & sửa F2) đều bị từ chối `git commit`, kể
+    cả khi chạy lệnh đơn giản và đã có file quyền; các thread đã lưu được trước đó (F1, Test & sửa F1, F2) vẫn lưu được
+    khi nhận việc mới qua tin nhắn. Cách đang dùng cho đợt F: **giao việc mới cho thread đã lưu được**, viết và rà vẫn
+    là hai thread khác nhau (F3: thread Test & sửa F1 viết, thread F2 rà; rà F2: thread F1). Thread mới bị chặn thì cho
+    dừng hẳn để không làm trùng; chủ dự án muốn dùng lại thread đó thì gõ một dòng cho phép trong chính thread đó.
 
 ## Git và phát hành
 
@@ -230,10 +235,11 @@ dự án gốc), `bo-cai/README.md`.
 | Nâng cấp đợt F1 | `session_01D56HmFAo4dZ7c8sbeNB9eh` | Nhánh `full/nang-cap-f1` (tách từ `full/nang-cap-f-goc` @ `2dbeee2`): mọi lệnh vẽ hiểu UCS; nút chế độ "Cả hai / 2D / 3D" cho máy gói Full. Viết xong tự mở thread con Test & sửa (`full/nang-cap-f1-test`). Bàn giao: `docs/ban-giao/nang-cap-f1.md`. Kế hoạch: `docs/ke-hoach-nang-cap-lenh.md` mục "Đợt F" |
 | ↳ Test & sửa đợt F1 (con của Nâng cấp đợt F1) | `session_01D56HmFrL65iF9oJokvqXw5` | Nhánh `full/nang-cap-f1-test` (tách từ `full/nang-cap-f1` @ `8110e45`): rà soát, thêm test tự động, sửa lỗi đợt F1; 1 lượt CI. Báo về thread đợt F1, tin cập nhật ngắn gửi luồng chính. Bàn giao: `docs/ban-giao/nang-cap-f1-test.md` |
 | Nâng cấp đợt F2 | `session_01D56HmFcYrzsme7GoBm8tNC` | Nhánh `full/nang-cap-f2` (tách từ `full/nang-cap-f1-test` @ `b2e6431`), chạy cùng lúc với F3: bộ style chuẩn Việt Nam, layout có khung tên, block từ thư viện, trạng thái layer. Viết xong tự mở thread con Test & sửa (`full/nang-cap-f2-test`). Thử tay: `docs/checklist-dot-f2.md`. Bàn giao: `docs/ban-giao/nang-cap-f2.md` |
-| ↳ Test & sửa đợt F2 (con của Nâng cấp đợt F2) | `session_01D56HmJDwuCnKRDvTAFHFXr` | Nhánh `full/nang-cap-f2-test` (tách từ `full/nang-cap-f2` @ `bae8262`): rà soát, thêm test tự động, sửa lỗi đợt F2, soát bảng con số chờ duyệt; 1 lượt CI. Báo về thread đợt F2, tin cập nhật ngắn gửi luồng chính. Bàn giao: `docs/ban-giao/nang-cap-f2-test.md` |
+| ↳ Test & sửa đợt F2 (thread con, đã dừng) | `session_01D56HmJDwuCnKRDvTAFHFXr` | Mở 25/11 16h36, đẩy được nhánh `full/nang-cap-f2-test` (@ `bae8262`) nhưng bị chế độ Auto từ chối `git commit`. Luồng chính cho dừng hẳn 16h38, chưa có commit nào. Chưa đóng (chờ chủ dự án cho đóng) |
+| Test & sửa đợt F2 (người rà) | `session_01D56HmFAo4dZ7c8sbeNB9eh` (chính là thread Nâng cấp đợt F1) | Giao 25/11 16h39 vì thread này đã lưu được lên GitHub: rà soát, thêm test, sửa lỗi đợt F2, soát bảng con số chờ duyệt trên nhánh `full/nang-cap-f2-test` (từ `full/nang-cap-f2` @ `bae8262`); 1 lượt CI. Báo thẳng luồng chính. Bàn giao: `docs/ban-giao/nang-cap-f2-test.md` |
 | Nâng cấp đợt F3 (lần 1, đã dừng) | `session_01D56HmFBfQ8mQ37WLtVFweF` | Mở 25/11 15h53, bị chế độ Auto từ chối `git commit` ngay bước thử quyền (gộp nhiều việc vào một lệnh). Luồng chính cho dừng hẳn, chưa viết gì, chưa đẩy gì. Thay bằng thread "lần 2" ở dòng dưới. Chưa đóng (chờ chủ dự án cho đóng) |
 | Nâng cấp đợt F3 (lần 2, đã dừng) | `session_01D56HmGHrzJYuxkoVZZ8MxA` | Mở 25/11 15h57, cũng bị chế độ Auto từ chối `git commit` dù chạy từng lệnh riêng. Chờ chủ dự án gần 30 phút không được, luồng chính cho dừng hẳn 16h25; chưa viết gì, chưa đẩy gì. Chưa đóng (chờ chủ dự án cho đóng) |
-| Nâng cấp đợt F3 (người viết) | `session_01D56HmFrL65iF9oJokvqXw5` (chính là thread Test & sửa đợt F1) | Giao 25/11 16h26 vì thread này đã lưu được lên GitHub và đang nắm code khối 3D trên UCS. Nhánh `full/nang-cap-f3` (tách từ `full/nang-cap-f1-test` @ `b2e6431`), chạy cùng lúc với F2: mái liền khối nhà chữ L / T, vật liệu + render, lưu góc nhìn, bản thang và bản mái dốc về 120 mm. Không mở thread con; viết xong báo luồng chính, luồng chính giao thread đợt F1 (`session_01D56HmFAo4dZ7c8sbeNB9eh`) rà lại. Thử tay: `docs/checklist-dot-f3.md`. Bàn giao: `docs/ban-giao/nang-cap-f3.md` |
+| Nâng cấp đợt F3 (người viết) | `session_01D56HmFrL65iF9oJokvqXw5` (chính là thread Test & sửa đợt F1) | Giao 25/11 16h26 vì thread này đã lưu được lên GitHub và đang nắm code khối 3D trên UCS. Nhánh `full/nang-cap-f3` (tách từ `full/nang-cap-f1-test` @ `b2e6431`), chạy cùng lúc với F2: mái liền khối nhà chữ L / T, vật liệu + render, lưu góc nhìn, bản thang và bản mái dốc về 120 mm. Không mở thread con; viết xong báo luồng chính, luồng chính giao thread đợt F2 (`session_01D56HmFcYrzsme7GoBm8tNC`) rà lại (thread đợt F1 đã nhận rà F2). Thử tay: `docs/checklist-dot-f3.md`. Bàn giao: `docs/ban-giao/nang-cap-f3.md` |
 
 Link mở thread: `https://claude.ai/code/<session id>`.
 
