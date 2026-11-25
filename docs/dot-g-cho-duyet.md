@@ -155,6 +155,7 @@ Mọi số ở `G3Numbers` (`Core/Estimate.cs`).
 | Tên file **`<bản vẽ>-du-toan.xlsx`** | tên file | không dấu, như các file Excel đợt F4 |
 | Tối đa **5** dòng phần trăm (thuế, chi phí khác) và **500** đơn giá một lần | nhiều hơn thì lệnh từ chối | chặn trường hợp lỗi |
 | Thể tích mặc định là thể tích **thực** (phần hai khối chồng nhau chỉ tính một lần) | số m³ | đúng khối lượng thi công; khách muốn tính gộp thì nói |
+| Trong bảng vẽ đơn giá hiện tối đa **2** số lẻ; kết quả Claude nhận về tối đa **200** dòng | số trong bảng; bảng rất dài thì Claude chỉ đọc 200 dòng đầu (file Excel vẫn đủ) | thread rà bổ sung dòng này 25/11, số đã có sẵn trong code |
 
 ### Quyết định tự chọn
 
@@ -170,6 +171,15 @@ Mọi số ở `G3Numbers` (`Core/Estimate.cs`).
 | Giá khách đưa mà không khớp dòng nào | kể lại trong kết quả | |
 | Chế độ "Chỉ xem" | tính và xuất Excel được; vẽ bảng vào bản vẽ bị chặn | file Excel nằm ngoài bản vẽ, như các bảng đợt F4 |
 | Macro | không ghi lại file Excel khi phát lại | như đợt F4 |
+| Khách gõ đơn vị "m3", "m2" | coi là m³, m² | thread rà thêm 25/11 |
+| Nhiều dòng phần trăm | mỗi dòng đều tính trên dòng "Cộng", không tính chồng lên nhau | thread rà xác nhận 25/11 |
+
+### Sau khi rà (25/11 23h00)
+
+Thread rà sửa 3 lỗi, không đổi số nào: khách gõ đơn vị "m3" / "m2" bị ghi chú là sai đơn vị; hai giá khớp lẫn nhau còn bị kể
+là "không khớp dòng nào"; tên giống số (phòng "101", mã "007") bị đổi thành số trong Excel (nay giữ là chữ). Thread rà cũng
+quét và xác nhận không có giá mẫu nào ở chỗ Claude đọc (mô tả lệnh, hướng dẫn, skill). Nhánh `full/nang-cap-g3-test` @
+`4061a6c` (code `d6b4a60`), CI 45649649749 xanh, lõi 1292, trợ lý 379.
 
 ### Chưa kiểm được
 
