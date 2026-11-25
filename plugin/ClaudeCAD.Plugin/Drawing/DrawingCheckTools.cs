@@ -75,6 +75,32 @@ namespace ClaudeCAD.Plugin.Drawing
             ctx.Tr.AddNewlyCreatedDBObject(xr, true);
         }
 
+        /// <summary>
+        /// Sửa KFG-32: the mark of a line section_view / projection_view drew (XData, no extra object per line), so check_drawing
+        /// never calls two edges of solids side by side a copy and fix_drawing never erases a line of the view, on any layer.
+        /// </summary>
+        internal const string ViewLineApp = "CLAUDECAD_VIEW";
+
+        internal static void MarkViewLine(ToolContext ctx, Entity obj)
+        {
+            var rat = (RegAppTable)ctx.Tr.GetObject(ctx.Db.RegAppTableId, OpenMode.ForRead);
+            if (!rat.Has(ViewLineApp))
+            {
+                rat.UpgradeOpen();
+                var r = new RegAppTableRecord { Name = ViewLineApp };
+                rat.Add(r);
+                ctx.Tr.AddNewlyCreatedDBObject(r, true);
+            }
+            if (!obj.IsWriteEnabled) obj.UpgradeOpen();
+            obj.XData = new ResultBuffer(new TypedValue((int)DxfCode.ExtendedDataRegAppName, ViewLineApp), new TypedValue((int)DxfCode.ExtendedDataInteger16, (short)1));
+        }
+
+        private static bool IsViewLine(Entity e)
+        {
+            try { using (var rb = e.GetXDataForApplication(ViewLineApp)) return rb != null; }
+            catch (Autodesk.AutoCAD.Runtime.Exception) { return false; }
+        }
+
         private static bool IsPlainHatch(ToolContext ctx, Hatch h)
         {
             if (h.ExtensionDictionary.IsNull) return false;
@@ -92,7 +118,7 @@ namespace ClaudeCAD.Plugin.Drawing
         /// </summary>
         private static DrawingCheckLogic.DupItem DupItemOf(Entity e, string space)
         {
-            if (Util2DLogic.IsDerivedViewLayer(e.Layer)) return null;
+            if (Util2DLogic.IsDerivedViewLayer(e.Layer) || IsViewLine(e)) return null; // Sửa KFG-32: also on a layer of the user's choice
             double[] P(Autodesk.AutoCAD.Geometry.Point3d q) => new[] { q.X, q.Y, q.Z };
             string g = space + "|" + (e.Layer ?? "").ToUpperInvariant() + "|";
             DrawingCheckLogic.DupItem I(string kind, IEnumerable<double> nums, string exact = "") => new DrawingCheckLogic.DupItem { Group = g + kind + "|" + exact, Nums = nums.ToArray() };

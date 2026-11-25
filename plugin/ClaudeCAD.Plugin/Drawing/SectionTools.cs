@@ -250,8 +250,11 @@ namespace ClaudeCAD.Plugin.Drawing
 
         private static ObjectId AddCurve(ToolContext ctx, Curve c, Params layerP)
         {
-            try { return Acad.Add(ctx, c, layerP); }
+            ObjectId id;
+            try { id = Acad.Add(ctx, c, layerP); }
             catch { if (c.ObjectId.IsNull) c.Dispose(); throw; }
+            MarkViewLine(ctx, c); // Sửa KFG-32: a line of a view from the model, whatever layer it was put on
+            return id;
         }
 
         /// <summary>A loop of lines / arcs as one closed polyline (vertices and bulges); null when it has other curves.</summary>
@@ -399,6 +402,7 @@ namespace ClaudeCAD.Plugin.Drawing
                             hatch.AppendLoop(HatchLoopTypes.Polyline, p2, bs);
                         }
                         hatch.EvaluateHatch(true);
+                        MarkPlainHatch(ctx, hatch); // Sửa KFG-32: on a layer of the user's choice too, it never had a boundary to lose
                         hatches.Add(Acad.H(hid));
                     }
                     catch (Autodesk.AutoCAD.Runtime.Exception ex)

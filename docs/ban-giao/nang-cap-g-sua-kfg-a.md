@@ -56,3 +56,18 @@ Không đổi số khách thấy. Dung sai "trùng" vẫn **0,1 mm**; nay đúng
   - dấu `CLAUDECAD_PLAIN_HATCH` trên hatch;
   - kích thước " " in ra không có chữ.
 - Thử tay: `docs/checklist-dot-g2.md` (D1, E…).
+
+## 7. Lượt 2 (sau lượt soát lại 1 của kiểm tra độc lập, 26/11)
+
+Gộp `full/nang-cap-g-tong-the` @ `20e3812` trước khi sửa.
+
+| Mã | Lỗi | Đã sửa thế nào | Test |
+| --- | --- | --- | --- |
+| KFG-32 (nhẹ, phần còn lại của KFG-07) | `section_view` / `projection_view` cho đặt layer riêng (`layer` / `hatch_layer` / `behind_layer`). Trên layer riêng: hatch mặt cắt vẫn bị báo "mất liên kết", và nét vẫn được so trùng, nên `fix_drawing duplicates` có thể xóa nét của hình chiếu. | Hatch mặt cắt: gọi `MarkPlainHatch` sau `EvaluateHatch`. Nét: mọi nét hai lệnh này vẽ (qua `AddCurve`) được gắn XData `CLAUDECAD_VIEW`; lần so trùng bỏ qua nét có dấu này, dù nằm trên layer nào. | `Lines_and_hatches_of_a_view_on_a_layer_of_the_users_choice_are_marked` |
+| KFG-34 (nhẹ) | So trùng chậm khi nhiều hình cùng ô: chỉ băm theo số đầu, nên các hình chung ô phải so từng cặp (20 000 đường cùng x mất 2,4 s). | Băm theo (x, y) của điểm đầu, xét 9 ô kề. Kết quả không đổi: một bản trùng không bao giờ cách quá một ô theo mỗi trục. Các test KFG-15 giữ nguyên và vẫn qua. | `Twenty_thousand_lines_of_one_x_are_checked_fast_and_give_the_same_answer` (dưới 1 s) |
+| KFG-38 (nhẹ) | Test cũ còn dùng `ShapeKey` + `DuplicateIndices(IList<string>)` mà code không còn gọi; chú thích `<summary>` dính nhầm. | Chuyển test sang `DupItem`, thêm ca polyline vẽ ngược. Xóa hai hàm chết, sửa chú thích của `DupItem` và `TargetLayer…`. Ca polyline vẽ ngược còn lộ thêm một **lỗi thật**: bulge bị đổi dấu thành `-0` nên đường vẽ ngược không bao giờ khớp. Đã sửa trong `Exact` (-0 = 0). | `An_open_polyline_drawn_backwards_is_a_copy_through_DupItem`, `NangCapG2Tests.A_line_drawn_backwards…` (chuyển sang `DupItem`) |
+
+Giới hạn: XData đi theo đối tượng khi chép. Nếu khách chép (COPY) một nét của hình chiếu rồi để đè lên chính nó, bản chép cũng
+mang dấu và không bị báo trùng. Chỉ ảnh hưởng nét do hai lệnh hình chiếu / mặt cắt vẽ ra.
+
+Test sau lượt 2: lõi **1412 / 1412**, trợ lý **407 / 407** (gồm test của hai thread kia sau khi gộp), build 3 target không lỗi, không cảnh báo. Không chạy CI riêng.
