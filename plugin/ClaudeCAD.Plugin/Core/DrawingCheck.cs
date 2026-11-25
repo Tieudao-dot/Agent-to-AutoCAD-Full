@@ -192,6 +192,51 @@ namespace ClaudeCAD.Plugin.Core
         }
 
         /// <summary>Indices of the extra copies: every object after the first of each key (the oldest is kept).</summary>
+        /// <summary>Sửa KFG-15: one object for the copy check: its kind / layer / exact parts, and its lengths (drawing units).</summary>
+        public sealed class DupItem
+        {
+            public string Group;
+            public double[] Nums;
+        }
+
+        /// <summary>
+        /// Sửa KFG-15: indices of the extra copies, each number within tol of an earlier object of the same group (not a rounding
+        /// to a grid of tol, which split 1000.049 / 1000.051). Candidates are found by the cell of the first number and its two
+        /// neighbours, then compared number by number; the oldest is kept.
+        /// </summary>
+        public static List<int> DuplicateIndices(IList<DupItem> items, double tol)
+        {
+            var cells = new Dictionary<(string, long), List<int>>();
+            var dup = new List<int>();
+            double t = tol > 0 ? tol : 1e-9;
+            for (int i = 0; i < items.Count; i++)
+            {
+                var it = items[i];
+                if (it?.Group == null || it.Nums == null) continue;
+                long c = it.Nums.Length > 0 ? (long)Math.Floor(it.Nums[0] / t) : 0;
+                bool isDup = false;
+                for (long k = c - 1; k <= c + 1 && !isDup; k++)
+                {
+                    if (!cells.TryGetValue((it.Group, k), out var list)) continue;
+                    foreach (int j in list)
+                    {
+                        var o = items[j].Nums;
+                        if (o.Length != it.Nums.Length) continue;
+                        bool same = true;
+                        for (int n = 0; n < o.Length && same; n++) same = Math.Abs(o[n] - it.Nums[n]) <= t * (1 + 1e-9);
+                        if (same) { isDup = true; break; }
+                    }
+                }
+                if (isDup) { dup.Add(i); continue; }
+                if (!cells.TryGetValue((it.Group, c), out var own)) cells[(it.Group, c)] = own = new List<int>();
+                own.Add(i);
+            }
+            return dup;
+        }
+
+        /// <summary>Sửa KFG-15: exact parts of a shape (angles, scales, bulges, texts) written rounded, never by the length tolerance.</summary>
+        public static string Exact(params double[] v) => string.Join("/", v.Select(x => Math.Round(x, 6).ToString("R", CultureInfo.InvariantCulture)));
+
         public static List<int> DuplicateIndices(IList<string> keys)
         {
             var seen = new HashSet<string>(StringComparer.Ordinal);
@@ -266,13 +311,26 @@ namespace ClaudeCAD.Plugin.Core
         public static bool IsDefaultLayoutName(string name) =>
             !string.IsNullOrEmpty(name) && Regex.IsMatch(name.Trim(), @"^(Layout|Bố cục|Bo cuc)\s*[0-9]+$", RegexOptions.IgnoreCase);
 
+        /// <summary>
+        /// Sửa KFG-08 (lần 2): a layout not checked as a sheet: a default name (Layout1…), nothing but viewports on it (the one
+        /// AutoCAD makes when the tab is opened counts as nothing), and the user did not name it in 'sheets'.
+        /// </summary>
+        public static bool IsUnusedTab(string layout, int objectsOtherThanViewports, bool askedBySheets) =>
+            !askedBySheets && objectsOtherThanViewports == 0 && IsDefaultLayoutName(layout);
+
+        /// <summary>The note naming the unused tabs, so Claude can tell the user and check them when they are real sheets.</summary>
+        public static string UnusedTabsNote(IEnumerable<string> tabs) =>
+            $"{string.Join(", ", tabs)}: only a viewport, no title block or other object, so taken as unused tab(s) and not checked as sheets. " +
+            "If one of them is a sheet to print, call check_drawing again with sheets = its name(s) to check it in full.";
+
         /// <summary>An "A$C…" block: what AutoCAD names a block made by Paste as Block.</summary>
         public static bool IsUnnamedBlock(string name) =>
             !string.IsNullOrEmpty(name) && Regex.IsMatch(name, @"^A\$C[0-9A-Fa-f]{8}$");
 
         /// <summary>A dimension text override that hides the measured value ("&lt;&gt;" keeps it; empty = no override).</summary>
         public static bool HidesMeasurement(string dimensionText) =>
-            !string.IsNullOrWhiteSpace(dimensionText) && !dimensionText.Contains("<>");
+            // Sửa KFG (nghi vấn G2): " " hides the number too (AutoCAD prints no text); only "" means no override
+            !string.IsNullOrEmpty(dimensionText) && !dimensionText.Contains("<>");
 
         /// <summary>
         /// Test & sửa đợt G2 (G2T-3): an xref is "mất file" only when AutoCAD did not find its file (FileNotFound / Unresolved);
@@ -310,6 +368,14 @@ namespace ClaudeCAD.Plugin.Core
         }
 
         /// <summary>The target layer of layer_zero / defpoints: given, and neither 0 nor Defpoints.</summary>
+        /// <summary>Sửa KFG-18: a target layer that does not print (off, frozen, not plotted — e.g. X-ANH-GOC) would only move the problem.</summary>
+        public static string TargetLayerStateError(string fix, string layer, bool off, bool frozen, bool plottable)
+        {
+            if (!(off || frozen || !plottable)) return null;
+            var why = string.Join(", ", new[] { off ? "off" : null, frozen ? "frozen" : null, !plottable ? "not plotted" : null }.Where(x => x != null));
+            return $"fix_drawing {fix}: layer '{layer}' is {why}, so the objects would still not print. Choose a layer that is on and plotted (ask the user).";
+        }
+
         public static string TargetLayerError(string fix, string layer)
         {
             bool needs = fix == "layer_zero" || fix == "defpoints";

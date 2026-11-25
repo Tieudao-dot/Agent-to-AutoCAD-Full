@@ -39,7 +39,8 @@ gõ đè số "9999" (Properties → Text override); một đường rất xa (v
 
 | # | Làm gì | Thấy gì là đạt |
 | --- | --- | --- |
-| D1 | Tạo một layout trống có một khung nhìn (MVIEW), không khung tên, không khóa; "soát bản vẽ" | Báo "Tờ in không có khung tên" (tên layout) và "Khung nhìn chưa khóa"; "khóa khung nhìn" → thẻ → khóa được |
+| D1 | Bấm tab "+" (layout mới tên `Layout2`), tự đặt một khung nhìn (MVIEW) và vẽ thêm một nét hoặc chữ trên tờ, không khung tên, không khóa khung nhìn; "soát bản vẽ" | Báo "Tờ in không có khung tên" (tên `Layout2`) và "Khung nhìn chưa khóa"; "khóa khung nhìn" → thẻ → khóa được |
+| D1b | *(Sửa KFG-08)* Bấm sang tab `Layout1` một lần rồi về Model (AutoCAD tự tạo khung nhìn), không vẽ gì trên tờ; "soát bản vẽ" | **Không** báo lỗi cho `Layout1`; Claude nói `Layout1` chỉ có khung nhìn nên coi là tab chưa dùng. Nói "soát cả Layout1": lúc đó mới báo thiếu khung tên / khung nhìn chưa khóa |
 | D2 | Bật "Chỉ xem", "soát bản vẽ" rồi "sửa hình trùng" | Soát vẫn chạy; sửa bị chặn (Chỉ xem) |
 | D3 | Máy gói 3D (nếu có) | Không có lệnh soát bản vẽ (thuộc gói 2D / Full) |
 

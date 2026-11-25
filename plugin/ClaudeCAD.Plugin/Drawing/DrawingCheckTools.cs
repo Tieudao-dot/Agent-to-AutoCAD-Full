@@ -32,6 +32,8 @@ namespace ClaudeCAD.Plugin.Drawing
             public double MmPerUnit = 1;
             public string Units;
             public int Scanned, Total, UntouchedLayouts;
+            /// <summary>Sửa KFG-08 (lần 2): the default layouts with only viewports, named in the note (not checked as sheets).</summary>
+            public readonly List<string> UnusedTabs = new List<string>();
 
             public void Hit(string group, ObjectId id, string layer = null, string layout = null)
             {
@@ -59,42 +61,61 @@ namespace ClaudeCAD.Plugin.Drawing
             catch (Autodesk.AutoCAD.Runtime.Exception) { return ""; }
         }
 
-        /// <summary>A layout with a viewport of its own (besides the sheet's first one).</summary>
-        private static bool HasViewports(BlockTableRecord btr, ToolContext ctx)
+        /// <summary>Sửa KFG-07: the mark draw_hatch puts on a hatch it makes without a boundary on purpose (points, pick point without keep).</summary>
+        internal const string PlainHatchKey = "CLAUDECAD_PLAIN_HATCH";
+
+        internal static void MarkPlainHatch(ToolContext ctx, Hatch h)
         {
-            int n = 0;
-            foreach (ObjectId id in btr) if (!id.IsErased && id.ObjectClass.DxfName == "VIEWPORT" && ++n > 1) return true;
-            return false;
+            if (h.Associative) return;
+            if (h.ExtensionDictionary.IsNull) h.CreateExtensionDictionary();
+            var ed = (DBDictionary)ctx.Tr.GetObject(h.ExtensionDictionary, OpenMode.ForWrite);
+            if (ed.Contains(PlainHatchKey)) return;
+            var xr = new Xrecord { Data = new ResultBuffer(new TypedValue((int)DxfCode.Int16, (short)1)) };
+            ed.SetAt(PlainHatchKey, xr);
+            ctx.Tr.AddNewlyCreatedDBObject(xr, true);
         }
 
-        // Test & sửa đợt G2 (G2T-2): an attribute definition (a tag in model space, its default value often empty) is not a text
+        private static bool IsPlainHatch(ToolContext ctx, Hatch h)
+        {
+            if (h.ExtensionDictionary.IsNull) return false;
+            try { return ((DBDictionary)ctx.Tr.GetObject(h.ExtensionDictionary, OpenMode.ForRead)).Contains(PlainHatchKey); }
+            catch (Autodesk.AutoCAD.Runtime.Exception) { return false; }
+        }
+
         private static string Txt(ToolContext ctx, Entity e) => e is AttributeDefinition ? null : e is DBText t ? t.TextString : e is MText m ? m.Text : null;
 
         /// <summary>The shape key of an object for "trùng" (null = not compared).</summary>
-        private static string DupKey(Entity e, string space, double tol)
+        /// <summary>
+        /// Sửa KFG-15: the copy check of an object (null = not compared): lengths compared within the tolerance, angles / scales /
+        /// bulges / texts exactly (rounded). Sửa KFG (nghi vấn G1 × G2): lines of the views drawn from the 3D model (A-SECT…,
+        /// A-ELEV) are not compared: two solids side by side give the same edge twice, and erasing it would cut the drawing set.
+        /// </summary>
+        private static DrawingCheckLogic.DupItem DupItemOf(Entity e, string space)
         {
+            if (Util2DLogic.IsDerivedViewLayer(e.Layer)) return null;
             double[] P(Autodesk.AutoCAD.Geometry.Point3d q) => new[] { q.X, q.Y, q.Z };
-            string layer = space + "|" + e.Layer;
+            string g = space + "|" + (e.Layer ?? "").ToUpperInvariant() + "|";
+            DrawingCheckLogic.DupItem I(string kind, IEnumerable<double> nums, string exact = "") => new DrawingCheckLogic.DupItem { Group = g + kind + "|" + exact, Nums = nums.ToArray() };
             switch (e)
             {
-                case Line l: return DrawingCheckLogic.ShapeKey("line", layer, DrawingCheckLogic.LineNumbers(P(l.StartPoint), P(l.EndPoint)), tol);
-                case Arc a: return DrawingCheckLogic.ShapeKey("arc", layer, new[] { a.Center.X, a.Center.Y, a.Center.Z, a.Radius }, tol,
-                    Math.Round(a.StartAngle, 4) + "/" + Math.Round(a.EndAngle, 4));
-                case Circle c: return DrawingCheckLogic.ShapeKey("circle", layer, new[] { c.Center.X, c.Center.Y, c.Center.Z, c.Radius }, tol);
-                case DBPoint pt: return DrawingCheckLogic.ShapeKey("point", layer, P(pt.Position), tol);
+                case Line l: return I("line", DrawingCheckLogic.LineNumbers(P(l.StartPoint), P(l.EndPoint)));
+                case Arc a: return I("arc", new[] { a.Center.X, a.Center.Y, a.Center.Z, a.Radius }, DrawingCheckLogic.Exact(a.StartAngle, a.EndAngle));
+                case Circle c: return I("circle", new[] { c.Center.X, c.Center.Y, c.Center.Z, c.Radius });
+                case DBPoint pt: return I("point", P(pt.Position));
                 case Polyline pl:
                 {
                     var verts = new List<double[]>();
                     var bulges = new List<double>();
                     for (int i = 0; i < pl.NumberOfVertices; i++) { var v = pl.GetPoint2dAt(i); verts.Add(new[] { v.X, v.Y }); bulges.Add(pl.GetBulgeAt(i)); }
-                    var nums = DrawingCheckLogic.PolylineNumbers(verts, bulges, pl.Closed).Concat(new[] { pl.Elevation });
-                    return DrawingCheckLogic.ShapeKey("pline", layer, nums, tol, pl.Closed ? "c" : "o");
+                    var nums = DrawingCheckLogic.PolylineNumbers(verts, bulges, pl.Closed); // x, y, bulge, x, y, bulge…
+                    var xy = nums.Where((_, i) => i % 3 != 2).Concat(new[] { pl.Elevation });
+                    var bs = nums.Where((_, i) => i % 3 == 2).ToArray();
+                    return I("pline", xy, (pl.Closed ? "c" : "o") + DrawingCheckLogic.Exact(bs));
                 }
-                case DBText t: return DrawingCheckLogic.ShapeKey("text", layer, P(t.Position).Concat(new[] { t.Height, t.Rotation }), tol, t.TextString);
-                case MText m: return DrawingCheckLogic.ShapeKey("mtext", layer, P(m.Location).Concat(new[] { m.TextHeight, m.Rotation }), tol, m.Contents);
+                case DBText t: return I("text", P(t.Position).Concat(new[] { t.Height }), DrawingCheckLogic.Exact(t.Rotation) + "|" + t.TextString);
+                case MText m: return I("mtext", P(m.Location).Concat(new[] { m.TextHeight }), DrawingCheckLogic.Exact(m.Rotation) + "|" + m.Contents);
                 case BlockReference br:
-                    return DrawingCheckLogic.ShapeKey("insert", layer, P(br.Position).Concat(new[] { br.Rotation, br.ScaleFactors.X, br.ScaleFactors.Y, br.ScaleFactors.Z }), tol,
-                        br.BlockTableRecord.Handle.ToString());
+                    return I("insert", P(br.Position), DrawingCheckLogic.Exact(br.Rotation, br.ScaleFactors.X, br.ScaleFactors.Y, br.ScaleFactors.Z) + "|" + br.BlockTableRecord.Handle);
                 default: return null;
             }
         }
@@ -130,7 +151,7 @@ namespace ClaudeCAD.Plugin.Drawing
         private static bool Wanted(HashSet<string> only, params string[] groups) => only == null || groups.Any(only.Contains);
 
         /// <summary>The whole scan (only = the groups wanted; null = all).</summary>
-        private static CheckScan ScanDrawing(ToolContext ctx, HashSet<string> only, bool layouts = true)
+        private static CheckScan ScanDrawing(ToolContext ctx, HashSet<string> only, bool layouts = true, ICollection<string> sheets = null)
         {
             var s = new CheckScan();
             s.MmPerUnit = FloorPlanLogic.MmPerUnit(Convert.ToInt32(ctx.Db.Insunits), out s.Units);
@@ -171,7 +192,7 @@ namespace ClaudeCAD.Plugin.Drawing
             }
             foreach (var sp in spaces) foreach (ObjectId _ in sp.btr) s.Total++;
 
-            var dupKeys = new List<string>();
+            var dupKeys = new List<DrawingCheckLogic.DupItem>();
             var dupIds = new List<ObjectId>();
             var boxes = new List<(double[] min, double[] max)>();
             var boxIds = new List<ObjectId>();
@@ -183,7 +204,12 @@ namespace ClaudeCAD.Plugin.Drawing
             {
                 bool model = sp.layout == null;
                 bool firstViewport = true, hasTitle = false;
-                int others = 0;
+                int others = 0, ownViewports = 0;
+                // Sửa KFG (nghi vấn G2): the sheet's own viewport is the first of Layout.GetViewports when AutoCAD has it, else the first in the block
+                ObjectId sheetVp = ObjectId.Null;
+                if (!model)
+                    try { var vps = ((Layout)ctx.Tr.GetObject(sp.layoutId, OpenMode.ForRead)).GetViewports(); if (vps != null && vps.Count > 0) sheetVp = vps[0]; }
+                    catch (Autodesk.AutoCAD.Runtime.Exception) { }
                 var vpUnlocked = new List<ObjectId>();
                 var vpScale = new List<ObjectId>();
                 string spaceKey = model ? "M" : sp.btr.Handle.ToString();
@@ -200,7 +226,10 @@ namespace ClaudeCAD.Plugin.Drawing
                     if (e is Viewport vp)
                     {
                         if (model) continue;
-                        if (firstViewport) { firstViewport = false; continue; } // the sheet's own viewport
+                        bool isSheet = sheetVp.IsNull ? firstViewport : id == sheetVp;
+                        firstViewport = false;
+                        if (isSheet) continue; // the sheet's own viewport
+                        ownViewports++;
                         if (Wanted(only, "viewport_unlocked") && !vp.Locked) vpUnlocked.Add(id);
                         // test tổng thể G: a 3D viewport (the perspective sheet of create_drawing_set) has no print scale to check
                         if (Wanted(only, "viewport_scale") && DrawingCheckLogic.IsPlanView(vp.ViewDirection.X, vp.ViewDirection.Y, vp.ViewDirection.Z)
@@ -244,7 +273,7 @@ namespace ClaudeCAD.Plugin.Drawing
                     }
                     if (e is Dimension dm)
                     {
-                        if (model) dims++;
+                        dims++; // Sửa KFG-16: a dimension on a layout counts too
                         if (Wanted(only, "dim_override") && DrawingCheckLogic.HidesMeasurement(dm.DimensionText)) s.Hit("dim_override", id);
                         if (s.Prefix != null && Wanted(only, "nonstandard_styles") && !DrawingCheckLogic.IsStandardDimStyle(s.Prefix, NameOf(ctx, dm.DimensionStyle)))
                             s.Hit("nonstandard_styles", id);
@@ -256,7 +285,7 @@ namespace ClaudeCAD.Plugin.Drawing
                     // geometry
                     // a zero-length object is never counted as a copy (the same answer whichever groups are asked)
                     if (CurveSize(e) is double len && len < zeroTol) { if (Wanted(only, "zero_length")) s.Hit("zero_length", id); }
-                    else if (Wanted(only, "duplicates")) { var k = DupKey(e, spaceKey, dupTol); if (k != null) { dupKeys.Add(k); dupIds.Add(id); } }
+                    else if (Wanted(only, "duplicates")) { var k = DupItemOf(e, spaceKey); if (k != null) { dupKeys.Add(k); dupIds.Add(id); } }
                     if (model && Wanted(only, "far_away") && !(e is Xline) && !(e is Ray))
                     {
                         try { var ex = e.GeometricExtents; boxes.Add((new[] { ex.MinPoint.X, ex.MinPoint.Y }, new[] { ex.MaxPoint.X, ex.MaxPoint.Y })); boxIds.Add(id); }
@@ -267,7 +296,10 @@ namespace ClaudeCAD.Plugin.Drawing
                         bool broken;
                         try { broken = h.NumberOfLoops == 0; } catch (Autodesk.AutoCAD.Runtime.Exception) { broken = true; }
                         if (broken) { if (Wanted(only, "hatch_broken")) s.Hit("hatch_broken", id); }
-                        else if (!h.Associative && Wanted(only, "hatch_unassociated")) s.Hit("hatch_unassociated", id);
+                        // Sửa KFG-07: the hatches of the views from the model (A-SECT-PAT) and those drawn without a boundary on purpose
+                        // (draw_hatch by points / pick point) never had one to lose
+                        else if (!h.Associative && !Util2DLogic.IsDerivedViewLayer(layer) && !IsPlainHatch(ctx, h) && Wanted(only, "hatch_unassociated"))
+                            s.Hit("hatch_unassociated", id);
                     }
 
                     // blocks and references
@@ -309,15 +341,25 @@ namespace ClaudeCAD.Plugin.Drawing
                 }
                 if (model) continue;
                 // an untouched default layout (Layout1 with only AutoCAD's own viewport) is not a sheet of the user's
-                if (others == 0 && DrawingCheckLogic.IsDefaultLayoutName(sp.layout)) { s.UntouchedLayouts++; continue; }
+                // Sửa KFG-08: a viewport the user put there makes it a sheet, whatever its name
+                // Sửa KFG-08 (lần 2, luồng chính chọn): a default layout with nothing but viewports (AutoCAD makes one when the tab
+                // is first opened) is an unused tab: named in a note, not reported; any other object, or the user naming it in
+                // 'sheets', makes it a sheet checked in full
+                bool asked = sheets != null && sheets.Contains(sp.layout, StringComparer.OrdinalIgnoreCase);
+                if (DrawingCheckLogic.IsUnusedTab(sp.layout, others, asked))
+                {
+                    s.UntouchedLayouts++;
+                    if (ownViewports > 0) s.UnusedTabs.Add(sp.layout);
+                    continue;
+                }
                 foreach (var v in vpUnlocked) s.Hit("viewport_unlocked", v, null, sp.layout);
                 foreach (var v in vpScale) s.Hit("viewport_scale", v, null, sp.layout);
-                if (!stopped && (others > 0 || vpUnlocked.Count + vpScale.Count > 0 || HasViewports(sp.btr, ctx)) && !hasTitle && Wanted(only, "no_title_block"))
+                if (!stopped && (others > 0 || ownViewports > 0) && !hasTitle && Wanted(only, "no_title_block"))
                     s.Hit("no_title_block", sp.layoutId, null, sp.layout);
             }
 
             if (Wanted(only, "duplicates"))
-                foreach (int i in DrawingCheckLogic.DuplicateIndices(dupKeys)) s.Hit("duplicates", dupIds[i]);
+                foreach (int i in DrawingCheckLogic.DuplicateIndices(dupKeys, dupTol)) s.Hit("duplicates", dupIds[i]);
             if (Wanted(only, "far_away"))
                 foreach (int i in DrawingCheckLogic.FarAway(boxes, s.MmPerUnit)) s.Hit("far_away", boxIds[i]);
             if (Wanted(only, "no_dimensions") && walls > 0 && dims == 0 && !stopped)
@@ -327,7 +369,9 @@ namespace ClaudeCAD.Plugin.Drawing
                 s.Notes.Add("The drawing does not use the standard of setup_standards (no KT-ARIAL / VN-ARIAL text style): layer names, styles and text heights were not checked; its own layers and styles are not errors.");
             else if (s.Scale == null)
                 s.Notes.Add($"No dimension style {s.Prefix}-<scale> in the drawing: the text heights were not checked.");
-            if (s.UntouchedLayouts > 0) s.Notes.Add($"{s.UntouchedLayouts} default layout(s) (Layout1…) with nothing but AutoCAD's own viewport were not checked as sheets.");
+            if (s.UnusedTabs.Count > 0)
+                s.Notes.Add(DrawingCheckLogic.UnusedTabsNote(s.UnusedTabs));
+            else if (s.UntouchedLayouts > 0) s.Notes.Add($"{s.UntouchedLayouts} empty default layout(s) (Layout1…) were not checked as sheets.");
             if (stopped) s.Notes.Add($"Only the first {G2Numbers.MaxScan} objects were read ({s.Scanned} of {s.Total}); groups that need the whole drawing (no_dimensions, title blocks of the later layouts) may be incomplete.");
             return s;
         }
@@ -346,7 +390,7 @@ namespace ClaudeCAD.Plugin.Drawing
                 }
             }
             int examples = p.Int("examples", G2Numbers.ExamplesPerGroup, 1, 50);
-            var s = ScanDrawing(ctx, only, p.Bool("layouts", true));
+            var s = ScanDrawing(ctx, only, p.Bool("layouts", true), p.StringsOpt("sheets"));
 
             var groups = new List<Dictionary<string, object>>();
             var summary = new Dictionary<string, object> { ["nen_sua"] = 0, ["can_nhac"] = 0, ["goi_y"] = 0 };
@@ -412,11 +456,15 @@ namespace ClaudeCAD.Plugin.Drawing
                 targetLayer = Acad.LayerId(ctx, layer);
                 var tl = (LayerTableRecord)ctx.Tr.GetObject(targetLayer, OpenMode.ForRead);
                 if (tl.IsLocked) throw new ToolException(ErrorCodes.Locked, $"fix_drawing: layer '{tl.Name}' is locked. Ask the user before unlocking it, or choose another layer.");
+                // Sửa KFG-18: never onto a layer that does not print (off, frozen, not plotted: X-ANH-GOC…)
+                var stateErr = DrawingCheckLogic.TargetLayerStateError(fix, tl.Name, tl.IsOff, tl.IsFrozen, tl.IsPlottable);
+                if (stateErr != null) throw ToolException.Invalid(stateErr);
                 layer = tl.Name;
             }
             else layer = null;
 
-            var s = ScanDrawing(ctx, new HashSet<string>(StringComparer.Ordinal) { fix });
+            // Sửa KFG-17: the same spaces as the check the user saw (layouts: false = model only)
+            var s = ScanDrawing(ctx, new HashSet<string>(StringComparer.Ordinal) { fix }, p.Bool("layouts", true), p.StringsOpt("sheets"));
             var found = s.Of(fix);
             if (p.Has("handles"))
             {
