@@ -254,8 +254,9 @@ namespace ClaudeCAD.Plugin.Core
             File.WriteAllBytes(temp, bytes);
             try
             {
-                if (File.Exists(path)) File.Delete(path);
-                File.Move(temp, path);
+                // KTF (nghi vấn): replace in one step, so a failure leaves the old file whole (Delete + Move could lose it)
+                if (File.Exists(path)) File.Replace(temp, path, null);
+                else File.Move(temp, path);
             }
             finally
             {
@@ -309,6 +310,49 @@ namespace ClaudeCAD.Plugin.Core
             var dir = Path.GetDirectoryName(full);
             if (!dirExists(dir)) throw ToolException.Invalid($"{tool}: folder '{dir}' does not exist.");
             return full;
+        }
+
+        private static readonly Regex CommaNumber = new Regex(@"^-?(0|[1-9][0-9]*)(,[0-9]+)?$", RegexOptions.CultureInvariant);
+
+        /// <summary>KTF-02: a column of a measured quantity: its header names a unit in brackets, "(m²)", "(m³)", "(m)".</summary>
+        public static bool IsQuantityColumn(object header)
+        {
+            var h = Convert.ToString(header, CultureInfo.InvariantCulture) ?? "";
+            return h.Contains("(m²)") || h.Contains("(m³)") || h.Contains("(m2)") || h.Contains("(m3)") || h.Contains("(m)");
+        }
+
+        /// <summary>
+        /// KTF-02: the table as Excel gets it. The drawing tables write "12,50" (Vietnamese decimal comma); in the quantity
+        /// columns (IsQuantityColumn) such a cell becomes the number 12.5 so Excel adds it up. Other cells and the drawing
+        /// table itself are unchanged ("chưa đo được", "3 cặp" stay text).
+        /// </summary>
+        public static List<List<object>> ForExcel(List<List<object>> data)
+        {
+            if (data == null || data.Count == 0) return data;
+            var head = data[0];
+            var qty = new HashSet<int>(Enumerable.Range(0, head.Count).Where(c => IsQuantityColumn(head[c])));
+            var out1 = new List<List<object>> { new List<object>(head) };
+            for (int r = 1; r < data.Count; r++)
+            {
+                var row = new List<object>(data[r]);
+                foreach (int c in qty)
+                {
+                    if (c >= row.Count || !(row[c] is string s)) continue;
+                    var t = s.Trim();
+                    if (CommaNumber.IsMatch(t) && double.TryParse(t.Replace(',', '.'), NumberStyles.Float, CultureInfo.InvariantCulture, out var n)) row[c] = n;
+                }
+                out1.Add(row);
+            }
+            return out1;
+        }
+
+        /// <summary>KTF-06: rows of data (not the header, not the closing "Tổng" row every schedule adds).</summary>
+        public static int DataRows(List<List<object>> data)
+        {
+            if (data == null || data.Count <= 1) return 0;
+            var last = data[data.Count - 1];
+            bool total = last.Any(c => string.Equals(Convert.ToString(c, CultureInfo.InvariantCulture)?.Trim(), "Tổng", StringComparison.Ordinal));
+            return data.Count - 1 - (total ? 1 : 0);
         }
 
         public static string ExistsMessage(string tool, string full) =>

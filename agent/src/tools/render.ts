@@ -29,7 +29,7 @@ export function renderTools(b: ToolBridge): AnyTool[] {
 
     cadTool(b, 'named_view',
       'Named views of model space: save (the current view under name), restore, list, delete; overwriting / deleting a saved view or an existing PNG needs the card (the error lists the handles, then confirm_handles); ' +
-        'image = save a PNG file of the model (off-screen, the user\'s view unchanged) from the saved view name or view (default sw_iso), ' +
+        'image = save a PNG file of the model (off-screen, the user\'s view unchanged) looking along the saved view name (its zoom is not kept: the whole model or handles is framed) or view (default sw_iso), ' +
         'visual_style default realistic (shows the materials), handles to frame, output .png (relative = next to the drawing). Tell the user the file path.',
       {
         action: z.enum(['save', 'restore', 'list', 'delete', 'image']),

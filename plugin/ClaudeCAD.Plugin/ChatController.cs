@@ -661,6 +661,7 @@ namespace ClaudeCAD.Plugin
             var m = new Dictionary<string, object> { ["type"] = "switch_session" };
             if (!string.IsNullOrEmpty(_transcript?.SessionId)) m["session_id"] = _transcript.SessionId;
             _ipc.Send(m);
+            SchedulePrewarm(); // KTF (nghi vấn F4): the other drawing's chat waits ready with its own skills
         }
 
         // ================================================================= sending
@@ -1014,7 +1015,11 @@ namespace ClaudeCAD.Plugin
             }
             _undoAvailable = false;
             if (_sidecar.State == SidecarState.Failed) { if (Activation.IsAllowed) _sidecar.Restart(); }
-            else _ipc.Send(new Dictionary<string, object> { ["type"] = "new_session" });
+            else
+            {
+                _ipc.Send(new Dictionary<string, object> { ["type"] = "new_session" });
+                SchedulePrewarm(); // KTF (nghi vấn F4): the new chat waits ready with its skills
+            }
         }
 
         /// <summary>Ends the current turn: closes the undo group, saves the transcript, unlocks the UI. Thread-safe.</summary>

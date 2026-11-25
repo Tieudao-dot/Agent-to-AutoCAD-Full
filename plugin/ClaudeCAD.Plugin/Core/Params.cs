@@ -61,7 +61,8 @@ namespace ClaudeCAD.Plugin.Core
             throw Bad(name, "a number", v);
         }
 
-        public double Num(string name, double def) => Has(name) ? Num(name) : def;
+        // KTF-05: a default of an absolute angle / height follows the UCS like a given value (base_z omitted = base_z 0)
+        public double Num(string name, double def) => Has(name) ? Num(name) : UcsScope.ConvertNumber(name, def);
 
         public double? NumOpt(string name) => Has(name) ? Num(name) : (double?)null;
 

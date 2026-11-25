@@ -740,6 +740,19 @@ namespace ClaudeCAD.Plugin.Core
 
         public static List<LibPrim> Build(LibItem it, double w, double d) => it.Draw(w, d);
 
+        /// <summary>Relative size difference under which an existing block of the same name is taken as the library one.</summary>
+        public const double SizeTol = 0.02;
+
+        /// <summary>Kiểm tra độc lập đợt F: an existing block w × h is the library block wantW × wantH (2 %, either orientation).</summary>
+        public static bool SameSize(double w, double h, double wantW, double wantH)
+        {
+            bool Near(double a, double b) => Math.Abs(a - b) <= SizeTol * Math.Max(Math.Abs(b), 1e-9);
+            return (Near(w, wantW) && Near(h, wantH)) || (Near(w, wantH) && Near(h, wantW));
+        }
+
+        /// <summary>The name of the library block when the drawing has another block of its name at another size.</summary>
+        public static string OtherSizeName(string name) => name + "-TV";
+
         /// <summary>Box of all primitives (min x, min y, max x, max y).</summary>
         public static double[] Box(IEnumerable<LibPrim> prims)
         {

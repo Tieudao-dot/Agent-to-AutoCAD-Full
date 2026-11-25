@@ -121,6 +121,32 @@ namespace ClaudeCAD.Plugin.Core
         public bool PlanBoxInside(double[] wmin, double[] wmax, double[] umin, double[] umax)
         {
             var (bmin, bmax) = BoxFromWcs(wmin, wmax);
+            return UcsBoxInside(bmin, bmax, umin, umax);
+        }
+
+        /// <summary>
+        /// KTF-03: the box of a set of WCS points in this UCS — tight, unlike BoxFromWcs of their WCS box, which grows when
+        /// the UCS turns by an angle that is not a multiple of 90° (a 100 long line along the UCS x of a 30° UCS has a UCS box
+        /// 100 × 0, its WCS box re-boxed is 136.6 × 86.6).
+        /// </summary>
+        public (double[] min, double[] max) BoxOfPoints(IEnumerable<double[]> wcsPoints)
+        {
+            var mn = new[] { double.MaxValue, double.MaxValue, double.MaxValue };
+            var mx = new[] { double.MinValue, double.MinValue, double.MinValue };
+            bool any = false;
+            foreach (var w in wcsPoints)
+            {
+                var c = FromWcs(w);
+                for (int k = 0; k < 3; k++) { mn[k] = Math.Min(mn[k], c[k]); mx[k] = Math.Max(mx[k], c[k]); }
+                any = true;
+            }
+            if (!any) throw new ArgumentException("no points");
+            return (mn, mx);
+        }
+
+        /// <summary>A box already in UCS numbers (bmin / bmax) lies, in x and y, inside the UCS area umin / umax (any order).</summary>
+        public static bool UcsBoxInside(double[] bmin, double[] bmax, double[] umin, double[] umax)
+        {
             double x0 = Math.Min(umin[0], umax[0]), x1 = Math.Max(umin[0], umax[0]);
             double y0 = Math.Min(umin[1], umax[1]), y1 = Math.Max(umin[1], umax[1]);
             const double eps = 1e-6;
@@ -211,6 +237,11 @@ namespace ClaudeCAD.Plugin.Core
         [ThreadStatic] private static UcsFrame _input;
         [ThreadStatic] private static UcsFrame _output;
         [ThreadStatic] private static string _tool;
+        // KTF-04: mm per drawing unit of the running call (the Height params are mm, the UCS origin is drawing units); 0 = 1
+        [ThreadStatic] private static double _mmPerUnit;
+
+        /// <summary>mm per drawing unit of the running call (1 when unknown).</summary>
+        public static double MmPerUnit => _mmPerUnit > 0 ? _mmPerUnit : 1;
 
         /// <summary>Frame point params are converted from (Ref mode and not World), else null.</summary>
         public static UcsFrame Input => _input;
@@ -219,20 +250,21 @@ namespace ClaudeCAD.Plugin.Core
         public static string Tool => _tool;
 
         /// <summary>Sets the ambient frame for one Ref call; World / null and other modes leave everything as is.</summary>
-        public static IDisposable Enter(UcsFrame frame, UcsMode mode, string tool)
+        public static IDisposable Enter(UcsFrame frame, UcsMode mode, string tool, double mmPerUnit = 1)
         {
-            var prev = (_input, _output, _tool);
+            var prev = (_input, _output, _tool, _mmPerUnit);
             bool active = frame != null && !frame.IsWorld && mode == UcsMode.Ref;
             _input = active ? frame : null;
             _output = active ? frame : null;
             _tool = tool;
+            _mmPerUnit = mmPerUnit > 0 ? mmPerUnit : 1;
             return new Restore(prev);
         }
 
         /// <summary>Points read in the middle of a call that are already WCS (e.g. picked by the user, stored in a macro).</summary>
         public static IDisposable Suspend()
         {
-            var prev = (_input, _output, _tool);
+            var prev = (_input, _output, _tool, _mmPerUnit);
             _input = null;
             _output = null;
             return new Restore(prev);
@@ -240,14 +272,14 @@ namespace ClaudeCAD.Plugin.Core
 
         private sealed class Restore : IDisposable
         {
-            private readonly (UcsFrame, UcsFrame, string) _prev;
+            private readonly (UcsFrame, UcsFrame, string, double) _prev;
             private bool _done;
-            public Restore((UcsFrame, UcsFrame, string) prev) { _prev = prev; }
+            public Restore((UcsFrame, UcsFrame, string, double) prev) { _prev = prev; }
             public void Dispose()
             {
                 if (_done) return;
                 _done = true;
-                (_input, _output, _tool) = _prev;
+                (_input, _output, _tool, _mmPerUnit) = _prev;
             }
         }
 
@@ -272,7 +304,8 @@ namespace ClaudeCAD.Plugin.Core
             switch (UcsLogic.KindOf(_tool, name))
             {
                 case ParamKind.PlanAngle: return v + f.PlanAngleDeg;
-                case ParamKind.Height: return v + f.O[2];
+                // KTF-04: the height is mm, the UCS origin z drawing units (a metre drawing: origin z 3.3 = 3300 mm)
+                case ParamKind.Height: return v + f.O[2] * MmPerUnit;
                 default: return v;
             }
         }
@@ -332,11 +365,18 @@ namespace ClaudeCAD.Plugin.Core
             ["edit_text"] = new[] { "rotation" },
         };
 
-        /// <summary>Absolute z heights (mm / drawing units) of Ref tools: + the UCS origin z when the UCS z is up.</summary>
+        /// <summary>
+        /// Absolute z heights in mm of Ref tools: + the UCS origin z (× mm per unit, KTF-04) when the UCS z is up. KTF-05: also
+        /// the Ref forms of build_railing (path_handle), build_stair (well_handle), build_beam (path_handles); their Create
+        /// forms get the UCS z from the transform of the new solids instead.
+        /// </summary>
         public static readonly Dictionary<string, string[]> HeightParams = new Dictionary<string, string[]>(StringComparer.Ordinal)
         {
             ["build_3d_from_plan"] = new[] { "base_z" },
             ["build_roof"] = new[] { "wall_top_z" },
+            ["build_railing"] = new[] { "base_z" },
+            ["build_stair"] = new[] { "base_z" },
+            ["build_beam"] = new[] { "top_z" },
         };
 
         /// <summary>The mode of one call (a few tools depend on their params: from existing objects → Ref).</summary>

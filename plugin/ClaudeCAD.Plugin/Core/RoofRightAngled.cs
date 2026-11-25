@@ -47,6 +47,85 @@ namespace ClaudeCAD.Plugin.Core
             return true;
         }
 
+        /// <summary>
+        /// KTF-01 (kiểm tra độc lập đợt F): a right-angled outline drawn by hand or turned and rounded is off by a little
+        /// (IsRightAngled takes edges within StairLogic.SquareTol, ~20 mm over 10 m), and the grid of MaximalRectangles
+        /// then found near-twin rectangles: thin slivers, a "slightly wider" rectangle taken as a wing, a wrong gable.
+        /// The outline is squared first: the frame is the length-weighted mean direction of all edges (folded to 90°),
+        /// every edge becomes exactly horizontal / vertical in it at the mean of its two ends, and each corner takes the
+        /// x of its vertical edge and the y of its horizontal one. Moves a corner by about the drawing error only.
+        /// Null when the edges do not alternate across / along (then the outline is not a right-angled one).
+        /// </summary>
+        public static List<double[]> SquareUp(IList<double[]> pts)
+        {
+            int n = pts.Count;
+            if (n < 4 || n % 2 != 0) return null;
+            double sx = 0, sy = 0;
+            for (int i = 0; i < n; i++)
+            {
+                var a = pts[i]; var b = pts[(i + 1) % n];
+                double dx = b[0] - a[0], dy = b[1] - a[1], l = Math.Sqrt(dx * dx + dy * dy);
+                if (l < 1e-9) return null;
+                double t4 = 4 * Math.Atan2(dy, dx); // edge directions folded to 90°: the same for along / across
+                sx += l * Math.Cos(t4); sy += l * Math.Sin(t4);
+            }
+            double th = Math.Atan2(sy, sx) / 4, c = Math.Cos(th), s = Math.Sin(th);
+            var loc = pts.Select(q => new[] { q[0] * c + q[1] * s, -q[0] * s + q[1] * c }).ToList();
+            // edge i (from corner i to i + 1) is along x or along y in the frame
+            var alongX = new bool[n];
+            for (int i = 0; i < n; i++)
+            {
+                var a = loc[i]; var b = loc[(i + 1) % n];
+                alongX[i] = Math.Abs(b[0] - a[0]) >= Math.Abs(b[1] - a[1]);
+                if (i > 0 && alongX[i] == alongX[i - 1]) return null;
+            }
+            if (alongX[n - 1] == alongX[0]) return null;
+            var lvl = new double[n]; // y of an edge along x, x of an edge along y
+            for (int i = 0; i < n; i++)
+            {
+                var a = loc[i]; var b = loc[(i + 1) % n];
+                lvl[i] = alongX[i] ? (a[1] + b[1]) / 2 : (a[0] + b[0]) / 2;
+            }
+            // KTF-01 (lần 2): levels closer than SnapTol are one level (a corner off by a few mm on both sides of an inward
+            // corner, a 2 mm jog in a wall line): their edges become one line, the zero-length edges between them go
+            double size = Math.Max(loc.Max(q => q[0]) - loc.Min(q => q[0]), loc.Max(q => q[1]) - loc.Min(q => q[1]));
+            double tol = Math.Max(SnapMinMm, StairLogic.SquareTol * size);
+            Snap(lvl, alongX, true, tol);
+            Snap(lvl, alongX, false, tol);
+            var res = new List<double[]>(n);
+            for (int k = 0; k < n; k++)
+            {
+                int prev = (k - 1 + n) % n; // corner k sits between edge k - 1 and edge k
+                double x = alongX[k] ? lvl[prev] : lvl[k], y = alongX[k] ? lvl[k] : lvl[prev];
+                res.Add(new[] { x * c - y * s, x * s + y * c });
+            }
+            var clean = Clean(res, 1e-6);
+            if (clean.Count < 4 || clean.Count % 2 != 0 || !IsRightAngled(clean)) return null;
+            return clean;
+        }
+
+        /// <summary>Two roof parts whose widths differ by less than this (mm) are equally wide (which one is the main roof).</summary>
+        public const double WidthTieMm = 50;
+
+        /// <summary>Smallest distance (mm) under which two parallel wall lines of a right-angled outline are taken as one.</summary>
+        public const double SnapMinMm = 5;
+
+        /// <summary>Levels of the edges along x (horizontal) or along y, closer than tol, replaced by their mean.</summary>
+        private static void Snap(double[] lvl, bool[] alongX, bool horizontal, double tol)
+        {
+            var idx = Enumerable.Range(0, lvl.Length).Where(i => alongX[i] == horizontal).OrderBy(i => lvl[i]).ToList();
+            int start = 0;
+            for (int k = 1; k <= idx.Count; k++)
+            {
+                if (k < idx.Count && lvl[idx[k]] - lvl[idx[k - 1]] <= tol) continue;
+                double mean = 0;
+                for (int j = start; j < k; j++) mean += lvl[idx[j]];
+                mean /= k - start;
+                for (int j = start; j < k; j++) lvl[idx[j]] = mean;
+                start = k;
+            }
+        }
+
         private static double[] Dir(double[] a, double[] b)
         {
             double dx = b[0] - a[0], dy = b[1] - a[1], l = Math.Sqrt(dx * dx + dy * dy);
@@ -122,7 +201,10 @@ namespace ClaudeCAD.Plugin.Core
                 foreach (var r in rects) res.Add((r, r.W >= r.H));
                 return res;
             }
-            var main = rects.OrderByDescending(r => Math.Min(r.W, r.H)).ThenByDescending(r => r.W * r.H).First();
+            // KTF-01 (lần 2): widths within WidthTieMm (drawing error) are equal, then the larger area is the main roof, so a
+            // corner off by a few mm does not swap the main roof and the wing
+            double widest = rects.Max(r => Math.Min(r.W, r.H));
+            var main = rects.Where(r => Math.Min(r.W, r.H) >= widest - WidthTieMm).OrderByDescending(r => r.W * r.H).First();
             bool mainAlongX = ridge == "short" ? main.W < main.H : main.W >= main.H;
             res.Add((main, mainAlongX));
             double line = mainAlongX ? (main.Y0 + main.Y1) / 2 : (main.X0 + main.X1) / 2;
@@ -144,7 +226,10 @@ namespace ClaudeCAD.Plugin.Core
                         parts.Add(new LRect { X0 = line, Y0 = r.Y0, X1 = r.X1, Y1 = r.Y1 });
                     }
                     // a wing cut at the main ridge runs away from it: its ridge is across the main ridge
-                    foreach (var q in parts) if (!q.Inside(main)) res.Add((q, !mainAlongX));
+                    // KTF-01 (lần 2): a cut part takes its ridge along its own long side (as an uncut wing), never across
+                    // its long side: a bar half taken as a "wing across the main ridge" got a ridge as high as the bar is long
+                    foreach (var q in parts)
+                        if (!q.Inside(main)) res.Add((q, ridge == "short" ? q.W < q.H : q.W >= q.H));
                 }
                 else if (!r.Inside(main))
                 {
@@ -182,7 +267,7 @@ namespace ClaudeCAD.Plugin.Core
                         var p = res[j];
                         if (p.ridgeAlongX == q.ridgeAlongX || !Overlaps(p.r, q.r)) continue;
                         double ip = Inset(p), iq = Inset(q);
-                        bool higher = ip > iq + 1e-6 || (Math.Abs(ip - iq) <= 1e-6 && j < i);
+                        bool higher = ip > iq + WidthTieMm / 2 || (Math.Abs(ip - iq) <= WidthTieMm / 2 && j < i);
                         if (!higher) continue;
                         // p's ridge line runs along p (x = const when p's ridge is along y); q runs across it
                         double line = p.ridgeAlongX ? (p.r.Y0 + p.r.Y1) / 2 : (p.r.X0 + p.r.X1) / 2;

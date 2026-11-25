@@ -88,3 +88,66 @@ Không đổi số nào trong code.
 
 - Run **#49** (`45614706040`, `release=false`) trên `7aa74c0` (code cuối): **xanh** (build 3 target, test lõi, trợ lý, UI test WPF). 1 lượt CI.
 - Commit sau CI chỉ thêm mục này (tài liệu).
+
+## Sau kiểm tra độc lập (KTF, 25/11/2026)
+
+Kiểm tra độc lập (`session_01D56HmHz4EXXJceBgkmjcap`) soát `afdaa68`, ghi 8 lỗi. Phần F1 (UCS) và F4 (Excel, khởi động sẵn)
+— KTF-02 → 06 — do thread F1 sửa trên `full/nang-cap-f-sua-ktf`, gộp vào đây khi có commit. Phần F3 / F2 / tài liệu sửa
+trực tiếp trên nhánh này:
+
+| Mã | Mô tả | Sửa | Test |
+| --- | --- | --- | --- |
+| KTF-01 (nặng, F3) | Mái 2 dốc / 4 dốc nhà L / T / U có đường bao lệch nhỏ (vẽ tay, xoay rồi làm tròn ~1 mm): phép thử góc vuông nhận lệch tới ~20 mm / 10 m nhưng lưới hình chữ nhật chỉ gộp tọa độ trong 0,5 mm → mảnh gần trùng, cánh "rộng hơn chút" có nóc chạy ngang mái chính (T lệch 1 mm: 5 mảnh, đỉnh 6603 thay 4293), mảnh mỏng < 1 mm ở mái 4 dốc | Đường bao được **nắn về góc vuông** trước khi chia (`RoofLogic.SquareUp`): khung = hướng trung bình theo chiều dài của mọi cạnh (gấp về 90°), mỗi cạnh nằm đúng ngang / dọc ở trung bình hai đầu, mỗi góc lấy x của cạnh dọc và y của cạnh ngang. Góc chỉ dời cỡ sai số vẽ; đường bao đã vuông giữ nguyên | `KiemTraDocLapDotFTests`: T lệch 1 mm = 2 mảnh, đỉnh 4293; T 37° / 133°, U 13° / 133° / 270°, L cánh hẹp 37°, T 90° xoay + làm tròn: cùng số mảnh và đỉnh như bản vuông, không mảnh nào hẹp < 500 mm, cả 2 dốc và 4 dốc. Bỏ dòng nắn thì 4 test đỏ (đã thử) |
+| KTF-07 (nhẹ, tài liệu F2) | `dot-f-cho-duyet.md`, checklist tổng F3-5, `checklist-dot-f2.md` ghi bản vẽ mét hiện "4.00"; code bỏ số 0 thừa (DIMZIN 8) nên khách thấy "4" | Sửa tài liệu ("4", "4.5"); thêm điểm để chủ dự án xem: muốn "4.00" thì đổi cài đặt này. Không đổi code | test tài liệu |
+| KTF-08 (nhẹ, skill F2) | `skills/ve-mep/SKILL.md` có hai bước "4." | Đánh số lại 1 → 5 | test số bước |
+
+Nghi vấn đã kiểm:
+
+| Nghi vấn | Kết quả |
+| --- | --- |
+| F3: tên vật liệu mẫu đè vật liệu của khách ("Glass", "Metal", "tile", "granite" là tên phụ của vật liệu mẫu) | **Đúng** (khách có "Glass" mà nhờ gán "Glass" thì nhận vật liệu mẫu "Kính"). Sửa: vật liệu đúng tên đã có trong bản vẽ được dùng nguyên. Đổi màu vật liệu khách đã có không qua thẻ: thread F5 làm |
+| F3: ảnh PNG từ góc nhìn đã lưu bỏ zoom / độ xoay / phối cảnh | **Đúng**, theo thiết kế (bộ chụp off-screen chỉ nhận hướng nhìn và khung). Không sửa (cần viết lại bộ chụp): mô tả lệnh nói rõ "giữ hướng, không giữ độ phóng to; khung cả công trình hoặc handles"; checklist F6-11 ghi rõ |
+| F2: `insert_library_block` không đặt ByLayer cho block tham chiếu | **Đúng** (Properties hiện màu hiện hành). Sửa: block tham chiếu ByLayer như khung / khung tên (test F2-test cập nhật 5 → 6 chỗ, mỗi chỗ vẫn ByLayer) |
+| F2: tên block không ghi đơn vị, block cùng tên khác cỡ bị dùng lại sai cỡ | **Đúng.** Sửa: block cùng tên mà cỡ lệch > 2 % thì không dùng lại, tạo block thư viện tên `<tên>-TV` (vẫn `CUA-DI-…` / `CUA-SO-…` cho dựng 3D) |
+| F2: hoàn tác sau khi xóa / ghi đè trạng thái layer | Chưa kiểm được ngoài AutoCAD: thêm mục thử tay F4-8 |
+
+Số kỹ thuật bên trong (không cần duyệt): nắn góc không có ngưỡng riêng (dùng ngưỡng góc vuông `StairLogic.SquareTol` = 2e-3
+sẵn có); lệch cỡ block cho dùng lại `LibraryBlocks.SizeTol` = 2 %.
+
+Quyết định tự chọn: tên block thư viện khi trùng tên khác cỡ là `<tên>-TV` (khách thấy tên này trong danh sách block; ghi
+vào `dot-f-cho-duyet.md`). Thử tay thêm: F4-8, F4-9, F6-12 (checklist tổng, khối "Đợt F").
+
+### KTF-01 lần 2 (sau soát lại của kiểm tra độc lập trên `f037b79`)
+
+Soát lại: 7/8 mã đúng; KTF-01 còn sai — `SquareUp` chỉ nắn góc, không gộp hai cạnh song song gần trùng ở hai bên chỗ lõm:
+T 2 dốc nhiễu ±2 mm 13/30 lần ra nóc 6603 (đúng 4293); L 12 × 12 m có bậc 2 mm ở cạnh trong ra 5 mảnh, nóc 6603 (đúng 4871);
+T 2 dốc ở 30° ra 3 mảnh. Gốc lỗi thứ hai: phần cánh bị cắt ở nóc mái chính luôn nhận nóc **ngang** mái chính, nên khi chân T
+nhỉnh hơn thanh ngang vài mm (thành mái chính), hai nửa thanh ngang có nóc chạy ngang chiều dài 6 m của chúng → nóc 6603.
+
+Sửa (`Core/RoofRightAngled.cs`):
+- `SquareUp` gộp các mức x (cạnh đứng) / y (cạnh ngang) cách nhau ≤ max(`SnapMinMm` = 5 mm, `SquareTol` × cỡ nhà) thành một
+  (trung bình), rồi bỏ cạnh dài 0 / đỉnh thẳng hàng (`Clean`); kết quả phải còn là đường bao góc vuông.
+- Phần cánh bị cắt lấy nóc theo **cạnh dài của chính nó** (như cánh không bị cắt), không còn bị ép nóc ngang mái chính.
+- Bề rộng chênh nhau < `WidthTieMm` (50 mm) coi là bằng nhau khi chọn mái chính (rồi chọn hình lớn hơn) và khi xét mái nào
+  cao hơn (`EndInHigherRidges`), nên nhiễu vài mm không đổi mái chính.
+
+Bậc lõm / lồi nhỏ có thật (50, 100, 220, 500 mm; cạnh trong, cạnh ngoài, mặt sau nhà T, sân trong nhà U): đã thử, sau sửa
+nóc 2 dốc **không bao giờ cao hơn** mái 4 dốc cùng nhà, bản mái dày đều, tối đa 7 mảnh (≤ 12). Nên **không** thêm ngưỡng bỏ
+bậc (không có số mới khách gặp); bậc được dựng đúng như vẽ.
+
+Test (`KiemTraDocLapDotFTests`, 1189 test lõi): T nhiễu ±2 mm 30 hạt cố định (2 dốc và 4 dốc đều 2 mảnh, nóc 4293); L bậc 2 / 3 /
+5 / 10 / 20 mm ở cạnh trong (2 mảnh, nóc 4871); 20 ca bậc thật (nóc 2 dốc ≤ nóc 4 dốc, ≤ 12 mảnh, bản mái dày đúng); T 30° xoay
++ làm tròn ra 2 mảnh. Test mái F3 cũ giữ nguyên, vẫn xanh.
+
+Số kỹ thuật bên trong (không cần duyệt): `SnapMinMm` 5 mm, `WidthTieMm` 50 mm. Nhiễu ±4 mm ở cánh hẹp 1,5 m vẫn có thể bị từ
+chối "không phải góc vuông" (ngưỡng `StairLogic.SquareTol` 2e-3 có từ đợt E): giữ nguyên, ghi để biết.
+
+Ghi chú nhẹ của người soát:
+- (c) checklist tổng: F6-12 xếp lại sau F6-11.
+- (b) `list_entities` theo khung trong UCS xoay đo từng hình theo trục UCS (tạo bản sao để đo), bản vẽ rất nhiều khối 3D có thể
+  chậm: thêm mục thử tay F7-10.
+- (a) block thư viện đuôi `-TV` đã có sẵn thì dùng lại mà không kiểm cỡ lần nữa (hiếm: cần cả block gốc lẫn block `-TV` khác cỡ):
+  ghi ở đây, không sửa.
+
+Thử tay thêm: F6-4b (nhà T vẽ tay lệch + bậc 220 mm).
+

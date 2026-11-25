@@ -20,8 +20,9 @@ namespace ClaudeCAD.Plugin.Drawing
         {
             var requested = XlsxLogic.Requested(p.Get("excel"), tool);
             if (requested == null) return false;
-            var data = table();
-            if (data == null || data.Count <= 1)
+            var data = XlsxLogic.ForExcel(table()); // KTF-02: the m² / m³ columns as numbers
+            int dataRows = XlsxLogic.DataRows(data); // KTF-06: without the header and the "Tổng" row
+            if (dataRows == 0)
                 throw ToolException.Invalid($"{tool}: nothing to export (no rows), so no Excel file was written.");
             string docName = SafeString(() => ctx.Doc.Name);
             string drawingDir = SafeString(() => Path.GetDirectoryName(ctx.Doc.Name));
@@ -33,7 +34,7 @@ namespace ClaudeCAD.Plugin.Drawing
             try { XlsxWriter.Write(full, rows, F4Numbers.SheetName.TryGetValue(tool, out var sheet) ? sheet : tool); }
             catch (IOException ex) { throw ToolException.Invalid($"{tool}: could not write '{full}' ({ex.Message}). If it is open in Excel, ask the user to close it, then call again."); }
             catch (UnauthorizedAccessException) { throw ToolException.Invalid($"{tool}: no permission to write '{full}'. Give another folder or file name in 'excel'."); }
-            result["excel"] = new Dictionary<string, object> { ["path"] = full, ["rows"] = data.Count - 1 };
+            result["excel"] = new Dictionary<string, object> { ["path"] = full, ["rows"] = dataRows };
             return true;
         }
     }

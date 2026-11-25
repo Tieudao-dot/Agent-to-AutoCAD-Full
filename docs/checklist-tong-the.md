@@ -296,7 +296,7 @@ Bản vẽ trống mm; sau đó một mặt bằng ~12 × 9 m.
 | F3-2 | Claude | Gõ lại đúng câu trên (F2-A2) | Báo không đổi gì; không có kiểu trùng |
 | F3-3 | Claude | Ô **Tiêu chuẩn** = Kiến trúc, "thiết lập style chuẩn"; ô **Tỉ lệ** = 1:50, gõ lại (F2-A3) | Có `KT-ARIAL`, `KT-100`, rồi thêm `KT-50` |
 | F3-4 | Claude | Sửa tay `VN-100` (chữ 3.5 trong `DIMSTYLE`), nhờ "thiết lập style chuẩn 1:100"; lần 1 bấm **Hủy**, lần 2 **Đồng ý**; lần 3 gõ tay "đồng ý" (F2-A4) | Thẻ hỏi ghi đè nêu chỗ khác; Hủy: vẫn 3.5; Đồng ý: về 2.5; gõ tay không ghi đè |
-| F3-5 | Claude | Bản vẽ đơn vị **mét** (`INSUNITS` = 6), "thiết lập style chuẩn 1:100"; bản vẽ **dm** (14) (F2-A5, F2-F4) | `VN-100-M`, đoạn 4 m ghi **4.00**, chữ ~0,25; dm: `VN-100-DM` |
+| F3-5 | Claude | Bản vẽ đơn vị **mét** (`INSUNITS` = 6), "thiết lập style chuẩn 1:100"; bản vẽ **dm** (14) (F2-A5, F2-F4) | `VN-100-M`, đoạn 4 m ghi **4** (4,5 m ghi **4.5**: số 0 thừa bị bỏ), chữ ~0,25; dm: `VN-100-DM` |
 | F3-6 | Claude | Đặt `LTSCALE` = 20 trước, chạy lại (F2-A6) | Claude giữ LTSCALE của cậu và nói số nên dùng |
 | F3-7 | Claude | Trên mặt bằng: "tạo trang in A3 tỉ lệ 1:100, công trình NHÀ PHỐ, tên bản vẽ MẶT BẰNG TẦNG 1, người vẽ …" (F2-B1) | Tab mới `BV-01`; khung cách mép trái 25 mm, 3 cạnh còn lại 5 mm; khung tên đủ 10 ô, ngày hôm nay, tỉ lệ 1:100, khổ A3, chữ có dấu; khung nhìn đúng 1:100, đã khóa, **một** khung nhìn; viền khung nhìn không in |
 | F3-8 | Claude | `EATTEDIT` sửa ô "KIỂM TRA", hoặc nhờ Claude sửa (F2-B2) | Sửa được đúng ô |
@@ -315,6 +315,8 @@ Bản vẽ trống mm; sau đó một mặt bằng ~12 × 9 m.
 | F4-5 | Claude | "lưu trạng thái layer tên IN-KIEN-TRUC"; tắt A-DIM, khóa A-TEXT, đổi màu A-WALL; "gọi lại trạng thái IN-KIEN-TRUC"; "liệt kê các trạng thái layer" (F2-D1–D3) | `LAYERSTATE` thấy tên; gọi lại trả đủ 3 layer, Claude báo số layer đã đổi; liệt kê thấy tên |
 | F4-6 | Claude | Lưu lại trùng tên; "xóa trạng thái IN-KIEN-TRUC" (F2-D4, D5) | Cả hai hiện thẻ; chỉ làm khi bấm **Đồng ý** |
 | F4-7 | Claude | **Hoàn tác lượt này** sau khi gọi lại; bật **Chỉ xem** rồi "liệt kê trạng thái layer" (F2-D6, F2-F6) | Layer về như trước khi gọi; Chỉ xem vẫn đọc được danh sách |
+| F4-8 | Claude | *(sau kiểm tra độc lập)* Lưu đè trạng thái IN-KIEN-TRUC (bấm Đồng ý) rồi bấm **Hoàn tác lượt này**; xóa trạng thái (Đồng ý) rồi **Hoàn tác lượt này** | `LAYERSTATE`: sau hoàn tác thấy lại bản cũ / tên vừa xóa. *(Chưa kiểm được ngoài AutoCAD)* |
+| F4-9 | Claude | *(sau kiểm tra độc lập)* Bản vẽ có block tự vẽ tên `CUA-DI-900` nhưng to 2 m; nhờ "chèn cửa đi 900"; màu hiện hành đỏ rồi chèn tiếp, bấm chọn block xem Properties | Có block mới `CUA-DI-900-TV` đúng 900 (block 2 m của cậu không bị dùng sai cỡ); Properties của block: màu **ByLayer** (không đỏ) |
 
 ## F5. Xuất bảng ra Excel (~12 phút)
 
@@ -338,13 +340,15 @@ Bản vẽ **đã lưu**, có vài phòng (polyline kín + tên phòng có dấu
 | F6-2 | Claude | "lập bảng khối lượng mái" (F3-B3) | Thể tích ≈ diện tích mặt bằng mái × 0,139 m (bản 120, dốc 30°), không gấp đôi |
 | F6-3 | Claude | Hoàn tác, "dựng mái 2 dốc" trên nhà L; nhà chữ T (14 × 5 m + chân 5 × 6 m) mái 4 dốc (F3-B4, B5) | 2 dốc: một nóc chính dọc cánh dài, cánh ngắn có nóc chạy vào; T: một khối, hai khe mái |
 | F6-4 | Claude | Nhà chữ U (hai cánh 5 × 9 m, thanh nối 3 m sâu), "dựng mái 2 dốc", nhìn **tường ngoài mỗi cánh** (F3-B8) | Mái cánh dốc đều xuống tường ngoài; không có tam giác đầu hồi của thanh nối nhô ra; nóc thanh nối dừng ở nóc hai cánh |
+| F6-4b | Claude | *(sau kiểm tra độc lập)* Vẽ tay nhà chữ T (thanh 12 × 4 m, chân rộng 4 m), cố ý lệch vài góc 1–2 mm và một bậc tường 220 mm ở mặt sau; "dựng mái 2 dốc" rồi "dựng mái 4 dốc" (hoàn tác giữa hai lần) | Mái 2 dốc: một nóc chính dọc thanh ngang, chân T có nóc chạy vào; nóc **không cao vọt** (không cao hơn mái 4 dốc của cùng nhà); không có mảnh mái mỏng lạ |
 | F6-5 | Claude | Nhà có tường xiên lõm, "dựng mái 4 dốc"; nhà chữ nhật 10 × 6 m mái 4 dốc (F3-B6, B7) | Xiên: báo chưa dựng được, gợi ý mái bằng / vẽ lại góc vuông; chữ nhật: như trước, bản 120 mm |
 | F6-6 | Claude | "dựng cầu thang chữ U cao 3,3 m", "dựng mái 2 dốc", "dựng mái bằng" (không nói độ dày) (F3-C1–C3) | Bản thang + chiếu nghỉ **120**, khe 2 vế **100**; mái dốc **120**; mái bằng **150** |
 | F6-7 | Claude | Chạy macro cũ (trước F3) có cầu thang / mái ghi số độ dày (F3-C4) | Ra đúng như lần ghi |
 | F6-8 | Claude | "gán vật liệu: tường bê tông, mái ngói, cửa sổ kính", rồi `VISUALSTYLES` → Realistic; "gán gỗ nâu đậm tên Gỗ lim cho cửa đi" (F3-D1, D2) | Tường xám, mái đỏ gạch, kính xanh nhìn xuyên; có vật liệu "Gỗ lim" (`MATBROWSEROPEN`) |
 | F6-9 | Claude | "xuất ảnh phối cảnh có vật liệu" (F3-D3) | File **.png** cạnh bản vẽ, có màu vật liệu; màn hình không đổi góc nhìn |
 | F6-10 | Claude | Khóa layer tường, "gán vật liệu gạch cho tường"; "đổi màu vật liệu Global thành đỏ" (F3-D4, D6) | Bỏ qua khối trên layer khóa, không tự mở khóa; Global: từ chối, bản vẽ không đổi màu |
-| F6-11 | Claude | "lưu góc nhìn này tên Phối cảnh 1"; xoay đi, "về góc nhìn Phối cảnh 1"; lưu lại trùng tên; "xuất ảnh từ góc nhìn Phối cảnh 1"; "xóa góc nhìn Phối cảnh 1" (F3-E1–E4) | `VIEW` thấy tên; về đúng góc; trùng tên: Claude hỏi trước khi ghi đè; ảnh đúng hướng; xóa xong `VIEW` không còn |
+| F6-11 | Claude | "lưu góc nhìn này tên Phối cảnh 1"; xoay đi, "về góc nhìn Phối cảnh 1"; lưu lại trùng tên; "xuất ảnh từ góc nhìn Phối cảnh 1"; "xóa góc nhìn Phối cảnh 1" (F3-E1–E4) | `VIEW` thấy tên; về đúng góc; trùng tên: Claude hỏi trước khi ghi đè; ảnh nhìn **đúng hướng** của góc đã lưu nhưng khung **cả công trình** (không giữ độ phóng to đã lưu, đã biết); xóa xong `VIEW` không còn |
+| F6-12 | Claude | *(sau kiểm tra độc lập)* Bản vẽ có sẵn vật liệu tên "Glass" (màu tùy ý); nhờ "gán vật liệu Glass cho cửa sổ" | Cửa sổ nhận đúng vật liệu "Glass" của cậu, **không** đổi sang vật liệu mẫu "Kính" |
 
 ## F7. UCS (~15 phút)
 
@@ -359,6 +363,7 @@ Bản vẽ **đã lưu**, có vài phòng (polyline kín + tên phòng có dấu
 | F7-7 | Claude | `UCS` → `X` → 90 (mặt đứng): "vẽ hình chữ nhật 2000 × 1000 tại gốc"; "đùn hình chữ nhật 1000 × 500 tại gốc dày 200" (U7, T2) | Hình đứng trên mặt đứng; khối dày 200 theo trục Z của UCS, không dẹt |
 | F7-8 | Claude | UCS xoay 30° trên mặt bằng 2 phòng, "dựng 3D phần trong khung từ 0,0 tới …" (khung ôm một phòng) (T1) | Chỉ phòng trong khung được dựng |
 | F7-9 | Claude | `UCS` → `W`, "bản vẽ đang dùng hệ tọa độ nào?" (U8) | World (WCS) |
+| F7-10 | Claude | *(sau kiểm tra độc lập)* Bản vẽ nhiều khối 3D (vd dựng 3D cả nhà 3 tầng), UCS xoay 30°, nhờ "liệt kê các đối tượng trong khung từ 0,0 tới 20000,15000" | Claude trả lời trong vài giây, AutoCAD không treo. Ghi số giây nếu thấy chậm (lệnh đo từng hình theo trục UCS) |
 
 ## F8. Macro và chéo (~8 phút)
 

@@ -162,16 +162,18 @@ namespace ClaudeCAD.Plugin.Drawing
         private static List<string> LayerList(Params p, string name, string[] def) =>
             p.Has(name) ? p.Strings(name, 1) : def.ToList();
 
-        private static bool InArea(Extents3d? ext, double[] amin, double[] amax, UcsFrame areaFrame = null)
+        private static bool InArea(Entity ent, double[] amin, double[] amax, UcsFrame areaFrame = null)
         {
             if (amin == null) return true;
+            var ext = EntityInfo.Extents(ent);
             if (!ext.HasValue) return false;
             var e = ext.Value;
             if (areaFrame != null)
             {
-                // F1 (Test & sửa): area_min / area_max given in a UCS is a rectangle along the UCS axes: the object's box is
-                // re-boxed in the UCS and tested there (two corners turned to WCS one by one would make another rectangle)
-                return areaFrame.PlanBoxInside(new[] { e.MinPoint.X, e.MinPoint.Y, e.MinPoint.Z }, new[] { e.MaxPoint.X, e.MaxPoint.Y, e.MaxPoint.Z }, amin, amax);
+                // F1 (Test & sửa): area_min / area_max given in a UCS is a rectangle along the UCS axes, tested in the UCS.
+                // KTF-03: with the object's own box in the UCS (its WCS box re-boxed grows at angles other than 90°)
+                var ub = Acad.ExtentsInUcs(ent, areaFrame);
+                return ub.HasValue && UcsFrame.UcsBoxInside(ub.Value.min, ub.Value.max, amin, amax);
             }
             return e.MinPoint.X >= amin[0] && e.MinPoint.Y >= amin[1] && e.MaxPoint.X <= amax[0] && e.MaxPoint.Y <= amax[1];
         }
@@ -439,10 +441,10 @@ namespace ClaudeCAD.Plugin.Drawing
                 if (kind == null)
                 {
                     // for the layer guess: what else is on the plan (only inside the area)
-                    if (amin == null || InArea(EntityInfo.Extents(e), amin, amax, areaFrame)) input.Unread[layer] = input.Unread.TryGetValue(layer, out var n) ? n + 1 : 1;
+                    if (amin == null || InArea(e, amin, amax, areaFrame)) input.Unread[layer] = input.Unread.TryGetValue(layer, out var n) ? n + 1 : 1;
                     continue;
                 }
-                if (!InArea(EntityInfo.Extents(e), amin, amax, areaFrame)) continue;
+                if (!InArea(e, amin, amax, areaFrame)) continue;
                 Count();
                 string h = Acad.H(id);
                 switch (kind)

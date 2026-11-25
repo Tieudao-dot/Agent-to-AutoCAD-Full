@@ -351,7 +351,9 @@ namespace ClaudeCAD.Plugin.Drawing
             if (mode == UcsMode.Ref)
             {
                 object r;
-                using (UcsScope.Enter(frame, UcsMode.Ref, def.Name)) r = def.Handler(ctx, p);
+                double mmPerUnit = 1;
+                try { mmPerUnit = FloorPlanLogic.MmPerUnit(Convert.ToInt32(ctx.Db.Insunits), out _); } catch (Exception) { }
+                using (UcsScope.Enter(frame, UcsMode.Ref, def.Name, mmPerUnit)) r = def.Handler(ctx, p); // KTF-04: heights are mm
                 return UcsLogic.FixResult(r, frame);
             }
             // a Create tool called only to read (insert_library_block without a name lists the library): nothing to place
