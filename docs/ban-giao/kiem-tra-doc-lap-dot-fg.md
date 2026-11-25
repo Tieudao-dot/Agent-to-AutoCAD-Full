@@ -556,3 +556,112 @@ Quyết định luồng chính giữ nguyên sau nhận xét của thread kiểm
 | Thread đợt F2 (G1, G3) | 26/11 02h23: CI 45682294964 của bản gộp lượt 1 (`20e3812`) xanh. Sửa KFG-30, 33 ở `6868a38`, lõi 1410, trợ lý 407. Chờ hai nhánh kia để gộp + CI |
 | Thread đợt F1 (G2) | 02h25: sửa KFG-32, 34, 38 ở `full/nang-cap-g-sua-kfg-a` @ `deec2a4`, lõi 1412, trợ lý 407, ≈ $4. Lộ và sửa thêm một lỗi: polyline vẽ ngược chiều có cung tròn không bao giờ được nhận là trùng. Giới hạn đã ghi: khách chép nét của hình chiếu thì bản chép cũng mang dấu, nên không bị báo trùng |
 | Thread Test & sửa F1 (G4, G5) | 02h26: sửa KFG-28, 29, 31, 35, 36, 37 và hai nhận xét G5 ở `full/nang-cap-g-sua-kfg-b` @ `adef96c` (code `271ae04`), lõi 1432, trợ lý 407. Quyết định mới: file khách kéo / chọn từ thư mục mạng được khung chat chép về máy (dọn sau 7 ngày) rồi dùng bản chép; bản vẽ mở từ ổ mạng đã ánh xạ mà ảnh ghi theo tên máy chủ thì vẫn từ chối, lời báo hướng dẫn ghi theo ký tự ổ |
+
+## Soát lại lượt 2 (26/11 02h31)
+
+*Nguyên văn báo cáo soát lại của thread kiểm tra độc lập.*
+
+**Còn 1 lỗi mức vừa: KFG-39, do chính bản sửa KFG-29 sinh ra.** Bản chép file mạng giữ giờ sửa cũ của file gốc nên bị dọn ngay ở lần đính kèm sau.
+Các mã khác của lượt 2 đều sửa đúng. Ngoài KFG-39 có thêm 3 lỗi nhẹ. Không có lỗi nặng.
+
+Bản soát: `57b69a0`, so với `20e3812`. Tớ không sửa code, không commit / push / CI.
+
+### Test và build @ `57b69a0`
+
+- **Lõi:** 1436 / 1436 đạt.
+- **Trợ lý:** 407 / 407 đạt.
+- **Build net48 / net8.0-windows / net10.0-windows:** 0 lỗi, 0 cảnh báo cả 3.
+- **Test bị sửa trong diff:**
+  - `NangCapG2Tests`: chuyển sang `DupItem`, vẫn giữ ý cũ (vẽ ngược, lệch 0,01, khác layer).
+  - `NangCapG5Tests`, `SuaKfgBTests`, `KfgDotGTests`: chuỗi kỳ vọng theo dòng mới `LocalFile` của `ChatController`.
+  - Không có test nào bị nới cho qua.
+- **Test thử của tớ chạy lại trên bản mới (project tạm link Core):**
+  - G1 + G2: 4 test đạt; các ca của lượt 1 đã gộp vào trong đó.
+  - G3 + G4: console chạy lại toàn bộ ca KFG-03 lượt 1, cộng 9 ca mẫu `*` mới.
+  - G5: ProbeTests + Probe2 + Probe3. Có 2 test báo fail, nhưng là do chính test thử viết theo số sai cũ (PDF 4 trang) và một ca viết sai; code đúng.
+
+### Từng mã
+
+| Mã | Kết luận | Bằng chứng ngắn |
+| --- | --- | --- |
+| KFG-07 (phần còn lại = KFG-32) | Sửa đúng | `AddCurve` gắn `CLAUDECAD_VIEW` cho mọi nét `section_view` / `projection_view` trên layer nào cũng có; hatch mặt cắt có `MarkPlainHatch`. Dấu chỉ dùng trong `DupItemOf`, nên `not_bylayer` / `layer_zero` / `defpoints`… vẫn kiểm và sửa được nét hình chiếu (đúng chủ ý) |
+| KFG-28 | Sửa đúng | Bị từ chối: `\\?\UNC\` / `\\.\UNC\` khác share, `//evil/x`, `\\host` không share, `\\.\pipe\`, `\\?\Volume{…}`, `\\?\GLOBALROOT`, dấu chấm cuối. Được mở: cùng share (không phân biệt hoa thường, cả dạng `//` và `\\.\UNC\`). `\\?\Z:\` / `\\.\Z:\` đổi thành `Z:\` rồi kiểm `DriveType`. `C:a.png`, `\a.png`, `\??\` bị từ chối trước khi đọc file |
+| KFG-29 | **Chưa đủ:** sinh KFG-39 (vừa), KFG-40 (nhẹ) | Đúng: file mạng chỉ bị đọc lúc khách kéo / chọn; tên `tep-…` không ghi đè; `trace_image` vẫn chép file ra cạnh bản vẽ trước khi gắn, nên dọn 7 ngày không mất nền của bản vẽ đã lưu |
+| KFG-30 | Sửa đúng | "San*" với "Sân phơi" + "Sàn gỗ": cả hai để trống, có `ambiguous_prices`. "San*" với "Sân phơi" + "Sân thượng": cả hai có giá. "Sân*" có dấu, `*` trơn, mẫu khớp một dòng, "*an", "Da*": đều đúng. Toàn bộ ca KFG-03 lượt 1 cho kết quả y như trước |
+| KFG-31 | Sửa đúng | Mỗi đường đi Dispose `named` đúng một lần; không dùng sau Dispose; không còn nhánh rò |
+| KFG-32 | Sửa đúng | Như dòng KFG-07 |
+| KFG-33 | Sửa đúng | Nhánh lỗi chỉ ghi tờ của lần này cộng `oldLayouts`; `WriteSetRecord` bỏ tên không còn, không ghi handle rỗng; đường chạy thường không đổi |
+| KFG-34 | Sửa đúng; còn chậm ở một dạng hiếm (KFG-42) | Lệch qua mép ô (0,002 cả x lẫn y; quanh 0 âm / dương; đúng 0,1; tọa độ 1e6) đều bắt được. Ba bản trùng ra [1,2]. 20 000 đường cùng x: 19 ms (trước 2,4 s) |
+| KFG-35 | Sửa đúng | PDF giả 45,7 MB: 2,0 s (trước 7,8 s), ra 0 trang kèm `pages_note` |
+| KFG-36 | Sửa đúng | UCS 90°, bản vẽ 10 000 × 5 000: ảnh đặt ở (10 000, 10 000), không đè; UCS World như cũ |
+| KFG-37 | Sửa đúng (đọc code, chưa thử AutoCAD) | Góc ảnh lưu trong dấu trace; `MoveFrame` dùng đúng ma trận; `info` dùng `Corners`; dấu cũ thì lấy khung WCS |
+| KFG-38 | Sửa đúng | `ShapeKey` / `DuplicateIndices(IList<string>)` đã xóa; sửa thêm lỗi bulge −0 (có test); chú thích chồng đã gỡ |
+| Nhận xét G5 (đường tương đối; ổ ánh xạ) | Đúng | Tương đối bị từ chối trước khi đọc; lời báo hướng dẫn ghi theo ký tự ổ |
+| 26 mã đúng ở lượt 1 | Vẫn đúng | Test thử cũ chạy lại cả 3 mảng đều ra như lượt 1 |
+
+### Lỗi mới
+
+**KFG-39 — Vừa — G5 (do bản sửa KFG-29): bản chép `tep-` bị dọn ngay ở lần đính kèm sau.**
+- **Chỗ:** `UI/ChatAttachments.cs` 52–55. `CleanOld()` chạy rồi mới `File.Copy(path, file)`. `File.Copy` giữ giờ sửa của file nguồn (đã thử: nguồn sửa 30 ngày trước thì bản chép cũng "30 ngày tuổi"). Ở lần `LocalFile` / `Save` kế tiếp, `CleanOld()` xóa bản chép đó.
+- **Tái hiện:**
+  - kéo hai ảnh mạng cũ (sửa hơn 7 ngày) vào cùng một tin: lần chép thứ hai xóa bản chép thứ nhất;
+  - hoặc kéo một ảnh mạng cũ, rồi dán ảnh ở tin sau, trước khi Claude gắn.
+- **Hậu quả:** Claude nhận đường dẫn tới file đã mất và báo "no file". Đúng ca KFG-29 định chữa (bản scan cũ trên NAS).
+- **Kết quả đúng:** bản chép được giữ 7 ngày tính từ lúc chép.
+- **Hướng sửa:** sau `File.Copy` gọi `File.SetLastWriteTimeUtc(file, DateTime.UtcNow)`. Nên chép vào file tạm rồi đổi tên, để mất mạng giữa chừng không để lại file dở mà lần sau `File.Exists` lại dùng.
+
+**KFG-40 — Nhẹ — G5 (do bản sửa KFG-29): chép file mạng chạy trên luồng của AutoCAD; file quá 50 MB bị bỏ mà không báo.**
+- **Chỗ:** `ChatController.cs` (đường `ui.SendRequested` → `SendComposed` → `Send`), gọi `LocalFile` đồng bộ trên luồng chính.
+- **Hậu quả:**
+  - ổ mạng chậm thì AutoCAD đứng trong lúc chép (tới 50 MB), với mọi ảnh mạng kéo vào trên gói 2D / Full, kể cả khi khách không định vẽ lại;
+  - file quá 50 MB: `LocalFile` trả null, nên Claude thấy "(none)" mà không biết lý do để nói với khách.
+- **Hướng sửa:** chép trong `Task.Run` (hoặc chỉ chép khi `trace_image attach` cần); file quá lớn thì gửi kèm ghi chú lý do.
+
+**KFG-41 — Nhẹ — G2 (có từ trước, không do bản sửa): đường gần thẳng đứng lệch rất ít không bị nhận là trùng.**
+- **Chỗ:** `Core/DrawingCheck.cs` `LineNumbers` (~153–157) đảo chiều hai đầu bằng phép so x tuyệt đối, không có dung sai. `PolylineNumbers` cũng vậy.
+- **Tái hiện:** A (0,0)→(0,1000); B (0,00001,0)→(0,1000). B bị đảo chiều, A thì không, nên kết quả "không trùng".
+- **Lệch tài liệu:** `dot-g-cho-duyet.md` ghi lệch ≤ 0,1 mm "luôn" bị tính là trùng.
+- **Hướng sửa:** `DuplicateIndices` so cả hai chiều của line / polyline hở; hoặc sửa chữ "luôn" trong tài liệu.
+
+**KFG-42 — Nhẹ — G2: so trùng vẫn chậm khi rất nhiều hình chung điểm đầu.**
+- **Chỗ:** `DuplicateIndices` (băm 9 ô theo điểm đầu).
+- **Tái hiện:** 20 000 đường cùng một điểm đầu (nan quạt): 1,9 s, vì cùng rơi vào một ô nên so từng cặp. Có giới hạn quét 20 000 nên không treo; dạng bản vẽ này hiếm.
+- **Hướng sửa:** băm thêm điểm thứ hai, hoặc chấp nhận và ghi vào bàn giao.
+
+### Nghi vấn / nhận xét (không tính lỗi)
+
+- **G3:** mỗi dòng gặp mẫu `*` không dấu thì `WildAccentClash` quét toàn bộ dòng và dựng regex mới, tức O(dòng²). Chưa đo; bảng dự toán thường gặp không đáng kể. Nếu sửa: tính một lần cho mỗi mẫu.
+- **G3:** "San*" với "Sân phơi", "Sân thượng", "Sàn gỗ" làm cả ba dòng để trống, kể cả hai dòng Sân thống nhất với nhau. Chặt nhưng an toàn, khớp quyết định "nhập nhằng thì để trống và hỏi"; Claude có `ambiguous_prices` để hỏi lại.
+- **G5:** `view` đọc `ActiveFileName` của ảnh có dấu trace mà không qua luật đường dẫn (DWG người khác gửi). AutoCAD đã tự nạp ảnh đó khi mở bản vẽ, nên rủi ro thấp.
+- **G5:** `\\nas\duan.\` hoặc `\\nas\duan \` bị coi là share khác nên bị từ chối. Sai theo hướng an toàn.
+- **G4:** thời gian chờ sau khi lệnh render kết thúc giữ như luồng chính chốt, không tính lỗi.
+
+### Chưa kiểm được
+
+- **Cần AutoCAD thật:**
+  - góc ảnh PDF sau scale / straighten trên UCS xoay (KFG-37);
+  - render (KFG-31 và ngưỡng chờ);
+  - viewport layout chưa mở;
+  - hatch `section_view` trên layer riêng thật sự không bị báo.
+- **Cần Windows + ổ mạng thật:** kéo file từ NAS vào khung chat, độ trễ khi chép, `DriveType` của ổ ánh xạ.
+- Excel thật; Claude thật.
+
+### Thời gian, chi phí
+
+- Lượt 2 khoảng 20 phút.
+- Chi phí thread khoảng $28,8 (lượt 1 kết thúc khoảng $19,7, nên lượt này khoảng $9,1).
+- Tốn nhất: 3 tác vụ con nạp lại ngữ cảnh và chạy project test tạm (PDF giả lớn).
+
+## Phân việc sửa lượt 3 (luồng chính, 26/11 02h33)
+
+Kết quả lượt soát lại 2: KFG-07 (phần còn lại) và 10 / 11 lỗi mới sửa đúng; KFG-29 sửa chưa đủ và sinh KFG-39 (vừa), KFG-40
+(nhẹ); thêm KFG-41, 42 (nhẹ, phần so trùng). 26 lỗi đúng ở lượt 1 vẫn đúng. Không có lỗi nặng.
+
+| Thread | Nhánh | Lỗi nhận |
+| --- | --- | --- |
+| Thread Test & sửa F1 (G5) | `full/nang-cap-g-sua-kfg-b` | KFG-39, 40 |
+| Thread đợt F1 (G2) | `full/nang-cap-g-sua-kfg-a` | KFG-41, 42 |
+| Thread đợt F2 (giữ nhánh tích hợp) | `full/nang-cap-g-tong-the` | gộp, tài liệu, CI |
+
+Luồng chính chốt cách dừng vòng soát: lượt soát lại 3 chỉ soát bốn lỗi này và phần code vừa sửa. Hết lỗi mức vừa trở lên thì
+chốt nhánh; lỗi nhẹ còn lại (nếu có) hoặc sửa ngay nếu rẻ, hoặc ghi vào danh sách "biết, chấp nhận" kèm lý do cho chủ dự án.
