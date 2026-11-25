@@ -213,6 +213,15 @@ namespace ClaudeCAD.Plugin.Core
             return sorted[i] + (sorted[i + 1] - sorted[i]) * (pos - i);
         }
 
+        /// <summary>The value at share q of the sorted values, the rank rounded towards the middle (low: up, high: down).</summary>
+        public static double RankInward(List<double> sorted, double q, bool low)
+        {
+            if (sorted.Count == 0) return 0;
+            double pos = q * (sorted.Count - 1);
+            int i = low ? (int)Math.Ceiling(pos - 1e-9) : (int)Math.Floor(pos + 1e-9);
+            return sorted[Math.Max(0, Math.Min(sorted.Count - 1, i))];
+        }
+
         /// <summary>
         /// Indices of the objects far from the main part: the main part is the box of the 5 %…95 % of the centres (at least
         /// FarMinSizeMm wide); an object whose box is farther from it than FarFactor × its size is far away.
@@ -223,7 +232,9 @@ namespace ClaudeCAD.Plugin.Core
             if (boxes.Count < G2Numbers.FarMinObjects) return res;
             var cx = boxes.Select(b => (b.min[0] + b.max[0]) / 2).OrderBy(v => v).ToList();
             var cy = boxes.Select(b => (b.min[1] + b.max[1]) / 2).OrderBy(v => v).ToList();
-            double x0 = Percentile(cx, 0.05), x1 = Percentile(cx, 0.95), y0 = Percentile(cy, 0.05), y1 = Percentile(cy, 0.95);
+            // Test & sửa đợt G2 (G2T-1): the ranks round inwards (no interpolation towards an outlier): with 10–19 objects an
+            // interpolated 95 % lay half way to the one far object, so it was never reported
+            double x0 = RankInward(cx, 0.05, true), x1 = RankInward(cx, 0.95, false), y0 = RankInward(cy, 0.05, true), y1 = RankInward(cy, 0.95, false);
             double size = Math.Max(Math.Max(x1 - x0, y1 - y0), G2Numbers.FarMinSizeMm / mmPerUnit);
             double limit = G2Numbers.FarFactor * size;
             for (int i = 0; i < boxes.Count; i++)
@@ -254,6 +265,13 @@ namespace ClaudeCAD.Plugin.Core
         /// <summary>A dimension text override that hides the measured value ("&lt;&gt;" keeps it; empty = no override).</summary>
         public static bool HidesMeasurement(string dimensionText) =>
             !string.IsNullOrWhiteSpace(dimensionText) && !dimensionText.Contains("<>");
+
+        /// <summary>
+        /// Test & sửa đợt G2 (G2T-3): an xref is "mất file" only when AutoCAD did not find its file (FileNotFound / Unresolved);
+        /// one the user unloaded on purpose (Unloaded), or that is not used, is not an error.
+        /// </summary>
+        public static bool XrefMissing(string status) =>
+            string.Equals(status, "FileNotFound", StringComparison.OrdinalIgnoreCase) || string.Equals(status, "Unresolved", StringComparison.OrdinalIgnoreCase);
 
         /// <summary>A layer of walls: A-WALL (and its kin) or a name with WALL / TUONG / TƯỜNG.</summary>
         public static bool IsWallLayer(string name)

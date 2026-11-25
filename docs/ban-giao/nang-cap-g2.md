@@ -104,6 +104,7 @@ Mọi số ở `G2Numbers` (`Core/DrawingCheck.cs`).
 | Sửa tối đa **2 000** đối tượng mỗi lần | `MaxFix` | phải gọi lại nếu nhiều hơn | một thẻ không quá lớn, hoàn tác nhẹ |
 | Tỉ lệ khung nhìn coi là chuẩn khi lệch ≤ **0,5 %** so với 1:n của bộ (1, 2, 5, 10, 20, 25, 50, 75, 100, 125, 150, 200, 250, 500, 1000, 2000, 5000) | `ViewportScaleTolerance`, `F2Numbers.StandardScales` | số "khung nhìn có tỉ lệ không chuẩn" | khung nhìn chỉnh tay hơi lệch (vd 1:99,7) vẫn tính là 1:100 |
 | Tên các nhóm và 3 mức "nên sửa / cân nhắc / gợi ý" (bảng mục 2) | `DrawingCheckLogic.Groups`, `G2Numbers.Level…` | chữ Claude đọc cho khách | ngắn, nói thẳng việc |
+| Mỗi nhóm liệt kê tối đa **30** tên layer / layout; kết quả sửa trả tối đa **50** handle *(Test & sửa G2 bổ sung, có từ bản viết)* | `CheckDrawing` (`Take(30)`), `FixDrawing` (`Take(50)`) | danh sách Claude đọc | đủ để nói, kết quả gọn |
 | Tên file Excel `…-soat-ban-ve.xlsx`, sheet "Soát bản vẽ" | `F4Numbers.DefaultSuffix` / `SheetName` | tên file | theo cách đặt tên của F4 |
 
 ## 7. Quyết định tự chọn

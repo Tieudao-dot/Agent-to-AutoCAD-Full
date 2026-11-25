@@ -67,7 +67,8 @@ namespace ClaudeCAD.Plugin.Drawing
             return false;
         }
 
-        private static string Txt(ToolContext ctx, Entity e) => e is DBText t ? t.TextString : e is MText m ? m.Text : null;
+        // Test & sửa đợt G2 (G2T-2): an attribute definition (a tag in model space, its default value often empty) is not a text
+        private static string Txt(ToolContext ctx, Entity e) => e is AttributeDefinition ? null : e is DBText t ? t.TextString : e is MText m ? m.Text : null;
 
         /// <summary>The shape key of an object for "trùng" (null = not compared).</summary>
         private static string DupKey(Entity e, string space, double tol)
@@ -113,6 +114,17 @@ namespace ClaudeCAD.Plugin.Drawing
                 }
             }
             catch (Autodesk.AutoCAD.Runtime.Exception) { return null; }
+        }
+
+        private static bool ImageFileFound(RasterImageDef def)
+        {
+            try
+            {
+                var f = def.ActiveFileName;
+                if (string.IsNullOrEmpty(f)) f = def.SourceFileName;
+                return !string.IsNullOrEmpty(f) && System.IO.File.Exists(f);
+            }
+            catch (Exception) { return false; }
         }
 
         private static bool Wanted(HashSet<string> only, params string[] groups) => only == null || groups.Any(only.Contains);
@@ -258,7 +270,11 @@ namespace ClaudeCAD.Plugin.Drawing
                     if (e is BlockReference br)
                     {
                         var btr = (BlockTableRecord)ctx.Tr.GetObject(br.BlockTableRecord, OpenMode.ForRead);
-                        if (btr.IsFromExternalReference && btr.XrefStatus != XrefStatus.Resolved) { if (Wanted(only, "missing_refs")) s.Hit("missing_refs", id); }
+                        if (btr.IsFromExternalReference && btr.XrefStatus != XrefStatus.Resolved)
+                        {
+                            // G2T-3: unloaded on purpose is not "mất file"
+                            if (Wanted(only, "missing_refs") && DrawingCheckLogic.XrefMissing(btr.XrefStatus.ToString())) s.Hit("missing_refs", id);
+                        }
                         else
                         {
                             string bname = br.IsDynamicBlock ? NameOf(ctx, br.DynamicBlockTableRecord) : btr.Name;
@@ -277,7 +293,12 @@ namespace ClaudeCAD.Plugin.Drawing
                     if (e is RasterImage img && Wanted(only, "missing_refs"))
                     {
                         bool missing;
-                        try { missing = !(ctx.Tr.GetObject(img.ImageDefId, OpenMode.ForRead) is RasterImageDef def) || !def.IsLoaded; }
+                        // G2T-3: an image the user unloaded whose file is still there is not "mất file"
+                        try
+                        {
+                            var def = ctx.Tr.GetObject(img.ImageDefId, OpenMode.ForRead) as RasterImageDef;
+                            missing = def == null || (!def.IsLoaded && !ImageFileFound(def));
+                        }
                         catch (Autodesk.AutoCAD.Runtime.Exception) { missing = true; }
                         if (missing) s.Hit("missing_refs", id);
                     }
@@ -433,6 +454,9 @@ namespace ClaudeCAD.Plugin.Drawing
                 if (plan.Count >= G2Numbers.MaxFix) break;
             }
             var res = new Dictionary<string, object> { ["fix"] = fix };
+            // G2T-4: a drawing larger than the scan: say so, never cut silently
+            if (s.Scanned < s.Total)
+                res["scanned_note"] = $"Only the first {s.Scanned} of {s.Total} objects were looked at; objects of this group beyond them are not in this fix. Run check_drawing again afterwards.";
             if (lockedCount > 0) res["locked"] = new Dictionary<string, object> { ["count"] = lockedCount, ["layers"] = locked.Take(20).Cast<object>().ToList(), ["note"] = "Left unchanged (locked layers). Ask the user before unlocking." };
             if (noStyle > 0) res["no_standard_style"] = $"{noStyle} object(s) kept their style: the matching style of the standard is not in the drawing (run setup_standards first).";
             if (plan.Count == 0)

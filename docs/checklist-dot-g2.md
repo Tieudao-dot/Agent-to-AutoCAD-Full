@@ -40,3 +40,13 @@ gõ đè số "9999" (Properties → Text override); một đường rất xa (v
 | D1 | Tạo một layout trống có một khung nhìn (MVIEW), không khung tên, không khóa; "soát bản vẽ" | Báo "Tờ in không có khung tên" (tên layout) và "Khung nhìn chưa khóa"; "khóa khung nhìn" → thẻ → khóa được |
 | D2 | Bật "Chỉ xem", "soát bản vẽ" rồi "sửa hình trùng" | Soát vẫn chạy; sửa bị chặn (Chỉ xem) |
 | D3 | Máy gói 3D (nếu có) | Không có lệnh soát bản vẽ (thuộc gói 2D / Full) |
+
+## E. Sau Test & sửa đợt G2 (~5 phút)
+
+*Nhánh `full/nang-cap-g2-test`. Chi tiết: `docs/ban-giao/nang-cap-g2-test.md`.*
+
+| # | Làm gì | Thấy gì là đạt |
+| --- | --- | --- |
+| E1 | Bản vẽ nhỏ (khoảng 10–15 hình), kéo một đường ra rất xa (vd cách 50 km), "soát bản vẽ" | Báo "Hình lạc rất xa phần còn lại" đúng đường đó |
+| E2 | Đặt một định nghĩa thuộc tính (lệnh `ATTDEF`, để trống giá trị mặc định) trong mô hình, "soát bản vẽ" rồi "sửa chữ rỗng" | Định nghĩa thuộc tính **không** nằm trong "Chữ rỗng", không bị xóa |
+| E3 | Gắn một xref rồi tạm gỡ nó (`XREF` → Unload), "soát bản vẽ" | **Không** báo "Xref / ảnh mất file" cho xref đó. Đổi tên file xref trên ổ rồi Reload: lúc đó mới báo |
