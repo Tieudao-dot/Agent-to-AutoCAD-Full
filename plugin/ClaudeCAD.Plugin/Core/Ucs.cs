@@ -114,6 +114,19 @@ namespace ClaudeCAD.Plugin.Core
             return (mn, mx);
         }
 
+        /// <summary>
+        /// The WCS box wmin / wmax lies (in x, y) inside the UCS-aligned area umin / umax (UCS numbers, any order): the area
+        /// filter of build_3d_from_plan in a UCS (Test & sửa đợt F1).
+        /// </summary>
+        public bool PlanBoxInside(double[] wmin, double[] wmax, double[] umin, double[] umax)
+        {
+            var (bmin, bmax) = BoxFromWcs(wmin, wmax);
+            double x0 = Math.Min(umin[0], umax[0]), x1 = Math.Max(umin[0], umax[0]);
+            double y0 = Math.Min(umin[1], umax[1]), y1 = Math.Max(umin[1], umax[1]);
+            const double eps = 1e-6;
+            return bmin[0] >= x0 - eps && bmin[1] >= y0 - eps && bmax[0] <= x1 + eps && bmax[1] <= y1 + eps;
+        }
+
         // ------------------------------------------------------------ JSON (macros)
 
         /// <summary>{"origin":[..],"x_axis":[..],"y_axis":[..]} (WCS) — stored with macro calls recorded in a UCS.</summary>

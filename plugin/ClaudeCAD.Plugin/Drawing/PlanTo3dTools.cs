@@ -162,11 +162,17 @@ namespace ClaudeCAD.Plugin.Drawing
         private static List<string> LayerList(Params p, string name, string[] def) =>
             p.Has(name) ? p.Strings(name, 1) : def.ToList();
 
-        private static bool InArea(Extents3d? ext, double[] amin, double[] amax)
+        private static bool InArea(Extents3d? ext, double[] amin, double[] amax, UcsFrame areaFrame = null)
         {
             if (amin == null) return true;
             if (!ext.HasValue) return false;
             var e = ext.Value;
+            if (areaFrame != null)
+            {
+                // F1 (Test & sửa): area_min / area_max given in a UCS is a rectangle along the UCS axes: the object's box is
+                // re-boxed in the UCS and tested there (two corners turned to WCS one by one would make another rectangle)
+                return areaFrame.PlanBoxInside(new[] { e.MinPoint.X, e.MinPoint.Y, e.MinPoint.Z }, new[] { e.MaxPoint.X, e.MaxPoint.Y, e.MaxPoint.Z }, amin, amax);
+            }
             return e.MinPoint.X >= amin[0] && e.MinPoint.Y >= amin[1] && e.MaxPoint.X <= amax[0] && e.MaxPoint.Y <= amax[1];
         }
 
@@ -327,6 +333,9 @@ namespace ClaudeCAD.Plugin.Drawing
             var slabLayers = LayerList(p, "slab_layers", FloorPlanLogic.DefaultSlabLayers);
             double[] amin = p.PointOpt("area_min"), amax = p.PointOpt("area_max");
             if ((amin == null) != (amax == null)) throw ToolException.Invalid("build_3d_from_plan: give both area_min and area_max (the plan area), or neither.");
+            // F1 (Test & sửa): in a UCS the area is tested in the UCS (InArea), so its corners go back to UCS numbers
+            var areaFrame = amin != null ? UcsScope.Input : null;
+            if (areaFrame != null) { amin = areaFrame.FromWcs(amin); amax = areaFrame.FromWcs(amax); }
             if (amin != null) { var a = new[] { Math.Min(amin[0], amax[0]), Math.Min(amin[1], amax[1]) }; amax = new[] { Math.Max(amin[0], amax[0]), Math.Max(amin[1], amax[1]) }; amin = a; }
 
             bool explicitWalls = p.Has("wall_handles") || p.Has("centerline_handles");
@@ -430,10 +439,10 @@ namespace ClaudeCAD.Plugin.Drawing
                 if (kind == null)
                 {
                     // for the layer guess: what else is on the plan (only inside the area)
-                    if (amin == null || InArea(EntityInfo.Extents(e), amin, amax)) input.Unread[layer] = input.Unread.TryGetValue(layer, out var n) ? n + 1 : 1;
+                    if (amin == null || InArea(EntityInfo.Extents(e), amin, amax, areaFrame)) input.Unread[layer] = input.Unread.TryGetValue(layer, out var n) ? n + 1 : 1;
                     continue;
                 }
-                if (!InArea(EntityInfo.Extents(e), amin, amax)) continue;
+                if (!InArea(EntityInfo.Extents(e), amin, amax, areaFrame)) continue;
                 Count();
                 string h = Acad.H(id);
                 switch (kind)

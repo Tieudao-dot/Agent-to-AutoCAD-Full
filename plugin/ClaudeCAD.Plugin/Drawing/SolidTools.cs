@@ -294,7 +294,7 @@ namespace ClaudeCAD.Plugin.Drawing
                 {
                     var pts = p.Points("profile_points", 3, 5000);
                     var bulges = p.NumbersOpt("profile_bulges");
-                    var pl = Acad.MakePolyline(pts, true, bulges);
+                    var pl = Acad.MakeProfilePolyline(pts, true, bulges); // F1 (Test & sửa): on the UCS plane in a tilted UCS
                     temp.Add(pl);
                     curves.Add(pl);
                     SamplePoints(pl, vertices);
@@ -395,7 +395,7 @@ namespace ClaudeCAD.Plugin.Drawing
                     var s = new Solid3d();
                     // a flat profile whose normal points down (clockwise lines / arcs, mirrored curves) would go down:
                     // positive height always means +Z for profiles in the XY plane
-                    double hh = SolidLogic.ExtrudeHeightAlongNormal(h, reg.Normal.Z);
+                    double hh = SolidLogic.ExtrudeHeightAlongNormal(h, reg.Normal.DotProduct(Acad.UcsZ)) /* F1 (Test & sửa): up = the UCS z (World: Z) */;
                     try { s.Extrude(reg, hh, Geometry.DegToRad(taper)); }
                     catch (Autodesk.AutoCAD.Runtime.Exception ex)
                     {

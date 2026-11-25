@@ -588,10 +588,6 @@ namespace ClaudeCAD.Plugin.UI
             return b;
         }
 
-        /// <summary>
-        /// Toolbar button the way AutoCAD palettes have them: a 16 px glyph, no text, and a tooltip that
-        /// says in one short line what it does. <paramref name="tip"/> is "Tên — giải thích ngắn".
-        /// </summary>
         /// <summary>F1: the work mode switch: icon + "Cả hai" / "2D" / "3D"; a click opens the three choices.</summary>
         private Button BuildModeButton()
         {
@@ -657,6 +653,10 @@ namespace ClaudeCAD.Plugin.UI
             _modeBtn.Visibility = show ? Visibility.Visible : Visibility.Collapsed;
         });
 
+        /// <summary>
+        /// Toolbar button the way AutoCAD palettes have them: a 16 px glyph, no text, and a tooltip that
+        /// says in one short line what it does. <paramref name="tip"/> is "Tên — giải thích ngắn".
+        /// </summary>
         private Button IconButton(string icon, string tip)
         {
             var b = new Button

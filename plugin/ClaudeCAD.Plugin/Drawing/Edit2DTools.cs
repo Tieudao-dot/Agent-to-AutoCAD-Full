@@ -425,7 +425,7 @@ namespace ClaudeCAD.Plugin.Drawing
             if (props.Contains("text")) r["text_matched"] = textDone;
             if (props.Contains("dimension")) r["dimension_matched"] = dimDone;
             if (props.Contains("thickness") && srcThick.HasValue) r["thickness_matched"] = thickDone;
-            if (skipped.Count > 0) r["skipped"] = skipped.Select(s => (object)(s + " (this machine's plan has no 2D)")).ToList();
+            if (skipped.Count > 0) r["skipped"] = skipped.Select(s => (object)(s + WorkModeLogic.NoTwoDReason(ctx.Dispatcher?.WorkMode))).ToList(); // F1 (Test & sửa): the work mode, not the plan
             return r;
         }
     }

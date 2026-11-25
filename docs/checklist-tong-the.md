@@ -284,3 +284,13 @@ cài thử nội bộ là Full) và một bản vẽ trống đơn vị mm. ~30 
 | M6 | Đang ở **Cả hai**, gửi một yêu cầu dài (vd "vẽ mặt bằng 3 phòng có cửa"); trong lúc Claude đang làm, chọn **3D** | Lượt đang chạy **làm tiếp bình thường** tới hết (không bị lỗi nửa chừng); dòng báo ghi "áp dụng từ tin nhắn sau, lượt đang chạy giữ chế độ cũ". Tin sau mới theo chế độ 3D; Claude vẫn nhớ đoạn chat trước |
 | M7 | Bấm **Thu gọn** khung chat | Nút chế độ **vẫn thấy** ở hàng trên cùng, bấm được |
 | M8 | Ở chế độ 2D, chạy một macro có cả lệnh 3D (nếu có) | Macro chạy đủ (macro không dùng Claude nên không bị chế độ giới hạn) |
+
+### F1-d. Sau Test & sửa đợt F1 (~6 phút)
+
+*Nhánh `full/nang-cap-f1-test`. Chi tiết: `docs/ban-giao/nang-cap-f1-test.md`.*
+
+| # | Làm gì | Thấy gì là đạt |
+| --- | --- | --- |
+| T1 | Vẽ (ở World) mặt bằng 2 phòng cạnh nhau trên layer A-WALL, cách nhau xa. Gõ `UCS` → `Z` → 30. Nhờ "dựng 3D phần mặt bằng nằm trong khung từ 0,0 tới …" (khung theo UCS chỉ ôm **một** phòng) | Chỉ phòng nằm trong khung (theo trục UCS) được dựng; phòng ngoài khung không bị dựng, không bị sót tường của phòng trong khung |
+| T2 | Gõ `UCS` → `X` → 90 (UCS mặt đứng). Nhờ "đùn hình chữ nhật 1000 × 500 tại gốc thành khối dày 200" (Claude dùng `extrude` với các điểm) | Khối **đứng trên mặt đứng** (dày 200 theo trục Z của UCS), không báo lỗi, không ra khối dẹt / mỏng như tờ giấy |
+| T3 | Máy Full, chọn chế độ **3D**. Nhờ "chép thuộc tính của khối A sang khối B", rồi "lập bảng khối lượng các khối" | Claude làm được phần 3D; nếu nhắc tới phần chữ / bảng thì nói **đổi sang 2D hoặc Cả hai**, không nói "gói của máy không có 2D", không mời mua gói |

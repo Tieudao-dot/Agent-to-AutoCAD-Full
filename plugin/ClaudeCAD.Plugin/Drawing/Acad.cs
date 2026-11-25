@@ -269,6 +269,22 @@ namespace ClaudeCAD.Plugin.Drawing
             return pl;
         }
 
+        /// <summary>
+        /// Test & sửa đợt F1: a closed profile from points of a Ref call (extrude, revolve, presspull). The points are WCS
+        /// already; in a tilted UCS (z not up, e.g. a front UCS) they lie on the UCS plane, which a flat polyline built from
+        /// their WCS x, y would squash: there it is built from the UCS numbers and carried onto the UCS plane. World and a
+        /// UCS with z up: exactly MakePolyline.
+        /// </summary>
+        public static Polyline MakeProfilePolyline(IList<double[]> wcsVerts, bool closed, IList<double> bulges = null)
+        {
+            var f = UcsScope.Input;
+            if (f == null || f.ZUp) return MakePolyline(wcsVerts, closed, bulges);
+            var local = wcsVerts.Select(v => f.FromWcs(v)).ToList();
+            var pl = MakePolyline(local, closed, bulges);
+            pl.TransformBy(ToWcsMatrix(f));
+            return pl;
+        }
+
         public static IEnumerable<ObjectId> ModelSpaceIds(ToolContext ctx)
         {
             foreach (ObjectId id in ctx.ModelSpace) yield return id;

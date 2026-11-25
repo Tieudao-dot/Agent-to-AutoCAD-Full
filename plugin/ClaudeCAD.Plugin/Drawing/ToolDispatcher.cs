@@ -106,6 +106,8 @@ namespace ClaudeCAD.Plugin.Drawing
 
         /// <summary>Service plan of this machine (match_properties leaves text / dimension properties out without 2D).</summary>
         public string Plan => _host?.Plan;
+        /// <summary>F1 (Test & sửa): "2d" / "3d" while a Full machine's chat is limited to that work mode, else null.</summary>
+        public string WorkMode => _host?.WorkMode;
 
         // -------------------------------------------------------------- entry point
 

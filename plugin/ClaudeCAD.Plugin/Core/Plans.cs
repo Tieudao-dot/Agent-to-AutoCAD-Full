@@ -336,6 +336,15 @@ namespace ClaudeCAD.Plugin.Core
                    $"\"Đang ở chế độ {label}, đổi sang {other} hoặc Cả hai (nút chế độ trên khung chat) để {(other == "3D" ? "vẽ 3D" : "vẽ 2D")}.\" Then do what the {label} mode allows.";
         }
 
+        /// <summary>
+        /// Test & sửa đợt F1: why match_properties left the text / dimension properties out: the machine's plan (2D / 3D
+        /// machine, exactly as before F1) or the 3D work mode of a Full machine (switch the mode, never a plan).
+        /// </summary>
+        public static string NoTwoDReason(string workMode) =>
+            Normalize(workMode) == ThreeD
+                ? " (outside the 3D work mode the user chose; the 2D or Cả hai mode has it: do not mention plans)"
+                : " (this machine's plan has no 2D)";
+
         /// <summary>A parameter outside the mode (block attributes in 3D, array levels in 2D…): the same wording.</summary>
         public static string BlockedParamMessage(string tool, string param, string mode) =>
             $"{tool}: '{param}' is outside the {Label(mode)} work mode the user chose (this machine's plan is Full). " +

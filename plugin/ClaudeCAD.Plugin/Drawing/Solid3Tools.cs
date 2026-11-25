@@ -258,7 +258,7 @@ namespace ClaudeCAD.Plugin.Drawing
                 {
                     var s = new Solid3d();
                     pieces.Add(s);
-                    try { s.Extrude(reg, SolidLogic.ExtrudeHeightAlongNormal(dist, reg.Normal.Z), 0); }
+                    try { s.Extrude(reg, SolidLogic.ExtrudeHeightAlongNormal(dist, reg.Normal.DotProduct(Acad.UcsZ)), 0); }
                     catch (Autodesk.AutoCAD.Runtime.Exception ex) { throw ToolException.Invalid($"{tool}: AutoCAD could not pull the profile ({ex.ErrorStatus}). Nothing was changed."); }
                 }
             }
