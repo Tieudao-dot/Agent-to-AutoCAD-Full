@@ -81,4 +81,4 @@ hỏi / trả lời là suy từ code, chỗ nào không chắc ghi rõ dưới 
 
 ## 6. CI
 
-(điền sau khi chạy)
+Run 45661671404 (#64) trên `fdeb306` (commit code cuối): **xanh**. Dùng 1 / 2 lượt. Commit sau đó chỉ ghi kết quả CI vào file này.
