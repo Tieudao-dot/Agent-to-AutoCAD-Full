@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git add *)",
+      "Bash(git commit *)",
+      "Bash(git push -u origin full/*)",
+      "Bash(git push origin full/*)",
+      "Bash(gh api repos/Tieudao-dot/Agent-to-AutoCAD-Full/actions/*)"
+    ]
+  }
+}
