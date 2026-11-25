@@ -391,7 +391,10 @@ mục G2-D1 / D1b, G4 F, G5 H, G6-1 / G6-2, G7.*
 **Vẽ lại từ ảnh (G5):**
 - Ảnh nền nằm thẳng theo UCS đang dùng.
 - Claude không co / xoay ảnh của khách (vd logo trong khung tên), chỉ đụng ảnh do lệnh vẽ lại gắn.
-- Đường dẫn mạng chỉ được dùng khi cùng thư mục chia sẻ với bản vẽ; chỗ khác thì Claude nhờ chép file về máy hoặc kéo vào chat.
+- Ảnh ghi bằng đường dẫn mạng chỉ được mở khi cùng máy chủ + thư mục chia sẻ với bản vẽ. Chỗ khác thì Claude nhờ **kéo file vào
+  khung chat** (khung chat tự chép file về máy, tên `tep-…`, dọn sau 7 ngày) hoặc chép về máy. Các dạng đường dẫn đặc biệt
+  (`\\.\…`, `\\?\…`) chỉ nhận khi trỏ về một ổ của máy; dạng khác bị từ chối. Bản vẽ mở từ ổ mạng ánh xạ (vd Z:) thì ghi
+  đường dẫn ảnh theo ổ đó.
 - Ảnh dán vào chat: chỉ lưu trên máy có phần 2D; ảnh cũ hơn 7 ngày tự dọn; bản vẽ chưa lưu thì Claude nhờ lưu trước.
 - PDF nhiều trang đã sửa nhiều lần: số trang đúng.
 
@@ -469,3 +472,28 @@ Không đổi: dung sai "trùng" vẫn 0,1 mm (nay đúng như tài liệu); gom
 | Full · chế độ 3D | 19,0k → 19,1k | 45,1k → 45,2k |
 
 Phạm vi gói trong system prompt thêm khoảng 0,1k; phần còn lại là mô tả lệnh dài thêm (chỉ nạp khi Claude cần).
+
+### Lượt 2 (sau khi agent kiểm tra độc lập soát lại, 26/11)
+
+Soát lại thấy 26 / 27 lỗi sửa đúng, KFG-07 sửa chưa đủ, và 11 lỗi mới nhỏ hơn (KFG-28 … 38, không lỗi nặng). Đã sửa hết:
+
+- **Dự toán:** mẫu `*` gõ không dấu ("San*") gặp các tên chỉ khác dấu ("Sân phơi", "Sàn gỗ") thì để trống và hỏi, như tên thường.
+- **Bộ hồ sơ:** sau một lần AutoCAD lỗi giữa chừng, layout cậu tự tạo trùng tên tờ cũ không còn bị nhận nhầm là của bộ.
+- **Soát bản vẽ:** hình mặt cắt / hình chiếu đặt layer riêng cũng không bị báo hatch "mất liên kết" và không bị xóa nét vì "trùng";
+  soát bản vẽ rất nhiều nét nhanh hơn; polyline vẽ ngược chiều nay được nhận là trùng đúng.
+- **Vẽ lại từ ảnh:** đường dẫn đặc biệt kiểu `\\.\UNC\…` không lách được luật đường dẫn mạng; file kéo vào chat từ ổ mạng được chép
+  về máy nên dùng được; ảnh đặt mặc định không đè lên bản vẽ khi UCS xoay; góc ảnh PDF báo đúng theo UCS; đếm trang PDF tối đa
+  khoảng 2 giây.
+- **Render:** "render lại góc đã lưu" rồi bấm Hủy nhiều lần không để lại đối tượng thừa.
+
+Không có con số mới cho khách. Quyết định tự chọn thêm:
+
+| Tình huống | Đã chọn | Muốn đổi thì |
+| --- | --- | --- |
+| File khách kéo vào chat từ ổ mạng | khung chat chép về máy một lần, Claude dùng bản chép | mở thẳng file trên máy mạng (kém an toàn) |
+| Bản vẽ ở ổ mạng ánh xạ, ảnh ghi theo tên máy chủ | từ chối, nhắc ghi theo ổ (vd Z:) | đổi ổ ra máy chủ (phải gọi thêm Windows) |
+| Nét hình chiếu bị khách COPY đè lên chính nó | không báo trùng (bản chép mang cùng dấu) | — |
+| Bộ hồ sơ làm bằng bản cài trước (chưa lưu mã tờ) | lần đầu vẫn nhận tờ theo tên | — |
+
+Vẫn giữ, cần cậu thử thật rồi chốt: chờ thêm sau khi lệnh RENDER xong = số lớn hơn giữa 20 giây và thời gian ước lượng của mức
+(một chỗ đổi: `RenderLogic.EndGrace`).

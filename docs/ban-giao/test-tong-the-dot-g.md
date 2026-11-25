@@ -150,3 +150,31 @@ mục trên. CI: ghi ở dưới khi có kết quả.
 
 Chưa kiểm được trên AutoCAD thật: bản ghi bộ hồ sơ có handle tờ (Xrecord), `try` / `catch` quanh lúc ra bộ, bỏ `Table` khỏi
 khung mặt bằng; phần của hai thread kia xem bàn giao của họ.
+
+CI lượt 1: run 45682294964 (#69) trên `20e3812`: **xanh**.
+
+### Lượt 2 (sau soát lại lượt 1, 26/11)
+
+Nguồn: mục "Soát lại lượt 1" của `docs/ban-giao/kiem-tra-doc-lap-dot-fg.md` (gộp từ nhánh luồng chính @ `22e660d`). Thread này sửa
+KFG-30, 33 và ba chỗ tài liệu lệch (`6868a38`, `21f00fb`), gộp `full/nang-cap-g-sua-kfg-a` @ `deec2a4` (`a4ffc5a`) và
+`full/nang-cap-g-sua-kfg-b` @ `adef96c` (`57b69a0`), cả hai gộp sạch.
+
+| Mã | Phần | Ai sửa | Commit | Cách sửa (ngắn) |
+| --- | --- | --- | --- | --- |
+| KFG-07 (phần còn lại) = KFG-32 | G2 | kfg-a | `deec2a4` | hatch `section_view` / `projection_view` có dấu không biên; nét gắn XData `CLAUDECAD_VIEW`, không so trùng |
+| KFG-28 | G5 (bảo mật) | kfg-b | `271ae04` | `\\.\UNC\` là mạng; `\\?\<ổ>:\` kiểm như ổ thường; dạng thiết bị khác từ chối (`TraceLogic.PlainPath`) |
+| KFG-29 | G5 | kfg-b | `271ae04` | file kéo vào chat từ mạng được chép vào `anh-dinh-kem` (`tep-…`, dọn 7 ngày); lời khuyên sửa |
+| KFG-30 | G3 | thread này | `6868a38` | mẫu `*` không dấu khớp tên mà phần chữ cố định khác dấu: để trống, `ambiguous_prices` (`WildFixedPart`, `WildAccentClash`) |
+| KFG-31 | G4 | kfg-b | `271ae04` | Dispose bản sao góc nhìn khi thẻ ghi đè / kiểm thư mục ném lỗi |
+| KFG-33 | G1 | thread này | `6868a38` | `catch` chỉ giữ tờ cũ của bộ (`oldLayouts`); `WriteSetRecord` bỏ tờ không còn, không ghi handle rỗng |
+| KFG-34 | G2 | kfg-a | `deec2a4` | so trùng băm theo (x, y), 9 ô kề |
+| KFG-35 | G5 | kfg-b | `271ae04` | đếm trang PDF thời hạn chung 2 s |
+| KFG-36 | G5 | kfg-b | `271ae04` | chỗ đặt mặc định tính trong UCS (`InsertPointInUcs`) |
+| KFG-37 | G5 | kfg-b | `271ae04` | PDF giữ khung góc trong dấu trace; `min` / `max` theo UCS |
+| KFG-38 | G2 | kfg-a | `deec2a4` | test sang `DupItem`, xóa hàm chết; sửa thêm bulge −0 của polyline vẽ ngược |
+
+Tài liệu lệch đã sửa: mẫu `*` không dấu, mã tờ ở nhánh lỗi, luật đường dẫn (dạng `\\.\` / `\\?\`, kéo vào chat được chép về
+máy). Checklist: G5 mục I, G6-1 (KFG-32), G7-15, G7-16. Không đổi prompt nên token mở chat như lượt 1.
+
+Test sau gộp lượt 2: lõi **1436 / 1436**, trợ lý **407 / 407**, build 3 target (xóa `obj` / `bin` giữa các lần) 0 lỗi 0 cảnh báo. CI: ghi ở dưới. Chưa
+kiểm được trên AutoCAD thật: như lượt 1, cộng phần của hai bàn giao kfg-a mục 7, kfg-b mục 8.
