@@ -16,7 +16,7 @@ export function renderTools(b: ToolBridge): AnyTool[] {
     cadTool(b, 'set_material',
       `Give a material to solids (handles) and / or layers: preset ${MATERIAL_PRESETS.join(' / ')} (bê tông, gạch, vữa trắng, kính, gỗ, ngói, thép, đá; made once in the drawing), ` +
         'an existing material name, ByLayer / ByBlock (reset), or a new name with color [r, g, b] (+ opacity %). list: true = the drawing\'s materials (read-only). ' +
-        'Changing existing objects follows the usual rule (more than 20: ask first); whole layers need the card (the error lists the handles). Materials show in the realistic visual style (capture_view, named_view image).',
+        'Changing existing objects follows the usual rule (more than 20: ask first); whole layers, or a new color / opacity for a material already in the drawing, need the card (the error lists the handles). Materials show in the realistic visual style (capture_view, named_view image).',
       {
         material: z.string().min(1).max(255).optional().describe('Preset key, existing material, ByLayer / ByBlock, or a new name with color.'),
         handles: handles.max(5000).optional(),

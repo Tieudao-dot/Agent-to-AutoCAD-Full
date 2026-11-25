@@ -78,6 +78,8 @@ namespace ClaudeCAD.Core.Tests
             Assert.Contains("RequireCard(ctx, p, tool, $\"overwrite the saved view '{name}'\", new[] { Acad.H(vt[name]) });", r);
             Assert.Contains("RequireCard(ctx, p, tool, $\"delete the saved view '{name}'\", new[] { Acad.H(vt[name]) });", r);
             Assert.Contains("lids.Select(Acad.H)", r);
+            // an existing material whose color / opacity changes (every object using it): the card; a new material: no card
+            Assert.Contains("if (!matId.IsNull) RequireCard(ctx, p, tool, $\"change the color / opacity of the existing material", r);
             var h = Plugin("Drawing", "ConfirmF5.cs");
             Assert.Contains("if (ctx.Dispatcher?.MacroRunning == true) return;", h);
             Assert.Contains("if (!exists) return;", h);

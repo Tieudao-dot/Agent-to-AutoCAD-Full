@@ -26,6 +26,7 @@ tên file), đơn vị mm. Khoảng 25 phút. "Đạt" là thấy đúng như c�
 | C3 | "Thống kê block ra Excel" hai lần | Lần 2 hiện thẻ; Đồng ý mới ghi đè |
 | C4 | "Lưu góc nhìn tên Phối cảnh 1" hai lần, rồi "xóa góc nhìn Phối cảnh 1" | Lưu lần 2 và xóa đều hiện thẻ; Hủy thì gõ `VIEW` vẫn thấy góc nhìn cũ |
 | C5 | "Gán vật liệu bê tông cho cả layer A-WALL-3D" | Hiện thẻ trước khi gán. Gán cho vài khối chọn sẵn (≤ 20): không hiện thẻ |
+| C5b | Sau C5, "đổi màu vật liệu Bê tông sang xám đậm" | Hiện thẻ (mọi khối dùng Bê tông sẽ đổi màu). "Tạo vật liệu mới tên Gỗ lim màu nâu": không hiện thẻ |
 | C6 | Xuất PDF / Excel ra **tên mới** (file chưa có) | Không hiện thẻ, ghi luôn |
 | C7 | Lưu macro cho một lượt có "lưu góc nhìn tên A" (lúc A chưa có), chạy macro | Macro chạy xong, **không** có thẻ nào treo |
 

@@ -70,6 +70,8 @@ namespace ClaudeCAD.Plugin.Drawing
                 {
                     if (matId.IsNull && preset == null && rgb == null)
                         throw ToolException.Invalid($"{tool}: no material '{requested}' in the drawing. Use a preset ({string.Join(", ", MaterialLogic.PresetKeys)}), list: true, or give color [r, g, b] to make it.");
+                    // nâng cấp đợt F5 (kiểm tra độc lập đợt F): changing an existing material recolours every object using it: the card first
+                    if (!matId.IsNull) RequireCard(ctx, p, tool, $"change the color / opacity of the existing material '{name}' (every solid and layer using it changes)", new[] { Acad.H(matId) });
                     created = matId.IsNull;
                     matId = MakeMaterial(ctx, dict, name, rgb ?? (preset != null ? new double[] { preset.R, preset.G, preset.B } : null), opacity ?? preset?.Opacity, matId, tool);
                 }

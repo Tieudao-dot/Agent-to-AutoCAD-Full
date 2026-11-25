@@ -25,6 +25,7 @@ trên AutoCAD / Claude thật. Phần chỉ kiểm được trên AutoCAD: bư�
 | Xuất STL, ảnh PNG (`named_view image`), Excel (4 bảng) vào file đã có | Claude hỏi trong chat rồi `overwrite` / `replace` | thẻ | mã của file |
 | Ghi đè / xóa góc nhìn đã lưu (`named_view save` trùng tên, `delete`) | `replace` / không hỏi | thẻ | handle của góc nhìn |
 | Gán vật liệu cho cả layer (`set_material layers`) | không hỏi | thẻ | handle của từng layer |
+| Đổi màu / độ trong của vật liệu **đã có** trong bản vẽ (`set_material` + `color` / `opacity`; mọi khối / layer dùng nó đổi theo; kiểm tra độc lập đợt F) | không hỏi (chỉ Global bị chặn) | thẻ | handle của vật liệu; tạo vật liệu mới thì không hỏi |
 
 - Cách chạy (như style / trạng thái layer của F2): plugin từ chối, không đổi gì, lời từ chối mở đầu "Confirmation required"
   và liệt kê mã → Claude gọi `request_confirmation` với các mã đó → khách bấm Đồng ý → Claude gọi lại với
