@@ -171,5 +171,36 @@ Gợi ý: sửa ví dụ thành "4" / "4.5" (muốn hiện 4.00 thì đổi DIMZ
 | Nghi vấn F3 "đổi màu vật liệu có sẵn không hỏi" | Thread đợt F5 `session_01D56HmFrL65iF9oJokvqXw5` (đang làm thẻ xác nhận) | `full/nang-cap-f5` |
 | Không sửa, đưa chủ dự án xem: "chữ trông như số" trong Excel; bảng thống kê không xoay theo UCS | — | `docs/dot-f-cho-duyet.md` |
 
-Thread giữ nhánh tích hợp gộp các bản sửa và chạy CI; thread kiểm tra độc lập soát lại từng lỗi trên commit đó. Kết quả soát
-lại ghi tiếp ở dưới khi có.
+Thread giữ nhánh tích hợp gộp các bản sửa và chạy CI; thread kiểm tra độc lập soát lại từng lỗi trên commit đó.
+
+## Soát lại lượt 1 (25/11 20h20, trên `f037b79`)
+
+Bản sửa: `4399fa0` (thread F1: KTF-02…06 và 3 nghi vấn F4) + `9743c18` (thread F2: KTF-01, 07, 08 và nghi vấn F2 / F3), gộp ở
+`f037b79`. Người soát chạy lại: lõi 1163 / 1163, trợ lý 355 / 355, build `net8.0-windows` 0 lỗi.
+
+| Mã | Kết luận |
+| --- | --- |
+| KTF-01 | **Sửa chưa hết** (chi tiết dưới) |
+| KTF-02 | Đúng: cả 4 bảng có cột (m²) / (m³) thành số, dòng Tổng cũng là số; chữ ("chưa đo", "3 cặp") giữ là chữ |
+| KTF-03 | Đúng theo code: window và crossing dùng khung bao của chính hình trong UCS; cần AutoCAD thật để chạy |
+| KTF-04 | Đúng: UCS gốc z 3,3 m / 330 cm / 3300 mm đều cho `base_z 0` = 3300 mm |
+| KTF-05 | Đúng: bỏ trống `base_z` = `base_z: 0`; `top_z` dầm Ref theo UCS; lan can / cầu thang Ref chỉ đổi khi có ghi `base_z`. Phụ: góc hatch mặc định giờ theo UCS, đúng như lệnh HATCH |
+| KTF-06 | Đúng: bảng block rỗng không tạo file; `rows` bỏ dòng Tổng |
+| KTF-07 | Đúng: tài liệu và checklist ghi "4" / "4.5" |
+| KTF-08 | Đúng: skill MEP đánh số 1–5 |
+| 2 test cũ bị sửa | Giữ đúng ý test |
+
+Nghi vấn đã xử lý, kết luận theo đọc code (chưa chạy AutoCAD): trợ lý đóng Claude trước khi thoát; prewarm sau chuyển bản
+vẽ / Chat mới; ghi đè Excel bằng `File.Replace`; block reference ByLayer; vật liệu khách trùng tên vật liệu mẫu không bị đè;
+block cùng tên khác cỡ thêm đuôi `-TV`; mô tả `named_view` ghi rõ ảnh không giữ zoom — đều đúng.
+
+**KTF-01 còn sai:** đã đúng khi xoay + làm tròn 1 mm (T / L / L cánh hẹp / U, 2 dốc và 4 dốc, 11 góc), riêng T 2 dốc ở 30°
+ra 3 mảnh thay vì 2. Còn sai khi nhà vẽ tay lệch 1–2 mm: nhà T mỗi góc lệch ngẫu nhiên ±2 mm thì 13 / 30 lần ra nóc
+6602–6603 (đúng 4293); nhà L 12 × 12 m có bậc 2 mm ở một cạnh trong ra nóc 6603 (đúng 4871), bậc 3 / 5 / 10 / 20 mm cũng
+vậy; mái 4 dốc cùng ca nóc đúng nhưng 3 mảnh thay vì 2. Luồng chính giao thread F2 sửa tiếp (20h22), kèm thử các bậc thật
+nhưng nhỏ 50–500 mm.
+
+Ghi chú nhẹ: block đuôi `-TV` có sẵn được dùng lại mà không kiểm cỡ (hiếm); `list_entities` theo khung trong UCS xoay có
+thể chậm hơn trên bản vẽ rất nhiều khối 3D (chưa đo); checklist F6-12 đứng trước F6-11.
+
+Kết quả soát lại lượt 2 (KTF-01 và phần F5) ghi tiếp ở dưới khi có.
