@@ -76,7 +76,8 @@ namespace ClaudeCAD.Core.Tests
             var r = Plugin("Drawing", "RenderTools.cs");
             Assert.Contains("RequireOverwriteCard(ctx, p, tool, file, File.Exists(file),", r);
             Assert.Contains("RequireCard(ctx, p, tool, $\"overwrite the saved view '{name}'\", new[] { Acad.H(vt[name]) });", r);
-            Assert.Contains("RequireCard(ctx, p, tool, $\"delete the saved view '{name}'\", new[] { Acad.H(vt[name]) });", r);
+            // Test & sửa F5: deleting has its own token (the overwrite approval of the same view no longer deletes it)
+            Assert.Contains("RequireCard(ctx, p, tool, $\"delete the saved view '{name}'\", new[] { F5Confirm.DeleteViewToken(Acad.H(vt[name])) });", r);
             Assert.Contains("lids.Select(Acad.H)", r);
             // an existing material whose color / opacity changes (every object using it): the card; a new material: no card
             Assert.Contains("if (!matId.IsNull) RequireCard(ctx, p, tool, $\"change the color / opacity of the existing material", r);

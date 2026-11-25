@@ -235,7 +235,7 @@ namespace ClaudeCAD.Plugin.Drawing
                     default: // delete
                     {
                         if (!exists) throw ToolException.Invalid($"{tool}: no view named '{name}'. Call named_view action list.");
-                        RequireCard(ctx, p, tool, $"delete the saved view '{name}'", new[] { Acad.H(vt[name]) }); // nâng cấp đợt F5
+                        RequireCard(ctx, p, tool, $"delete the saved view '{name}'", new[] { F5Confirm.DeleteViewToken(Acad.H(vt[name])) }); // nâng cấp đợt F5 (Test & sửa: its own token)
                         tr.GetObject(vt[name], OpenMode.ForWrite).Erase();
                         result = new Dictionary<string, object> { ["name"] = name, ["deleted"] = true };
                         break;

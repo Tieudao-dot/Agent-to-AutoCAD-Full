@@ -37,10 +37,19 @@ namespace ClaudeCAD.Plugin.Core
         public const string Param = "confirm_handles";
 
         /// <summary>A stable 16-hex-digit handle-like token of a file (FNV-1a 64 of the full path, case-free).</summary>
-        public static string FileToken(string fullPath)
+        public static string FileToken(string fullPath) =>
+            Fnv("file:" + (fullPath ?? "").Trim().Replace('/', '\\').ToUpperInvariant());
+
+        /// <summary>
+        /// Test & sửa F5: the token of deleting a saved view. Overwriting it is approved with its own handle; deleting needs
+        /// this other token, so the Đồng ý of "overwrite view X" never lets the same turn delete X (and the reverse).
+        /// </summary>
+        public static string DeleteViewToken(string viewHandle) => Fnv("delete-view:" + (viewHandle ?? "").Trim().ToUpperInvariant());
+
+        private static string Fnv(string s)
         {
             ulong h = 14695981039346656037UL;
-            foreach (byte b in Encoding.UTF8.GetBytes("file:" + (fullPath ?? "").Trim().Replace('/', '\\').ToUpperInvariant()))
+            foreach (byte b in Encoding.UTF8.GetBytes(s))
             {
                 h ^= b;
                 h *= 1099511628211UL;

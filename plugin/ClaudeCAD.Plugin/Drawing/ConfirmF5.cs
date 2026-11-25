@@ -31,7 +31,10 @@ namespace ClaudeCAD.Plugin.Drawing
                 if (!oldFlags.Any(f => p.Bool(f, false))) throw ToolException.Invalid(oldRefusal);
                 return;
             }
-            RequireCard(ctx, p, tool, $"overwrite the existing file '{fullPath}'", new[] { F5Confirm.FileToken(fullPath) });
+            // Test & sửa F5: the token of the normalised full path ("a.png", ".\\a.png", "dir\\..\\dir\\a.png" = one file)
+            string norm;
+            try { norm = System.IO.Path.GetFullPath(fullPath); } catch (System.Exception) { norm = fullPath; }
+            RequireCard(ctx, p, tool, $"overwrite the existing file '{norm}'", new[] { F5Confirm.FileToken(norm) });
         }
     }
 }
