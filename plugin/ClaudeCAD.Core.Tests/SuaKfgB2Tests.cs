@@ -64,10 +64,11 @@ namespace ClaudeCAD.Core.Tests
             Assert.Contains("the chat copies it to this computer", TraceLogic.Advice);
             Assert.Contains(TraceLogic.Advice, TraceLogic.PathRefusal(@"\\other\s\a.png", @"C:\nha.dwg", false, false));
             var c = Src("plugin", "ClaudeCAD.Plugin", "ChatController.cs");
-            Assert.Contains("UI.ChatAttachments.LocalFile(i.SourcePath)", c);
+            // lượt 3 (KFG-40): nothing is copied when the message is sent; the copy happens at trace_image attach
+            Assert.Contains("UI.ChatAttachments.UserFile(i.SourcePath)", c);
             var a = Src("plugin", "ClaudeCAD.Plugin", "UI", "ChatAttachments.cs");
-            Assert.Contains("if (!Core.TraceLogic.NeedsLocalCopy(path, network)) return path;", a);
-            Assert.Contains("\"tep-\"", a);
+            Assert.Contains("public static string CopyForTrace(string path)", a);
+            Assert.StartsWith("tep-", TraceLogic.NetworkCopyName(@"\\nas\a.png", 1, 1));
             Assert.Contains("Directory.GetFiles(Folder, \"tep-*.*\")", a);
             // a whole network copy is not called "pasted ≤ 1568 px"
             Assert.True(TraceLogic.IsPastedName(@"C:\x\anh-0123.png"));
