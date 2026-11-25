@@ -408,7 +408,8 @@ mục G2-D1 / D1b, G4 F, G5 H, G6-1 / G6-2, G7.*
 **Dự toán (G3):**
 - Tên giá **giữ dấu**: "Sân" không còn ăn giá của "Sàn". Hoa thường / khoảng trắng vẫn không quan trọng.
 - Gõ tên không dấu ("phong khach") vẫn ghép được nếu chỉ khớp một dòng. Khớp nhiều dòng (vd "san" khớp cả Sàn và Sân) thì để
-  trống và Claude hỏi.
+  trống và Claude hỏi. Mẫu có dấu `*` cũng vậy: "San*" khi có cả "Sân phơi" và "Sàn gỗ" thì để trống cả hai và hỏi; "Sàn*"
+  (gõ có dấu) chỉ khớp các tên bắt đầu bằng "Sàn". Phần nằm ở chỗ `*` thì khác dấu cũng được ("san*" cho "Sàn gỗ", "Sàn đá").
 - `A-WALL` và `A_WALL` chỉ gộp khi bản vẽ không có cả hai.
 - Dự toán theo diện tích gặp đường bao nhà chứa các phòng thì **không tính** (tránh tính tiền hai lần). Claude hỏi bỏ đường bao hay cứ tính.
 - Lời cảnh báo của bảng nguồn (vd đã bỏ layer mặt cắt) được Claude kể lại.
@@ -420,7 +421,8 @@ mục G2-D1 / D1b, G4 F, G5 H, G6-1 / G6-2, G7.*
 - Bộ cũ đã bị xóa tay hết thì không hỏi thẻ nữa.
 - Bảng thống kê / dự toán cạnh mặt bằng không làm tờ mặt bằng lệch tâm hay thu nhỏ.
 - Chân tường lệch nhau vài cm không đẻ thêm tầng.
-- Tờ của bộ cũ được nhận theo mã riêng của tờ, không theo tên: layout mới khách đặt trùng tên không bị xóa.
+- Tờ của bộ cũ được nhận theo mã riêng của tờ, không theo tên: layout mới khách đặt trùng tên không bị xóa (kể cả sau một lần
+  AutoCAD lỗi giữa lúc ra bộ). Riêng bộ làm bằng bản cài trước bản sửa này (chưa lưu mã tờ) thì lần đầu vẫn nhận theo tên.
 - AutoCAD lỗi giữa chừng thì lần sau vẫn biết bộ dở dang đó.
 - Macro không ghi đè PDF đã có (in lại bằng chat, có thẻ hỏi).
 
