@@ -132,6 +132,31 @@ tiếp; đợt sau xuất phát từ commit cuối của bước Test & sửa đ
 | F3 | `session_01D56HmFrL65iF9oJokvqXw5` (thread Test & sửa F1 nhận viết, 25/11 16h26 → 17h12, ~$10; hai thread mở riêng cho F3 bị chặn lưu, đã dừng) | Thread đợt F2 `session_01D56HmFcYrzsme7GoBm8tNC` (17h14 → 17h35, ~$4; 2 lỗi sửa) | `full/nang-cap-f3` @ `09ae953` (code `4a26989`, lõi 1001, trợ lý 317), CI 45590903520 xanh → `full/nang-cap-f3-test` @ `53e18b5` (code `d3484f6`), CI 45595009744 xanh (lõi 1012, trợ lý 317) | **Xong**, ~$14, 1 giờ 9 phút. Mái liền khối chữ L / T / U, `set_material`, `named_view` (kèm xuất ảnh PNG), bản thang và bản mái dốc 120 mm; token mở chat 3D và Full +1,0k. Con số chờ duyệt: `docs/dot-f-cho-duyet.md` |
 | F4 | Thread đợt F1 `session_01D56HmFAo4dZ7c8sbeNB9eh` (25/11 17h40 → 18h20, $14,6) | Thread Test & sửa F1 `session_01D56HmFrL65iF9oJokvqXw5` (18h22 → 19h17, có 30 phút dừng vì chạm giới hạn sử dụng; ~$10; 3 lỗi sửa) | `full/nang-cap-f4` @ `d6c15d6`: gộp F2 + F3 ở `c67bc79` (CI 45597564054 xanh, lõi 1087, trợ lý 328), code F4 `587f7ce` (CI 45601966332 xanh, lõi 1113, trợ lý 347) → `full/nang-cap-f4-test` @ `1cdf8d4` (code `9278808`), CI 45610810220 xanh (lõi 1126, trợ lý 355) | **Xong**, ~$25, 1 giờ 37 phút. Trợ lý khởi động sẵn, 25 lệnh nạp sẵn + lệnh khác tìm khi cần (token mở chat ước tính Full 60,5k → 20,6k, 2D 40,5k → 13,4k, 3D 41,8k → 18,8k), có công tắc tắt nạp gọn, 4 bảng xuất `.xlsx`. Con số chờ duyệt: `docs/dot-f-cho-duyet.md` |
 | Cuối | Test tổng thể đợt F: thread đợt F2 `session_01D56HmFcYrzsme7GoBm8tNC` (25/11 19h20 → 19h44, ~$10; 3 lỗi nhẹ sửa) | Kiểm tra độc lập: thread mới `session_01D56HmHz4EXXJceBgkmjcap` (mở 19h45; chỉ ghi lỗi, gửi báo cáo về luồng chính) | `full/nang-cap-f-tong-the` @ `afdaa68` (code `7aa74c0`), CI 45614706040 xanh (lõi 1132, trợ lý 355) | Test tổng thể **xong**: checklist khối "Đợt F" (~2 giờ thử tay) ở cuối `docs/checklist-tong-the.md`; token mở chat ước tính trước → sau: 2D 38,8k → 13,4k, 3D 39,8k → 18,8k, Full 57,7k → 20,6k (tắt nạp gọn: 40,8k / 42,0k / 61,0k). Đang kiểm tra độc lập; sau đó bộ cài thử bản 4 |
+| F5 | Thread Test & sửa F1 `session_01D56HmFrL65iF9oJokvqXw5` (giao 25/11 20h05) | Giao sau khi viết xong (thread khác thread viết) | `full/nang-cap-f5` (từ `full/nang-cap-f-tong-the` @ `afdaa68`) | Đang viết. Ba việc nhỏ còn sót của đợt F, chủ dự án chọn 25/11 ~20h: ô bật / tắt nạp gọn lệnh trong ⚙; thẻ xác nhận đồng bộ (ghi đè file PDF / STL / PNG / Excel, ghi đè / xóa góc nhìn, gán vật liệu cả layer); ghi chú có mũi tên (multileader). Rà xong thì gộp vào nhánh tích hợp đợt F, kịp bộ cài thử bản 4 |
+
+## Đợt G (chốt 25/11/2026 ~20h)
+
+Chủ dự án chọn làm tiếp cả 5 tính năng mới luồng chính đề xuất, **chạy liền như đợt F**: không dừng để hỏi, thread dùng số
+đề xuất, luồng chính gom con số và quyết định tự chọn cho chủ dự án duyệt một lần ở cuối; dừng trước phát hành.
+
+| Đợt | Nội dung | Gói | Ước |
+| --- | --- | --- | --- |
+| G1 | Ra bộ hồ sơ một lệnh: từ mô hình 3D tự xếp mặt bằng, mặt đứng, mặt cắt, phối cảnh lên các tờ có khung tên, in một PDF | Theo gói của từng phần (đủ bộ: Full) | $25–40 |
+| G2 | Soát lỗi bản vẽ trước khi xuất: layer sai tên, chữ sai cỡ, thiếu kích thước, đối tượng lệch layer; báo cáo kèm đề xuất sửa | 2D / Full | $20–30 |
+| G3 | Bảng dự toán: từ bảng khối lượng, thêm đơn giá do khách nhập, tính thành tiền, xuất Excel | Theo gói của bảng nguồn | $20–30 |
+| G4 | Render thật: lệnh RENDER và thư viện vật liệu của Autodesk, có đường lui về ảnh chụp hiện tại | 3D / Full | $20–30 |
+| G5 | Vẽ lại từ ảnh / PDF scan (phần lớn và khó chính xác nhất; tốn token của khách mỗi lần dùng) | 2D / Full | $35–45 |
+| Cuối | Test tổng thể đợt G; kiểm tra độc lập (agent mới); bộ cài thử bản 5 | — | $30–40 |
+
+- Tổng ước $150–200, khoảng 8–12 giờ chạy; có thể ngắt quãng khi chạm giới hạn sử dụng 5 giờ (luồng chính đặt lịch tự
+  cho chạy lại sau khi giới hạn đặt lại).
+- **Chạy cùng lúc (chủ dự án đồng ý 25/11 ~20h):** G1 với G2; G3 với G4. Mỗi đợt vẫn có thread viết và thread khác rà.
+  G5 chạy riêng sau cùng. Sau mỗi cặp, thread kế tiếp gộp hai nhánh, CI xanh rồi mới làm tiếp.
+- **Bắt đầu sau khi đợt F xong hẳn** (kiểm tra độc lập + sửa + F5 + bộ cài thử bản 4), xuất phát từ commit cuối của nhánh
+  tích hợp đợt F. Lý do: ưu tiên bộ cài thử bản 4 trước, và giới hạn sử dụng dùng chung cho mọi thread.
+- Thread: dùng lại ba thread đã lưu được lên GitHub (thread F1, Test & sửa F1, F2); thread mới chỉ dùng cho kiểm tra độc lập
+  (không cần lưu).
+- Con số và quyết định tự chọn của đợt G gom vào một file riêng `docs/dot-g-cho-duyet.md`.
 
 ### Số mặc định chủ dự án xác nhận 25/11/2026
 

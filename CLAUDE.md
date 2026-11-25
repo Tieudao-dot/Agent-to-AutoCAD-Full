@@ -51,7 +51,8 @@ dự án gốc), `bo-cai/README.md`.
   - còn số chưa được xác nhận thì thread chưa báo "xong" phần đó;
   - không phải hỏi: số kỹ thuật bên trong mà khách không thấy và không làm đổi kết quả (dung sai tính toán, thời gian
     chờ, số trong test). Các số này ghi trong bàn giao;
-  - **khi cậu đã dặn "cứ triển khai, không hỏi lại" cho một chuỗi** (đợt F, dặn 25/11/2026): không dừng chuỗi để hỏi.
+  - **khi cậu đã dặn "cứ triển khai, không hỏi lại" cho một chuỗi** (đợt F, dặn 25/11/2026; đợt F5 và đợt G, cậu chọn
+    "chạy liền như đợt F" 25/11 ~20h): không dừng chuỗi để hỏi.
     Thread dùng số đề xuất, để mọi số ở một chỗ dễ đổi, và lập bảng "Con số chờ chủ dự án duyệt" trong bàn giao; luồng
     chính gom các bảng, đưa cậu duyệt một lần ở báo cáo cuối chuỗi, trước khi báo "hoàn thành". Điểm cần chọn khác thì
     chọn cách rẻ, an toàn, đổi lại được và ghi vào "Quyết định tự chọn" để cậu xem lại. Việc khó đảo ngược hoặc hướng
@@ -104,7 +105,8 @@ dự án gốc), `bo-cai/README.md`.
   - sub-thread con báo về thread đợt (thread cha); thread đợt tổng hợp rồi báo về luồng chính;
   - đợt sau chỉ bắt đầu khi test & sửa của đợt trước báo xong, và xuất phát từ commit cuối của bước test đó;
   - **ngoại lệ (chủ dự án chốt 25/11/2026):** hai đợt đụng hai mảng khác nhau được chạy cùng lúc khi chủ dự án đồng ý
-    cho đúng cặp đó (đợt F: F2 và F3 cùng xuất phát từ commit cuối của Test & sửa F1). Mỗi đợt vẫn có thread con Test &
+    cho đúng cặp đó (đợt F: F2 và F3 cùng xuất phát từ commit cuối của Test & sửa F1; đợt G, đồng ý 25/11 ~20h: G1 với
+    G2, G3 với G4). Mỗi đợt vẫn có thread con Test &
     sửa riêng; xong cả hai thì thread của đợt kế tiếp gộp hai nhánh, gỡ chỗ chồng nhau, CI xanh rồi mới làm việc của
     mình. Thread chạy song song sửa file dùng chung càng ít càng tốt và viết phần thử tay vào file riêng của đợt;
   - tin giao việc **đầu tiên** của thread đợt (prompt lúc mở thread) ghi sẵn yêu cầu "viết xong thì tự mở thread con
@@ -244,6 +246,7 @@ dự án gốc), `bo-cai/README.md`.
 | Nâng cấp đợt F4 (người viết) | `session_01D56HmFAo4dZ7c8sbeNB9eh` (chính là thread Nâng cấp đợt F1) | Giao 25/11 17h40: nhánh `full/nang-cap-f4` (từ `full/nang-cap-f2-test` @ `c9fdc08`, gộp `full/nang-cap-f3-test` @ `53e18b5`, CI xanh rồi mới làm tiếp); mở chat nhanh hơn (trợ lý khởi động sẵn, chỉ nạp mô tả lệnh cần dùng), xuất bảng ra Excel. Không mở thread con; viết xong báo luồng chính, luồng chính giao thread khác rà. Thử tay: `docs/checklist-dot-f4.md`. Bàn giao: `docs/ban-giao/nang-cap-f4.md` |
 | Test & sửa đợt F4 (người rà) | `session_01D56HmFrL65iF9oJokvqXw5` (chính là thread Test & sửa đợt F1) | Giao 25/11 18h22: rà soát, thêm test, sửa lỗi đợt F4 trên nhánh `full/nang-cap-f4-test` (từ `full/nang-cap-f4` @ `d6c15d6`): nạp gọn mô tả lệnh (thêm công tắc tắt nếu chưa có), khởi động sẵn, xuất Excel; ≤ 2 lượt CI. Báo thẳng luồng chính. Xong 19h17: commit cuối `1cdf8d4`, CI 45610810220 xanh. Bàn giao: `docs/ban-giao/nang-cap-f4-test.md` |
 | Test tổng thể đợt F | `session_01D56HmFcYrzsme7GoBm8tNC` (chính là thread Nâng cấp đợt F2) | Giao 25/11 19h20: nhánh `full/nang-cap-f-tong-the` (từ `full/nang-cap-f4-test` @ `1cdf8d4`, gộp tài liệu luồng chính): rà chiều ngang F1 → F4 cùng gói / 3D / chuỗi A → E, sửa lỗi, đo token trước / sau, gộp các checklist đợt F vào `docs/checklist-tong-the.md`, soát `docs/dot-f-cho-duyet.md` so với code; ≤ 2 lượt CI. Giữ nhánh tích hợp đợt F cho bản sửa sau kiểm tra độc lập. Xong 19h44: commit cuối `afdaa68`, CI 45614706040 xanh. Bàn giao: `docs/ban-giao/test-tong-the-dot-f.md` |
+| Nâng cấp đợt F5 (người viết) | `session_01D56HmFrL65iF9oJokvqXw5` (chính là thread Test & sửa đợt F1) | Giao 25/11 20h05: nhánh `full/nang-cap-f5` (từ `full/nang-cap-f-tong-the` @ `afdaa68`): ô bật / tắt nạp gọn lệnh trong ⚙, thẻ xác nhận đồng bộ (ghi đè file, góc nhìn, vật liệu cả layer), ghi chú có mũi tên (multileader); ≤ 2 lượt CI. Viết xong báo luồng chính, luồng chính giao thread khác rà rồi gộp vào nhánh tích hợp đợt F. Thử tay: `docs/checklist-dot-f5.md`. Bàn giao: `docs/ban-giao/nang-cap-f5.md` |
 | Kiểm tra độc lập đợt F | `session_01D56HmHz4EXXJceBgkmjcap` | Mở 25/11 19h45 từ `full/nang-cap-f-tong-the` @ `afdaa68`: agent mới test lại toàn bộ đợt F một lượt, chỉ ghi lỗi (KTF-xx), không sửa, không commit / push / CI; gửi toàn văn báo cáo về luồng chính, luồng chính lưu vào `docs/ban-giao/kiem-tra-doc-lap-dot-f.md` và chuyển lỗi cho thread giữ nhánh tích hợp đợt F; sau đó soát lại các lỗi đã sửa |
 
 Link mở thread: `https://claude.ai/code/<session id>`.

@@ -162,3 +162,7 @@ trong 5 phút chỉ tốn ~10%.
     làm test tổng thể đợt F trên `full/nang-cap-f-tong-the`.
   - 19h44: test tổng thể đợt F xong (3 lỗi nhẹ sửa, ~$10, `full/nang-cap-f-tong-the` @ `afdaa68`, CI 45614706040 xanh).
     19h45 mở thread Kiểm tra độc lập đợt F (`session_01D56HmHz4EXXJceBgkmjcap`).
+  - ~20h: chủ dự án chọn làm tiếp hai nhóm. **Đợt F5** (ba việc nhỏ còn sót: ô nạp gọn trong ⚙, thẻ xác nhận đồng bộ,
+    ghi chú có mũi tên) giao 20h05 cho thread Test & sửa F1 trên `full/nang-cap-f5`, kịp bộ cài thử bản 4. **Đợt G** (ra
+    bộ hồ sơ, soát lỗi bản vẽ, bảng dự toán, render thật, vẽ lại từ ảnh / PDF scan; ước $150–200) chạy liền như đợt F,
+    bắt đầu sau khi đợt F xong hẳn. Kế hoạch: [`ke-hoach-nang-cap-lenh.md`](ke-hoach-nang-cap-lenh.md) mục "Đợt G".
