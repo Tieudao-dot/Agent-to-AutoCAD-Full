@@ -118,7 +118,7 @@ tiếp; đợt sau xuất phát từ commit cuối của bước Test & sửa đ
 
 | Đợt | Thread viết | Thread con Test & sửa | Nhánh | Trạng thái |
 | --- | --- | --- | --- | --- |
-| F1 | `session_01D56HmFAo4dZ7c8sbeNB9eh` (mở 25/11 14h27) | — | `full/nang-cap-f1` | Đang viết |
+| F1 | `session_01D56HmFAo4dZ7c8sbeNB9eh` (25/11 14h27 → 15h19) | `session_01D56HmFrL65iF9oJokvqXw5` (đang rà) | `full/nang-cap-f1` @ `8110e45`, CI 45573567269 xanh (lõi 952, trợ lý 307, UI 37) → `full/nang-cap-f1-test` | Viết xong; token mở chat Full 58k → 39k (2D) / 40k (3D) khi chọn chế độ riêng. Đang Test & sửa |
 | F2 | — | — | — | Chờ F1 |
 | F3 | — | — | — | Chờ F2 |
 | F4 | — | — | — | Chờ F3 |

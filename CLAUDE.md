@@ -203,6 +203,7 @@ dự án gốc), `bo-cai/README.md`.
 | Tối ưu khung chat | `session_01D56HmJHAPE5osZWP7986Jp` | Nhánh `full/toi-uu-khung-chat` (tách từ `full/nang-cap-tong-the` @ `b0da814`): sửa khung chat giật khi cuộn / gõ lúc chat dài (chủ dự án báo khi thử thật 14/11), không đổi cách dùng; ≤ 2 lượt CI, không mở thread con. Báo về luồng chính. Bàn giao: `docs/ban-giao/toi-uu-khung-chat.md` |
 | ↳ Commit & CI (con của Tối ưu khung chat) | `session_01D56HmETMC8GaiKLR7th4ha` | Chủ dự án yêu cầu mở 15/11 (thread cha bị chế độ Auto chặn commit / push): áp bản vá của thread cha lên nhánh `full/toi-uu-khung-chat` (từ `full/nang-cap-tong-the` @ `b0da814`), build, test, commit, push, 1 lượt CI. Báo về thread cha, tin cập nhật ngắn gửi luồng chính |
 | Nâng cấp đợt F1 | `session_01D56HmFAo4dZ7c8sbeNB9eh` | Nhánh `full/nang-cap-f1` (tách từ `full/nang-cap-f-goc` @ `2dbeee2`): mọi lệnh vẽ hiểu UCS; nút chế độ "Cả hai / 2D / 3D" cho máy gói Full. Viết xong tự mở thread con Test & sửa (`full/nang-cap-f1-test`). Bàn giao: `docs/ban-giao/nang-cap-f1.md`. Kế hoạch: `docs/ke-hoach-nang-cap-lenh.md` mục "Đợt F" |
+| ↳ Test & sửa đợt F1 (con của Nâng cấp đợt F1) | `session_01D56HmFrL65iF9oJokvqXw5` | Nhánh `full/nang-cap-f1-test` (tách từ `full/nang-cap-f1` @ `8110e45`): rà soát, thêm test tự động, sửa lỗi đợt F1; 1 lượt CI. Báo về thread đợt F1, tin cập nhật ngắn gửi luồng chính. Bàn giao: `docs/ban-giao/nang-cap-f1-test.md` |
 
 Link mở thread: `https://claude.ai/code/<session id>`.
 
