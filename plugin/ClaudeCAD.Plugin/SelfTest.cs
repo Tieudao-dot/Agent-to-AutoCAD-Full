@@ -1167,6 +1167,13 @@ namespace ClaudeCAD.Plugin
                     : new SelfTestRules.Verdict(false, string.Join("; ", errs));
             });
 
+            // Nâng cấp đợt G5: a picture attached under the drawing, scaled from a known length, looked at with a grid, erased
+            Check("Nâng cấp đợt G5: vẽ lại từ ảnh (gắn ảnh nền khóa không in, đặt tỉ lệ 8 m, xem có lưới)", () =>
+            {
+                var errs = DrawingService.SelfTestTrace(doc, dir, out string info);
+                return errs.Count == 0 ? new SelfTestRules.Verdict(true, info) : new SelfTestRules.Verdict(false, string.Join("; ", errs) + " (" + info + ")");
+            });
+
             string versionFile = Path.Combine(dir, "version-copy.dwg");
             Do("Bản sao phiên bản (Wblock + SaveAs)", () =>
             {

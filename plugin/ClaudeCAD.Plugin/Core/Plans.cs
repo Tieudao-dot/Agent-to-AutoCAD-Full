@@ -103,6 +103,8 @@ namespace ClaudeCAD.Plugin.Core
                 "setup_standards create_sheet " +
                 // nâng cấp đợt G2 (Drawing/DrawingCheckTools.cs): check the drawing before printing, repair after the card
                 "check_drawing fix_drawing");
+            // nâng cấp đợt G5 (Drawing/TraceTools.cs): trace a photo / scan / PDF scan (2D / Full)
+            Add(ToolGroup.TwoD, "trace_image");
             // 3D phases 1, 2 and 3 (Drawing/SolidTools.cs, Solid2Tools.cs, PlanTo3dTools.cs, SectionTools.cs): only the 3D and Full plans
             Add(ToolGroup.ThreeD,
                 // draw_solid (nâng cấp đợt A) replaces the six primitives for Claude; their old names stay for recorded macros

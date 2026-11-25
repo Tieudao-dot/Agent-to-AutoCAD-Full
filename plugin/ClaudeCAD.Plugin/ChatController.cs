@@ -827,7 +827,14 @@ namespace ClaudeCAD.Plugin
                 };
             }
             if (m.Images.Count > 0)
-                attachments["images"] = m.Images.Select(i => (object)new Dictionary<string, object> { ["media_type"] = i.MediaType, ["data"] = i.Base64 }).ToList();
+                attachments["images"] = m.Images.Select(i =>
+                {
+                    var d = new Dictionary<string, object> { ["media_type"] = i.MediaType, ["data"] = i.Base64 };
+                    // nâng cấp đợt G5: the file of the picture, so Claude can attach it under the drawing (trace_image)
+                    var path = i.SourcePath ?? UI.ChatAttachments.Save(i.Base64, i.MediaType);
+                    if (path != null) d["path"] = path;
+                    return (object)d;
+                }).ToList();
             if (attachments.Count > 0) payload["attachments"] = attachments;
             var ctx = new Dictionary<string, object>();
             if (!string.IsNullOrEmpty(_settings.Scale)) ctx["scale"] = _settings.Scale;

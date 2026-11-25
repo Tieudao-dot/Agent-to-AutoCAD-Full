@@ -85,6 +85,7 @@ namespace ClaudeCAD.Plugin.Drawing
             RegisterDrawingSet(d); // nâng cấp đợt G1: drawing set
             RegisterEstimate(d); // nâng cấp đợt G3: cost_estimate
             RegisterDrawingCheck(d); // nâng cấp đợt G2: check_drawing, fix_drawing (Drawing/DrawingCheckTools.cs)
+            RegisterTrace(d); // nâng cấp đợt G5: trace_image (Drawing/TraceTools.cs)
         }
 
         private static void RegisterSystem(ToolDispatcher d, ITurnHost host)

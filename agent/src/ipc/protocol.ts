@@ -187,6 +187,8 @@ export interface ImageAttachment {
   media_type: 'image/png' | 'image/jpeg' | 'image/gif' | 'image/webp';
   /** Base64 data without the data: prefix. */
   data: string;
+  /** Nâng cấp đợt G5: the file of the picture on the user's computer (trace_image action attach). */
+  path?: string;
 }
 
 export interface UserAttachments {
@@ -401,7 +403,7 @@ function parseAttachments(v: unknown): UserAttachments | undefined {
       (i): i is ImageAttachment =>
         typeof i === 'object' && i !== null && MEDIA_TYPES.has((i as any).media_type) && typeof (i as any).data === 'string',
     );
-    if (imgs.length) out.images = imgs.map((i) => ({ media_type: i.media_type, data: i.data }));
+    if (imgs.length) out.images = imgs.map((i) => ({ media_type: i.media_type, data: i.data, ...(typeof i.path === 'string' && i.path.length > 0 && i.path.length <= 1024 ? { path: i.path } : {}) }));
   }
   return out.selection || out.images || out.layers ? out : undefined;
 }

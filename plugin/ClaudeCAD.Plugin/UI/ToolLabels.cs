@@ -155,6 +155,7 @@ namespace ClaudeCAD.Plugin.UI
             ["cost_estimate"] = "Lập dự toán", // nâng cấp đợt G3
             // nâng cấp đợt G2
             ["check_drawing"] = "Soát bản vẽ",
+            ["trace_image"] = "Vẽ lại từ ảnh",
             ["fix_drawing"] = "Sửa lỗi bản vẽ",
         };
 
