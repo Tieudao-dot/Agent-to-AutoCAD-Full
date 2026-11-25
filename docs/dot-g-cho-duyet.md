@@ -30,6 +30,7 @@ Mọi số ở `G2Numbers` (`Core/DrawingCheck.cs`).
 | Tỉ lệ khung nhìn coi là chuẩn khi lệch ≤ **0,5 %** so với 1:n của bộ chuẩn | số "khung nhìn có tỉ lệ không chuẩn" | khung chỉnh tay hơi lệch (1:99,7) vẫn tính là 1:100 |
 | Tên 22 nhóm lỗi và ba mức "nên sửa / cân nhắc / gợi ý" | chữ Claude đọc cho khách | ngắn, nói thẳng việc |
 | Tên file Excel `<bản vẽ>-soat-ban-ve.xlsx`, sheet "Soát bản vẽ" | tên file | theo cách đặt tên của đợt F4 |
+| Mỗi nhóm kể tối đa **30** tên layer / tờ in; kết quả sửa kể tối đa **50** hình đã sửa | độ dài danh sách Claude đọc | kết quả gọn (thread rà bổ sung dòng này 25/11, số đã có sẵn trong code) |
 
 ### Quyết định tự chọn
 
@@ -46,10 +47,17 @@ Mọi số ở `G2Numbers` (`Core/DrawingCheck.cs`).
 | Sửa lỗi có ghi vào macro không | không ghi | sửa theo từng bản vẽ, phát lại ở bản vẽ khác dễ sai |
 | Xuất Excel khi không có lỗi | không ghi file, có ghi chú | |
 | Polyline kín vẽ trùng nhưng bắt đầu ở đỉnh khác | không coi là trùng | bỏ sót hiếm, đổi lại không báo nhầm |
+| Xref khách tạm gỡ, ảnh đã gỡ mà file vẫn còn | không coi là "mất file" | thread rà thêm 25/11; chỉ báo khi không tìm thấy file |
+
+### Sau khi rà (25/11 22h13)
+
+Thread rà sửa 4 lỗi, không đổi số nào: hình lạc xa bị bỏ sót ở bản vẽ 10–19 hình; định nghĩa thuộc tính của block để trống bị
+coi là chữ rỗng và bị xóa; xref tạm gỡ bị báo mất file; sửa trên bản vẽ quá 20 000 hình không nói là chỉ sửa phần đã quét.
+Nhánh `full/nang-cap-g2-test` @ `f49e717` (code `7b9be8f`), CI 45640452138 xanh, lõi 1255, trợ lý 373.
 
 ### Chưa kiểm được
 
-- Chưa chạy trên AutoCAD thật.
+- Chưa chạy trên AutoCAD thật (trạng thái xref / ảnh, khung nhìn, khung tên).
 - Chưa đo tốc độ khi quét 20 000 hình.
 
 ## G1: ra bộ hồ sơ một lệnh
