@@ -78,6 +78,8 @@ quy tắc làm việc và danh bạ thread: [`../CLAUDE.md`](../CLAUDE.md).
 | 25/11 | Kiểm tra trước khi báo hoàn thành | Mỗi đợt có Test & sửa + CI; cuối chuỗi test tổng thể + kiểm tra độc lập; luồng chính tự kiểm CI và file bộ cài rồi mới báo "hoàn thành" |
 | 25/11 | File quyền cho thread | Luồng chính thêm hộ `.claude/settings.json` trên `full/nang-cap-f-goc` (ngoại lệ một lần) để thread mới tự commit / push nhánh `full/…` và chạy CI; không cho đẩy `main` |
 | 25/11 | Con số phải xác nhận trước | Mọi con số khách sẽ gặp hoặc làm đổi kết quả (số mặc định, kích thước, ngưỡng…) phải hỏi chủ dự án xác nhận trước khi làm; thread gom danh sách số gửi luồng chính, luồng chính hỏi. Số kỹ thuật bên trong thì không hỏi, ghi trong bàn giao |
+| 25/11 | Số mặc định cầu thang / mái dốc | Đổi: bản thang + chiếu nghỉ dày **120** mm (trước 150), bản mái dốc dày **120** mm (trước 150); giữ khe giữa 2 vế thang chữ U **100** mm. Mái bằng dày 150 giữ như đã chốt 13/11. Sửa trong đợt F3 |
+| 25/11 | Số mặc định lan can | Xác nhận giữ: cao 1100; khe giữa các song ≤ 100; trụ cách nhau ≤ 1500; tay vịn và trụ 50 × 50; song 20 × 20; thanh dưới cách sàn 100; tấm kín dày 20 (mm) |
 | 12/11 | Cách làm việc | Luồng chính điều phối; mỗi đợt một thread, thread đợt tự mở thread con "Test & sửa" |
 
 ## 4. Đã làm

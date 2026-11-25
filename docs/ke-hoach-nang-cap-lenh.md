@@ -101,7 +101,7 @@ tiếp; đợt sau xuất phát từ commit cuối của bước Test & sửa đ
 | --- | --- | --- | --- |
 | F1 | Mọi lệnh vẽ hiểu UCS (UCS World thì y như cũ); nút chế độ "Cả hai / 2D / 3D" cho máy gói Full | UCS: mọi gói. Nút: chỉ gói Full | $25–45 |
 | F2 | Bộ style chuẩn Việt Nam; layout có khung tên; block từ thư viện; lưu / gọi layer state | 2D / Full | $25–40 |
-| F3 | Mái liền khối nhà chữ L / T; vật liệu + render; lưu góc nhìn | 3D / Full | $25–40 |
+| F3 | Mái liền khối nhà chữ L / T; vật liệu + render; lưu góc nhìn; đổi số mặc định bản thang + chiếu nghỉ và bản mái dốc từ 150 xuống 120 mm (chốt 25/11) | 3D / Full | $25–40 |
 | F4 | Mở chat nhanh hơn (trợ lý khởi động sẵn, chỉ nạp mô tả lệnh cần dùng); xuất bảng khối lượng / thống kê ra Excel | Theo gói của bảng nguồn | $20–35 |
 | Cuối | Test tổng thể đợt F; kiểm tra độc lập (agent mới); bộ cài thử bản 4 | — | $30–40 |
 
@@ -125,3 +125,14 @@ tiếp; đợt sau xuất phát từ commit cuối của bước Test & sửa đ
 | F3 | — | — | — | Chờ F2 |
 | F4 | — | — | — | Chờ F3 |
 | Cuối | — | — | — | Chờ F4 |
+
+### Số mặc định chủ dự án xác nhận 25/11/2026
+
+Hai nhóm số thread tự chọn hôm 13/11, nay hỏi lại theo quy tắc "con số phải xác nhận trước":
+
+| Nhóm | Số (mm) | Kết quả |
+| --- | --- | --- |
+| Cầu thang, mái dốc | Bản thang + chiếu nghỉ 150 → **120**; bản mái dốc 150 → **120**; khe giữa 2 vế thang chữ U **100** | Đổi 2 số, giữ 1 số; sửa trong đợt F3 |
+| Lan can | Cao 1100; khe song ≤ 100; trụ cách nhau ≤ 1500; tay vịn và trụ 50 × 50; song 20 × 20; thanh dưới cách sàn 100; tấm kín dày 20 | Giữ nguyên |
+
+Các số đợt E chốt 13/11 giữ nguyên: cao bậc 160, rộng bậc 280, vế rộng 1000, mái bằng dày 150, mái dốc 30°, đua 600.
