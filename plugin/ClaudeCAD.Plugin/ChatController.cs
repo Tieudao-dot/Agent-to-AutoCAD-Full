@@ -833,7 +833,7 @@ namespace ClaudeCAD.Plugin
                 {
                     var d = new Dictionary<string, object> { ["media_type"] = i.MediaType, ["data"] = i.Base64 };
                     // nâng cấp đợt G5: the file of the picture, so Claude can attach it under the drawing (trace_image)
-                    var path = tracePaths ? i.SourcePath ?? UI.ChatAttachments.Save(i.Base64, i.MediaType) : null;
+                    var path = tracePaths ? (i.SourcePath != null ? UI.ChatAttachments.LocalFile(i.SourcePath) : UI.ChatAttachments.Save(i.Base64, i.MediaType)) : null; // KFG-29: a network file is copied here
                     if (path != null) d["path"] = path;
                     return (object)d;
                 }).ToList();

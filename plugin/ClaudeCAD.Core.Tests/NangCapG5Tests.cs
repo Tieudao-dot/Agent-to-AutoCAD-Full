@@ -218,7 +218,8 @@ namespace ClaudeCAD.Core.Tests
             Assert.Contains("PDFIMPORT", t);
             Assert.Contains("RegisterTrace(d);", Src("plugin", "ClaudeCAD.Plugin", "Drawing", "DrawingService.cs"));
             // every picture of a message has a file for attach
-            Assert.Contains("i.SourcePath ?? UI.ChatAttachments.Save(i.Base64, i.MediaType)", Src("plugin", "ClaudeCAD.Plugin", "ChatController.cs"));
+            // Sửa KFG-29: a file of the network is copied to this computer first (LocalFile); a pasted picture is saved (Save)
+            Assert.Contains("(i.SourcePath != null ? UI.ChatAttachments.LocalFile(i.SourcePath) : UI.ChatAttachments.Save(i.Base64, i.MediaType))", Src("plugin", "ClaudeCAD.Plugin", "ChatController.cs"));
         }
     }
 }

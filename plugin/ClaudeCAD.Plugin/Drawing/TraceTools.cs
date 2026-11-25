@@ -93,7 +93,10 @@ namespace ClaudeCAD.Plugin.Drawing
             else
             {
                 var ext = Capture.ModelExtents(doc);
-                var ip = TraceLogic.InsertPoint(ext.HasValue ? new[] { ext.Value.MinPoint.X, ext.Value.MinPoint.Y } : null, ext.HasValue ? new[] { ext.Value.MaxPoint.X, ext.Value.MaxPoint.Y } : null, mpu);
+                // KFG-36: right of the drawing in the user's UCS (the picture lies along it), not of its WCS box
+                var fr = ctx.Dispatcher?.CurrentFrame ?? UcsFrame.World;
+                var ip = TraceLogic.InsertPointInUcs(ext.HasValue ? new[] { ext.Value.MinPoint.X, ext.Value.MinPoint.Y } : null, ext.HasValue ? new[] { ext.Value.MaxPoint.X, ext.Value.MaxPoint.Y } : null, mpu,
+                    fr.IsWorld ? new double[] { 0, 0 } : new[] { fr.O[0], fr.O[1] }, fr.IsWorld ? 0 : fr.PlanAngleDeg);
                 at = new Point3d(ip[0], ip[1], 0);
             }
             double width = TraceLogic.DefaultWidth(mpu);
@@ -167,15 +170,16 @@ namespace ClaudeCAD.Plugin.Drawing
                     if (!frame.IsWorld && Math.Abs(frame.PlanAngleDeg) > 1e-9) r.TransformBy(Matrix3d.Rotation(frame.PlanAngleDeg * Math.PI / 180, Vector3d.ZAxis, at));
                     ent = r;
                 }
-                MarkTrace(tr, ent, source, page, false, 0);
-                handle = Acad.H(ent.ObjectId);
-                corners = Corners(ent);
-                if (ent is PdfReference && !frame.IsWorld && Math.Abs(frame.PlanAngleDeg) > 1e-9)
+                // KFG-37: a PDF keeps its own corner frame in the mark (its box is a WCS box once turned)
+                double[] pdfFrame = null;
+                if (ent is PdfReference)
                 {
-                    var c = Math.Cos(frame.PlanAngleDeg * Math.PI / 180);
-                    var sn = Math.Sin(frame.PlanAngleDeg * Math.PI / 180);
-                    corners = (at, at + new Vector3d(w * c - h * sn, w * sn + h * c, 0));
+                    double ang = frame.IsWorld ? 0 : frame.PlanAngleDeg * Math.PI / 180, c = Math.Cos(ang), sn = Math.Sin(ang);
+                    pdfFrame = new[] { at.X, at.Y, w * c, w * sn, -h * sn, h * c };
                 }
+                MarkTrace(tr, ent, source, page, false, 0, pdfFrame);
+                handle = Acad.H(ent.ObjectId);
+                corners = Corners(ent, pdfFrame);
                 // locked: Claude's lines never move it; it shows faded under the drawing
                 var ltr = (LayerTableRecord)tr.GetObject(layerId, OpenMode.ForWrite);
                 ltr.IsLocked = true;
@@ -195,7 +199,7 @@ namespace ClaudeCAD.Plugin.Drawing
                            " mm only to show it. Look at it with action view, find a length you know (a dimension written on the scan, or ask the user), then action scale. " + TraceLogic.DraftNote,
             };
             // Sửa KFG-13: a pasted picture is the copy sent to Claude (≤ 1568 px): small text of a big scan may be lost
-            if (chatDir != null && TraceLogic.IsInside(path, chatDir))
+            if (chatDir != null && TraceLogic.IsInside(path, chatDir) && TraceLogic.IsPastedName(path))
                 res["pasted_note"] = $"This picture was pasted in the chat, so it is kept at most {G5Numbers.PastedMaxSide} px wide. For a large scan with small text, ask the user to drag the file itself into the chat (or give its path) for full detail.";
             if (kind == "raster") { res["pixels"] = new List<object> { pxW, pxH }; }
             else
@@ -213,12 +217,18 @@ namespace ClaudeCAD.Plugin.Drawing
         /// Sửa KFG-05: the corners of a traced picture whose UCS images are its lower-left and upper-right corners in the UCS: a
         /// raster picture by its orientation (origin, origin + width + height), a PDF by its box.
         /// </summary>
-        private static (Point3d min, Point3d max) Corners(Entity e)
+        private static (Point3d min, Point3d max) Corners(Entity e, double[] pdfFrame = null)
         {
             if (e is RasterImage img)
             {
                 var cs = img.Orientation;
                 return (cs.Origin, cs.Origin + cs.Xaxis + cs.Yaxis);
+            }
+            // KFG-37: a PDF by the corner frame kept in its mark (origin, width and height vectors)
+            if (pdfFrame != null && pdfFrame.Length >= 6)
+            {
+                var o = new Point3d(pdfFrame[0], pdfFrame[1], 0);
+                return (o, o + new Vector3d(pdfFrame[2] + pdfFrame[4], pdfFrame[3] + pdfFrame[5], 0));
             }
             var x = e.GeometricExtents;
             return (new Point3d(x.MinPoint.X, x.MinPoint.Y, 0), new Point3d(x.MaxPoint.X, x.MaxPoint.Y, 0));
@@ -231,11 +241,16 @@ namespace ClaudeCAD.Plugin.Drawing
             string drawing = null;
             try { drawing = ctx.Doc.IsNamedDrawing ? ctx.Doc.Name : null; } catch (Exception) { }
             bool network = false, same = false;
+            // the path itself decides, before anything reads it: a relative path would be read from AutoCAD's current folder
+            var plain = TraceLogic.PlainPath(path);
+            if (plain != null && TraceLogic.UncShare(plain) == null && !TraceLogic.IsAbsoluteDrivePath(plain))
+                throw ToolException.Invalid($"{tool}: '{path}' is not a full path. Give the full path of the file (e.g. C:\\Users\\…\\scan.jpg), or ask the user to drag it into the chat.");
             try
             {
-                if (TraceLogic.UncShare(path) == null && Path.IsPathRooted(path))
+                if (plain != null && TraceLogic.UncShare(plain) == null)
                 {
-                    var root = Path.GetPathRoot(path);
+                    // KFG-28: "\\?\Z:\…" is checked as "Z:\…"
+                    var root = Path.GetPathRoot(plain);
                     if (!string.IsNullOrEmpty(root) && root.Length >= 2 && root[1] == ':')
                     {
                         network = new DriveInfo(root.Substring(0, 1)).DriveType == DriveType.Network;
@@ -253,7 +268,7 @@ namespace ClaudeCAD.Plugin.Drawing
             try { return Path.GetFullPath(UI.ChatAttachments.Folder); } catch (Exception) { return null; }
         }
 
-        private static void MarkTrace(Transaction tr, Entity ent, string file, int page, bool scaled, double realUnits)
+        private static void MarkTrace(Transaction tr, Entity ent, string file, int page, bool scaled, double realUnits, double[] pdfFrame = null)
         {
             if (ent.ExtensionDictionary.IsNull) ent.CreateExtensionDictionary();
             var ed = (DBDictionary)tr.GetObject(ent.ExtensionDictionary, OpenMode.ForWrite);
@@ -265,9 +280,25 @@ namespace ClaudeCAD.Plugin.Drawing
                 new TypedValue((int)DxfCode.Int32, page),
                 new TypedValue((int)DxfCode.Int16, (short)(scaled ? 1 : 0)),
                 new TypedValue((int)DxfCode.Real, realUnits));
+            if (pdfFrame != null && pdfFrame.Length >= 6)
+            {
+                var vals = xr.Data.AsArray().ToList();
+                vals.AddRange(pdfFrame.Take(6).Select(v => new TypedValue((int)DxfCode.Real, v)));
+                xr.Data = new ResultBuffer(vals.ToArray());
+            }
         }
 
-        private sealed class TraceMark { public string File; public int Page; public bool Scaled; public double Real; }
+        /// <summary>KFG-37: the corner frame of a PDF moved like the picture (origin as a point, width / height as vectors).</summary>
+        private static double[] MoveFrame(double[] f, Matrix3d m)
+        {
+            if (f == null || f.Length < 6) return null;
+            var o = new Point3d(f[0], f[1], 0).TransformBy(m);
+            var u = new Vector3d(f[2], f[3], 0).TransformBy(m);
+            var v = new Vector3d(f[4], f[5], 0).TransformBy(m);
+            return new[] { o.X, o.Y, u.X, u.Y, v.X, v.Y };
+        }
+
+        private sealed class TraceMark { public string File; public int Page; public bool Scaled; public double Real; public double[] PdfFrame; }
 
         private static TraceMark ReadMark(Transaction tr, Entity ent)
         {
@@ -276,7 +307,11 @@ namespace ClaudeCAD.Plugin.Drawing
             if (!ed.Contains(TraceKey)) return null;
             var v = ((Xrecord)tr.GetObject(ed.GetAt(TraceKey), OpenMode.ForRead)).Data?.AsArray();
             if (v == null || v.Length < 4) return null;
-            return new TraceMark { File = v[0].Value as string, Page = Convert.ToInt32(v[1].Value), Scaled = Convert.ToInt32(v[2].Value) == 1, Real = Convert.ToDouble(v[3].Value) };
+            return new TraceMark
+            {
+                File = v[0].Value as string, Page = Convert.ToInt32(v[1].Value), Scaled = Convert.ToInt32(v[2].Value) == 1, Real = Convert.ToDouble(v[3].Value),
+                PdfFrame = v.Length >= 10 ? v.Skip(4).Take(6).Select(t => Convert.ToDouble(t.Value)).ToArray() : null,
+            };
         }
 
         /// <summary>The picture the call means: its handle, else the only traced picture of the drawing.</summary>
@@ -344,10 +379,12 @@ namespace ClaudeCAD.Plugin.Drawing
                 bool wasLocked = ltr.IsLocked;
                 ltr.IsLocked = false;
                 e.UpgradeOpen();
-                e.TransformBy(scale ? Matrix3d.Scaling(factor, p1) : Matrix3d.Rotation(turn, Vector3d.ZAxis, p1));
-                if (scale && mark != null) MarkTrace(tr, e, mark.File, mark.Page, true, real);
+                var move = scale ? Matrix3d.Scaling(factor, p1) : Matrix3d.Rotation(turn, Vector3d.ZAxis, p1);
+                e.TransformBy(move);
+                var frameNow = MoveFrame(mark?.PdfFrame, move);
+                if (mark != null) MarkTrace(tr, e, mark.File, mark.Page, scale || mark.Scaled, scale ? real : mark.Real, frameNow);
                 ltr.IsLocked = wasLocked;
-                corners = Corners(e);
+                corners = Corners(e, frameNow);
                 handle = Acad.H(id);
                 tr.Commit();
             }
@@ -664,7 +701,7 @@ namespace ClaudeCAD.Plugin.Drawing
                 {
                     var e = (Entity)tr.GetObject(id, OpenMode.ForRead);
                     var m = ReadMark(tr, e);
-                    var ext = e.GeometricExtents;
+                    var cn = Corners(e, m?.PdfFrame); // KFG-37: the picture's corners (in the user's UCS), not its WCS box
                     list.Add(new Dictionary<string, object>
                     {
                         ["handle"] = Acad.H(id),
@@ -672,8 +709,8 @@ namespace ClaudeCAD.Plugin.Drawing
                         ["file"] = m?.File,
                         ["page"] = m?.Page ?? 1,
                         ["scaled"] = m?.Scaled == true,
-                        ["min"] = Acad.J(new Point3d(ext.MinPoint.X, ext.MinPoint.Y, 0)),
-                        ["max"] = Acad.J(new Point3d(ext.MaxPoint.X, ext.MaxPoint.Y, 0)),
+                        ["min"] = Acad.J(cn.min),
+                        ["max"] = Acad.J(cn.max),
                     });
                 }
                 tr.Commit();

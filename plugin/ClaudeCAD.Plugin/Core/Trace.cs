@@ -87,11 +87,28 @@ namespace ClaudeCAD.Plugin.Core
         public static string UncShare(string path)
         {
             var p = (path ?? "").Trim().Replace('/', '\\');
-            if (p.StartsWith(@"\\?\UNC\", StringComparison.OrdinalIgnoreCase)) p = @"\\" + p.Substring(8);
+            // KFG-28: "\\?\UNC\" and "\\.\UNC\" are network paths too
+            if (p.StartsWith(@"\\?\UNC\", StringComparison.OrdinalIgnoreCase) || p.StartsWith(@"\\.\UNC\", StringComparison.OrdinalIgnoreCase)) p = @"\\" + p.Substring(8);
             else if (p.StartsWith(@"\\?\", StringComparison.Ordinal) || p.StartsWith(@"\\.\", StringComparison.Ordinal)) return null;
             if (!p.StartsWith(@"\\", StringComparison.Ordinal)) return null;
             var parts = p.Substring(2).Split(new[] { '\\' }, StringSplitOptions.RemoveEmptyEntries);
             return parts.Length >= 2 ? (@"\\" + parts[0] + @"\" + parts[1]).ToUpperInvariant() : (parts.Length == 1 ? @"\\" + parts[0].ToUpperInvariant() : @"\\");
+        }
+
+        /// <summary>
+        /// KFG-28: a path written with a device prefix: "\\?\C:\…" / "\\.\C:\…" → the plain "C:\…" (its drive is then checked like any
+        /// other); "\\?\UNC\…" / "\\.\UNC\…" → "\\server\share\…"; any other device path ("\\?\GLOBALROOT\…", "\\.\pipe\…", volume
+        /// GUIDs…) → null: refused. A path without prefix comes back as it is.
+        /// </summary>
+        public static string PlainPath(string path)
+        {
+            var p = (path ?? "").Trim().Replace('/', '\\');
+            bool dev = p.StartsWith(@"\\?\", StringComparison.Ordinal) || p.StartsWith(@"\\.\", StringComparison.Ordinal);
+            if (!dev) return p;
+            var rest = p.Substring(4);
+            if (rest.StartsWith(@"UNC\", StringComparison.OrdinalIgnoreCase)) return @"\\" + rest.Substring(4);
+            if (rest.Length >= 3 && char.IsLetter(rest[0]) && rest[1] == ':' && rest[2] == '\\') return rest;
+            return null;
         }
 
         /// <summary>
@@ -101,16 +118,41 @@ namespace ClaudeCAD.Plugin.Core
         /// </summary>
         public static string PathRefusal(string path, string drawingPath, bool onNetworkDrive, bool sameDriveAsDrawing, string tool = "trace_image")
         {
+            // KFG-28: a device path that is neither a drive nor a network share is never opened
+            if (PlainPath(path) == null)
+                return $"{tool}: '{path}' is a device path, which is not opened for safety. Ask the user for the normal path of the file (e.g. C:\\…), or to drag the file into the chat.";
             string share = UncShare(path);
             if (share != null)
             {
                 if (share == UncShare(drawingPath)) return null;
-                return $"{tool}: '{path}' is on another computer of the network ({share}). For safety only files on this computer, pictures attached in the chat, or files in the same network folder as the open drawing are opened. Ask the user to copy the file to this computer (e.g. Desktop) or attach it in the chat.";
+                // the drawing opened from a mapped drive (Z:): the same folder written as \\server\share is not recognised
+                string mapped = !string.IsNullOrEmpty(drawingPath) && UncShare(drawingPath) == null && drawingPath.Length >= 2 && drawingPath[1] == ':'
+                    ? $" The drawing is opened from drive {drawingPath.Substring(0, 2)}: if the file is in the same network folder, give its path on {drawingPath.Substring(0, 2)} instead."
+                    : "";
+                return $"{tool}: '{path}' is on another computer of the network ({share}). For safety only files on this computer, pictures attached in the chat, or files in the same network folder as the open drawing are opened.{mapped} " + Advice;
             }
             if (onNetworkDrive && !sameDriveAsDrawing)
-                return $"{tool}: '{path}' is on a network drive. For safety only files on this computer, pictures attached in the chat, or files on the same drive as the open drawing are opened. Ask the user to copy the file to this computer or attach it in the chat.";
+                return $"{tool}: '{path}' is on a network drive. For safety only files on this computer, pictures attached in the chat, or files on the same drive as the open drawing are opened. " + Advice;
             return null;
         }
+
+        /// <summary>A picture pasted in the chat ("anh-…", ≤ 1568 px), not a network file copied whole ("tep-…").</summary>
+        public static bool IsPastedName(string path)
+        {
+            var p = path ?? "";
+            int cut = Math.Max(p.LastIndexOf('\\'), p.LastIndexOf('/'));
+            return p.Substring(cut + 1).StartsWith("anh-", StringComparison.OrdinalIgnoreCase);
+        }
+
+        /// <summary>"C:\\…" (a drive letter, a colon and a separator): an absolute path on a drive.</summary>
+        public static bool IsAbsoluteDrivePath(string p) =>
+            !string.IsNullOrEmpty(p) && p.Length >= 3 && char.IsLetter(p[0]) && p[1] == ':' && (p[2] == '\\' || p[2] == '/');
+
+        /// <summary>KFG-29: what to tell the user (a file dragged into the chat from the network is copied to this computer first).</summary>
+        public const string Advice = "Ask the user to drag the file into the chat (the chat copies it to this computer) or to copy it to this computer (e.g. Desktop).";
+
+        /// <summary>KFG-29: a file the user dragged / chose from the network is copied into the chat's folder (its copy is then used).</summary>
+        public static bool NeedsLocalCopy(string path, bool onNetworkDrive) => PlainPath(path) == null || UncShare(path) != null || onNetworkDrive;
 
         /// <summary>A file inside a folder (prefix with the separator: "…\\anh" does not hold "…\\anh-2\\x.png").</summary>
         public static bool IsInside(string file, string folder)
@@ -123,6 +165,26 @@ namespace ClaudeCAD.Plugin.Core
         /// <summary>Pages of a PDF, counted from its page objects (0 = could not tell).</summary>
         public static int PdfPageCount(byte[] content)
         {
+            // KFG-35: the scan runs on AutoCAD's main thread: at most PdfScanSeconds, then "not counted" (pages_note says so)
+            _pdfDeadline = DateTime.UtcNow.AddSeconds(PdfScanSeconds);
+            try { return PdfPageCountIn(content); }
+            catch (RegexMatchTimeoutException) { return 0; }
+        }
+
+        /// <summary>Internal: seconds the page count of a PDF may take (a big file of many objects: then 0 = unknown).</summary>
+        public const double PdfScanSeconds = 2;
+
+        [ThreadStatic] private static DateTime _pdfDeadline;
+
+        private static Regex Rx(string pattern, RegexOptions o = RegexOptions.None)
+        {
+            var left = _pdfDeadline - DateTime.UtcNow;
+            if (left <= TimeSpan.Zero) throw new RegexMatchTimeoutException("pdf page count", pattern, TimeSpan.Zero);
+            return new Regex(pattern, o, left);
+        }
+
+        private static int PdfPageCountIn(byte[] content)
+        {
             if (content == null || content.Length == 0) return 0;
             var s = Encoding.ASCII.GetString(content);
             // Sửa KFG-11: the /Count of the root page tree (the last version of each object: a PDF saved again appends them)
@@ -130,12 +192,12 @@ namespace ClaudeCAD.Plugin.Core
             if (root > 0) return root;
             // else the page objects, each counted once (a page appended again by an incremental save is the same object)
             var ids = new HashSet<string>();
-            foreach (Match m in Regex.Matches(s, @"(\d+)\s+(\d+)\s+obj\s*<<(?:(?!endobj).){0,4000}?/Type\s*/Page(?![a-zA-Z])", RegexOptions.Singleline))
+            foreach (Match m in Rx(@"(\d+)\s+(\d+)\s+obj\s*<<(?:(?!endobj).){0,4000}?/Type\s*/Page(?![a-zA-Z])", RegexOptions.Singleline).Matches(s))
                 ids.Add(m.Groups[1].Value + " " + m.Groups[2].Value);
             if (ids.Count > 0) return ids.Count;
-            int pages = Regex.Matches(s, @"/Type\s*/Page(?![a-zA-Z])").Count;
-            if (pages > 0 && !Regex.IsMatch(s, @"\d+\s+\d+\s+obj")) return pages;
-            var counts = Regex.Matches(s, @"/Type\s*/Pages\b[^>]*?/Count\s+(\d+)|/Count\s+(\d+)[^>]*?/Type\s*/Pages\b");
+            int pages = Rx(@"/Type\s*/Page(?![a-zA-Z])").Matches(s).Count;
+            if (pages > 0 && !Rx(@"\d+\s+\d+\s+obj").IsMatch(s)) return pages;
+            var counts = Rx(@"/Type\s*/Pages\b[^>]*?/Count\s+(\d+)|/Count\s+(\d+)[^>]*?/Type\s*/Pages\b").Matches(s);
             int best = 0;
             foreach (Match m in counts)
             {
@@ -148,22 +210,22 @@ namespace ClaudeCAD.Plugin.Core
         /// <summary>The /Count of the page tree the trailer's /Root points to (0 = not readable, e.g. inside a compressed stream).</summary>
         private static int RootPageCount(string s)
         {
-            var roots = Regex.Matches(s, @"/Root\s+(\d+)\s+(\d+)\s+R");
+            var roots = Rx(@"/Root\s+(\d+)\s+(\d+)\s+R").Matches(s);
             if (roots.Count == 0) return 0;
             var r = roots[roots.Count - 1];
             var cat = LastObject(s, r.Groups[1].Value, r.Groups[2].Value);
             if (cat == null) return 0;
-            var pg = Regex.Match(cat, @"/Pages\s+(\d+)\s+(\d+)\s+R");
+            var pg = Rx(@"/Pages\s+(\d+)\s+(\d+)\s+R").Match(cat);
             if (!pg.Success) return 0;
             var tree = LastObject(s, pg.Groups[1].Value, pg.Groups[2].Value);
             if (tree == null) return 0;
-            var c = Regex.Match(tree, @"/Count\s+(\d+)");
+            var c = Rx(@"/Count\s+(\d+)").Match(tree);
             return c.Success && int.TryParse(c.Groups[1].Value, NumberStyles.Integer, CultureInfo.InvariantCulture, out var n) ? n : 0;
         }
 
         private static string LastObject(string s, string num, string gen)
         {
-            var all = Regex.Matches(s, @"(?<![0-9])" + num + @"\s+" + gen + @"\s+obj(.*?)endobj", RegexOptions.Singleline);
+            var all = Rx(@"(?<![0-9])" + num + @"\s+" + gen + @"\s+obj(.*?)endobj", RegexOptions.Singleline).Matches(s);
             return all.Count == 0 ? null : all[all.Count - 1].Groups[1].Value;
         }
 
@@ -247,6 +309,27 @@ namespace ClaudeCAD.Plugin.Core
             if (extMin == null || extMax == null) return new double[] { 0, 0 };
             double gap = G5Numbers.GapMm / (mmPerUnit > 0 ? mmPerUnit : 1);
             return new[] { extMax[0] + gap, extMin[1] };
+        }
+
+        /// <summary>
+        /// KFG-36: the same in a UCS moved / turned in plan (origin ucsO, angle): the WCS box of the drawing seen in the UCS, the
+        /// picture right of it along the UCS x axis; returns the WCS point. World (0°): as InsertPoint.
+        /// </summary>
+        public static double[] InsertPointInUcs(double[] extMin, double[] extMax, double mmPerUnit, double[] ucsO, double ucsAngleDeg)
+        {
+            if (extMin == null || extMax == null) return InsertPoint(null, null, mmPerUnit);
+            double c = Math.Cos(ucsAngleDeg * Math.PI / 180), s = Math.Sin(ucsAngleDeg * Math.PI / 180), ox = ucsO?[0] ?? 0, oy = ucsO?[1] ?? 0;
+            var us = new List<double>();
+            var vs = new List<double>();
+            foreach (var x in new[] { extMin[0], extMax[0] })
+                foreach (var y in new[] { extMin[1], extMax[1] })
+                {
+                    double dx = x - ox, dy = y - oy;
+                    us.Add(dx * c + dy * s);
+                    vs.Add(-dx * s + dy * c);
+                }
+            var ip = InsertPoint(new[] { us.Min(), vs.Min() }, new[] { us.Max(), vs.Max() }, mmPerUnit);
+            return new[] { ox + ip[0] * c - ip[1] * s, oy + ip[0] * s + ip[1] * c };
         }
 
         /// <summary>Default width of a newly attached picture, drawing units.</summary>
