@@ -94,7 +94,7 @@ Gộp `full/nang-cap-g-tong-the` @ `20e3812` vào trước. Nguồn: mục "Soá
   trên ổ mạng ánh xạ + ảnh ghi theo máy chủ: **giữ từ chối**, lời báo hướng dẫn ghi theo ổ.
 - Chưa sửa (ngoài phạm vi): dòng tương ứng trong `docs/checklist-tong-the.md` (mục G5 3) và `docs/dot-g-cho-duyet.md` (~394) vẫn ghi "chép
   file về máy hoặc kéo vào chat" theo thứ tự cũ: ý vẫn đúng; thread giữ nhánh tích hợp sửa khi gộp nếu muốn.
-- Test: lõi **1432** (1409 sau gộp + 23 `SuaKfgB2Tests.cs`); trợ lý: xem dòng dưới; build 3 target 0 cảnh báo. Thử tay: `docs/checklist-dot-g5.md` mục I.
+- Test: lõi **1432** (1409 sau gộp + 23 `SuaKfgB2Tests.cs`); trợ lý **407** (không đổi code trợ lý ở lượt 2), chạy lại sau lần sửa cuối (`271ae04`); build 3 target 0 cảnh báo. Thử tay: `docs/checklist-dot-g5.md` mục I.
 - Chưa kiểm được: kéo file mạng vào khung chat trên Windows thật (WPF), `DriveInfo` ổ mạng, PDF xoay theo UCS (khung góc), thời gian đếm
   trang trên máy khách.
 
