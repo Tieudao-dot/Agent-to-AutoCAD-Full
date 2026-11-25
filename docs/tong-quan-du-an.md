@@ -8,37 +8,53 @@ quy tắc làm việc và danh bạ thread: [`../CLAUDE.md`](../CLAUDE.md).
 
 ## 1. Tình hình
 
-- **Nhánh tích hợp mới nhất:** `full/test-tong-the`, commit `19944df` (mã như `860101b`, thêm tài liệu luồng chính). Gồm gói dịch vụ, 3D đợt 1, 2, 3, test tổng thể,
-  bộ cài thay bản gốc + cảnh báo, và bản sửa sau **4 lượt kiểm tra độc lập** (43 lỗi: 39 đã sửa đúng, 4 chấp nhận,
-  0 mở).
-  - Test lõi 369/369, trợ lý 215/215, build net48 / net8 / net10 sạch, CI Windows run 43272295317 xanh.
-  - **Chưa thử trên AutoCAD thật. Chưa phát hành.** `main` vẫn là v0.9.3 của bản gốc.
-- **Chưa dùng được bộ cài:** `activation/activation.json` và khóa công khai trong `License.cs` vẫn là của dự án gốc.
-  Bộ cài CI build ra chỉ để kiểm build, không cài thử, không phát cho ai.
-- **Bộ cài thử nội bộ (13/11):** chỉ chủ dự án dùng, không gửi ai. Bỏ qua kích hoạt, gói Full, hết hạn 10/12/2026, nhãn
-  "BẢN THỬ NỘI BỘ", không tự cập nhật. Nhánh `full/ban-thu-noi-bo` @ `8387b06` (**không bao giờ gộp**), CI run 43373318854,
-  artifact `AgentToAutoCADFull-ThuNoiBo-0.9.4` (tải được tới 11/02/2027). Thử được 2D + 3D; phần gói / kích hoạt chờ bộ cài
-  thật. Bàn giao: `docs/ban-giao/ban-thu-noi-bo.md` trên nhánh đó.
-- **Checklist thử tay:** [`checklist-tong-the.md`](checklist-tong-the.md) (rút gọn ~97 phút, đủ ~157 phút; chi tiết ở
-  [`checklist-thu-that.md`](checklist-thu-that.md) phần I, J, K, L, M, X). Bản dùng thử AutoCAD hết khoảng 10/12/2026.
+*Cập nhật 25/11/2026 (giờ VN).*
+
+- **Đợt F đang chạy (từ 25/11):** chủ dự án đã thử thật bộ cài thử bản 3, chạy ổn, và chốt nâng cấp tiếp 4 đợt nối tiếp
+  F1 → F4 (UCS + nút chế độ; 2D dùng hằng ngày; 3D đẹp và đúng hơn; mở chat nhanh + xuất Excel), rồi test tổng thể, kiểm
+  tra độc lập và bộ cài thử bản 4. Chi tiết và tiến độ: [`ke-hoach-nang-cap-lenh.md`](ke-hoach-nang-cap-lenh.md) mục
+  "Đợt F". Nhánh gốc của đợt F: `full/nang-cap-f-goc` @ `2dbeee2` (nhánh tích hợp + file quyền). **Tới 25/11 19h20:**
+  F1 → F4 xong (viết + rà, CI xanh; bản mới nhất `full/nang-cap-f4-test` @ `1cdf8d4`); đang test tổng thể đợt F trên
+  `full/nang-cap-f-tong-the`, sau đó kiểm tra độc lập và bộ cài thử bản 4. Chưa phần nào của đợt F chạy trên AutoCAD
+  thật.
+
+- **Nhánh tích hợp mới nhất:** `full/nang-cap-tong-the` @ `012ed29` (có sửa lỗi bộ cài TT-01 và bản sửa khung chat 15/11; CI 43669231795 xanh trên mã khung chat). Chứa toàn bộ: gói dịch vụ,
+  3D đợt 1–3, test tổng thể + 4 lượt kiểm tra độc lập lần 1 (43 lỗi), bộ cài thay bản gốc + cảnh báo, và **chuỗi nâng
+  cấp A → E** (13/11) + test tổng thể nâng cấp.
+  - Test lõi 910, trợ lý 298, UI 33, build net48 / net8 / net10 sạch.
+  - Nhánh tích hợp cũ `full/test-tong-the` @ `19944df` vẫn giữ (nơi sửa lỗi thử thật phần 3D cũ, hiện chưa có lỗi nào).
+  - **Chủ dự án đã thử thật bằng bộ cài thử bản 3: chạy ổn (25/11). Chưa phát hành.** `main` vẫn là v0.9.3 của bản gốc.
+- **Chuỗi nâng cấp lệnh vẽ (13/11):** [`ke-hoach-nang-cap-lenh.md`](ke-hoach-nang-cap-lenh.md) (bảng tiến độ). Cả 5 đợt
+  xong (~$96, 22 lỗi sửa trong các bước Test & sửa), test tổng thể nâng cấp xong (3 lỗi chéo). **Kiểm tra độc lập
+  nâng cấp** (agent mới, 3 lượt): 32 lỗi, 30 sửa đúng, 2 chấp nhận, **0 mở**; báo cáo
+  `docs/ban-giao/kiem-tra-doc-lap-nang-cap.md` trên `full/kiem-tra-doc-lap-2`. **Báo cáo cho chủ dự án:**
+  [`bao-cao-nang-cap-14-11.md`](bao-cao-nang-cap-14-11.md).
+- **Token mỗi lần mở chat** (mô tả lệnh + system prompt): 2D 34,4k → 38,7k, 3D 35,7k → 39,7k, Full 49,7k → 57,5k
+  (trước / sau chuỗi nâng cấp; phần này được cache, lượt sau trong 5 phút ~10%).
+- **Chưa dùng được bộ cài thật:** `activation/activation.json` và khóa công khai trong `License.cs` vẫn là của dự án
+  gốc; chờ chủ dự án dựng máy chủ kích hoạt riêng.
+- **Bộ cài thử nội bộ** (chỉ chủ dự án dùng, không gửi ai; bỏ qua kích hoạt, gói Full, hết hạn 10/12/2026, nhãn "BẢN THỬ
+  NỘI BỘ", không tự cập nhật; nhánh `full/ban-thu-noi-bo`, **không bao giờ gộp**). **Bản dùng hiện tại (bản 3, 15/11):** thêm khung chat mượt khi chat dài, icon nét kiểu AutoCAD, thu gọn cân đối: `d602051`, CI 43670758598, artifact `AgentToAutoCADFull-ThuNoiBo-nang-cap-3-0.9.4` ([tải](https://github.com/Tieudao-dot/Agent-to-AutoCAD-Full/actions/runs/43670758598/artifacts/14143819585), tới 13/02/2027). **Bản 2 (14/11 tối, đã thay):** có đủ
+  chuỗi nâng cấp + sửa lỗi bộ cài TT-01 (hỏi đóng AutoCAD bằng tiếng Việt, tự tắt tiến trình phụ của plugin):
+  `45b45a6`, CI 43614348802, artifact `AgentToAutoCADFull-ThuNoiBo-nang-cap-2-0.9.4` ([tải](https://github.com/Tieudao-dot/Agent-to-AutoCAD-Full/actions/runs/43614348802/artifacts/14121404198), tới
+  12/02/2027). Cài đè lên bản cũ được. Các bản cũ (CI 43373318854, 43481896536) bỏ.
+  Bàn giao: `docs/ban-giao/ban-thu-noi-bo.md` trên nhánh đó.
+- **Checklist thử tay:** [`checklist-tong-the.md`](checklist-tong-the.md) trên nhánh tích hợp: phần cũ I–M, X (rút gọn
+  ~97 phút, đủ ~157 phút) + khối **chuỗi nâng cấp A → E** (rút gọn ~95 phút, đủ ~3 giờ; mục N–R, chéo V1–V8). Chi tiết
+  ở [`checklist-thu-that.md`](checklist-thu-that.md). Bản dùng thử AutoCAD hết khoảng 10/12/2026.
 - **Báo cáo sáng 13/11:** [`bao-cao-sang-13-11.md`](bao-cao-sang-13-11.md). Chủ dự án đã đồng ý cả 9 quyết định
   luồng chính đưa ra trong đêm (13/11).
-- **Kế hoạch nâng cấp lệnh vẽ (13/11):** [`ke-hoach-nang-cap-lenh.md`](ke-hoach-nang-cap-lenh.md), 5 điểm đã chốt.
-  **Chạy liền A → B → C → D → E từ 13/11** (chủ dự án thử 3D song song), cuối chuỗi kiểm tra độc lập + test tổng thể,
-  dừng trước phát hành. **Đợt A xong** (13/11 16h17, `full/nang-cap-a-test` @ `33acb5f`, $35,7). **Đợt B xong** (19h31,
-  `full/nang-cap-b-test` @ `265b66e`, ~$21). **Đợt C xong** (21h40,
-  `full/nang-cap-c-test` @ `f4f27fe`, ~$12). **Đợt D xong** (22h50,
-  `full/nang-cap-d-test` @ `db34801`, ~$15). Đợt E đang chạy: thread `session_01D56HmJ3WbDQRkUMc3aJjvF`, nhánh
-  `full/nang-cap-e`. Tiến độ: bảng trong kế hoạch.
 
 ## 2. Việc chờ chủ dự án
 
 1. **Dựng máy chủ kích hoạt riêng** theo [`dung-may-chu-kich-hoat-full.md`](dung-may-chu-kich-hoat-full.md), gửi luồng
    chính URL web app + 2 dòng khóa công khai (không gửi khóa riêng / SECRET).
 2. Sau bước 1: luồng chính giao gắn URL / khóa, build **bộ cài thử**; chủ dự án thử theo checklist tổng, gửi lỗi.
-3. **Thử phần 3D** bằng bộ cài thử nội bộ (`checklist-tong-the.md` phần 0, 2, 3, 4, 5, ~54 phút), song song với chuỗi
-   nâng cấp; lỗi gửi luồng chính (thread "Test tổng thể" sửa).
-4. Trước khi phát hành: số phiên bản (plugin / trợ lý vẫn ghi 0.9.4), secret CI của repo Full, đồng ý merge `main`,
+3. ~~Thử bằng bộ cài thử nội bộ~~: **đã thử bản 3, chạy ổn (25/11).** Sau đợt F: thử bộ cài thử bản 4 theo khối
+   "đợt F" của checklist tổng.
+4. Xem 2 quyết định luồng chính chọn theo đề xuất của kiểm tra độc lập (bản vẽ mét tự quy đổi; mái nhà chữ L / T báo
+   trước chỗ chồng) và 3 số đợt E tự chọn (bản thang 150, khe 2 vế chữ U 100, bản mái dốc 150 mm).
+5. Trước khi phát hành: số phiên bản (plugin / trợ lý vẫn ghi 0.9.4), secret CI của repo Full, đồng ý merge `main`,
    các chỗ còn trỏ về dự án gốc ([`cho-tro-ve-repo-goc.md`](cho-tro-ve-repo-goc.md)).
 
 ## 3. Đã chốt
@@ -59,6 +75,16 @@ quy tắc làm việc và danh bạ thread: [`../CLAUDE.md`](../CLAUDE.md).
 | 13/11 | Đợt E: cầu thang / mái | 3 kiểu cầu thang + 3 kiểu mái; mặc định cao bậc 160, rộng bậc 280, vế 1000, mái bằng dày 150, mái dốc 30°, đua 600 (mm) |
 | 13/11 | Cập nhật tình hình | Mọi sub-thread (kể cả thread con) gửi tin ngắn `[Cập nhật từ thread …]` về luồng chính ở các mốc (bắt đầu, push + CI, kết quả CI, mở thread con, xong, bị chặn); luồng chính ghi tình hình trong thread chính, không push noti cho từng tin. Chi tiết trong `CLAUDE.md` |
 | 13/11 | Thanh tác vụ bên phải | Mọi việc đang chạy hiện thành task ở thanh bên phải của thread chính (1 task / thread đang chạy, trạng thái = bước hiện tại); sub-thread cũng hiện tác vụ của mình. Chi tiết trong `CLAUDE.md` |
+| 14/11 | Chọn vẽ 2D / 3D | Giữ như hiện tại: máy gói Full dùng cả 2D lẫn 3D cùng lúc, Claude tự chọn lệnh. Nút chọn chế độ "Cả hai / 2D / 3D" ghi vào đợt F, quyết sau khi thử thật |
+| 15/11 | Dọn thread | Đóng 13 thread đã xong (Gói dịch vụ, Test tổng thể bản đầu, Kiểm tra độc lập nâng cấp, đợt A → E và 5 thread Test & sửa). Lỗi thuộc phần thread đã đóng chuyển cho "Test tổng thể nâng cấp" |
+| 25/11 | Đợt F làm ngay | Chủ dự án thử thật bản 3 ổn, chốt nâng cấp tiếp cả 4 nhóm trước khi phát hành: F1 UCS + nút chế độ, F2 2D dùng hằng ngày, F3 3D đẹp và đúng hơn, F4 mở chat nhanh + xuất Excel; ước $125–200 |
+| 25/11 | Kiểm tra trước khi báo hoàn thành | Mỗi đợt có Test & sửa + CI; cuối chuỗi test tổng thể + kiểm tra độc lập; luồng chính tự kiểm CI và file bộ cài rồi mới báo "hoàn thành" |
+| 25/11 | File quyền cho thread | Luồng chính thêm hộ `.claude/settings.json` trên `full/nang-cap-f-goc` (ngoại lệ một lần) để thread mới tự commit / push nhánh `full/…` và chạy CI; không cho đẩy `main` |
+| 25/11 | Con số phải xác nhận trước | Mọi con số khách sẽ gặp hoặc làm đổi kết quả (số mặc định, kích thước, ngưỡng…) phải hỏi chủ dự án xác nhận trước khi làm; thread gom danh sách số gửi luồng chính, luồng chính hỏi. Số kỹ thuật bên trong thì không hỏi, ghi trong bàn giao |
+| 25/11 | Số mặc định cầu thang / mái dốc | Đổi: bản thang + chiếu nghỉ dày **120** mm (trước 150), bản mái dốc dày **120** mm (trước 150); giữ khe giữa 2 vế thang chữ U **100** mm. Mái bằng dày 150 giữ như đã chốt 13/11. Sửa trong đợt F3 |
+| 25/11 | Số mặc định lan can | Xác nhận giữ: cao 1100; khe giữa các song ≤ 100; trụ cách nhau ≤ 1500; tay vịn và trụ 50 × 50; song 20 × 20; thanh dưới cách sàn 100; tấm kín dày 20 (mm) |
+| 25/11 | Cách chạy đợt F | Sau F1: F2 và F3 chạy cùng lúc, mỗi đợt có Test & sửa riêng; thread F4 gộp hai nhánh, CI xanh rồi mới làm F4. Nhanh hơn ~1,5 giờ, thêm ~$5–10 |
+| 25/11 | Chạy liền, không hỏi lại | Chủ dự án dặn cứ triển khai đợt F theo kế hoạch, không hỏi lại. Con số: thread dùng số đề xuất, gom bảng "Con số chờ chủ dự án duyệt"; quyết định khác ghi "Quyết định tự chọn"; chủ dự án duyệt một lần ở báo cáo cuối. Vẫn dừng trước phát hành |
 | 12/11 | Cách làm việc | Luồng chính điều phối; mỗi đợt một thread, thread đợt tự mở thread con "Test & sửa" |
 
 ## 4. Đã làm
@@ -70,19 +96,21 @@ quy tắc làm việc và danh bạ thread: [`../CLAUDE.md`](../CLAUDE.md).
 | 3D đợt 2 | 12 lệnh: sweep, loft, cắt / bo / vát / làm rỗng, xoay / đối xứng / căn 3D, UCS, va chạm; danh sách cạnh / mặt | `full/ve-3d-dot-2` → `full/ve-3d-test-2` (6 lỗi) | [`ve-3d-dot-2.md`](ban-giao/ve-3d-dot-2.md), [`ve-3d-test-2.md`](ban-giao/ve-3d-test-2.md) |
 | 3D đợt 3 | 3 lệnh: dựng 3D từ mặt bằng, mặt cắt, hình chiếu (API .NET, không gọi FLATSHOT); skill `ve-3d-kien-truc` | `full/ve-3d-dot-3` → `full/ve-3d-test-3` (13 lỗi) | [`ve-3d-dot-3.md`](ban-giao/ve-3d-dot-3.md), [`ve-3d-test-3.md`](ban-giao/ve-3d-test-3.md) |
 | Test tổng thể | Rà chéo gói × 3 đợt (1 lỗi), 11 test rà chéo, checklist tổng; lượt sửa 3 điểm đã chốt | `full/test-tong-the` | [`ban-giao/test-tong-the.md`](ban-giao/test-tong-the.md) |
+| Nâng cấp A → E (13/11) | A: `draw_solid`, dựng 3D nhận layer tên khác, cột, nhiều tầng, lan can, `array_rect` số tầng; B: sửa hình 2D (kéo giãn, bẻ gãy, kéo dài, chia đều, nhóm, chép thuộc tính, bo / vát polyline + cung, offset hai phía, nối có dung sai); C: tiện ích 2D (hatch bấm điểm, kích thước mặt bằng, thống kê block, bảng diện tích, tìm & thay, in nhiều layout); D: dầm, tường cong, PRESSPULL, STL, bảng khối lượng / va chạm; E: cầu thang, mái | `full/nang-cap-{a..e}` → `-test` → `full/nang-cap-tong-the` | `ban-giao/nang-cap-*.md`, `test-tong-the-nang-cap.md`, `kiem-tra-doc-lap-nang-cap.md` |
 
-Mỗi nhánh tách từ commit cuối của nhánh trước, nên `full/test-tong-the` chứa toàn bộ.
+Mỗi nhánh tách từ commit cuối của nhánh trước, nên `full/nang-cap-tong-the` chứa toàn bộ.
 
-## 5. Chi phí token mỗi lượt đầu phiên (ước, ~3,5 ký tự / token)
+## 5. Chi phí token mỗi lượt đầu phiên (mô tả lệnh + system prompt)
 
-| Gói | Mô tả lệnh + system prompt |
-| --- | --- |
-| 2D | ~36k |
-| 3D | ~37k |
-| Full | ~51k |
+| Gói | Trước chuỗi nâng cấp (`19944df`) | Sau (`f1e7123`) |
+| --- | --- | --- |
+| 2D | 34,4k | 38,7k |
+| 3D | 35,7k | 39,7k |
+| Full | 49,7k | 57,5k |
 
-Riêng phần 3D ~15k (kế hoạch ước 5–6k). Phần này nằm trong prefix được cache: các lượt sau trong 5 phút chỉ tốn ~10%.
-Cách giảm thêm còn lại: gộp 6 lệnh khối cơ bản thành 1 lệnh (~−2k, đổi tên lệnh); đã chốt làm trong đợt A nâng cấp.
+Đo cùng một cách ở thread "Test tổng thể nâng cấp" (bảng cũ ~36k / ~37k / ~51k đếm hơi khác). Gộp 6 lệnh dựng khối ở
+đợt A chỉ bớt ~1,1k (ước cũ ~2k), phần lệnh mới dùng lại khoản đó. Phần này nằm trong prefix được cache: các lượt sau
+trong 5 phút chỉ tốn ~10%.
 
 ## 6. Nhật ký
 
@@ -102,3 +130,34 @@ Cách giảm thêm còn lại: gộp 6 lệnh khối cơ bản thành 1 lệnh (
   - chủ dự án cho đóng các thread đã xong việc: 3D đợt 1, 2, 3 + 3 thread con Test & sửa, Kiểm tra độc lập. Còn mở:
     Gói dịch vụ, Test tổng thể (nhận lỗi 3D khi thử thật), Bộ cài thử nội bộ, QnA;
   - chủ dự án cho chạy liền chuỗi nâng cấp A → E; mở thread Nâng cấp đợt A.
+  - chuỗi nâng cấp A → E chạy liền 14h28 → 23h50 (~$96, 22 lỗi sửa trong Test & sửa), test tổng thể nâng cấp (3 lỗi chéo).
+- **14/11/2026 (rạng sáng):**
+  - kiểm tra độc lập nâng cấp lượt 1: 31 lỗi (0 nặng, 7 vừa, 24 nhẹ); chuyển về 6 thread sửa; lượt 2: 29 sửa đúng,
+    2 chấp nhận, 1 lỗi mới; lượt 3: sửa đúng, 0 lỗi mở. Nhánh tích hợp cuối `full/nang-cap-tong-the` @ `f7f32ad`, CI xanh;
+  - bộ cài thử nội bộ build lại có đủ nâng cấp (CI 43481896536); báo cáo [`bao-cao-nang-cap-14-11.md`](bao-cao-nang-cap-14-11.md).
+- **14/11/2026 (chiều):** mở thread Bảo mật (`session_01D56HmJNNATNAVHRZejGSMu`) để chủ dự án trao đổi về khóa key, máy chủ
+  kích hoạt và quản lý thiết bị.
+- **14/11/2026 (tối):** chủ dự án thử bộ cài thử nội bộ, gặp lỗi bộ cài không đóng được ứng dụng đang dùng file (hộp tiếng
+  Anh của Inno). Thread Test tổng thể nâng cấp sửa (TT-01), thread Bộ cài thử nội bộ build lại (CI 43614348802).
+- **14–15/11/2026:** chủ dự án báo khung chat giật. Thread Tối ưu khung chat sửa (tạm ngừng vẽ tin ngoài màn hình, chỉ
+  dựng lại đoạn cuối khi Claude đang viết), thêm bộ icon nét kiểu AutoCAD và thu gọn cân đối theo yêu cầu thêm.
+  - Thread bị chế độ Auto chặn commit khoảng 10 giờ; thread con "Commit & CI" lưu hộ: `full/toi-uu-khung-chat` @
+    `983d4c2`, CI 43669231795 xanh (lượt đầu đỏ vì 2 UI test cũ chưa theo icon mới).
+  - Gộp vào nhánh tích hợp (`012ed29`); bộ cài thử bản 3 (CI 43670758598). Đóng 13 thread đã xong.
+- **25/11/2026:** chủ dự án thử thật bản 3: chạy ổn; chốt làm đợt F ngay (4 đợt) và yêu cầu kiểm tra trước khi báo hoàn
+  thành. Tạo nhánh gốc `full/nang-cap-f-goc` @ `2dbeee2` có file quyền; mở thread Nâng cấp đợt F1
+  (`session_01D56HmFAo4dZ7c8sbeNB9eh`).
+  - 15h51: đợt F1 xong (viết + Test & sửa, 4 lỗi sửa, ~$21, `full/nang-cap-f1-test` @ `b2e6431`, CI 45578496260 xanh).
+    Chủ dự án chốt thêm: con số phải xác nhận; bản thang và bản mái dốc 120 mm; F2 + F3 chạy cùng lúc; chạy liền không
+    hỏi lại. 15h53 mở F2 (`session_01D56HmFcYrzsme7GoBm8tNC`) và F3 (`session_01D56HmFBfQ8mQ37WLtVFweF`).
+  - Ba thread mở mới sau 15h53 (F3 lần 1, F3 lần 2, Test & sửa F2) bị chế độ Auto từ chối `git commit`, cho dừng. Việc
+    chuyển cho các thread đã lưu được: thread Test & sửa F1 viết F3, thread F1 rà F2, thread F2 rà F3.
+  - 17h08: đợt F2 xong (7 lỗi sửa, ~$23, `full/nang-cap-f2-test` @ `c9fdc08`, CI 45590233177 xanh).
+  - 17h35: đợt F3 xong (2 lỗi sửa, ~$14, `full/nang-cap-f3-test` @ `53e18b5`, CI 45595009744 xanh).
+  - 17h40: giao đợt F4 cho thread F1 (nhánh `full/nang-cap-f4`): gộp F2 + F3 trước, rồi mở chat nhanh + xuất Excel.
+    Con số và quyết định chờ chủ dự án duyệt gom ở [`dot-f-cho-duyet.md`](dot-f-cho-duyet.md).
+  - 18h20: F4 viết xong (`full/nang-cap-f4` @ `d6c15d6`, CI 45601966332 xanh, $14,6); 18h22 giao thread Test & sửa F1 rà
+    trên `full/nang-cap-f4-test`.
+  - 18h21–18h50: các thread dừng vì chạm giới hạn sử dụng 5 giờ; chủ dự án cho chạy tiếp sau khi giới hạn đặt lại.
+  - 19h17: đợt F4 xong (3 lỗi sửa, ~$25, `full/nang-cap-f4-test` @ `1cdf8d4`, CI 45610810220 xanh). 19h20 giao thread F2
+    làm test tổng thể đợt F trên `full/nang-cap-f-tong-the`.
