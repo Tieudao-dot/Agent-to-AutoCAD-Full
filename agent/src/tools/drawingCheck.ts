@@ -27,6 +27,7 @@ export function drawingCheckTools(b: ToolBridge): AnyTool[] {
       {
         groups: z.array(z.enum(CHECK_GROUPS)).optional().describe('Only these groups (default all).'),
         layouts: z.boolean().optional().describe('Also check the layouts (default true).'),
+        sheets: z.array(z.string().min(1)).max(50).optional().describe('Default-named layouts (Layout1…) with only a viewport to check in full as sheets (the user says they are).'),
         examples: z.number().int().min(1).max(50).optional().describe('Example handles per group (default 5).'),
         ...excelParams,
       },
@@ -43,6 +44,7 @@ export function drawingCheckTools(b: ToolBridge): AnyTool[] {
         layer: z.string().optional().describe('layer_zero / defpoints: the layer the objects go to (must exist).'),
         handles: handles.max(2000).optional().describe('Only these objects of the group (default the whole group).'),
         layouts: z.boolean().optional().describe('As in the check_drawing call the user saw (false = model only; default true).'),
+        sheets: z.array(z.string().min(1)).max(50).optional().describe('As in that check_drawing call.'),
         confirm_handles: handles.max(50).optional().describe(confirmDesc),
       },
       { destructive: true }),

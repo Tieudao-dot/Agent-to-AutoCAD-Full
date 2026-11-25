@@ -32,6 +32,8 @@ namespace ClaudeCAD.Plugin.Drawing
             public double MmPerUnit = 1;
             public string Units;
             public int Scanned, Total, UntouchedLayouts;
+            /// <summary>Sửa KFG-08 (lần 2): the default layouts with only viewports, named in the note (not checked as sheets).</summary>
+            public readonly List<string> UnusedTabs = new List<string>();
 
             public void Hit(string group, ObjectId id, string layer = null, string layout = null)
             {
@@ -149,7 +151,7 @@ namespace ClaudeCAD.Plugin.Drawing
         private static bool Wanted(HashSet<string> only, params string[] groups) => only == null || groups.Any(only.Contains);
 
         /// <summary>The whole scan (only = the groups wanted; null = all).</summary>
-        private static CheckScan ScanDrawing(ToolContext ctx, HashSet<string> only, bool layouts = true)
+        private static CheckScan ScanDrawing(ToolContext ctx, HashSet<string> only, bool layouts = true, ICollection<string> sheets = null)
         {
             var s = new CheckScan();
             s.MmPerUnit = FloorPlanLogic.MmPerUnit(Convert.ToInt32(ctx.Db.Insunits), out s.Units);
@@ -340,7 +342,16 @@ namespace ClaudeCAD.Plugin.Drawing
                 if (model) continue;
                 // an untouched default layout (Layout1 with only AutoCAD's own viewport) is not a sheet of the user's
                 // Sửa KFG-08: a viewport the user put there makes it a sheet, whatever its name
-                if (others == 0 && ownViewports == 0 && DrawingCheckLogic.IsDefaultLayoutName(sp.layout)) { s.UntouchedLayouts++; continue; }
+                // Sửa KFG-08 (lần 2, luồng chính chọn): a default layout with nothing but viewports (AutoCAD makes one when the tab
+                // is first opened) is an unused tab: named in a note, not reported; any other object, or the user naming it in
+                // 'sheets', makes it a sheet checked in full
+                bool asked = sheets != null && sheets.Contains(sp.layout, StringComparer.OrdinalIgnoreCase);
+                if (DrawingCheckLogic.IsUnusedTab(sp.layout, others, asked))
+                {
+                    s.UntouchedLayouts++;
+                    if (ownViewports > 0) s.UnusedTabs.Add(sp.layout);
+                    continue;
+                }
                 foreach (var v in vpUnlocked) s.Hit("viewport_unlocked", v, null, sp.layout);
                 foreach (var v in vpScale) s.Hit("viewport_scale", v, null, sp.layout);
                 if (!stopped && (others > 0 || ownViewports > 0) && !hasTitle && Wanted(only, "no_title_block"))
@@ -358,7 +369,9 @@ namespace ClaudeCAD.Plugin.Drawing
                 s.Notes.Add("The drawing does not use the standard of setup_standards (no KT-ARIAL / VN-ARIAL text style): layer names, styles and text heights were not checked; its own layers and styles are not errors.");
             else if (s.Scale == null)
                 s.Notes.Add($"No dimension style {s.Prefix}-<scale> in the drawing: the text heights were not checked.");
-            if (s.UntouchedLayouts > 0) s.Notes.Add($"{s.UntouchedLayouts} empty default layout(s) (Layout1… with no viewport or object of the user) were not checked as sheets.");
+            if (s.UnusedTabs.Count > 0)
+                s.Notes.Add(DrawingCheckLogic.UnusedTabsNote(s.UnusedTabs));
+            else if (s.UntouchedLayouts > 0) s.Notes.Add($"{s.UntouchedLayouts} empty default layout(s) (Layout1…) were not checked as sheets.");
             if (stopped) s.Notes.Add($"Only the first {G2Numbers.MaxScan} objects were read ({s.Scanned} of {s.Total}); groups that need the whole drawing (no_dimensions, title blocks of the later layouts) may be incomplete.");
             return s;
         }
@@ -377,7 +390,7 @@ namespace ClaudeCAD.Plugin.Drawing
                 }
             }
             int examples = p.Int("examples", G2Numbers.ExamplesPerGroup, 1, 50);
-            var s = ScanDrawing(ctx, only, p.Bool("layouts", true));
+            var s = ScanDrawing(ctx, only, p.Bool("layouts", true), p.StringsOpt("sheets"));
 
             var groups = new List<Dictionary<string, object>>();
             var summary = new Dictionary<string, object> { ["nen_sua"] = 0, ["can_nhac"] = 0, ["goi_y"] = 0 };
@@ -451,7 +464,7 @@ namespace ClaudeCAD.Plugin.Drawing
             else layer = null;
 
             // Sửa KFG-17: the same spaces as the check the user saw (layouts: false = model only)
-            var s = ScanDrawing(ctx, new HashSet<string>(StringComparer.Ordinal) { fix }, p.Bool("layouts", true));
+            var s = ScanDrawing(ctx, new HashSet<string>(StringComparer.Ordinal) { fix }, p.Bool("layouts", true), p.StringsOpt("sheets"));
             var found = s.Of(fix);
             if (p.Has("handles"))
             {

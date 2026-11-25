@@ -311,6 +311,18 @@ namespace ClaudeCAD.Plugin.Core
         public static bool IsDefaultLayoutName(string name) =>
             !string.IsNullOrEmpty(name) && Regex.IsMatch(name.Trim(), @"^(Layout|Bố cục|Bo cuc)\s*[0-9]+$", RegexOptions.IgnoreCase);
 
+        /// <summary>
+        /// Sửa KFG-08 (lần 2): a layout not checked as a sheet: a default name (Layout1…), nothing but viewports on it (the one
+        /// AutoCAD makes when the tab is opened counts as nothing), and the user did not name it in 'sheets'.
+        /// </summary>
+        public static bool IsUnusedTab(string layout, int objectsOtherThanViewports, bool askedBySheets) =>
+            !askedBySheets && objectsOtherThanViewports == 0 && IsDefaultLayoutName(layout);
+
+        /// <summary>The note naming the unused tabs, so Claude can tell the user and check them when they are real sheets.</summary>
+        public static string UnusedTabsNote(IEnumerable<string> tabs) =>
+            $"{string.Join(", ", tabs)}: only a viewport, no title block or other object, so taken as unused tab(s) and not checked as sheets. " +
+            "If one of them is a sheet to print, call check_drawing again with sheets = its name(s) to check it in full.";
+
         /// <summary>An "A$C…" block: what AutoCAD names a block made by Paste as Block.</summary>
         public static bool IsUnnamedBlock(string name) =>
             !string.IsNullOrEmpty(name) && Regex.IsMatch(name, @"^A\$C[0-9A-Fa-f]{8}$");

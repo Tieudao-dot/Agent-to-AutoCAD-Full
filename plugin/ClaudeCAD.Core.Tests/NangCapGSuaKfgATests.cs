@@ -69,17 +69,38 @@ namespace ClaudeCAD.Core.Tests
         // ------------------------------------------------------------ KFG-08: a default name with the user's viewport
 
         [Fact]
-        public void A_default_layout_with_a_viewport_of_the_user_is_a_sheet()
+        public void A_default_layout_with_a_viewport_and_another_object_is_a_sheet()
         {
+            // Layout2 with the user's viewport and a line / text / title block: checked in full
+            Assert.False(DrawingCheckLogic.IsUnusedTab("Layout2", 1, false));
+            // a layout of another name is always a sheet
+            Assert.False(DrawingCheckLogic.IsUnusedTab("BV-01", 0, false));
             var t = Tools;
-            Assert.Contains("if (others == 0 && ownViewports == 0 && DrawingCheckLogic.IsDefaultLayoutName(sp.layout))", t);
-            Assert.Contains("ownViewports++;", t);
+            Assert.Contains("if (DrawingCheckLogic.IsUnusedTab(sp.layout, others, asked))", t);
             Assert.Contains("(others > 0 || ownViewports > 0) && !hasTitle", t);
             // the sheet's own viewport: Layout.GetViewports first, else the first of the block
             Assert.Contains("GetViewports()", t);
             Assert.Contains("bool isSheet = sheetVp.IsNull ? firstViewport : id == sheetVp;", t);
-            var check = Src("docs", "checklist-dot-g2.md");
-            Assert.Contains("Layout2", check);
+        }
+
+        [Fact]
+        public void A_default_layout_with_only_a_viewport_is_named_in_a_note_not_reported()
+        {
+            // the viewport AutoCAD makes when Layout1 is first opened: not reported (no title block / unlocked / scale)
+            Assert.True(DrawingCheckLogic.IsUnusedTab("Layout1", 0, false));
+            Assert.True(DrawingCheckLogic.IsUnusedTab("layout 2", 0, false));
+            // the user says it is a sheet: checked in full
+            Assert.False(DrawingCheckLogic.IsUnusedTab("Layout1", 0, true));
+            var note = DrawingCheckLogic.UnusedTabsNote(new[] { "Layout1", "Layout2" });
+            Assert.StartsWith("Layout1, Layout2: only a viewport", note);
+            Assert.Contains("sheets", note);
+            var t = Tools;
+            Assert.Contains("if (ownViewports > 0) s.UnusedTabs.Add(sp.layout);", t);
+            Assert.Contains("s.Notes.Add(DrawingCheckLogic.UnusedTabsNote(s.UnusedTabs));", t);
+            Assert.Contains("p.StringsOpt(\"sheets\")", t);
+            var ts = Src("agent", "src", "tools", "drawingCheck.ts");
+            Assert.Equal(2, ts.Split(new[] { "sheets: z.array(" }, StringSplitOptions.None).Length - 1); // check_drawing and fix_drawing
+            Assert.Contains("Layout2", Src("docs", "checklist-dot-g2.md"));
         }
 
         // ------------------------------------------------------------ KFG-16, KFG-17
@@ -90,7 +111,7 @@ namespace ClaudeCAD.Core.Tests
             var t = Tools;
             Assert.Contains("dims++; // Sửa KFG-16", t);
             Assert.DoesNotContain("if (model) dims++;", t);
-            Assert.Contains("ScanDrawing(ctx, new HashSet<string>(StringComparer.Ordinal) { fix }, p.Bool(\"layouts\", true))", t);
+            Assert.Contains("ScanDrawing(ctx, new HashSet<string>(StringComparer.Ordinal) { fix }, p.Bool(\"layouts\", true), p.StringsOpt(\"sheets\"))", t);
             var ts = Src("agent", "src", "tools", "drawingCheck.ts");
             int fix = ts.IndexOf("'fix_drawing'", StringComparison.Ordinal);
             Assert.True(ts.IndexOf("layouts: z.boolean()", fix, StringComparison.Ordinal) > fix, "fix_drawing has layouts");
