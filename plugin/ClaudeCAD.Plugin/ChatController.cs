@@ -339,6 +339,7 @@ namespace ClaudeCAD.Plugin
             Logger.Info("work mode: " + m);
             ShowPlan();
             Ui.AddNote(WorkModeLogic.ChangedNote(m, _busy));
+            if (!_busy) SchedulePrewarm(); // F4: the next message finds Claude ready with the new mode
         }
 
         private void SendOptions()
@@ -607,6 +608,49 @@ namespace ClaudeCAD.Plugin
             if (t != null) _store.Save(t);
         }
 
+        // ================================================================= nâng cấp đợt F4: prewarm
+
+        /// <summary>Delay after the assistant is ready before the Claude process is started (AutoCAD finishes opening first).</summary>
+        internal const int PrewarmDelayMs = 3000;
+        private System.Threading.Timer _prewarmTimer;
+
+        /// <summary>
+        /// Starts the Claude process ahead of the first message (the assistant only starts it, nothing is sent to Claude, no
+        /// tokens), with the plan / work mode / skills the next message carries. Only on an activated, allowed machine.
+        /// </summary>
+        private void SchedulePrewarm()
+        {
+            try
+            {
+                _prewarmTimer?.Dispose();
+                _prewarmTimer = new System.Threading.Timer(_ => MainThread.Post(() => Guard("prewarm", SendPrewarm)), null, PrewarmDelayMs, System.Threading.Timeout.Infinite);
+            }
+            catch (Exception ex) { Logger.Warn("prewarm not scheduled: " + ex.Message); }
+        }
+
+        private void SendPrewarm()
+        {
+            if (_busy || !Activation.IsAllowed) return;
+            var mode = WorkModeLogic.Normalize(_settings.WorkMode);
+            var plan = WorkModeLogic.EffectivePlan(Activation.Plan, mode);
+            _ipc.Send(new Dictionary<string, object>
+            {
+                ["type"] = "prewarm",
+                ["context"] = PlanContext(plan, WorkModeLogic.Limiting(Activation.Plan, mode)),
+                ["skills"] = ChatSkills().Cast<object>().ToList(),
+            });
+        }
+
+        /// <summary>service_plan / plan_tools / work_mode as a message carries them (F1); shared by Send and the prewarm.</summary>
+        private static Dictionary<string, object> PlanContext(string servicePlan, string limitingMode)
+        {
+            var ctx = new Dictionary<string, object>();
+            if (limitingMode != null) ctx["work_mode"] = limitingMode;
+            ctx["service_plan"] = servicePlan;
+            if (servicePlan != PlanLogic.PlanFull) ctx["plan_tools"] = PlanLogic.AllowedTools(servicePlan).Cast<object>().ToList();
+            return ctx;
+        }
+
         private void SendSwitchSession()
         {
             var m = new Dictionary<string, object> { ["type"] = "switch_session" };
@@ -783,9 +827,7 @@ namespace ClaudeCAD.Plugin
             _turnWorkMode = WorkModeLogic.Normalize(_settings.WorkMode);
             var servicePlan = WorkModeLogic.EffectivePlan(Activation.Plan, _turnWorkMode);
             var limitingMode = WorkModeLogic.Limiting(Activation.Plan, _turnWorkMode);
-            if (limitingMode != null) ctx["work_mode"] = limitingMode;
-            ctx["service_plan"] = servicePlan;
-            if (servicePlan != PlanLogic.PlanFull) ctx["plan_tools"] = PlanLogic.AllowedTools(servicePlan).Cast<object>().ToList();
+            foreach (var kv in PlanContext(servicePlan, limitingMode)) ctx[kv.Key] = kv.Value; // F4: the same as the prewarm
             var notes = NotesFor(doc);
             if (notes != null) ctx["notes"] = notes;
             if (!_settings.VisualCheck) ctx["visual_check"] = false;
@@ -2132,6 +2174,7 @@ namespace ClaudeCAD.Plugin
             if (now == planBefore || !Activation.IsActivated) return;
             Logger.Info($"service plan changed: {planBefore} -> {now}");
             Ui.ShowToast("Gói đã đổi sang " + PlanLogic.Label(now), ChatControl.ToastKind.Info, 8);
+            if (!_busy) SchedulePrewarm(); // F4: Claude waits ready with the tools of the new plan
         }
 
         /// <summary>The answer of a manual check, on whichever 🔒 card is live.</summary>
@@ -2465,6 +2508,7 @@ namespace ClaudeCAD.Plugin
                         string info = msg.TryGetValue("info", out var i) ? i as string : null;
                         if (!string.IsNullOrEmpty(info)) _readyInfo = info;
                         Ui.SetConnection("Đã kết nối" + (string.IsNullOrEmpty(info) ? "" : " · " + info), true);
+                        SchedulePrewarm(); // F4: the assistant (re)started: have Claude ready for the first message
                         break;
                     }
                 case "skills_reloaded":
@@ -2721,6 +2765,7 @@ namespace ClaudeCAD.Plugin
         {
             try
             {
+                _prewarmTimer?.Dispose();
                 SaveTranscript();
                 _settings.Save();
                 var dm = AcApp.DocumentManager;

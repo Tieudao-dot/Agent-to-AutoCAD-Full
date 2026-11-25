@@ -135,7 +135,7 @@ namespace ClaudeCAD.Plugin.Drawing
             }
         }
 
-        private static object BlockSchedule(ToolContext ctx, Params p)
+        internal static object BlockSchedule(ToolContext ctx, Params p)
         {
             var names = p.StringsOpt("names");
             var layers = p.StringsOpt("layers");
@@ -185,6 +185,7 @@ namespace ClaudeCAD.Plugin.Drawing
                 var t = InsertSchedule(ctx, p, Util2DLogic.BlockTable(rows, byAttr), widths, "THỐNG KÊ BLOCK");
                 res["handles"] = t["handles"];
             }
+            ExportExcel(ctx, p, "block_schedule", () => Util2DLogic.BlockTable(rows, byAttr), res); // nâng cấp đợt F4
             return res;
         }
 
@@ -354,6 +355,7 @@ namespace ClaudeCAD.Plugin.Drawing
                 var t = InsertSchedule(ctx, p, Util2DLogic.AreaTable(rows, groupBy, decimals, mmPerUnit), widths, groupBy == "room" ? "BẢNG DIỆN TÍCH PHÒNG" : "BẢNG DIỆN TÍCH THEO LAYER");
                 res["handles"] = t["handles"];
             }
+            ExportExcel(ctx, p, "area_schedule", () => Util2DLogic.AreaTable(rows, groupBy, decimals, mmPerUnit), res); // nâng cấp đợt F4
             return res;
         }
 

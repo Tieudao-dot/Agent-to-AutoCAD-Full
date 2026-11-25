@@ -75,6 +75,7 @@ Trang in: `create_sheet` (khổ A3 / A1…, khung tên điền công trình, h�
 
 - Tên phòng (IN HOA, ví dụ "PHÒNG NGỦ") ở tâm phòng, `add_text` justify `middle_center`, cao theo bảng mục 4, layer `A-TEXT`, style `KT-ARIAL`.
 - Dòng diện tích ngay dưới, cách 1.5 × chiều cao chữ: `S = 21.85 m²` — diện tích **thông thủy** (đo bằng `measure_area` của polyline nét tường trong, hoặc tính (dài − dày tường) × (rộng − dày tường)), 2 chữ số thập phân.
+- Bảng diện tích các phòng / thống kê block: `area_schedule` (group_by "room") / `block_schedule`; khách cần file Excel thì thêm `excel: true` (file cạnh bản vẽ).
 
 ## 7. Ví dụ hoàn chỉnh: phòng 4x6 m, tường 220, cửa đi 900 ở cạnh dài, ghi kích thước (tỷ lệ 1:100)
 

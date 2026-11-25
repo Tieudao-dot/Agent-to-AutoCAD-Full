@@ -78,6 +78,18 @@ export const point = z
   .max(3)
   .describe('Point [x, y] or [x, y, z] in millimetres, current UCS. Missing z = 0. Example: [4000, 3600]');
 
+/**
+ * Nâng cấp đợt F4: the schedules (block_schedule, area_schedule, volume_schedule, check_interference) also write their
+ * table to an Excel file (Core/Xlsx.cs; no Excel needed on the machine). Same file rules as export_stl.
+ */
+export const excelParams = {
+  excel: z
+    .union([z.boolean(), z.string().min(1)])
+    .optional()
+    .describe('Also write the table to Excel (.xlsx): true = <drawing>-<table>.xlsx next to the drawing, or a file name / path ending in .xlsx.'),
+  overwrite: z.boolean().optional().describe('Replace an existing Excel file (only after asking the user).'),
+};
+
 /** Nâng cấp đợt F1: points of the few tools that ignore the UCS on purpose (set_ucs itself, plot windows, viewport centers). */
 export const wcsPoint = z
   .array(z.number())

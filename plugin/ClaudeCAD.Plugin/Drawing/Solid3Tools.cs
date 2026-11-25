@@ -506,6 +506,7 @@ namespace ClaudeCAD.Plugin.Drawing
                 var t = InsertSchedule(ctx, p, Solid3Logic.VolumeTable(res, decimals, f, withArea), withArea ? new[] { 5.0, 16, 7, 11, 13, 13, 13 } : new[] { 5.0, 16, 7, 11, 13, 13 }, "BẢNG KHỐI LƯỢNG 3D");
                 r["handles"] = t["handles"];
             }
+            ExportExcel(ctx, p, "volume_schedule", () => Solid3Logic.VolumeTable(res, decimals, f, withArea), r); // nâng cấp đợt F4 (also on the 3D plan)
             return r;
         }
     }

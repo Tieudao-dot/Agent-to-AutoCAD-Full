@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { cadTool, entityProps, handles, point, type AnyTool, type ToolBridge } from './common.js';
+import { cadTool, entityProps, excelParams, handles, point, type AnyTool, type ToolBridge } from './common.js';
 
 const table = {
   table_position: point.optional().describe('Insert the result as a TABLE with its top-left corner here (omit = only return the numbers).'),
@@ -41,6 +41,7 @@ export function utility2dTools(b: ToolBridge): AnyTool[] {
         layers: z.array(z.string()).optional(),
         group_by_attribute: z.string().optional(),
         ...table,
+        ...excelParams,
       }),
 
     cadTool(b, 'area_schedule',
@@ -56,6 +57,7 @@ export function utility2dTools(b: ToolBridge): AnyTool[] {
         decimals: z.number().int().min(0).max(4).optional(),
         allow_nested: z.boolean().optional().describe('Insert the table even when an area contains others (counted twice); only after asking.'),
         ...table,
+        ...excelParams,
       }),
 
     cadTool(b, 'find_replace_text',

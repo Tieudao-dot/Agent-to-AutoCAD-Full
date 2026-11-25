@@ -327,6 +327,16 @@ export interface NewSessionMessage {
   type: 'new_session';
 }
 
+/**
+ * Nâng cấp đợt F4: start the Claude process before the first message, with the plan / work mode / skills the next
+ * message will carry, so that message does not wait for the start. Nothing is sent to Claude (no tokens).
+ */
+export interface PrewarmMessage {
+  type: 'prewarm';
+  context?: UserContext;
+  skills?: string[];
+}
+
 export interface ToolError {
   code: ErrorCode;
   message: string;
@@ -353,6 +363,7 @@ export type PluginToSidecar =
   | SetOptionsMessage
   | SwitchSessionMessage
   | ReloadSkillsMessage
+  | PrewarmMessage
   | ToolResponse;
 
 const MEDIA_TYPES = new Set(['image/png', 'image/jpeg', 'image/gif', 'image/webp']);
@@ -483,6 +494,16 @@ export function parsePluginMessage(value: unknown): PluginToSidecar {
       return { type: 'cancel' };
     case 'new_session':
       return { type: 'new_session' };
+    case 'prewarm': {
+      const context = parseContext(m.context);
+      return {
+        type: 'prewarm',
+        ...(context ? { context } : {}),
+        ...(Array.isArray(m.skills)
+          ? { skills: [...new Set(m.skills.filter((x: unknown): x is string => typeof x === 'string' && /^[a-z0-9][a-z0-9-]{0,63}$/.test(x)))] }
+          : {}),
+      };
+    }
     default:
       throw new ProtocolError(`unknown message type: ${JSON.stringify(m.type)}`);
   }

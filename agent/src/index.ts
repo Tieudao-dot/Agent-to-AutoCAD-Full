@@ -111,6 +111,9 @@ async function main(): Promise<void> {
       case 'new_session':
         session.reset();
         break;
+      case 'prewarm':
+        session.prewarm(msg);
+        break;
     }
   });
   conn.on('invalid', (err, line) => {

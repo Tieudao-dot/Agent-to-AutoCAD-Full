@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { angle, cadTool, entityProps, handle, handles, point, points, wcsPoint, type AnyTool, type ToolBridge } from './common.js';
+import { angle, cadTool, entityProps, excelParams, handle, handles, point, points, wcsPoint, type AnyTool, type ToolBridge } from './common.js';
 import { PLAN3D_TOOL_NAMES, plan3dTools } from './plan3d.js';
 import { SOLID3_TOOL_NAMES, STAIR_ROOF_TOOL_NAMES, solid3Tools, solidTable } from './solids3.js';
 import { RENDER_TOOL_NAMES, renderTools } from './render.js';
@@ -353,6 +353,7 @@ function solidTools2(b: ToolBridge): AnyTool[] {
         other_handles: handles.max(SOLID2_LIMITS.MaxInterferenceSolids).optional(),
         ...solidTable,
         decimals: z.number().int().min(0).max(6).optional(),
+        ...excelParams,
       }),
   ];
 }

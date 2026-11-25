@@ -129,7 +129,8 @@ describe('AgentSession', () => {
     assert.equal(s.busy, false);
     // permission / isolation configuration (spec §5)
     assert.equal(calls.options.permissionMode, 'dontAsk');
-    assert.deepEqual(calls.options.tools, ['Read', 'Skill']);
+    // F4: + ToolSearch (it only loads the schema of a deferred ClaudeCAD tool; no file, shell or web access)
+    assert.deepEqual(calls.options.tools, ['Read', 'Skill', 'ToolSearch']);
     assert.ok(calls.options.disallowedTools.includes('Bash'));
     assert.ok(calls.options.disallowedTools.includes('WebSearch'));
     assert.ok(calls.options.allowedTools.includes('mcp__claudecad'));

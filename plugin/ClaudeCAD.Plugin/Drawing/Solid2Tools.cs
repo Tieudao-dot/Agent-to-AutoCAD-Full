@@ -936,6 +936,9 @@ namespace ClaudeCAD.Plugin.Drawing
                     if (clashes > clashRows.Count) r["table_note"] = $"The table lists the first {clashRows.Count} of {clashes} clashes.";
                 }
             }
+            // nâng cấp đợt F4: the clash list to Excel (also on the 3D plan); no clash → no file, a note instead
+            if (XlsxLogic.Requested(p.Get("excel"), "check_interference") != null && clashRows.Count == 0) r["excel_note"] = "No clash: no Excel file was written.";
+            else ExportExcel(ctx, p, "check_interference", () => Solid3Logic.ClashTable(clashRows, p.Int("decimals", 3, 0, 6), mmPerUnit), r);
             return r;
         }
 

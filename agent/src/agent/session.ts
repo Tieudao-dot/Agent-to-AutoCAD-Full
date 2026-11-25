@@ -5,7 +5,7 @@ import {
   type SDKMessage,
   type SDKUserMessage,
 } from '@anthropic-ai/claude-agent-sdk';
-import type { ServicePlan, SidecarToPlugin, UserMessage, WorkMode } from '../ipc/protocol.js';
+import type { PrewarmMessage, ServicePlan, SidecarToPlugin, UserMessage, WorkMode } from '../ipc/protocol.js';
 import { applyUserConfirmation, confirmationError, createdHandles, newlyAffected, planLayersOf, refusedForConfirmation, windowChanged, type GateState } from './confirmation.js';
 import { toSdkUserMessage } from './content.js';
 import type { ToolBridge } from '../tools/common.js';
@@ -32,6 +32,15 @@ export interface SessionConfig {
   /** Injection point for tests. */
   queryFn?: QueryFn;
 }
+
+/**
+ * Nâng cấp đợt F4: the prewarmed Claude process. A process that ends while waiting is started again after RetryMs,
+ * at most MaxRestarts times in a row without a turn (a broken install does not loop forever).
+ */
+export const PREWARM = { RetryMs: 5000, MaxRestarts: 3 } as const;
+
+/** Nâng cấp đợt F4: Claude Code's tool search, always on (deferred tools listed by name, ToolSearch loads them). */
+export const TOOL_SEARCH = 'true';
 
 /** Built-in Claude Code tools we never want in a CAD session (spec §5). */
 export const DISALLOWED_BUILTINS = [
@@ -126,6 +135,11 @@ export class AgentSession {
   private workMode?: WorkMode;
   private planTools?: string[];
   private loadedPlanKey?: string;
+  // F4: the palette asked for a prewarmed process; the running one was started by prewarm and had no turn yet
+  private prewarmWanted = false;
+  private prewarmOnly = false;
+  private prewarmRestarts = 0;
+  private prewarmTimer?: ReturnType<typeof setTimeout>;
 
   constructor(private readonly cfg: SessionConfig) {
     this.defaultModel = cfg.model;
@@ -242,13 +256,14 @@ export class AgentSession {
       ...(this.cfg.effort ? { effort: this.cfg.effort as Options['effort'] } : {}),
       mcpServers: { [MCP_SERVER_NAME]: server },
       strictMcpConfig: true,
-      // Base tool set: only Read (to read skill files) and Skill. Everything CAD comes from our MCP server.
-      tools: ['Read', 'Skill'],
+      // Base tool set: only Read (to read skill files), Skill and ToolSearch (F4: loads the schema of a deferred CAD tool).
+      // Everything CAD comes from our MCP server.
+      tools: ['Read', 'Skill', 'ToolSearch'],
       disallowedTools: DISALLOWED_BUILTINS,
       // Auto-allow our tools; Read ONLY inside the generated skills plugin (relative to cwd = workDir).
       // Anything else is denied without prompting (dontAsk): text inside a received drawing cannot make
       // Claude read credentials or other files of this PC.
-      allowedTools: [`mcp__${MCP_SERVER_NAME}`, `mcp__${MCP_SERVER_NAME}__*`, `Read(./${SKILLS_PLUGIN_NAME}/**)`, 'Skill'],
+      allowedTools: [`mcp__${MCP_SERVER_NAME}`, `mcp__${MCP_SERVER_NAME}__*`, `Read(./${SKILLS_PLUGIN_NAME}/**)`, 'Skill', 'ToolSearch'],
       permissionMode: 'dontAsk',
       permissionPrompts: 'none',
       // Isolation: ignore ~/.claude settings, CLAUDE.md, project MCP configs.
@@ -261,7 +276,8 @@ export class AgentSession {
       promptSuggestions: true,
       persistSession: true,
       stderr: (data) => this.cfg.log(`[claude] ${data.trimEnd()}`),
-      env: { ...process.env, CLAUDE_AGENT_SDK_CLIENT_APP: `claudecad/${this.cfg.version}` },
+      // F4: tool search on: only ALWAYS_LOADED_TOOLS (+ the card tools) are sent in full, the rest by name
+      env: { ...process.env, CLAUDE_AGENT_SDK_CLIENT_APP: `claudecad/${this.cfg.version}`, ENABLE_TOOL_SEARCH: TOOL_SEARCH },
     };
     if (resume) options.resume = resume;
     return options;
@@ -282,6 +298,50 @@ export class AgentSession {
     this.q = q;
     this.input = input;
     void this.consume(q, gen);
+  }
+
+  /**
+   * Nâng cấp đợt F4: starts the Claude process now with the plan, work mode and skills the next message will carry, so
+   * the first message does not wait for it. Nothing is sent to Claude, so no tokens are used. A message with another
+   * plan / mode / skills restarts it as before (resumed conversation); a running turn or process is left alone.
+   */
+  prewarm(msg: PrewarmMessage): void {
+    this.prewarmWanted = true;
+    if (this.turnActive || this.q) return;
+    const plan = msg.context?.service_plan;
+    if (plan) {
+      this.servicePlan = plan;
+      this.planTools = msg.context?.plan_tools;
+      this.workMode = msg.context?.work_mode;
+    }
+    if (msg.skills) this.chatSkills = msg.skills;
+    this.startPrewarmed();
+  }
+
+  /** True while a prewarmed process waits for its first message (tests, logs). */
+  get prewarmed(): boolean {
+    return !!this.q && this.prewarmOnly;
+  }
+
+  private startPrewarmed(): void {
+    try {
+      this.ensureStarted();
+      this.prewarmOnly = true;
+      this.cfg.log('prewarm: Claude process started, waiting for the first message (no request sent)');
+    } catch (err) {
+      this.cfg.log(`prewarm failed: ${(err as Error).message}`);
+    }
+  }
+
+  /** A prewarmed process is wanted and none runs: start one after RetryMs (a crash loop stops at MaxRestarts). */
+  private schedulePrewarm(): void {
+    if (!this.prewarmWanted || this.prewarmTimer || this.prewarmRestarts > PREWARM.MaxRestarts) return;
+    this.prewarmTimer = setTimeout(() => {
+      this.prewarmTimer = undefined;
+      if (this.q || this.turnActive) return;
+      this.startPrewarmed();
+    }, PREWARM.RetryMs);
+    this.prewarmTimer.unref?.();
   }
 
   /** Sends one user turn (plain text form, kept for callers and tests). */
@@ -338,6 +398,8 @@ export class AgentSession {
       this.cfg.emit({ type: 'turn_end', error: `Không khởi tạo được phiên Claude: ${(err as Error).message}` });
       return; // the list is remembered only once Claude really started with it (the note is not lost)
     }
+    this.prewarmOnly = false;
+    this.prewarmRestarts = 0;
     if (usable) {
       this.lastSentSkills = usable;
       if (this.sessionId) this.skillsBySession.set(this.sessionId, usable);
@@ -390,7 +452,10 @@ export class AgentSession {
         if (opts.effort) await q.applyFlagSettings({ effortLevel: (resetEffort ? null : opts.effort) as never });
       } catch (err) {
         this.cfg.log(`set_options failed live, will apply on next session: ${(err as Error).message}`);
-        if (!this.turnActive) this.closeQuery(); // next message starts a query with the new options (resumed)
+        if (!this.turnActive) {
+          this.closeQuery(); // next message starts a query with the new options (resumed)
+          this.schedulePrewarm(); // F4
+        }
       }
     }
     this.cfg.emit({ type: 'options', ...(this.cfg.model ? { model: this.cfg.model } : {}), ...(this.cfg.effort ? { effort: this.cfg.effort } : {}) });
@@ -403,7 +468,10 @@ export class AgentSession {
    */
   reloadSkills(): void {
     if (this.turnActive) this.reloadPending = true;
-    else this.closeQuery(); // sessionId is kept → resumed on the next message
+    else {
+      this.closeQuery(); // sessionId is kept → resumed on the next message
+      this.schedulePrewarm(); // F4
+    }
     const loaded = skillsForPlan(this.cfg.skillsDir, this.chatSkills ? librarySkills(this.cfg.skillsDir).filter((x) => this.chatSkills!.includes(x)) : enabledSkills(this.cfg.skillsDir), this.servicePlan);
     this.cfg.emit({ type: 'skills_reloaded', skills: loaded });
   }
@@ -423,6 +491,7 @@ export class AgentSession {
     // the list that conversation was last sent (its "−" / "+" note stays right); unknown → no note
     this.lastSentSkills = sessionId ? this.skillsBySession.get(sessionId) : undefined;
     this.sessionId = sessionId;
+    this.schedulePrewarm(); // F4: the other drawing's conversation waits ready too
   }
 
   /** Stop button: interrupts the running turn cleanly (spec §5). */
@@ -461,9 +530,13 @@ export class AgentSession {
     this.turnHadText = true;
     this.lastSentSkills = undefined;
     this.cfg.emit({ type: 'session_reset' });
+    this.schedulePrewarm(); // F4: the new chat waits ready too
   }
 
   close(): void {
+    this.prewarmWanted = false;
+    if (this.prewarmTimer) clearTimeout(this.prewarmTimer);
+    this.prewarmTimer = undefined;
     this.closeQuery();
   }
 
@@ -501,7 +574,9 @@ export class AgentSession {
           this.sendMessage(msg);
           return;
         }
-        this.cfg.emit({ type: 'agent_error', message: `Phiên Claude bị lỗi: ${(err as Error).message}` });
+        // F4: a prewarmed process that fails before any message only goes to the log (it is started again)
+        if (this.prewarmOnly && !this.turnActive) this.cfg.log('prewarmed Claude process failed before the first message');
+        else this.cfg.emit({ type: 'agent_error', message: `Phiên Claude bị lỗi: ${(err as Error).message}` });
       }
     } finally {
       if (gen === this.generation) {
@@ -510,6 +585,11 @@ export class AgentSession {
         this.input?.close();
         this.input = undefined;
         if (this.turnActive) this.finishTurn({ error: 'Tiến trình Claude kết thúc bất thường. Gửi lại yêu cầu để tiếp tục.' });
+        // F4: keep one waiting; a process that died before any turn counts towards the restart limit
+        if (this.prewarmOnly) this.prewarmRestarts++;
+        else this.prewarmRestarts = 0;
+        this.prewarmOnly = false;
+        if (!this.turnActive) this.schedulePrewarm();
       }
     }
   }
@@ -525,6 +605,7 @@ export class AgentSession {
     if (this.reloadPending) {
       this.reloadPending = false;
       this.closeQuery();
+      this.schedulePrewarm(); // F4
     }
   }
 

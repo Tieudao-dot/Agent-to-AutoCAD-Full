@@ -23,6 +23,29 @@ import { viewTools } from './view.js';
 export const MCP_SERVER_NAME = 'claudecad';
 
 /**
+ * Nâng cấp đợt F4: the tools Claude gets with their full description and schema when a chat opens (the ones nearly
+ * every task uses). Every other ClaudeCAD tool of the plan is still there, listed by name only (deferred behind the
+ * built-in ToolSearch): Claude loads its schema with ToolSearch when it needs it, then calls it as usual. A name of
+ * another plan is simply not on the machine's list. The card tools (interaction.ts) are always loaded too.
+ */
+export const ALWAYS_LOADED_TOOLS: readonly string[] = [
+  // reading, layers, view, the batch
+  'get_drawing_info', 'list_entities', 'get_entity', 'list_layers', 'create_layer', 'batch_execute', 'capture_view', 'zoom_extents',
+  // drawing and changing
+  'draw_line', 'draw_polyline', 'draw_rectangle', 'draw_circle', 'move_entities', 'copy_entities', 'erase_entities', 'set_entity_props',
+  // 2D
+  'add_text', 'add_dim_linear', 'offset_entity',
+  // 3D
+  'draw_solid', 'extrude', 'solid_subtract', 'get_solid_info', 'set_view_3d', 'build_3d_from_plan',
+];
+
+/** Marks a tool as always loaded (Claude Code reads _meta["anthropic/alwaysLoad"]); others stay deferred. */
+export function withLoading(t: AnyTool, always: boolean): AnyTool {
+  if (!always) return t;
+  return { ...t, _meta: { ...(t._meta ?? {}), 'anthropic/alwaysLoad': true } } as AnyTool;
+}
+
+/**
  * Every ClaudeCAD tool, in the order Claude sees them. allowed = the tools of this machine's service plan (sent by
  * the plugin): the others are left out to save tokens. The plugin's dispatcher refuses them anyway (NOT_IN_PLAN).
  */
@@ -46,7 +69,8 @@ export function buildTools(bridge: ToolBridge, allowed?: readonly string[], plan
     ...systemTools(bridge),
   ];
   const kept = allowed ? all.filter((t) => new Set(allowed).has(t.name)) : all;
-  return plan ? kept.map((t) => trimForPlan(t, plan)) : kept;
+  const always = new Set(ALWAYS_LOADED_TOOLS);
+  return (plan ? kept.map((t) => trimForPlan(t, plan)) : kept).map((t) => withLoading(t, always.has(t.name)));
 }
 
 /**
@@ -92,6 +116,6 @@ export function createCadServer(bridge: ToolBridge, version: string, emit?: (msg
   return createSdkMcpServer({
     name: MCP_SERVER_NAME,
     version,
-    tools: [...buildTools(bridge, allowed, plan), ...(emit ? interactionTools(emit, skillPlan ?? plan) : [])],
+    tools: [...buildTools(bridge, allowed, plan), ...(emit ? interactionTools(emit, skillPlan ?? plan).map((t) => withLoading(t, true)) : [])],
   });
 }

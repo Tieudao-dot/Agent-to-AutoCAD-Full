@@ -869,6 +869,28 @@ namespace ClaudeCAD.Plugin
                     : new SelfTestRules.Verdict(false, string.Join("; ", errs));
             });
 
+            // Nâng cấp đợt F4: block_schedule with excel writes an .xlsx (the F2 step above inserted CUA-DI-900); it is read back
+            Check("Nâng cấp đợt F4: thống kê block xuất file Excel (.xlsx) đọc lại được", () =>
+            {
+                string xlsx = Path.Combine(dir, "selftest-f4.xlsx");
+                Dictionary<string, object> r;
+                using (doc.LockDocument())
+                using (var tr = doc.TransactionManager.StartTransaction())
+                {
+                    r = (Dictionary<string, object>)DrawingService.BlockSchedule(new ToolContext(doc, tr, false, null),
+                        new Params("block_schedule", new Dictionary<string, object> { ["excel"] = xlsx, ["overwrite"] = true }));
+                    tr.Abort();
+                }
+                if (!File.Exists(xlsx)) return new SelfTestRules.Verdict(false, "không có file " + xlsx);
+                string sheet;
+                using (var zip = System.IO.Compression.ZipFile.OpenRead(xlsx))
+                using (var rd = new StreamReader(zip.GetEntry("xl/worksheets/sheet1.xml").Open(), Encoding.UTF8)) sheet = rd.ReadToEnd();
+                bool ok = sheet.Contains("Tên block") && sheet.Contains("CUA-DI-900");
+                var ex = (Dictionary<string, object>)r["excel"];
+                return ok ? new SelfTestRules.Verdict(true, $"{ex["rows"]} dòng → {Path.GetFileName(xlsx)}")
+                          : new SelfTestRules.Verdict(false, "file Excel thiếu tiêu đề cột hoặc block CUA-DI-900");
+            });
+
             string versionFile = Path.Combine(dir, "version-copy.dwg");
             Do("Bản sao phiên bản (Wblock + SaveAs)", () =>
             {

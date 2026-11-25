@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { cadTool, handle, handles, point, points, type AnyTool, type ToolBridge } from './common.js';
+import { cadTool, excelParams, handle, handles, point, points, type AnyTool, type ToolBridge } from './common.js';
 
 /**
  * Nâng cấp đợt D (13/11/2026, docs/ban-giao/nang-cap-d.md): beams, PRESSPULL, STL export, volume schedule by layer.
@@ -132,6 +132,7 @@ export function solid3Tools(b: ToolBridge): AnyTool[] {
         surface_area: z.boolean().optional().describe('Also the surface area (default true).'),
         decimals: z.number().int().min(0).max(6).optional(),
         ...solidTable,
+        ...excelParams,
       }),
 
     cadTool(b, 'build_stair',

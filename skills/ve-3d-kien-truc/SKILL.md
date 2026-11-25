@@ -155,7 +155,7 @@ báo lỗi → mái bằng, hoặc vẽ lại đường bao góc vuông. Đầu 
 `roof_area_m2` (diện tích mặt mái nghiêng, để tính tôn / ngói).
 
 Khối lượng: `volume_schedule` (theo layer; cột lồng trong tường / dầm chỉ tính một lần, vào cột). Va chạm:
-`check_interference`.
+`check_interference`. Khách cần file Excel (nâng cấp đợt F4): thêm `excel: true` (file cạnh bản vẽ) hoặc `excel: "<tên>.xlsx"`.
 
 Vật liệu và ảnh phối cảnh (nâng cấp đợt F3): `set_material` gán vật liệu mẫu cho khối (`handles`) hoặc cả layer
 (`layers`): `concrete` bê tông (tường, sàn, cột, dầm), `brick` gạch, `plaster` vữa trắng, `glass` kính (cửa sổ, lan can
