@@ -52,6 +52,15 @@ Mọi số nằm ở một chỗ: `F2Numbers` trong `plugin/ClaudeCAD.Plugin/Cor
 | Cỡ block mặc định (mm) | Cửa đi 900; cửa 2 cánh 1400; cửa trượt 1800; cửa sổ 1200 (cửa trượt và cửa sổ tính tường dày 220); bồn cầu 400 × 700; lavabo 500 × 420; bồn tắm 1700 × 750; khay tắm 900 × 900; giường 1600 × 2000; sofa 2000 × 850; bàn 1200 × 800; ghế 450 × 450; tủ 1200 × 600; bếp 700 × 450; cây đường kính 3000. Mỗi loại có giới hạn nhỏ nhất / lớn nhất | Theo thông lệ |
 | Layer mới | `KHUNG` (khung và khung tên), `KHUNG-VP` (viền khung nhìn, không in); block chèn vào `A-DOOR`, `A-WIND`, `A-FIXT`, `A-FURN`, `L-PLNT`; tên block dạng `CUA-DI-900`, `CUA-SO-1200` | — |
 
+### Ghi chú của người rà về nguồn các con số (25/11, chờ thread rà F2 xác nhận lại)
+
+- **Lề khung bản vẽ:** số đề xuất là trái 25 mm, ba cạnh còn lại 5 mm (thông lệ quen dùng). Người rà ghi chú: ISO 5457 /
+  TCVN 7285 dùng trái 20 mm, ba cạnh còn lại 10 mm. **Chủ dự án chọn một trong hai.**
+- Chiều cao chữ 5 / 3,5 / 2,5 / 1,8 mm nằm trong dãy cỡ chữ của ISO 3098.
+- Khung tên rộng 180 mm trùng với ISO 7200.
+- Số nên thêm vào bảng: cách ghi chữ kích thước (chữ nằm trên đường kích thước, số thập phân, bỏ số 0 thừa), 5 kiểu nét
+  nạp sẵn, tên trang in mặc định `BV-01`, layer do khách tự đặt thì màu 7 (trắng / đen).
+
 ### Quyết định tự chọn
 
 | Tình huống | Đã chọn |
