@@ -105,7 +105,46 @@ feet bị gắn tên kiểu kích thước của cm; "liệt kê trạng thái l
 
 ## Đợt F3 (3D đẹp và đúng hơn)
 
-*Chờ báo cáo của thread viết.*
+*Theo báo cáo của thread viết (25/11 17h12); thread rà đang soát lại. Chi tiết: `docs/ban-giao/nang-cap-f3.md` trên nhánh
+`full/nang-cap-f3`.*
+
+### Con số chờ duyệt
+
+Số mới của đợt F3:
+
+| Nhóm | Số đề xuất | Nguồn |
+| --- | --- | --- |
+| Giới hạn mái dốc nhà góc vuông | Tối đa 40 góc tường, 12 mảnh mái; quá thì báo và gợi ý mái bằng | Giới hạn kỹ thuật do thread chọn |
+| Vật liệu mẫu | 8 loại: bê tông, gạch, vữa trắng, kính, gỗ, ngói, thép, đá; mỗi loại một màu; kính trong 35 %; tên vật liệu tiếng Việt | Theo thông lệ |
+| Ảnh xuất ra | File PNG, cạnh dài 1568 px; mặc định nhìn chéo từ góc Tây Nam; kiểu hiển thị Realistic; tên file `<bản vẽ>-<góc nhìn>.png`, lưu cạnh bản vẽ | Do thread chọn |
+
+Số có từ đợt E, chưa được duyệt, **không đổi** trong F3:
+
+| Nhóm | Số (mm) |
+| --- | --- |
+| Tay vịn cầu thang | Cao 900; tay vịn và trụ 50 × 50; trụ cách nhau ≤ 1500 |
+| Cầu thang | Bậc trên cùng chạy lên sàn 100; gợi ý tách vế khi quá 18 bậc |
+| Khoảng cho phép | Vd độ dốc mái 5–60°, mái đua ≤ 3000; các khoảng khác xem bàn giao F3 |
+
+Lưu ý: tay vịn cầu thang cao 900, trong khi lan can (đợt A, đã duyệt) cao 1100.
+
+### Quyết định tự chọn
+
+| Tình huống | Đã chọn |
+| --- | --- |
+| Mái 2 dốc nhà chữ L / T / U | Cánh rộng nhất làm mái chính; các cánh khác có nóc chạy vào mái chính |
+| Đường bao có tường xiên lõm vào | Báo lỗi kèm gợi ý dùng mái bằng |
+| Cách làm vật liệu và ảnh | Dùng vật liệu thường của bản vẽ (màu + độ trong) và bộ chụp ảnh sẵn có; không dùng lệnh RENDER hay thư viện vật liệu của Autodesk (ít rủi ro nhất trên AutoCAD 2022–2027) |
+| Gói và chế độ | Hai lệnh mới thuộc nhóm 3D: gói 3D / Full, chế độ "3D" và "Cả hai" |
+| Chế độ "Chỉ xem" | Gọi lại góc nhìn bị chặn như lệnh ghi; liệt kê và xuất ảnh vẫn chạy |
+| Đối tượng trên layer khóa khi gán vật liệu | Bỏ qua và báo lại, không tự mở khóa |
+| Gán vật liệu cho đối tượng có sẵn | Hỏi bằng thẻ khi sửa quá 20 đối tượng (luật chung đang có) |
+| Lưu góc nhìn trùng tên | Phải nói rõ là ghi đè |
+
+### Chưa kiểm được (cần AutoCAD thật)
+
+Toàn bộ phần F3 mới qua test tự động. Bước tự kiểm `CLAUDECHATSELFTEST` mới (mái chữ L, vật liệu, góc nhìn, ảnh) chưa chạy.
+Danh sách thử tay: `docs/checklist-dot-f3.md` (khoảng 30 phút).
 
 ## Đợt F4 (mở chat nhanh, xuất Excel)
 
