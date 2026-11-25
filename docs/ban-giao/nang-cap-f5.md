@@ -89,7 +89,10 @@ hầu như không tăng.
 
 ## CI
 
-*(điền sau khi chạy)*
+- Run **#52** (`45622402883`, `release=false`) trên `99f1bf6` (commit code cuối): **xanh** (job `windows`: build 3 target, lõi,
+  trợ lý, UI test WPF). Run #51 (`4b21509`) bị hủy giữa chừng vì đã có bản sửa mới (bổ sung thẻ đổi vật liệu có sẵn). Trước đó
+  trên Linux, sau lần sửa cuối: build 3 target 0 cảnh báo, lõi 1148, trợ lý 364, dự án UI test build được. Commit sau CI chỉ
+  thêm mục này.
 
 ## Chưa kiểm được
 
