@@ -105,3 +105,6 @@ Bản vẽ có vài layer (A-WALL, A-DOOR, A-DIM, A-TEXT…).
    chuẩn kiến trúc 1:100". Đạt: kiểu chữ báo "không đổi" (không hiện thẻ hỏi ghi đè chỉ vì tên file font).
 4. Bản vẽ đơn vị **dm** (`INSUNITS` = 14) hoặc **inch** (1): "thiết lập style chuẩn 1:100". Đạt: kiểu kích thước tên
    `VN-100-DM` (dm) / `VN-100-IN` (inch), không còn ghi nhầm `-CM`.
+5. Đặt màu hiện hành của AutoCAD sang **đỏ** (thanh Properties → Color = Red). Nhờ "chèn lavabo" và "tạo trang in A3".
+   Đạt: lavabo, khung bản vẽ, khung tên **không đỏ** (theo màu layer). Đặt lại màu hiện hành ByLayer khi xong.
+6. Bật **Chỉ xem**, nhờ "liệt kê trạng thái layer". Đạt: Claude đọc ra danh sách, không báo bị chặn vì Chỉ xem.

@@ -23,7 +23,25 @@ namespace ClaudeCAD.Plugin.Drawing
             d.Register("setup_standards", true, SetupStandards);
             d.Register(new ToolDef("create_sheet", true, CreateSheet, noTransaction: true));
             d.Register(new ToolDef("insert_library_block", true, InsertLibraryBlock, readsWhen: p => !p.Has("name")));
-            d.Register(new ToolDef("layer_state", true, LayerState, readsWhen: p => string.Equals(p.Str("action", ""), "list", StringComparison.OrdinalIgnoreCase)));
+            d.Register(new ToolDef("layer_state", true, LayerState, readsWhen: LayerStateReads));
+        }
+
+        /// <summary>F2-test (point 6): "list", "liệt kê" or no action only read (the same normalisation as the handler).</summary>
+        private static bool LayerStateReads(Params p)
+        {
+            try { return LayerStateLogic.NormalizeAction(p.Str("action", "list")) == "list"; }
+            catch (ToolException) { return false; } // a bad action: the handler refuses it
+        }
+
+        /// <summary>
+        /// F2-test (point 2): SetDatabaseDefaults copies the current color / linetype / lineweight (CECOLOR…); the objects
+        /// the F2 tools build take them from their layer (or block reference) instead.
+        /// </summary>
+        private static void ByLayer(Entity e)
+        {
+            e.ColorIndex = 256;
+            e.Linetype = "ByLayer";
+            e.LineWeight = LineWeight.ByLayer;
         }
 
         // ------------------------------------------------------------------ shared helpers
@@ -83,7 +101,7 @@ namespace ClaudeCAD.Plugin.Drawing
             return new Dictionary<string, object>
             {
                 // F2-test: a TrueType style made by STYLE keeps both "arial.ttf" and "Arial": compare the type face then
-                ["font"] = !string.IsNullOrEmpty(r.Font.TypeFace) ? r.Font.TypeFace : r.FileName,
+                ["font"] = StandardsLogic.FontKey(!string.IsNullOrEmpty(r.Font.TypeFace) ? r.Font.TypeFace : r.FileName),
                 ["height"] = r.TextSize,
                 ["width_factor"] = r.XScale,
             };
@@ -238,6 +256,7 @@ namespace ClaudeCAD.Plugin.Drawing
             void Put(Entity e)
             {
                 e.SetDatabaseDefaults(ctx.Db);
+                ByLayer(e);
                 e.Layer = "0";
                 btr.AppendEntity(e);
                 ctx.Tr.AddNewlyCreatedDBObject(e, true);
@@ -280,7 +299,7 @@ namespace ClaudeCAD.Plugin.Drawing
         {
             for (int i = 1; i < 1000; i++)
             {
-                var n = "BV-" + i.ToString("00", CultureInfo.InvariantCulture);
+                var n = F2Numbers.SheetNamePrefix + i.ToString("00", CultureInfo.InvariantCulture);
                 if (!lm.LayoutExists(n)) return n;
             }
             throw ToolException.Invalid("create_sheet: give a layout name.");
@@ -387,6 +406,7 @@ namespace ClaudeCAD.Plugin.Drawing
                             new[] { sheet.X0, sheet.Y0 }, new[] { sheet.X1, sheet.Y0 }, new[] { sheet.X1, sheet.Y1 }, new[] { sheet.X0, sheet.Y1 },
                         }, true);
                         frame.SetDatabaseDefaults(db);
+                        ByLayer(frame);
                         frame.LayerId = frameLayer;
                         frame.LineWeight = (LineWeight)Geometry.LineWeightFrom(F2Numbers.FrameLineweight);
                         var frameId = space.AppendEntity(frame);
@@ -394,6 +414,7 @@ namespace ClaudeCAD.Plugin.Drawing
 
                         var br = new BlockReference(new Point3d(sheet.X1, sheet.Y0, 0), tbId);
                         br.SetDatabaseDefaults(db);
+                        ByLayer(br);
                         br.LayerId = frameLayer;
                         var brId = space.AppendEntity(br);
                         tr.AddNewlyCreatedDBObject(br, true);
@@ -403,6 +424,7 @@ namespace ClaudeCAD.Plugin.Drawing
 
                         var vp = new Viewport();
                         vp.SetDatabaseDefaults(db);
+                        ByLayer(vp);
                         vp.CenterPoint = new Point3d(sheet.VpCenter[0], sheet.VpCenter[1], 0);
                         vp.Width = sheet.VpW;
                         vp.Height = sheet.VpH;
@@ -494,6 +516,7 @@ namespace ClaudeCAD.Plugin.Drawing
                         break;
                 }
                 e.SetDatabaseDefaults(ctx.Db);
+                ByLayer(e);
                 e.Layer = "0"; // takes the layer / color of the block reference
                 btr.AppendEntity(e);
                 ctx.Tr.AddNewlyCreatedDBObject(e, true);

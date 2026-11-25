@@ -38,7 +38,7 @@ namespace ClaudeCAD.Core.Tests
         [Fact]
         public void A_truetype_style_is_compared_by_its_type_face()
         {
-            Assert.Contains("[\"font\"] = !string.IsNullOrEmpty(r.Font.TypeFace) ? r.Font.TypeFace : r.FileName", Tools);
+            Assert.Contains("StandardsLogic.FontKey(!string.IsNullOrEmpty(r.Font.TypeFace) ? r.Font.TypeFace : r.FileName)", Tools);
             // the comparison itself: "Arial" (type face) equals the wanted Arial, "arial.ttf" alone would not
             var wanted = StandardsLogic.TextStyleParams("KT");
             var styleDialog = new Dictionary<string, object> { ["font"] = "Arial", ["height"] = 0.0, ["width_factor"] = F2Numbers.WidthFactor };
@@ -148,6 +148,62 @@ namespace ClaudeCAD.Core.Tests
             Assert.Contains("Nothing was changed", msg);
             Assert.Contains("1F", msg);
             Assert.Contains("A typed \"ok\" does not count", msg);
+        }
+        // ------------------------------------------------------------ second review (7 points of another review)
+
+        [Theory]
+        [InlineData("Arial", "Arial")]
+        [InlineData("arial.ttf", "arial")]
+        [InlineData(@"C:\Windows\Fonts\ARIAL.TTF", "ARIAL")]
+        [InlineData("calibri.otf", "calibri")]
+        [InlineData("romans.shx", "romans.shx")]
+        [InlineData(null, "")]
+        public void Font_names_have_one_key(string font, string key) => Assert.Equal(key, StandardsLogic.FontKey(font));
+
+        [Fact]
+        public void A_style_whose_font_is_only_a_file_name_is_the_same_font()
+        {
+            Assert.Contains("[\"font\"] = StandardsLogic.FontKey(", Tools);
+            var wanted = StandardsLogic.TextStyleParams("VN");
+            var file = new Dictionary<string, object> { ["font"] = StandardsLogic.FontKey("arial.ttf"), ["height"] = 0.0, ["width_factor"] = F2Numbers.WidthFactor };
+            Assert.Empty(StandardsLogic.Differences(wanted, file));
+            var shx = new Dictionary<string, object> { ["font"] = StandardsLogic.FontKey("romans.shx"), ["height"] = 0.0, ["width_factor"] = F2Numbers.WidthFactor };
+            Assert.Single(StandardsLogic.Differences(wanted, shx));
+        }
+
+        [Fact]
+        public void New_objects_take_color_linetype_and_lineweight_from_their_layer_not_the_current_ones()
+        {
+            var t = Tools;
+            // every SetDatabaseDefaults of the F2 tools is followed by ByLayer (block definitions, frame, title block insert, viewport)
+            int defaults = System.Text.RegularExpressions.Regex.Matches(t, @"SetDatabaseDefaults\(").Count;
+            int bylayer = System.Text.RegularExpressions.Regex.Matches(t, @"SetDatabaseDefaults\([^)]*\);\s*ByLayer\(").Count;
+            Assert.Equal(5, defaults);
+            Assert.Equal(defaults, bylayer);
+            Assert.Contains("e.ColorIndex = 256;", t);
+            Assert.Contains("e.LineWeight = LineWeight.ByLayer;", t);
+            // the explicit frame / title block line weights are set after it
+            Assert.True(t.IndexOf("ByLayer(frame);", StringComparison.Ordinal) < t.IndexOf("frame.LineWeight =", StringComparison.Ordinal));
+        }
+
+        [Theory]
+        [InlineData("list", "list")]
+        [InlineData("liệt kê", "list")]
+        [InlineData("LIET KE", "list")]
+        [InlineData(null, "list")]
+        public void Layer_state_list_in_any_wording_only_reads(string action, string want)
+        {
+            Assert.Equal(want, LayerStateLogic.NormalizeAction(action ?? "list"));
+            Assert.Contains("readsWhen: LayerStateReads", Tools);
+            Assert.Contains("LayerStateLogic.NormalizeAction(p.Str(\"action\", \"list\")) == \"list\"", Tools);
+        }
+
+        [Fact]
+        public void The_sheet_name_prefix_lives_in_F2Numbers()
+        {
+            Assert.Equal("BV-", F2Numbers.SheetNamePrefix);
+            Assert.DoesNotContain("\"BV-\"", Tools);
+            Assert.Contains("F2Numbers.SheetNamePrefix + i.ToString(", Tools);
         }
     }
 }

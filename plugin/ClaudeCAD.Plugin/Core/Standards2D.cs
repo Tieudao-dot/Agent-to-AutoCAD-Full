@@ -60,6 +60,8 @@ namespace ClaudeCAD.Plugin.Core
         public const double ViewportGap = 5;
         /// <summary>Layers of the frame / title block (printed) and of the viewport border (not printed), with ACI colors.</summary>
         public const string FrameLayer = "KHUNG", ViewportLayer = "KHUNG-VP";
+        /// <summary>Name of a new sheet without a name: BV-01, BV-02… (F2-test: was a literal in the plugin).</summary>
+        public const string SheetNamePrefix = "BV-";
         public const int FrameLayerColor = 7, ViewportLayerColor = 8;
         /// <summary>Text style of the title block and the title block block name.</summary>
         public const string TitleTextStyle = "VN-KHUNG", TitleBlockName = "KHUNG-TEN-VN";
@@ -116,6 +118,21 @@ namespace ClaudeCAD.Plugin.Core
         /// <summary>KT-100; a drawing in metres gets its own name (KT-100-M) so a mm style of the same scale is not mixed up.</summary>
         public static string DimStyleName(string prefix, int scale, double mmPerUnit) =>
             $"{prefix}-{scale}" + UnitSuffix(mmPerUnit);
+
+        /// <summary>
+        /// F2-test (point 3): one key for a font name — "Arial", "arial.ttf" and "C:\\Windows\\Fonts\\ARIAL.TTF" are the same
+        /// font (TrueType / OpenType extension and folder dropped, case kept for display only by callers). A .shx name keeps
+        /// its extension so a shape font never equals a TrueType one.
+        /// </summary>
+        public static string FontKey(string font)
+        {
+            var s = (font ?? "").Trim();
+            int slash = Math.Max(s.LastIndexOf('\\'), s.LastIndexOf('/'));
+            if (slash >= 0) s = s.Substring(slash + 1);
+            foreach (var ext in new[] { ".ttf", ".ttc", ".otf" })
+                if (s.EndsWith(ext, StringComparison.OrdinalIgnoreCase)) { s = s.Substring(0, s.Length - ext.Length); break; }
+            return s;
+        }
 
         /// <summary>F2-test: the unit of the drawing in the style name (dm / inch / foot drawings were named "-CM").</summary>
         public static string UnitSuffix(double mmPerUnit)
