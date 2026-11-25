@@ -673,3 +673,113 @@ chốt nhánh; lỗi nhẹ còn lại (nếu có) hoặc sửa ngay nếu rẻ, 
 | Thread đợt F1 (G2) | 26/11 02h37: sửa KFG-41, 42 ở `full/nang-cap-g-sua-kfg-a` @ `3d68e9f`, lõi 1438, trợ lý 407, ≈ $3 |
 | Thread Test & sửa F1 (G5) | 02h37: sửa KFG-39, 40 ở `full/nang-cap-g-sua-kfg-b` @ `47faaf2` (code `0dd8945`), lõi 1442, trợ lý 407. Cách làm đổi: lúc gửi tin không chép gì; khung chat ghi nhớ file khách kéo / chọn, đến lúc gắn ảnh mới chép file mạng về máy (giữ 7 ngày tính từ lúc chép). Quyết định mới: AutoCAD có thể chờ khi gắn file mạng lớn; danh sách file khách đã kéo chỉ giữ trong một phiên AutoCAD |
 | Thread đợt F2 (giữ nhánh tích hợp) | CI 45685933989 (#70) của bản gộp lượt 2 + tài liệu (`fff7ffe`) xanh. Thread dừng 02h43 vì chạm giới hạn sử dụng 5 giờ (cả luồng chính cũng dừng tới 04h55); 04h56 luồng chính cho chạy tiếp: gộp hai nhánh lượt 3, tài liệu, CI |
+
+## Soát lại lượt 3, lượt cuối (26/11 05h06)
+
+*Nguyên văn báo cáo soát lại của thread kiểm tra độc lập.*
+
+**Không còn lỗi nào mức vừa trở lên.** KFG-39, 40, 41, 42 đều sửa đúng. Chỉ còn 1 lỗi nhẹ mới (KFG-43, chậm ở một dạng bản vẽ rất hiếm) và 1 nhận xét về dự toán.
+
+Bản soát: `e1455fb`, so với `57b69a0`. Tớ không sửa code, không commit / push / CI.
+
+### Test và build @ `e1455fb`
+
+- **Lõi:** 1445 / 1445 đạt.
+- **Trợ lý:** 407 / 407 đạt.
+- **Build net48 / net8.0-windows / net10.0-windows:** 0 lỗi, 0 cảnh báo cả 3.
+- **Test thử cũ chạy lại trên bản mới:**
+  - G1 + G2: 5 test đạt, gồm toàn bộ ca của lượt 1 và lượt 2.
+  - G3: các ca ghép đơn giá cho kết quả y như lượt 2; có so thêm với bản `Estimate.cs` trước commit `6586923`.
+  - G5: 11 / 13 đạt. 2 test báo trượt là do chính test thử viết theo số sai cũ (PDF 4 trang) và một ca viết sai, như ở lượt 2; code đúng.
+
+### 4 mã
+
+| Mã | Kết luận | Bằng chứng ngắn |
+| --- | --- | --- |
+| KFG-39 | Sửa đúng | `CopyForTrace` chép vào tên tạm `….dang-chep-…`, kiểm đủ dung lượng rồi mới đổi tên, đặt giờ sửa = lúc chép (dùng lại thì làm mới). File gốc đổi nội dung (đổi cỡ / giờ sửa) thì ra tên bản chép mới. Hai file cùng tên ở thư mục khác thì khác tên chép (tên chép có đường dẫn đầy đủ). Mất mạng giữa chừng: xóa file tạm, báo lý do; file tạm sót thì dọn |
+| KFG-40 | Sửa đúng | Lúc gửi tin chỉ ghi nhớ đường dẫn (`UserFile`), không đọc gì. Chép khi `trace_image attach` cần; quá 50 MB / file mất / chép lỗi thì `attach` từ chối kèm lý do để Claude nói với khách |
+| KFG-41 | Sửa đúng | Đường gần thẳng đứng (lệch 0,00001 / 0,00002 / 0,05, xuôi / ngược) ra [1,2,3], giữ bản cũ nhất. Polyline hở xuôi / ngược ra đúng, mỗi bản tính một lần. Hình không tự trùng chính nó. Polyline đóng giữ quyết định cũ (vẽ ngược không coi là trùng) |
+| KFG-42 | Sửa đúng | Nan quạt 20 000 đường chung điểm đầu: 395 ms (trước 1,9 s). 20 000 đường cùng x: 245 ms |
+
+**Soát kỹ đường đi mới của KFG-39 / 40 (theo câu luồng chính hỏi):**
+- **Ai thêm được vào danh sách file khách đính kèm:** chỉ khung chat, từ `SourcePath` của ảnh khách kéo / chọn (`ChatController` → `UserFile`). Claude, nội dung bản vẽ hay tên file không có đường nào để thêm.
+  - Claude ghi đường dẫn khác chuỗi khách đã kéo (vd `\\?\UNC\…` của cùng file) thì không được nhận là file của khách, nên đi qua luật đường dẫn bình thường và bị từ chối.
+- **Luật đường dẫn của KFG-28:** còn nguyên; `CheckPathAllowed` không đổi trong diff.
+  - File của khách trên mạng được chép trước, rồi bản chép (nằm trong thư mục ảnh đính kèm) mới được kiểm.
+  - File của khách ở ổ của máy thì không chép, kiểm như thường.
+- **Gói không có 2D:** không ghi nhớ file nào (`tracePaths` false); `trace_image` bị chặn theo gói như trước.
+- **Đúng như thread sửa đã ghi, không tính là lỗi:**
+  - AutoCAD chờ trong lúc gắn file mạng lớn;
+  - danh sách file khách đã kéo chỉ giữ trong một phiên AutoCAD: mở lại chat cũ sau khi khởi động lại thì file mạng bị từ chối, có lời báo.
+
+### Lỗi mới
+
+**KFG-43 — Nhẹ — G2: so trùng còn chậm với nhiều point / block cùng x, y khác z.**
+- **Chỗ:** `Core/DrawingCheck.cs`, hàm `Cell` trong `DuplicateIndices`. Hình chỉ có 3 số (`DBPoint`, `BlockReference`: x, y, z) không có điểm giữa, nên nhiều hình cùng x, y khác z dồn vào một ô và bị so từng cặp.
+- **Tái hiện (test thử):** 20 000 point cùng x, y, với z = 0…19 999: 5,8 s.
+- **Hậu quả:** rất hiếm gặp; giới hạn quét 20 000 chặn trên nên không treo.
+- **Hướng sửa:** hình 3 số thì băm thêm z, hoặc ghi vào bàn giao là chấp nhận.
+
+### Nhận xét (không tính lỗi)
+
+- **G3, commit `6586923` đổi hành vi ở 1 ca:** các dòng "Sàn gỗ", "Sân phơi" đã có giá đúng tên, và đơn giá có thêm mẫu "San*".
+  - Bản cũ: "San*" nằm ở cả `ambiguous_prices` lẫn `unused`.
+  - Bản mới: chỉ ở `unused`.
+  - Vô hại, có khi hợp lý hơn (mẫu không định giá dòng nào thì báo "không dùng" là đủ). Nhưng commit ghi là chỉ tối ưu tốc độ, nên nên ghi một dòng vào bàn giao.
+- 11 ca dự toán còn lại ra giống hệt bản trước commit.
+
+### Tổng kết cả ba lượt
+
+| | Số lỗi |
+| --- | --- |
+| Lượt đầu (`881b12e`) | 27 (KFG-01…27): 1 nặng (khả năng cao), 7 vừa, 19 nhẹ |
+| Soát lại lượt 1 (`20e3812`) | 11 lỗi mới (KFG-28…38): 3 vừa, 8 nhẹ |
+| Soát lại lượt 2 (`57b69a0`) | 4 lỗi mới (KFG-39…42): 1 vừa, 3 nhẹ |
+| Soát lại lượt 3 (`e1455fb`) | 1 lỗi mới (KFG-43): nhẹ |
+| **Tổng** | **43 lỗi đã ghi; 42 đã sửa đúng; còn mở 1: KFG-43 (nhẹ)** |
+
+Các điểm luồng chính đã chốt giữ nguyên, không tính là lỗi:
+- thời gian chờ sau khi lệnh render kết thúc = số lớn hơn giữa 20 giây và thời gian ước lượng, chờ thử trên AutoCAD thật;
+- khách COPY nét hình chiếu thì bản chép cũng mang dấu;
+- AutoCAD chờ khi gắn file mạng lớn;
+- danh sách file khách đính kèm chỉ giữ trong một phiên.
+
+**Cả ba lượt đều chưa kiểm được:**
+- **Cần AutoCAD thật:**
+  - render `-RENDER`: chuỗi câu trả lời, render có chạy nền sau khi lệnh kết thúc không, Dừng / Esc, bấm U không nhảy góc nhìn, vật liệu thư viện;
+  - render góc đã lưu (KFG-01);
+  - viewport / layout chưa mở lần nào, khung tên, in PDF của bộ hồ sơ;
+  - hatch mặt cắt trên layer riêng thật sự không bị báo;
+  - ảnh raster / PDF underlay trên UCS xoay, góc ảnh PDF sau co / xoay;
+  - đèn trong block.
+- **Cần Claude thật:**
+  - không bịa đơn giá, hỏi lại khi giá nhập nhằng;
+  - không nghe theo chữ trong ảnh / bản vẽ;
+  - làm theo PLAN_SCOPE và mô tả lệnh mới.
+- **Cần Excel thật:** mở file dự toán và tính lại công thức (mới soát XML).
+- **Cần Windows + ổ mạng thật:**
+  - kéo file từ NAS vào khung chat, chép khi gắn, độ trễ;
+  - `DriveType` của ổ ánh xạ;
+  - luật UNC cùng share.
+- **UI WPF:** ô ⚙ "Nạp gọn lệnh", thẻ Đồng ý / Hủy trong khung chat.
+
+### Thời gian, chi phí
+
+- Lượt 3 khoảng 15 phút.
+- Chi phí thread khoảng $35,1 (lượt 2 kết thúc khoảng $28,8, nên lượt này khoảng $6,3).
+- Cả ba lượt soát lại cộng lượt đầu: khoảng 2 giờ làm việc thực, chưa tính khoảng thời gian dừng chờ.
+- Tốn nhất: các tác vụ con nạp lại ngữ cảnh và chạy project test tạm.
+
+## Kết luận của luồng chính (26/11 05h08)
+
+- **43 lỗi đã ghi, 42 đã sửa và được soát lại là đúng, còn mở 1 lỗi nhẹ.** Không còn lỗi mức vừa trở lên.
+- **KFG-43 (nhẹ): biết, chấp nhận, không sửa ở đợt này.** Lệnh soát bản vẽ chậm (khoảng 6 giây) khi bản vẽ có tới 20 000 điểm
+  hoặc block nằm chồng đúng một vị trí x, y mà khác cao độ. Dạng bản vẽ này rất hiếm, và giới hạn quét 20 000 hình chặn trên
+  nên không treo. Lý do không sửa ngay: sửa thêm code sau lượt soát cuối thì phần sửa đó không còn được agent độc lập soát.
+  Muốn sửa sau: băm thêm cao độ z cho hình chỉ có một điểm (`Core/DrawingCheck.cs`, hàm `Cell`).
+- **Bốn điểm giữ nguyên chờ chủ dự án xem** (đã ghi trong `docs/dot-g-cho-duyet.md`): thời gian chờ sau khi lệnh render kết
+  thúc; nét hình chiếu bị khách chép thì bản chép cũng mang dấu; AutoCAD chờ khi gắn file mạng lớn; danh sách file khách đính
+  kèm chỉ giữ trong một phiên AutoCAD.
+- **Chi phí thread kiểm tra độc lập:** khoảng $35 cho cả bốn lượt (lượt đầu $11,4; ba lượt soát lại $8,3 + $9,1 + $6,3).
+- Phần chưa ai kiểm được (cần AutoCAD, Claude, Excel, ổ mạng thật): xem mục "Tổng kết cả ba lượt" ở trên; đây là danh sách
+  chủ dự án cần thử tay, đã có trong khối "Đợt G" của `docs/checklist-tong-the.md`.
