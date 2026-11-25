@@ -89,6 +89,18 @@ namespace ClaudeCAD.Core.Tests
         }
 
         [Fact]
+        public void KFG30_an_unaccented_pattern_is_checked_once_not_once_per_row()
+        {
+            var rows = Enumerable.Range(0, 3000).Select(i => R((i % 2 == 0 ? "Sân " : "Sàn ") + i)).ToList();
+            var sw = System.Diagnostics.Stopwatch.StartNew();
+            var r = EstimateLogic.Build(rows, new[] { P("San*", 9) }, null);
+            Assert.True(sw.Elapsed.TotalSeconds < 2, sw.Elapsed.ToString());
+            Assert.All(r.Lines, l => Assert.Null(l.UnitPrice));
+            Assert.Single(r.Ambiguous);
+            Assert.Equal(3000, r.Ambiguous[0].items.Count);
+        }
+
+        [Fact]
         public void KFG03_the_description_and_skills_say_accents_count()
         {
             Assert.Contains("ambiguous_prices", Src("agent", "src", "tools", "estimate.ts"));

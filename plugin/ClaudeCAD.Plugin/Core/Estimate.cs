@@ -155,12 +155,17 @@ namespace ClaudeCAD.Plugin.Core
         public static Price Match(string item, IList<Price> prices, out string note, out List<Price> fitting) => Match(item, prices, out note, out fitting, new[] { item });
 
         /// <summary>The same, knowing every item of the list (for the "fits one item only" rule of levels 2 and 3).</summary>
-        public static Price Match(string item, IList<Price> prices, out string note, out List<Price> fitting, IEnumerable<string> allItems)
+        public static Price Match(string item, IList<Price> prices, out string note, out List<Price> fitting, IEnumerable<string> allItems) =>
+            Match(item, prices, out note, out fitting, allItems, null);
+
+        /// <summary>The same; clash: per unaccented pattern, whether it is ambiguous on allItems (computed once per pattern).</summary>
+        public static Price Match(string item, IList<Price> prices, out string note, out List<Price> fitting, IEnumerable<string> allItems,
+            IDictionary<string, bool> clash)
         {
             note = null;
             fitting = new List<Price>();
-            var items = allItems.Select(KeyExact).Distinct().ToList();
-            bool Unique(Price p, Func<string, string> key) => items.Count(i => key(i) == key(p.Item)) <= 1;
+            List<string> items = null; // only when a level 2 / 3 name hits (a long list costs a pass per row)
+            bool Unique(Price p, Func<string, string> key) => (items = items ?? allItems.Select(KeyExact).Distinct().ToList()).Count(i => key(i) == key(p.Item)) <= 1;
             var plain = prices.Where(p => !p.Item.Contains("*")).ToList();
             var level = new List<Func<string, string>> { KeyExact, KeySep, Key };
             for (int l = 0; l < level.Count; l++)
@@ -179,7 +184,9 @@ namespace ClaudeCAD.Plugin.Core
             if (wild.Count == 0) return null;
             // KFG-30: a pattern typed without accents ("San*") that fits names whose fixed letters differ only in accents
             // ("Sân phơi", "Sàn gỗ") is ambiguous, as a plain name is: no price, ask which
-            var amb = wild.Where(p => !HasAccents(p.Item) && WildAccentClash(p.Item, allItems)).ToList();
+            clash = clash ?? new Dictionary<string, bool>();
+            bool Clashes(string pat) { if (!clash.TryGetValue(pat, out var c)) clash[pat] = c = WildAccentClash(pat, allItems); return c; }
+            var amb = wild.Where(p => !HasAccents(p.Item) && Clashes(p.Item)).ToList();
             if (amb.Count > 0) { note = "the price pattern fits names that differ only in accents (" + string.Join(", ", amb.Select(p => p.Item)) + "): ask which"; return null; }
             if (wild.Select(p => p.UnitPrice).Distinct().Count() > 1) { note = "several price patterns fit (" + string.Join(", ", wild.Select(p => p.Item)) + ")"; return null; }
             return wild[0];
@@ -220,9 +227,10 @@ namespace ClaudeCAD.Plugin.Core
             if (pc.Count > G3Numbers.MaxPercentLines) throw ToolException.Invalid($"{Tool}: at most {G3Numbers.MaxPercentLines} percent lines.");
             var r = new Result();
             var used = new HashSet<Price>();
+            var clash = new Dictionary<string, bool>(StringComparer.Ordinal); // KFG-30: once per pattern, not once per row
             foreach (var row in rows)
             {
-                var pr = Match(row.Item, prices, out var note, out var fitting, rows.Select(x => x.Item));
+                var pr = Match(row.Item, prices, out var note, out var fitting, rows.Select(x => x.Item), clash);
                 foreach (var fp in fitting) used.Add(fp); // Test & sửa G3: an ambiguous price fitted a row, it is not "unused"
                 // the quantity as shown (and as the Excel formula multiplies it)
                 double q = Math.Round(row.Quantity, G3Numbers.QuantityDecimals, MidpointRounding.AwayFromZero);
@@ -251,8 +259,8 @@ namespace ClaudeCAD.Plugin.Core
             // KFG-30: and the patterns typed without accents that fit names differing only in accents
             foreach (var p in prices.Where(p => p.Item.Contains("*") && !HasAccents(p.Item)))
             {
-                var its = rows.Select(x => x.Item).Where(i => WildFixedPart(p.Item, i) != null).Distinct().ToList();
-                if (WildAccentClash(p.Item, its)) r.Ambiguous.Add((p.Item, its));
+                if (!clash.TryGetValue(p.Item, out var c) || !c) continue;
+                r.Ambiguous.Add((p.Item, rows.Select(x => x.Item).Where(i => WildFixedPart(p.Item, i) != null).Distinct().ToList()));
             }
             foreach (var p in prices.Where(p => !p.Item.Contains("*")))
             {
