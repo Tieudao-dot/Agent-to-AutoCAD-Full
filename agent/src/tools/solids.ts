@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { angle, cadTool, entityProps, handle, handles, point, points, type AnyTool, type ToolBridge } from './common.js';
+import { angle, cadTool, entityProps, handle, handles, point, points, wcsPoint, type AnyTool, type ToolBridge } from './common.js';
 import { PLAN3D_TOOL_NAMES, plan3dTools } from './plan3d.js';
 import { SOLID3_TOOL_NAMES, STAIR_ROOF_TOOL_NAMES, solid3Tools, solidTable } from './solids3.js';
 
@@ -331,9 +331,9 @@ function solidTools2(b: ToolBridge): AnyTool[] {
         'origin / x_axis / y_axis are WCS. Every later tool takes and returns points in the new UCS, like AutoCAD. The user\'s U undoes it with the turn. Not allowed in read-only mode.',
       {
         preset: z.enum(UCS_PRESETS).optional(),
-        origin: point.optional(),
-        x_axis: point.optional().describe('X direction [x, y, z] (with y_axis).'),
-        y_axis: point.optional().describe('A direction in the XY plane of the UCS, made perpendicular to x_axis.'),
+        origin: wcsPoint.optional(),
+        x_axis: wcsPoint.optional().describe('X direction [x, y, z] in WCS (with y_axis).'),
+        y_axis: wcsPoint.optional().describe('A WCS direction in the XY plane of the UCS, made perpendicular to x_axis.'),
         name: z.string().min(1).max(255).optional().describe('Restore this saved UCS.'),
         save_as: z.string().min(1).max(255).optional().describe('Save the new UCS under this name (must not exist).'),
         plan_view: z.boolean().optional(),

@@ -227,7 +227,15 @@ export interface UserContext {
   service_plan?: ServicePlan;
   /** The plugin's tools open to that plan; Claude is given only these. Absent = every tool. */
   plan_tools?: string[];
+  /**
+   * Nâng cấp đợt F1: a Full machine whose user chose the 2D or 3D work mode in the palette. service_plan / plan_tools are
+   * then that mode's; Claude is told to switch the mode, never to buy a plan. Absent = no mode limits the chat.
+   */
+  work_mode?: WorkMode;
 }
+
+export const WORK_MODES = ['2d', '3d'] as const;
+export type WorkMode = (typeof WORK_MODES)[number];
 
 export const SERVICE_PLANS = ['2d', '3d', '2d3d'] as const;
 export type ServicePlan = (typeof SERVICE_PLANS)[number];
@@ -402,6 +410,9 @@ function parseContext(v: unknown): UserContext | undefined {
     out.service_plan = c.service_plan as ServicePlan;
     if (Array.isArray(c.plan_tools))
       out.plan_tools = c.plan_tools.filter((t): t is string => typeof t === 'string' && TOOL_NAME_RX.test(t)).slice(0, 1000);
+    // a work mode only narrows a plan to itself (2D mode = the 2D plan's tools): anything else is ignored
+    if (typeof c.work_mode === 'string' && c.work_mode === out.service_plan && (WORK_MODES as readonly string[]).includes(c.work_mode))
+      out.work_mode = c.work_mode as WorkMode;
   }
   return Object.keys(out).length > 0 ? out : undefined;
 }

@@ -287,7 +287,8 @@ namespace ClaudeCAD.Plugin.Core
         /// <summary>Keep WCS on purpose: the UCS itself, views, layouts / paper space, files, settings.</summary>
         public static readonly HashSet<string> WcsTools = new HashSet<string>(StringComparer.Ordinal)
         {
-            "set_ucs", "reset_ucs", "set_view_3d", "set_visual_style", "capture_view", "zoom_extents", "regen",
+            // set_view_3d is Ref: its custom direction is a UCS vector (its presets stay WCS views, like VIEW's defaults)
+            "set_ucs", "reset_ucs", "set_visual_style", "capture_view", "zoom_extents", "regen",
             "save_drawing", "purge_unused", "undo_last_turn", "batch_execute", "ping",
             "list_layouts", "create_layout", "set_current_layout", "delete_layout", "add_viewport", "set_viewport",
             "plot_pdf", "list_plot_media",

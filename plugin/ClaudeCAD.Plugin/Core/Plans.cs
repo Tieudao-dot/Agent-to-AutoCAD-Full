@@ -257,4 +257,88 @@ namespace ClaudeCAD.Plugin.Core
                    (string.IsNullOrWhiteSpace(contact) ? "." : $" ({contact}).");
         }
     }
+
+    /// <summary>
+    /// Nâng cấp đợt F1, việc 2 (chủ dự án chốt 14/11/2026): on a Full machine the user picks a work mode in the palette —
+    /// "Cả hai" (default), "2D" or "3D". 2D / 3D load only the tools and rules of that group (the very sets of the 2D / 3D
+    /// plans), so every chat opening costs fewer tokens. A machine on the 2D or 3D plan has no switch.
+    /// </summary>
+    public static class WorkModeLogic
+    {
+        public const string Both = "both";
+        public const string TwoD = "2d";
+        public const string ThreeD = "3d";
+        public static readonly string[] Modes = { Both, TwoD, ThreeD };
+
+        /// <summary>"both" / "2d" / "3d"; anything else (an old settings file, a typo) is "both".</summary>
+        public static string Normalize(string mode)
+        {
+            var s = (mode ?? "").Trim().ToLowerInvariant();
+            return s == TwoD || s == ThreeD ? s : Both;
+        }
+
+        /// <summary>The switch is shown only on a Full machine.</summary>
+        public static bool ShowsSwitch(string plan) => PlanLogic.IsKnown(plan) && PlanLogic.Normalize(plan) == PlanLogic.PlanFull;
+
+        /// <summary>
+        /// The plan the chat runs with: on Full the chosen mode's plan ("2d" / "3d"), else the machine's plan unchanged
+        /// (a 2D / 3D machine never gets more or less than its plan from a stale setting).
+        /// </summary>
+        public static string EffectivePlan(string plan, string mode)
+        {
+            if (!ShowsSwitch(plan)) return plan;
+            var m = Normalize(mode);
+            return m == Both ? PlanLogic.PlanFull : m;
+        }
+
+        /// <summary>The mode that limits this Full machine's chat ("2d" / "3d"), null when nothing is limited.</summary>
+        public static string Limiting(string plan, string mode)
+        {
+            if (!ShowsSwitch(plan)) return null;
+            var m = Normalize(mode);
+            return m == Both ? null : m;
+        }
+
+        /// <summary>What the switch shows: "Cả hai", "2D", "3D".</summary>
+        public static string Label(string mode)
+        {
+            switch (Normalize(mode))
+            {
+                case TwoD: return "2D";
+                case ThreeD: return "3D";
+                default: return "Cả hai";
+            }
+        }
+
+        public static string Tip(string mode) =>
+            "Chế độ làm việc (máy gói Full): " + Label(mode) + ". \"Cả hai\" có đủ lệnh 2D và 3D; chọn \"2D\" hoặc \"3D\" để Claude chỉ nạp lệnh của nhóm đó " +
+            "(mỗi lần mở chat tốn ít token hơn). Đổi chế độ áp dụng từ tin nhắn sau, đoạn chat giữ nguyên.";
+
+        /// <summary>The line the palette adds when the mode changes (it applies from the next message).</summary>
+        public static string ChangedNote(string mode, bool busy) =>
+            $"Đã chuyển sang chế độ {Label(mode)}" +
+            (Normalize(mode) == Both ? " (đủ lệnh 2D và 3D)" : $" (Claude chỉ dùng lệnh {Label(mode)})") +
+            (busy ? ": áp dụng từ tin nhắn sau, lượt đang chạy giữ chế độ cũ." : ": áp dụng từ tin nhắn tới, đoạn chat giữ nguyên.");
+
+        /// <summary>The other mode that has the tool ("3D" for a 3D tool in the 2D mode).</summary>
+        private static string OtherMode(string mode) => Normalize(mode) == TwoD ? "3D" : "2D";
+
+        /// <summary>
+        /// Error text for Claude when a tool is outside the chosen mode of a Full machine: no plan talk, no invitation to buy
+        /// or upgrade (the machine has Full) — the user only switches the mode.
+        /// </summary>
+        public static string BlockedMessage(string tool, string mode)
+        {
+            var label = Label(mode);
+            var other = OtherMode(mode);
+            return $"{tool}: the user set the palette to the {label} work mode, which leaves the {other} tools out (this machine's plan is Full: it has every tool). " +
+                   "Do not try other tools to get the same result and do not mention plans, buying or upgrading. Tell the user in Vietnamese: " +
+                   $"\"Đang ở chế độ {label}, đổi sang {other} hoặc Cả hai (nút chế độ trên khung chat) để {(other == "3D" ? "vẽ 3D" : "vẽ 2D")}.\" Then do what the {label} mode allows.";
+        }
+
+        /// <summary>A parameter outside the mode (block attributes in 3D, array levels in 2D…): the same wording.</summary>
+        public static string BlockedParamMessage(string tool, string param, string mode) =>
+            $"{tool}: '{param}' is outside the {Label(mode)} work mode the user chose (this machine's plan is Full). " +
+            $"Do not mention plans or upgrades; tell the user in Vietnamese: \"Đang ở chế độ {Label(mode)}, đổi sang {OtherMode(mode)} hoặc Cả hai (nút chế độ trên khung chat) để dùng phần này.\"";
+    }
 }

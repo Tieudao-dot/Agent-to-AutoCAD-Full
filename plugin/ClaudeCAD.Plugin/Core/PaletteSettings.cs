@@ -28,6 +28,7 @@ namespace ClaudeCAD.Plugin.Core
         /// <summary>Skills of the most recent chat: a new chat (or a drawing without one) starts with them. null = never set.</summary>
         public List<string> LastSkills;
         public bool SnapshotNextToDrawing;  // also write the "biên bản" next to the DWG (shared project folders)
+        public string WorkMode = WorkModeLogic.Both; // nâng cấp đợt F1: Full machines only — "both" | "2d" | "3d" (WorkModeLogic)
         public List<string> History = new List<string>(); // feature 10, newest last
 
         public static readonly string[] Standards = { "", "ve-kien-truc", "ve-mep", "ve-ha-tang" };
@@ -77,6 +78,7 @@ namespace ClaudeCAD.Plugin.Core
             ["font_size"] = FontSize, ["font_auto"] = FontAuto, ["theme"] = Theme, ["notify"] = Notify,
             ["visual_check"] = VisualCheck, ["plan_first"] = PlanFirst, ["suggestions"] = Suggestions, ["hotkey"] = Hotkey,
             ["versions"] = Versions, ["snapshot_next_to_drawing"] = SnapshotNextToDrawing,
+            ["work_mode"] = WorkModeLogic.Normalize(WorkMode),
             ["history"] = History.Cast<object>().ToList(),
             ["last_skills"] = LastSkills?.Cast<object>().ToList(),
         });
@@ -103,6 +105,7 @@ namespace ClaudeCAD.Plugin.Core
             s.Hotkey = Bool("hotkey", true);
             s.Versions = Bool("versions", true);
             s.SnapshotNextToDrawing = Bool("snapshot_next_to_drawing", false);
+            s.WorkMode = WorkModeLogic.Normalize(Str("work_mode", WorkModeLogic.Both));
             if (d.TryGetValue("history", out var h) && h is List<object> hl) s.History = hl.OfType<string>().Take(MaxHistory).ToList();
             if (d.TryGetValue("last_skills", out var ls) && ls is List<object> lsl) s.LastSkills = SkillSelection.Clean(lsl.OfType<string>());
             return s;

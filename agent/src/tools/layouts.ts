@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { cadTool, entityProps, handle, point, type AnyTool, type ToolBridge } from './common.js';
+import { cadTool, entityProps, handle, paperPoint, wcsPoint, type AnyTool, type ToolBridge } from './common.js';
 
 const scale = z
   .union([z.string(), z.number().positive()])
@@ -35,12 +35,12 @@ export function layoutTools(b: ToolBridge): AnyTool[] {
         '{"layout": "MB-01", "center": [200, 150], "width": 300, "height": 230, "view_center": [6000, 4500], "scale": "1:100", "locked": true}.',
       {
         layout: z.string().min(1),
-        center: point.optional(),
+        center: paperPoint.optional(),
         width: z.number().positive().optional(),
         height: z.number().positive().optional(),
-        corner1: point.optional(),
-        corner2: point.optional(),
-        view_center: point.optional(),
+        corner1: paperPoint.optional(),
+        corner2: paperPoint.optional(),
+        view_center: wcsPoint.optional(),
         scale: scale.optional(),
         locked: z.boolean().optional(),
         freeze_layers: z.array(z.string()).optional().describe('Layers frozen in this viewport only (VP freeze).'),
@@ -50,11 +50,11 @@ export function layoutTools(b: ToolBridge): AnyTool[] {
     cadTool(b, 'set_viewport', 'Change a viewport: scale, view_center, locked, size, sheet position, per-viewport frozen/thawed layers.', {
       handle,
       scale: scale.optional(),
-      view_center: point.optional(),
+      view_center: wcsPoint.optional(),
       locked: z.boolean().optional(),
       width: z.number().positive().optional(),
       height: z.number().positive().optional(),
-      center: point.optional(),
+      center: paperPoint.optional(),
       freeze_layers: z.array(z.string()).optional(),
       thaw_layers: z.array(z.string()).optional(),
     }),
@@ -73,8 +73,8 @@ export function layoutTools(b: ToolBridge): AnyTool[] {
         plot_style: z.string().optional().describe('e.g. "monochrome.ctb", "acad.ctb".'),
         scale: z.union([z.literal('fit'), z.string(), z.number().positive()]).optional(),
         area: z.enum(['layout', 'extents', 'display', 'window']).optional(),
-        window_p1: point.optional(),
-        window_p2: point.optional(),
+        window_p1: wcsPoint.optional().describe('Window corner: WCS on Model, paper units on a layout (ignores the UCS).'),
+        window_p2: wcsPoint.optional().describe('Opposite window corner, same system as window_p1.'),
         center: z.boolean().optional(),
         landscape: z.boolean().optional(),
       }),

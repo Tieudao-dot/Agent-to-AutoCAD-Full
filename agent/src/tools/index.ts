@@ -83,10 +83,11 @@ function trimForPlan(t: AnyTool, plan: string): AnyTool {
 }
 
 /** emit: palette messages of the local tools (confirmation / plan / suggestion / skill draft cards). */
-export function createCadServer(bridge: ToolBridge, version: string, emit?: (msg: SidecarToPlugin) => void, allowed?: readonly string[], plan?: string) {
+/** skillPlan: the machine's own plan for drafted skills (a Full machine in the 2D work mode still drafts Full skills). */
+export function createCadServer(bridge: ToolBridge, version: string, emit?: (msg: SidecarToPlugin) => void, allowed?: readonly string[], plan?: string, skillPlan?: string) {
   return createSdkMcpServer({
     name: MCP_SERVER_NAME,
     version,
-    tools: [...buildTools(bridge, allowed, plan), ...(emit ? interactionTools(emit, plan) : [])],
+    tools: [...buildTools(bridge, allowed, plan), ...(emit ? interactionTools(emit, skillPlan ?? plan) : [])],
   });
 }

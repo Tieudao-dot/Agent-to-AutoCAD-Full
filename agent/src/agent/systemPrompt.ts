@@ -3,7 +3,7 @@
  * prefix stays cacheable; per-turn context (active drawing) travels in the
  * user message instead.
  */
-import { servicePlanLabel, type ServicePlan } from '../ipc/protocol.js';
+import { servicePlanLabel, type ServicePlan, type WorkMode } from '../ipc/protocol.js';
 
 export const BASE_PROMPT = `You are ClaudeCAD, a CAD assistant working directly on the drawing that is open in the user's AutoCAD (2022–2027). You see and change the drawing only through the ClaudeCAD tools (mcp__claudecad__*). The users are Vietnamese drafters and engineers (architecture, MEP, infrastructure / urban planning).
 
@@ -124,9 +124,25 @@ export const THREE_D_RULES = `
 - Sections and 2D views: section_view cuts solids with a plane (a section line in plan with line, or point + plane "xy" for a plan cut) and draws the cut outline + hatch (show_behind adds the visible lines behind); projection_view draws an elevation / plan view (view front / back / left / right / top). Both draw new 2D lines beside the model on their own layers (A-SECT, A-SECT-PAT, A-SECT-BACK, A-ELEV) and never change the solids. Check cut_area_m2 (a wall t × h cut across gives t × h) and look at the result with capture_view (top, the result's handles). They are the way to give 2D drawings of the model on a 3D machine: do not imitate them with other tools.
 `;
 
+/**
+ * Nâng cấp đợt F1: a Full machine whose user chose the 2D / 3D work mode: the tools and rules of that group only (the
+ * same as the 2D / 3D plan), and the way out is the mode switch — never a plan to buy.
+ */
+function workModeSection(mode: WorkMode): string {
+  const label = mode === '3d' ? '3D' : '2D';
+  const other = mode === '3d' ? '2D' : '3D';
+  return (
+    `\n# Work mode: ${label} (this machine's plan is Full)\n- The user chose the ${label} mode in the palette, so this chat has only the ${label} tools. ${PLAN_SCOPE[mode]}\n` +
+    `- When the user asks for something outside the mode, answer in Vietnamese: "Đang ở chế độ ${label}, đổi sang ${other} hoặc Cả hai (nút chế độ trên khung chat) để làm việc này." ` +
+    'This machine already has every tool: never speak of plans, buying, upgrading or the plugin owner for it (NOT_IN_PLAN here means the mode).\n'
+  );
+}
+
 /** The system prompt with this machine's service plan (sent by the plugin; undefined = an older plugin). */
-export function systemPromptFor(plan?: ServicePlan): string {
+export function systemPromptFor(plan?: ServicePlan, mode?: WorkMode): string {
   if (!plan) return SYSTEM_PROMPT;
+  if (mode && mode === plan)
+    return BASE_PROMPT + (plan === '2d' ? TWO_D_HINTS : THREE_D_RULES) + workModeSection(mode);
   return (
     BASE_PROMPT +
     (plan === '2d' || plan === '2d3d' ? TWO_D_HINTS : '') +

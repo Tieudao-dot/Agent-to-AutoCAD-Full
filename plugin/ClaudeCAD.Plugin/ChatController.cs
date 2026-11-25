@@ -78,6 +78,8 @@ namespace ClaudeCAD.Plugin
         private MacroStore _macroStore;
         private Autodesk.AutoCAD.DatabaseServices.Database _turnDb;
         private bool _macroRunning;
+        // F1: the work mode the last message was sent with (the running turn keeps it when the user switches)
+        private string _turnWorkMode;
         private volatile bool _macroCancel;
         private readonly List<string> _turnSuggestions = new List<string>();
         private (string id, string kind)? _pendingPlan;
@@ -152,6 +154,7 @@ namespace ClaudeCAD.Plugin
             ui.ConfirmAnswered += (id, yes) => Guard("confirm", () => AnswerConfirm(id, yes));
             ui.ExportRequested += () => Guard("export", () => MainThread.Post(Export));
             ui.SettingsChanged += s => Guard("settings", () => OnSettingsChanged(s));
+            ui.WorkModeChanged += m => Guard("work mode", () => OnWorkModeChanged(m));
             ui.AddSkillRequested += () => Guard("add skill", () => MainThread.Post(AddSkill));
             ui.SkillToggled += (n, on) => Guard("toggle skill", () => ToggleSkill(n, on));
             ui.SkillEditRequested += n => Guard("edit skill", () => EditSkill(n));
@@ -323,6 +326,19 @@ namespace ClaudeCAD.Plugin
             _settings.Save();
             if (oldModel != s.Model || oldEffort != s.Effort) SendOptions();
             if (oldTheme != s.Theme) ApplyTheme();
+        }
+
+        /// <summary>F1: the user picked "Cả hai" / "2D" / "3D" (Full machines): kept in the settings, used from the next message.</summary>
+        private void OnWorkModeChanged(string mode)
+        {
+            var m = WorkModeLogic.Normalize(mode);
+            if (!WorkModeLogic.ShowsSwitch(Activation.Plan)) { ShowPlan(); return; } // a stale switch on a 2D / 3D machine: hide it
+            if (m == WorkModeLogic.Normalize(_settings.WorkMode)) return;
+            _settings.WorkMode = m;
+            _settings.Save();
+            Logger.Info("work mode: " + m);
+            ShowPlan();
+            Ui.AddNote(WorkModeLogic.ChangedNote(m, _busy));
         }
 
         private void SendOptions()
@@ -762,7 +778,12 @@ namespace ClaudeCAD.Plugin
             if (!string.IsNullOrEmpty(_settings.Scale)) ctx["scale"] = _settings.Scale;
             if (_transcript?.ReadOnly == true) ctx["read_only"] = true;
             // service plan: the assistant loads only the tools of the plan (the dispatcher refuses the others anyway)
-            var servicePlan = Activation.Plan;
+            // F1: on a Full machine the work mode of the palette narrows the plan of this turn (2D / 3D tools only);
+            // it is taken here, once per message, so a switch during a running turn applies from the next message
+            _turnWorkMode = WorkModeLogic.Normalize(_settings.WorkMode);
+            var servicePlan = WorkModeLogic.EffectivePlan(Activation.Plan, _turnWorkMode);
+            var limitingMode = WorkModeLogic.Limiting(Activation.Plan, _turnWorkMode);
+            if (limitingMode != null) ctx["work_mode"] = limitingMode;
             ctx["service_plan"] = servicePlan;
             if (servicePlan != PlanLogic.PlanFull) ctx["plan_tools"] = PlanLogic.AllowedTools(servicePlan).Cast<object>().ToList();
             var notes = NotesFor(doc);
@@ -2092,7 +2113,13 @@ namespace ClaudeCAD.Plugin
         }
 
         /// <summary>"Gói: …" in the palette; hidden for a build without an activation service (every tool, no plans).</summary>
-        private void ShowPlan() => Ui.SetPlan(Activation.ServiceUrl == null || !Activation.IsActivated ? null : Activation.PlanLabel);
+        private void ShowPlan()
+        {
+            bool shown = !(Activation.ServiceUrl == null || !Activation.IsActivated);
+            Ui.SetPlan(shown ? Activation.PlanLabel : null);
+            // F1: the work mode switch, on a Full machine only
+            Ui.SetWorkMode(shown && WorkModeLogic.ShowsSwitch(Activation.Plan), WorkModeLogic.Normalize(_settings.WorkMode));
+        }
 
         /// <summary>
         /// After a status check: the owner may have changed the plan in the device list. The palette shows it and the
@@ -2243,8 +2270,14 @@ namespace ClaudeCAD.Plugin
 
         public void RecordCall(string tool, Dictionary<string, object> parameters, object result) => _recorder.Record(tool, parameters, result);
 
-        /// <summary>Service plan of this machine (2d / 3d / 2d3d), see Activation.Plan.</summary>
-        public string Plan => Activation.Plan;
+        /// <summary>
+        /// Service plan the tools are checked against: the machine's plan (Activation.Plan), narrowed on a Full machine to
+        /// the work mode the running turn was sent with (F1). A macro does not use Claude: it runs with the whole plan.
+        /// </summary>
+        public string Plan => _macroRunning ? Activation.Plan : WorkModeLogic.EffectivePlan(Activation.Plan, _turnWorkMode ?? _settings.WorkMode);
+
+        /// <summary>F1: "2d" / "3d" while a Full machine's chat is limited to that mode, else null (ITurnHost.WorkMode).</summary>
+        public string WorkMode => _macroRunning ? null : WorkModeLogic.Limiting(Activation.Plan, _turnWorkMode ?? _settings.WorkMode);
 
         public string PlanContact => Activation.Contact;
 

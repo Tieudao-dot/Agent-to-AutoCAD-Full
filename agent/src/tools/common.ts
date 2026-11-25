@@ -78,6 +78,20 @@ export const point = z
   .max(3)
   .describe('Point [x, y] or [x, y, z] in millimetres, current UCS. Missing z = 0. Example: [4000, 3600]');
 
+/** Nâng cấp đợt F1: points of the few tools that ignore the UCS on purpose (set_ucs itself, plot windows, viewport centers). */
+export const wcsPoint = z
+  .array(z.number())
+  .min(2)
+  .max(3)
+  .describe('Point [x, y] or [x, y, z] in millimetres, WCS (this tool ignores the UCS). Missing z = 0.');
+
+/** A point on a layout sheet (paper-space units), not a model point. */
+export const paperPoint = z
+  .array(z.number())
+  .min(2)
+  .max(3)
+  .describe('Point [x, y] on the layout sheet (paper units, mm).');
+
 export const points = (min: number, what = 'points') =>
   z.array(point).min(min).describe(`Array of ${what} [[x, y], ...] in mm (at least ${min}).`);
 

@@ -244,3 +244,43 @@ cậu muốn đổi số mặc định thì báo luồng chính:
 | Bản thang (phần bê tông dưới bậc) và chiếu nghỉ dày | **150 mm** | R1–R3: mặt cắt V4 thấy bản nghiêng dưới các bậc dày 150 |
 | Khe giữa 2 vế cầu thang chữ U | **100 mm** | R3, V2: nhìn từ trên thấy khe hở giữa hai vế |
 | Bản mái dốc dày (đo vuông góc mặt mái) | **150 mm** | R7, R8, V1: mép mái đua |
+
+# Đợt F1: lệnh hiểu UCS + nút chế độ "Cả hai / 2D / 3D" (thêm 25/11/2026)
+
+*Thread "Nâng cấp đợt F1", nhánh `full/nang-cap-f1`. Chi tiết: `docs/ban-giao/nang-cap-f1.md`. Cần máy **gói Full** (bộ
+cài thử nội bộ là Full) và một bản vẽ trống đơn vị mm. ~30 phút.*
+
+**UCS là gì (một câu):** UCS là hệ trục khách tự đặt (gõ lệnh `UCS` trong AutoCAD, hoặc nhờ Claude), ví dụ dời gốc tọa
+độ tới góc nhà hoặc xoay trục theo hướng nhà. Biểu tượng trục X / Y ở góc màn hình đổi theo.
+
+### F1-a. World vẫn như cũ (~5 phút, làm trước)
+
+| # | Làm gì | Thấy gì là đạt |
+| --- | --- | --- |
+| U0 | Gõ `UCS` → `W` (World). Chạy một macro đã lưu từ trước đợt F1 (nếu có), rồi nhờ "vẽ hình chữ nhật 4000 × 3000 tại 0,0" | Macro vẽ ra **đúng chỗ như trước**. Hình chữ nhật có góc ở 0,0, cạnh ngang / dọc như cũ. Claude không nhắc gì tới UCS |
+
+### F1-b. Vẽ trong UCS đã dời / xoay (~12 phút)
+
+| # | Làm gì | Thấy gì là đạt |
+| --- | --- | --- |
+| U1 | Gõ `UCS` → chọn gốc mới tại điểm 10000,5000 → xoay trục Z 30° (`UCS` → `Z` → 30). Nhờ "vẽ hình chữ nhật 4000 × 3000 tại gốc" | Góc hình chữ nhật nằm **đúng gốc UCS mới** (chỗ biểu tượng trục), cạnh dài song song trục X của UCS (nghiêng 30° so với màn hình nếu đang nhìn World) |
+| U2 | Tiếp U1: "ghi chữ PHÒNG KHÁCH cao 250 giữa hình", "ghi kích thước cạnh dưới" | Chữ nằm giữa hình, **xoay theo UCS** (dọc theo cạnh dài). Kích thước nằm dọc cạnh dưới, số đo 4000 |
+| U3 | Tiếp: "dời hình chữ nhật theo trục X 1000", rồi "hình chữ nhật đang ở tọa độ nào?" | Hình dời **dọc theo trục X của UCS** (không phải ngang màn hình World). Claude trả lời góc ở khoảng **1000, 0** và nói là theo UCS |
+| U4 | Tiếp: "dựng khối hộp 1000 × 500 cao 800 tại gốc", rồi xoay góc nhìn 3D | Khối hộp đứng ở gốc UCS, cạnh song song cạnh hình chữ nhật |
+| U5 | Bấm nút **Chọn điểm** trên khung chat, bấm đúng vào gốc UCS, gửi "vẽ đường tròn bán kính 500 tại điểm này" | Ô nhập có số gần **[0, 0]**; đường tròn tâm đúng chỗ đã bấm |
+| U6 | Bấm **Lưu macro** cho lượt U1. Gõ `UCS` → `W`. Chạy macro vừa lưu | Hình chữ nhật mới vẽ **chồng đúng lên hình của U1** (macro nhớ UCS lúc ghi), không nhảy về 0,0 của World |
+| U7 | Gõ `UCS` → `X` → 90 (UCS mặt đứng). Nhờ "vẽ hình chữ nhật 2000 × 1000 tại gốc", rồi xoay góc nhìn 3D | Hình chữ nhật **đứng thẳng** (nằm trên mặt đứng), không nằm sàn |
+| U8 | Gõ `UCS` → `W`. Hỏi "bản vẽ đang dùng hệ tọa độ nào?" | Claude nói đang là World (WCS); số lại như cũ |
+
+### F1-c. Nút chế độ (~10 phút)
+
+| # | Làm gì | Thấy gì là đạt |
+| --- | --- | --- |
+| M1 | Mở khung chat trên máy gói **Full** | Hàng trên cùng, cạnh "Gói: Full", có nút hình khối ghi **Cả hai**. (Máy gói 2D hoặc 3D: **không có** nút này) |
+| M2 | Bấm nút → chọn **2D — chỉ lệnh 2D** | Nút đổi thành **2D**; khung chat có dòng "Đã chuyển sang chế độ 2D … áp dụng từ tin nhắn tới" |
+| M3 | Ở chế độ 2D, nhờ "dựng khối hộp 1000 × 1000 × 1000" | Claude nói kiểu **"Đang ở chế độ 2D, đổi sang 3D hoặc Cả hai để vẽ"**. **Không** có câu mua gói, nâng cấp, liên hệ chủ plugin. Bản vẽ không có gì mới |
+| M4 | Chọn **3D**, nhờ "ghi chữ ABC" | Claude nói đang ở chế độ 3D, đổi sang 2D hoặc Cả hai. Rồi chọn **Cả hai**, nhờ lại: chữ được ghi |
+| M5 | Chọn **2D**, đóng hẳn AutoCAD, mở lại, mở khung chat | Nút vẫn ghi **2D** (nhớ lựa chọn) |
+| M6 | Đang ở **Cả hai**, gửi một yêu cầu dài (vd "vẽ mặt bằng 3 phòng có cửa"); trong lúc Claude đang làm, chọn **3D** | Lượt đang chạy **làm tiếp bình thường** tới hết (không bị lỗi nửa chừng); dòng báo ghi "áp dụng từ tin nhắn sau, lượt đang chạy giữ chế độ cũ". Tin sau mới theo chế độ 3D; Claude vẫn nhớ đoạn chat trước |
+| M7 | Bấm **Thu gọn** khung chat | Nút chế độ **vẫn thấy** ở hàng trên cùng, bấm được |
+| M8 | Ở chế độ 2D, chạy một macro có cả lệnh 3D (nếu có) | Macro chạy đủ (macro không dùng Claude nên không bị chế độ giới hạn) |

@@ -50,6 +50,8 @@ namespace ClaudeCAD.Plugin.UI
         public event Action<List<string>> ZoomRequested;
         public event Action<string, bool> ConfirmAnswered;
         public event Action<PaletteSettings> SettingsChanged;
+        /// <summary>Nâng cấp đợt F1: the user picked a work mode ("both" / "2d" / "3d") on a Full machine.</summary>
+        public event Action<string> WorkModeChanged;
         // skills (+ Add skill / Skill list)
         public event Action AddSkillRequested;
         /// <summary>"+" (true) / "−" (false): use the skill in the current chat or not; the library keeps it.</summary>
@@ -130,6 +132,10 @@ namespace ClaudeCAD.Plugin.UI
         private TextBlock _accountStatus;
         /// <summary>"Gói 2D" in the top bar and "Gói dịch vụ của máy này: …" in ⚙ (hidden for a build without plans).</summary>
         private TextBlock _planBadge, _planLine;
+        // F1: "Cả hai / 2D / 3D" (Full machines only), in the top row so it stays visible in compact mode
+        private Button _modeBtn;
+        private ContextMenu _modeMenu;
+        private string _workMode = WorkModeLogic.Both;
         /// <summary>"Kiểm tra lại" / "Dán mã của chủ plugin" under the plan line in ⚙ (KT-41).</summary>
         private WrapPanel _planButtons;
         private Category _accountCat;
@@ -239,6 +245,9 @@ namespace ClaudeCAD.Plugin.UI
             _planBadge.VerticalAlignment = VerticalAlignment.Center;
             _planBadge.Visibility = Visibility.Collapsed;
             DockPanel.SetDock(_planBadge, Dock.Right);
+            _modeBtn = BuildModeButton();
+            DockPanel.SetDock(_modeBtn, Dock.Right);
+            top.Children.Add(_modeBtn);
             top.Children.Add(_planBadge);
             var statusStack = new StackPanel { VerticalAlignment = VerticalAlignment.Center };
             _connection = MutedText("Đang khởi động...");
@@ -583,6 +592,71 @@ namespace ClaudeCAD.Plugin.UI
         /// Toolbar button the way AutoCAD palettes have them: a 16 px glyph, no text, and a tooltip that
         /// says in one short line what it does. <paramref name="tip"/> is "Tên — giải thích ngắn".
         /// </summary>
+        /// <summary>F1: the work mode switch: icon + "Cả hai" / "2D" / "3D"; a click opens the three choices.</summary>
+        private Button BuildModeButton()
+        {
+            var b = new Button
+            {
+                Content = Icons.WithText("mode", WorkModeLogic.Label(_workMode)),
+                ToolTip = WorkModeLogic.Tip(_workMode),
+                Height = 22,
+                MinWidth = 24,
+                Margin = new Thickness(0, 0, 4, 0),
+                Padding = new Thickness(5, 0, 6, 0),
+                BorderThickness = new Thickness(1),
+                Background = Brushes.Transparent,
+                Focusable = false,
+                Visibility = Visibility.Collapsed,
+            };
+            Theme.Ref(b, BorderBrushProperty, Theme.Border);
+            Theme.Ref(b, ForegroundProperty, Theme.Fg);
+            _modeMenu = new ContextMenu { PlacementTarget = b, Placement = PlacementMode.Bottom };
+            foreach (var m in WorkModeLogic.Modes)
+            {
+                var item = new MenuItem
+                {
+                    Header = m == WorkModeLogic.Both ? "Cả hai (2D và 3D)" : m == WorkModeLogic.TwoD ? "2D — chỉ lệnh 2D" : "3D — chỉ lệnh 3D",
+                    IsCheckable = true,
+                    Tag = m,
+                };
+                item.Click += (s, e) => PickWorkMode((string)((MenuItem)s).Tag);
+                _modeMenu.Items.Add(item);
+            }
+            b.ContextMenu = _modeMenu;
+            b.Click += (s, e) => { PaintWorkMode(); _modeMenu.IsOpen = true; };
+            return b;
+        }
+
+        /// <summary>A choice of the switch's menu (also used by the UI tests).</summary>
+        internal void PickWorkMode(string mode)
+        {
+            var m = WorkModeLogic.Normalize(mode);
+            bool changed = m != _workMode;
+            _workMode = m;
+            if (_settings != null) _settings.WorkMode = m;
+            PaintWorkMode();
+            if (changed) WorkModeChanged?.Invoke(m);
+        }
+
+        private void PaintWorkMode()
+        {
+            if (_modeBtn == null) return;
+            _modeBtn.Content = Icons.WithText("mode", WorkModeLogic.Label(_workMode));
+            _modeBtn.ToolTip = WorkModeLogic.Tip(_workMode);
+            if (_modeMenu != null)
+                foreach (var o in _modeMenu.Items)
+                    if (o is MenuItem mi) mi.IsChecked = (string)mi.Tag == _workMode;
+        }
+
+        /// <summary>F1: shows the switch (Full machine) with the chosen mode, or hides it (2D / 3D machine, not activated).</summary>
+        public void SetWorkMode(bool show, string mode) => Ui(() =>
+        {
+            _workMode = WorkModeLogic.Normalize(mode);
+            if (_settings != null) _settings.WorkMode = _workMode;
+            PaintWorkMode();
+            _modeBtn.Visibility = show ? Visibility.Visible : Visibility.Collapsed;
+        });
+
         private Button IconButton(string icon, string tip)
         {
             var b = new Button
@@ -985,6 +1059,8 @@ namespace ClaudeCAD.Plugin.UI
         public void ApplySettings(PaletteSettings s) => Ui(() =>
         {
             _settings = s.Clone();
+            _workMode = WorkModeLogic.Normalize(s.WorkMode); // F1: the label only; ShowPlan decides whether the switch shows
+            PaintWorkMode();
             _suppressSettingsEvents = true;
             try
             {

@@ -5,7 +5,7 @@ import {
   type SDKMessage,
   type SDKUserMessage,
 } from '@anthropic-ai/claude-agent-sdk';
-import type { ServicePlan, SidecarToPlugin, UserMessage } from '../ipc/protocol.js';
+import type { ServicePlan, SidecarToPlugin, UserMessage, WorkMode } from '../ipc/protocol.js';
 import { applyUserConfirmation, confirmationError, createdHandles, newlyAffected, planLayersOf, refusedForConfirmation, windowChanged, type GateState } from './confirmation.js';
 import { toSdkUserMessage } from './content.js';
 import type { ToolBridge } from '../tools/common.js';
@@ -122,6 +122,8 @@ export class AgentSession {
   // service plan of this machine (2D / 3D / Full) and its tools, from the palette (undefined = an older plugin:
   // every tool); the tool list is fixed when a Claude process starts, so a changed plan restarts it (resumed)
   private servicePlan?: ServicePlan;
+  // F1: the 2D / 3D work mode of a Full machine (undefined = no mode limits the chat)
+  private workMode?: WorkMode;
   private planTools?: string[];
   private loadedPlanKey?: string;
 
@@ -225,16 +227,16 @@ export class AgentSession {
       if (req.type === 'confirm_request') this.cardShown(req.id, req.handles, req.text);
       if (req.type === 'plan_request') this.askShown([req.summary, ...req.steps].join('\n'));
       this.cfg.emit(req);
-    }, this.planTools, this.servicePlan);
-    this.loadedPlanKey = planKey(this.servicePlan, this.planTools);
-    if (this.servicePlan) this.cfg.log(`service plan: ${this.servicePlan}${this.planTools ? ` (${this.planTools.length} tools)` : ''}`);
+    }, this.planTools, this.servicePlan, this.workMode ? '2d3d' : undefined);
+    this.loadedPlanKey = planKey(this.servicePlan, this.planTools, this.workMode);
+    if (this.servicePlan) this.cfg.log(`service plan: ${this.servicePlan}${this.workMode ? ` (work mode ${this.workMode} of Full)` : ''}${this.planTools ? ` (${this.planTools.length} tools)` : ''}`);
     const plugin = prepareSkillsPlugin(this.cfg.skillsDir, this.cfg.workDir, this.chatSkills, this.servicePlan);
     this.loadedSkillsKey = skillsKey(this.chatSkills);
     if (plugin) this.cfg.log(`skills loaded: ${plugin.skills.join(', ') || '(none)'}`);
 
     const options: Options = {
       cwd: this.cfg.workDir,
-      systemPrompt: systemPromptFor(this.servicePlan),
+      systemPrompt: systemPromptFor(this.servicePlan, this.workMode),
       model: this.cfg.model,
       fallbackModel: this.cfg.fallbackModel,
       ...(this.cfg.effort ? { effort: this.cfg.effort as Options['effort'] } : {}),
@@ -309,9 +311,12 @@ export class AgentSession {
     const plan = msg.context?.service_plan;
     if (plan) {
       const tools = msg.context?.plan_tools;
-      if (this.q && this.loadedPlanKey !== planKey(plan, tools)) this.closeQuery();
+      // F1: a switched work mode changes the plan key too → the same restart (resumed conversation) as a changed plan
+      const mode = msg.context?.work_mode;
+      if (this.q && this.loadedPlanKey !== planKey(plan, tools, mode)) this.closeQuery();
       this.servicePlan = plan;
       this.planTools = tools;
+      this.workMode = mode;
     }
     let removed: string[] = [];
     let added: string[] = [];
@@ -630,6 +635,6 @@ function skillsKey(list: string[] | undefined): string {
 }
 
 /** Identity of a service plan + its tool list (order-free). */
-function planKey(plan?: string, tools?: readonly string[]): string {
-  return `${plan ?? ''}|${tools ? [...tools].sort().join(',') : '*'}`;
+function planKey(plan?: string, tools?: readonly string[], mode?: string): string {
+  return `${plan ?? ''}|${tools ? [...tools].sort().join(',') : '*'}|${mode ?? ''}`;
 }

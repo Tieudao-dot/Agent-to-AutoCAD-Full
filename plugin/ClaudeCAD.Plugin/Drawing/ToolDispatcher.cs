@@ -59,6 +59,11 @@ namespace ClaudeCAD.Plugin.Drawing
         string Plan { get; }
         /// <summary>Who opens a bigger plan (shown to Claude in the NOT_IN_PLAN error).</summary>
         string PlanContact { get; }
+        /// <summary>
+        /// Nâng cấp đợt F1: the work mode ("2d" / "3d") a Full machine's chat is limited to, null when nothing is limited.
+        /// Plan is then that mode's plan, and a refused tool says "switch the mode", never "buy a plan".
+        /// </summary>
+        string WorkMode { get; }
         /// <summary>The entity was added during the running turn or macro (explode_entities: such a 3D solid needs no yes).</summary>
         bool CreatedThisTurn(string handle);
     }
@@ -155,7 +160,9 @@ namespace ClaudeCAD.Plugin.Drawing
         {
             var plan = _host.Plan;
             if (!PlanLogic.Allowed(plan, tool))
-                throw new ToolException(ErrorCodes.NotInPlan, PlanLogic.BlockedMessage(tool, plan, _host.PlanContact));
+                throw new ToolException(ErrorCodes.NotInPlan, _host.WorkMode != null
+                    ? WorkModeLogic.BlockedMessage(tool, _host.WorkMode)
+                    : PlanLogic.BlockedMessage(tool, plan, _host.PlanContact));
         }
 
         /// <summary>Block attributes are text: refused on a plan without 2D (decided 12/11/2026, C3); the block itself is not.</summary>
@@ -164,7 +171,9 @@ namespace ClaudeCAD.Plugin.Drawing
             var plan = _host.Plan;
             var param = PlanLogic.BlockedParam(plan, tool, p);
             if (param != null)
-                throw new ToolException(ErrorCodes.NotInPlan, PlanLogic.BlockedParamMessage(tool, param, plan, _host.PlanContact));
+                throw new ToolException(ErrorCodes.NotInPlan, _host.WorkMode != null
+                    ? WorkModeLogic.BlockedParamMessage(tool, param, _host.WorkMode)
+                    : PlanLogic.BlockedParamMessage(tool, param, plan, _host.PlanContact));
         }
 
         public static Dictionary<string, object> Ok(string id, object result) => new Dictionary<string, object>
