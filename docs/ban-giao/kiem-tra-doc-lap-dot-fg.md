@@ -548,3 +548,11 @@ Quyết định luồng chính giữ nguyên sau nhận xét của thread kiểm
 - **Chờ sau khi lệnh render kết thúc:** vẫn là số lớn hơn giữa 20 giây và thời gian ước lượng. Chưa ai biết lệnh render của
   AutoCAD kết thúc trước hay sau khi ảnh ra; nếu thử thật thấy lệnh kết thúc ngay còn ảnh ra sau thì đổi thành chờ tới thời
   gian tối đa (một chỗ: `RenderLogic.EndGrace`). Đây là mục cần chủ dự án thử tay trước tiên.
+
+### Tiến độ sửa lượt 2
+
+| Thread | Kết quả |
+| --- | --- |
+| Thread đợt F2 (G1, G3) | 26/11 02h23: CI 45682294964 của bản gộp lượt 1 (`20e3812`) xanh. Sửa KFG-30, 33 ở `6868a38`, lõi 1410, trợ lý 407. Chờ hai nhánh kia để gộp + CI |
+| Thread đợt F1 (G2) | 02h25: sửa KFG-32, 34, 38 ở `full/nang-cap-g-sua-kfg-a` @ `deec2a4`, lõi 1412, trợ lý 407, ≈ $4. Lộ và sửa thêm một lỗi: polyline vẽ ngược chiều có cung tròn không bao giờ được nhận là trùng. Giới hạn đã ghi: khách chép nét của hình chiếu thì bản chép cũng mang dấu, nên không bị báo trùng |
+| Thread Test & sửa F1 (G4, G5) | 02h26: sửa KFG-28, 29, 31, 35, 36, 37 và hai nhận xét G5 ở `full/nang-cap-g-sua-kfg-b` @ `adef96c` (code `271ae04`), lõi 1432, trợ lý 407. Quyết định mới: file khách kéo / chọn từ thư mục mạng được khung chat chép về máy (dọn sau 7 ngày) rồi dùng bản chép; bản vẽ mở từ ổ mạng đã ánh xạ mà ảnh ghi theo tên máy chủ thì vẫn từ chối, lời báo hướng dẫn ghi theo ký tự ổ |
