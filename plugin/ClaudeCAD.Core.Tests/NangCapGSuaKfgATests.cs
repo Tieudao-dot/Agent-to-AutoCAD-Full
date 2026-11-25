@@ -1,0 +1,127 @@
+using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+using ClaudeCAD.Plugin.Core;
+using Xunit;
+
+namespace ClaudeCAD.Core.Tests
+{
+    /// <summary>
+    /// Sửa các lỗi kiểm tra độc lập đợt F + G, phần G2 (docs/ban-giao/nang-cap-g-sua-kfg-a.md): KFG-07, 08, 15, 16, 17, 18 and
+    /// the suspicions on the sheet viewport, a dimension text " " and the lines of the drawing set seen as copies.
+    /// </summary>
+    public class NangCapGSuaKfgATests
+    {
+        private static string Src(params string[] parts) =>
+            File.ReadAllText(Path.GetFullPath(Path.Combine(new[] { AppContext.BaseDirectory, "..", "..", "..", "..", ".." }.Concat(parts).ToArray())));
+
+        private static string Tools => Src("plugin", "ClaudeCAD.Plugin", "Drawing", "DrawingCheckTools.cs");
+
+        private static DrawingCheckLogic.DupItem D(string g, params double[] n) => new DrawingCheckLogic.DupItem { Group = g, Nums = n };
+
+        // ------------------------------------------------------------ KFG-15: within 0.1 mm, not on a grid
+
+        [Fact]
+        public void Two_lines_0_002_mm_apart_across_a_grid_line_are_copies()
+        {
+            double tol = G2Numbers.DuplicateTolMm;
+            // before: the grid of 0.1 put 1000.049 and 1000.051 in two cells (two keys), so no copy was found
+            Assert.NotEqual(DrawingCheckLogic.ShapeKey("line", "A", new[] { 1000.049 }, tol), DrawingCheckLogic.ShapeKey("line", "A", new[] { 1000.051 }, tol));
+            var items = new List<DrawingCheckLogic.DupItem>
+            {
+                D("M|A|line|", 1000.049, 0, 0, 4000, 0, 0),
+                D("M|A|line|", 1000.051, 0, 0, 4000, 0, 0),   // 0.002 away: a copy
+                D("M|A|line|", 1000.2, 0, 0, 4000, 0, 0),     // 0.15 from the first: not a copy
+                D("M|B|line|", 1000.049, 0, 0, 4000, 0, 0),   // another layer: not compared
+                D("M|A|line|", 1000.049, 0, 0, 4000.5, 0, 0), // one end 0.5 away: not a copy
+            };
+            Assert.Equal(new List<int> { 1 }, DrawingCheckLogic.DuplicateIndices(items, tol));
+            // exactly at the tolerance still counts (≤ 0.1 mm), negative numbers too
+            Assert.Equal(new List<int> { 1 }, DrawingCheckLogic.DuplicateIndices(new[] { D("g", -5.0), D("g", -5.1) }, tol));
+            Assert.Empty(DrawingCheckLogic.DuplicateIndices(new[] { D("g", -5.0), D("g", -5.11) }, tol));
+            // angles / scales are exact parts, not compared with the length tolerance
+            Assert.NotEqual(DrawingCheckLogic.Exact(0.0), DrawingCheckLogic.Exact(0.05));
+            Assert.Contains("DrawingCheckLogic.DuplicateIndices(dupKeys, dupTol)", Tools);
+        }
+
+        // ------------------------------------------------------------ nghi vấn G1 × G2: the drawing set's lines
+
+        [Fact]
+        public void Lines_of_the_views_from_the_model_are_never_called_copies()
+        {
+            Assert.True(Util2DLogic.IsDerivedViewLayer(SectionLogic.ElevationLayer));
+            Assert.True(Util2DLogic.IsDerivedViewLayer(SectionLogic.OutlineLayer));
+            Assert.Contains("if (Util2DLogic.IsDerivedViewLayer(e.Layer)) return null;", Tools);
+        }
+
+        // ------------------------------------------------------------ KFG-07: hatches that never had a boundary
+
+        [Fact]
+        public void Hatches_of_the_views_and_hatches_drawn_without_boundary_are_not_unassociated()
+        {
+            Assert.Contains("!h.Associative && !Util2DLogic.IsDerivedViewLayer(layer) && !IsPlainHatch(ctx, h)", Tools);
+            var draw = Src("plugin", "ClaudeCAD.Plugin", "Drawing", "DrawTools.cs");
+            Assert.Equal(2, draw.Split(new[] { "MarkPlainHatch(ctx, hatch);" }, StringSplitOptions.None).Length - 1); // pick point + points
+            Assert.Contains("if (h.Associative) return;", Tools); // an associative hatch is never marked
+        }
+
+        // ------------------------------------------------------------ KFG-08: a default name with the user's viewport
+
+        [Fact]
+        public void A_default_layout_with_a_viewport_of_the_user_is_a_sheet()
+        {
+            var t = Tools;
+            Assert.Contains("if (others == 0 && ownViewports == 0 && DrawingCheckLogic.IsDefaultLayoutName(sp.layout))", t);
+            Assert.Contains("ownViewports++;", t);
+            Assert.Contains("(others > 0 || ownViewports > 0) && !hasTitle", t);
+            // the sheet's own viewport: Layout.GetViewports first, else the first of the block
+            Assert.Contains("GetViewports()", t);
+            Assert.Contains("bool isSheet = sheetVp.IsNull ? firstViewport : id == sheetVp;", t);
+            var check = Src("docs", "checklist-dot-g2.md");
+            Assert.Contains("Layout2", check);
+        }
+
+        // ------------------------------------------------------------ KFG-16, KFG-17
+
+        [Fact]
+        public void Dimensions_on_layouts_count_and_the_fix_reads_the_same_spaces_as_the_check()
+        {
+            var t = Tools;
+            Assert.Contains("dims++; // Sửa KFG-16", t);
+            Assert.DoesNotContain("if (model) dims++;", t);
+            Assert.Contains("ScanDrawing(ctx, new HashSet<string>(StringComparer.Ordinal) { fix }, p.Bool(\"layouts\", true))", t);
+            var ts = Src("agent", "src", "tools", "drawingCheck.ts");
+            int fix = ts.IndexOf("'fix_drawing'", StringComparison.Ordinal);
+            Assert.True(ts.IndexOf("layouts: z.boolean()", fix, StringComparison.Ordinal) > fix, "fix_drawing has layouts");
+            // the card token is made from the objects of that scan only: model-only and with layouts give other tokens
+            Assert.NotEqual(DrawingCheckLogic.FixToken("not_bylayer", null, new[] { "2F" }), DrawingCheckLogic.FixToken("not_bylayer", null, new[] { "2F", "3A" }));
+        }
+
+        // ------------------------------------------------------------ KFG-18: a target layer that does not print
+
+        [Fact]
+        public void Objects_are_never_moved_onto_a_layer_that_does_not_print()
+        {
+            Assert.Null(DrawingCheckLogic.TargetLayerStateError("layer_zero", "A-WALL", false, false, true));
+            Assert.Contains("off", DrawingCheckLogic.TargetLayerStateError("layer_zero", "A-WALL", true, false, true));
+            Assert.Contains("frozen", DrawingCheckLogic.TargetLayerStateError("defpoints", "A-DOOR", false, true, true));
+            var img = DrawingCheckLogic.TargetLayerStateError("layer_zero", G5Numbers.Layer, false, false, false);
+            Assert.Contains("not plotted", img);
+            Assert.Contains("ask the user", img);
+            Assert.Contains("DrawingCheckLogic.TargetLayerStateError(fix, tl.Name, tl.IsOff, tl.IsFrozen, tl.IsPlottable)", Tools);
+        }
+
+        // ------------------------------------------------------------ nghi vấn G2: a dimension text " "
+
+        [Fact]
+        public void A_dimension_text_of_one_space_hides_the_number_and_is_reported()
+        {
+            Assert.True(DrawingCheckLogic.HidesMeasurement(" "));
+            Assert.True(DrawingCheckLogic.HidesMeasurement("9999"));
+            Assert.False(DrawingCheckLogic.HidesMeasurement(""));
+            Assert.False(DrawingCheckLogic.HidesMeasurement(null));
+            Assert.False(DrawingCheckLogic.HidesMeasurement("<> TT"));
+        }
+    }
+}

@@ -42,6 +42,7 @@ export function drawingCheckTools(b: ToolBridge): AnyTool[] {
         fix: z.enum(FIX_GROUPS),
         layer: z.string().optional().describe('layer_zero / defpoints: the layer the objects go to (must exist).'),
         handles: handles.max(2000).optional().describe('Only these objects of the group (default the whole group).'),
+        layouts: z.boolean().optional().describe('As in the check_drawing call the user saw (false = model only; default true).'),
         confirm_handles: handles.max(50).optional().describe(confirmDesc),
       },
       { destructive: true }),

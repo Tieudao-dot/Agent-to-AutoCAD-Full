@@ -39,7 +39,7 @@ gõ đè số "9999" (Properties → Text override); một đường rất xa (v
 
 | # | Làm gì | Thấy gì là đạt |
 | --- | --- | --- |
-| D1 | Tạo một layout trống có một khung nhìn (MVIEW), không khung tên, không khóa; "soát bản vẽ" | Báo "Tờ in không có khung tên" (tên layout) và "Khung nhìn chưa khóa"; "khóa khung nhìn" → thẻ → khóa được |
+| D1 | Bấm tab "+" (layout mới tên `Layout2`), xóa hết rồi tự đặt một khung nhìn (MVIEW), không khung tên, không khóa; "soát bản vẽ" *(Sửa KFG-08: tên mặc định vẫn được kiểm khi có khung nhìn của cậu; layout mặc định trống hẳn thì bỏ qua)* | Báo "Tờ in không có khung tên" (tên layout) và "Khung nhìn chưa khóa"; "khóa khung nhìn" → thẻ → khóa được |
 | D2 | Bật "Chỉ xem", "soát bản vẽ" rồi "sửa hình trùng" | Soát vẫn chạy; sửa bị chặn (Chỉ xem) |
 | D3 | Máy gói 3D (nếu có) | Không có lệnh soát bản vẽ (thuộc gói 2D / Full) |
 
