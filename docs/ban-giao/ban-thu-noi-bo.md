@@ -6,8 +6,12 @@
 
 *13/11/2026 · thread "Bộ cài thử nội bộ" · xuất phát từ `full/test-tong-the` @ `19944df`. Chủ dự án chốt 13/11/2026.*
 
-> **Bản mới nhất (25/11/2026): bản 4, `AgentToAutoCADFull-ThuNoiBo-nang-cap-4-0.9.4`** (lượt CI #55, mục "Bản 4" ngay
-> dưới). Như bản 3, thêm **đợt F (F1 → F5)**. Bản 3 bỏ.
+> **Bản mới nhất (26/11/2026): bản 5, `AgentToAutoCADFull-ThuNoiBo-nang-cap-5-0.9.4`** (mục "Bản 5" ngay dưới). Đủ
+> đợt F (F1 → F5) + đợt G (G1 → G5). Bản 3, bản 4 bỏ. **Cài đè lên bản 3: phải làm thêm một bước tay cho skill** (xem
+> "Bản 5 › Skill").
+>
+> **Bản 4 (25/11/2026): `AgentToAutoCADFull-ThuNoiBo-nang-cap-4-0.9.4`** (lượt CI #55). Như bản 3, thêm **đợt F (F1 →
+> F5)**. Không gửi chủ dự án (chủ dự án chọn nhận một lần ở bản 5).
 >
 > **Bản 3 (15/11/2026): `AgentToAutoCADFull-ThuNoiBo-nang-cap-3-0.9.4`** (lượt CI #38, mục "Lượt CI" cuối
 > file). Như bản 2 dưới đây, thêm **sửa khung chat** (`full/toi-uu-khung-chat` @ `983d4c2`): hết giật khi cuộn / gõ lúc
@@ -22,6 +26,100 @@
 > - file còn bị giữ thì bảo khởi động lại máy rồi chạy lại.
 >
 > Các bộ cài cũ (`…-0.9.4` lượt #16, `…-nang-cap-0.9.4` lượt #32): **đừng dùng nữa**.
+
+## Bản 5 (26/11/2026): đợt F + đợt G
+
+**Gồm gì.** Gộp nhánh tích hợp đợt G `full/nang-cap-g-tong-the` @ `547d6af` (code cuối `e1455fb`, đã qua test tổng thể và
+ba lượt soát của kiểm tra độc lập), không xung đột:
+- **đợt F** (như bản 4): F1 UCS + nút chế độ, F2 style chuẩn VN / khung tên / block thư viện / trạng thái layer, F3 mái
+  liền khối / vật liệu / góc nhìn, F4 mở chat nhanh + xuất Excel, F5 ô Nạp gọn lệnh / thẻ xác nhận / ghi chú mũi tên;
+- **đợt G** (mới): G1 ra bộ hồ sơ một lệnh; G2 soát / sửa bản vẽ trước khi in; G3 bảng dự toán (xuất Excel có công
+  thức); G4 render thật; G5 vẽ lại từ ảnh / PDF scan;
+- skill cập nhật: `ve-kien-truc`, `ve-3d-kien-truc` (đợt G), `ve-mep`, `ve-ha-tang` (sửa nhỏ từ sau bản 3);
+- lệnh tự kiểm `CLAUDECHATSELFTEST` có thêm 5 dòng "Nâng cấp đợt G1 … G5".
+
+Đợt G không thêm file dữ liệu hay thư viện riêng: mọi thứ nằm trong plugin, trợ lý và skill.
+
+**Khác bản 3 / 4.**
+- Bản 3 → bản 5: thêm toàn bộ đợt F và đợt G.
+- Bản 4 → bản 5: thêm đợt G.
+- Tên bản ghi rõ **"nâng cấp 5"**: thanh trên cùng khung chat, ⚙, dòng đầu báo cáo tự kiểm, danh sách ứng dụng Windows
+  ("Agent to AutoCAD Full: BẢN THỬ NỘI BỘ nâng cấp 5 (hết hạn 10/12/2026)"), trang đầu bộ cài.
+- Thiết lập bản thử giữ nguyên: không kích hoạt, luôn gói Full, **vẫn hết hạn sau 10/12/2026**, không tự cập nhật,
+  không phát hành được.
+
+**Tải.** Mục "Bản 5 — lượt CI" ở cuối file: trang run, tên, id, dung lượng, hạn tải, link tải thẳng.
+
+### Bản 5 › Cài đè lên bản 3 (hoặc bản 4)
+
+1. Đóng AutoCAD. Bộ cài nhắc bằng tiếng Việt nếu AutoCAD còn mở: đóng rồi bấm Thử lại.
+2. **Làm bước "Skill" ngay dưới trước**, rồi mới chạy bộ cài.
+3. Giải nén zip, chạy `AgentToAutoCADFull-ThuNoiBo-Setup.exe`, bấm Next tới hết. Không cần gỡ bản cũ.
+4. Mở AutoCAD, gõ `CLAUDECHAT`:
+   - thanh trên cùng phải ghi "… nâng cấp 5 …";
+   - bấm **Chat mới** một lần trước khi thử.
+
+**Bộ cài cập nhật gì, giữ gì:**
+- **Được thay mới:** plugin (cả 3 bản cho AutoCAD 2022–2027), trợ lý, Node.js đi kèm, mẫu lệnh nhanh.
+- **Được giữ nguyên:** lịch sử chat, cài đặt, macro, đăng nhập Claude.
+- **Skill: không được cập nhật nếu máy đã có.** Bộ cài chỉ chép một skill khi trên máy **chưa có** file đó, để không xóa
+  phần cậu tự sửa. Kiểm trong `installer/ClaudeCAD.iss`: dòng chép thư mục `skills` có cờ `onlyifdoesntexist`. Máy đang
+  có bản 3 nên đã có đủ 4 skill cũ. Cài đè mà không làm gì thì Claude vẫn dùng skill **cũ**, thiếu hướng dẫn của đợt
+  F / G (ví dụ cách ra bộ hồ sơ, render, vẽ lại từ ảnh).
+
+### Bản 5 › Skill: để có skill mới (làm một lần, trước khi chạy bộ cài)
+
+1. Đóng AutoCAD.
+2. Bấm phím **Windows + R**, dán dòng sau rồi bấm OK:
+   `%AppData%\Autodesk\ApplicationPlugins\ClaudeCAD.bundle\Contents\skills`
+3. Cửa sổ thư mục mở ra, có 4 thư mục: `ve-kien-truc`, `ve-3d-kien-truc`, `ve-mep`, `ve-ha-tang`.
+4. **Nếu cậu chưa từng tự sửa skill nào:** chọn cả 4 thư mục đó, bấm **Delete**.
+5. **Nếu cậu đã tự sửa một skill và muốn giữ:** đổi tên thư mục đó thành tên khác (ví dụ `ve-kien-truc-cua-toi`) thay vì
+   xóa. Bộ cài sẽ chép bản mới vào tên gốc, bản của cậu vẫn nằm cạnh.
+6. Chạy bộ cài bản 5 (bước 3 ở trên). Bộ cài chép lại 4 skill mới vào đúng chỗ.
+7. Kiểm: mở lại thư mục ở bước 2, mở `ve-kien-truc\SKILL.md` bằng Notepad, tìm (Ctrl+F) chữ `create_drawing_set`. Có
+   chữ đó là đã có skill mới.
+
+Quên bước này mà đã cài: làm bước 1–5, rồi chạy lại bộ cài bản 5 lần nữa là được.
+
+Skill cậu tự **thêm** (thư mục tên khác 4 tên trên) không bị đụng tới.
+
+### Bản 5 › Chạy lệnh tự kiểm
+
+Mở một bản vẽ bất kỳ, gõ `CLAUDECHATSELFTEST`, chờ vài phút. Plugin tự kiểm trên một bản vẽ tạm, bản vẽ của cậu
+không bị đụng tới. Notepad mở báo cáo:
+- dòng đầu ghi tên bản "… nâng cấp 5 …";
+- các dòng "Nâng cấp đợt F2 … F5" và "Nâng cấp đợt G1 … G5" đều ✓.
+
+Có dòng ✗ thì gửi luồng chính file `selftest-….txt` cùng thư mục thử ghi ở cuối báo cáo.
+
+### Bản 5 › Thử gì trước
+
+Theo `docs/checklist-tong-the.md`:
+1. **Khối "Đợt G", mục G0** (~35 phút, làm trước): những điểm rủi ro nhất, chưa ai kiểm được ngoài AutoCAD thật:
+   - **G4 render thật** (G0-2, G0-3): tự gõ `-RENDER` chép lại các câu AutoCAD hỏi; rồi nhờ Claude "render góc hiện tại
+     chất lượng nhanh": phải ra ảnh render thật, hoặc Claude nói rõ đã dùng ảnh chụp thay và vì sao;
+   - **G5 xem ảnh và gắn ảnh** (G0-1, G0-4): ảnh nền được gắn dưới bản vẽ, khóa, không in; Claude thấy được bản scan
+     ảnh / PDF; PDF trắng trơn thì Claude phải nói là không thấy;
+   - **G1 thẻ chạy lại bộ hồ sơ** (G0-5): "ra bộ hồ sơ" hai lần liền, lần 2 phải hiện thẻ Đồng ý / Hủy; Hủy không đổi gì;
+     Đồng ý không nhân đôi tờ hay hình;
+   - **G3 mở file dự toán bằng Excel thật** (G0-6): cột tiền có dấu tách hàng nghìn, tổng là công thức, dòng thiếu đơn
+     giá để trống.
+2. Phần còn lại của khối "Đợt G": G1 → G7 (~3 giờ tổng cả G0).
+3. Khối **"Đợt F"** (~2 giờ), như hướng dẫn bản 4 dưới đây. Bỏ F10-1 … F10-3 (cần máy chưa kích hoạt / gói 2D / 3D).
+
+Các mục ghi "Máy khác" (cần máy gói 2D / 3D hoặc máy chưa kích hoạt) không thử được trên bản thử nội bộ.
+
+### Bản 5 › Kỹ thuật
+
+- Gộp `547d6af` không xung đột. Chỉ đổi thêm: nhãn `InternalBuild.Label` và `AppDisplayName` của bộ cài thêm "nâng cấp
+  5"; `WelcomeLabel2` ghi "(nâng cấp 5: đợt F + đợt G)"; tên artifact `-nang-cap-5`; test nhãn bản thử theo đó.
+- Phần đợt G không hỏi trạng thái kích hoạt / gói ngoài `Activation.Plan` (bản thử: Full), nên chạy như máy Full đã kích
+  hoạt.
+- Test: lõi **1455/1455** (1445 của nhánh tích hợp + 10 test bản thử), trợ lý **407/407**, build 3 target xanh. Không
+  loại trừ test nào.
+- **Chưa kiểm được:** chưa chạy bộ cài trên Windows thật (CI chỉ build bộ cài); các mục G0 chỉ kiểm được trên AutoCAD
+  thật.
 
 ## Bản 4 (25/11/2026): có đợt F
 
