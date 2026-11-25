@@ -123,6 +123,76 @@ namespace ClaudeCAD.Core.Tests
             }
         }
 
+        // ------------------------------------------------------------ KTF-01 (lần 2): near-twin wall lines, small real steps
+
+        [Fact]
+        public void Ktf01b_a_t_house_with_every_corner_off_by_up_to_2_mm_is_always_the_exact_roof()
+        {
+            for (int seed = 0; seed < 30; seed++)
+            {
+                var rnd = new Random(seed);
+                var noisy = Tee.Select(q => new[] { q[0] + rnd.Next(-2, 3), q[1] + rnd.Next(-2, 3) }).ToList();
+                var g = RoofLogic.Build(noisy, 3000, new RoofLogic.Options { Type = "gable" });
+                var h = RoofLogic.Build(noisy, 3000, new RoofLogic.Options { Type = "hip" });
+                Assert.True(g.Pieces.Count == 2 && Math.Abs(g.TopZ - 4293) < 4, $"seed {seed}: gable {g.Pieces.Count} pieces, top {g.TopZ:0}");
+                Assert.True(h.Pieces.Count == 2 && Math.Abs(h.TopZ - 4293) < 4, $"seed {seed}: hip {h.Pieces.Count} pieces, top {h.TopZ:0}");
+            }
+            var t30 = TurnRound(Tee, 30);
+            Assert.Equal(2, RoofLogic.Build(t30, 3000, new RoofLogic.Options { Type = "gable" }).Pieces.Count);
+        }
+
+        [Theory]
+        [InlineData(2)]
+        [InlineData(3)]
+        [InlineData(5)]
+        [InlineData(10)]
+        [InlineData(20)]
+        public void Ktf01b_an_l_house_with_a_tiny_jog_in_an_inner_wall_is_the_l_roof(double jog)
+        {
+            // L 12 × 12 m, the inner horizontal wall 6000 → 6000 + jog half way
+            var l = P(0, 0, 12000, 0, 12000, 6000, 9000, 6000, 9000, 6000 + jog, 6000, 6000 + jog, 6000, 12000, 0, 12000);
+            foreach (var type in new[] { "gable", "hip" })
+            {
+                var lay = RoofLogic.Build(l, 3000, new RoofLogic.Options { Type = type });
+                Assert.Equal(2, lay.Pieces.Count);
+                Assert.True(Math.Abs(lay.TopZ - 4871) < 8, $"{type} jog {jog}: top {lay.TopZ:0} (L without the jog: 4871)");
+            }
+        }
+
+        /// <summary>Small real steps (wall thickness changes, pilasters): 50–500 mm, on inner and outer walls of L / T / U.</summary>
+        public static IEnumerable<object[]> Steps()
+        {
+            foreach (var s in new[] { 50.0, 100, 220, 500 })
+            {
+                yield return new object[] { $"L inner wall {s}", P(0, 0, 12000, 0, 12000, 6000, 6000, 6000, 6000, 9000, 6000 + s, 9000, 6000 + s, 12000, 0, 12000) };
+                yield return new object[] { $"L inner floor {s}", P(0, 0, 12000, 0, 12000, 6000, 9000, 6000, 9000, 6000 + s, 6000, 6000 + s, 6000, 12000, 0, 12000) };
+                yield return new object[] { $"L outer {s}", P(0, 0, 6000, 0, 6000, -s, 12000, -s, 12000, 6000, 6000, 6000, 6000, 12000, 0, 12000) };
+                yield return new object[] { $"T back {s}", P(4000, 0, 8000, 0, 8000, 6000, 12000, 6000, 12000, 10000, 6000, 10000, 6000, 10000 + s, 0, 10000 + s, 0, 6000, 4000, 6000) };
+                yield return new object[] { $"U court {s}", P(0, 0, 14000, 0, 14000, 9000, 9000, 9000, 9000, 3000 + s, 7000, 3000 + s, 7000, 3000, 5000, 3000, 5000, 9000, 0, 9000) };
+            }
+        }
+
+        [Theory]
+        [MemberData(nameof(Steps))]
+        public void Ktf01b_a_small_real_step_never_gives_a_ridge_higher_than_the_hip_roof_of_the_same_house(string what, List<double[]> outline)
+        {
+            var g = RoofLogic.Build(outline, 3000, new RoofLogic.Options { Type = "gable" });
+            var h = RoofLogic.Build(outline, 3000, new RoofLogic.Options { Type = "hip" });
+            // a gable roof is never higher than the hip roof of the same outline (a ridge across a wing's long side was)
+            Assert.True(g.TopZ <= h.TopZ + 2, $"{what}: gable top {g.TopZ:0} > hip top {h.TopZ:0}");
+            Assert.True(g.Pieces.Count <= RoofLogic.MaxRoofPieces && h.Pieces.Count <= RoofLogic.MaxRoofPieces, what);
+            // still one slab of the right thickness inside
+            double up = 120 / Math.Cos(Math.PI / 6);
+            foreach (var q in new[] { new[] { 2000.0, 2000 }, new[] { 2000.0, 7000 } })
+                foreach (var lay in new[] { g, h })
+                {
+                    if (!Prism3.PointInPolygon(lay.Eave, q[0], q[1])) continue;
+                    int n = 0;
+                    for (double z = lay.EaveZ - 200; z <= lay.TopZ + 200; z += 1) if (lay.Contains(new[] { q[0], q[1], z })) n++;
+                    Assert.True(Math.Abs(n - up) <= 3, $"{what} {lay.Type}: column {n} at {q[0]},{q[1]}");
+                }
+        }
+
         [Fact]
         public void Ktf01_squaring_keeps_an_exact_outline_and_moves_a_corner_only_by_the_drawing_error()
         {

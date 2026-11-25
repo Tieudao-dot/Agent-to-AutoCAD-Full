@@ -117,3 +117,37 @@ sẵn có); lệch cỡ block cho dùng lại `LibraryBlocks.SizeTol` = 2 %.
 Quyết định tự chọn: tên block thư viện khi trùng tên khác cỡ là `<tên>-TV` (khách thấy tên này trong danh sách block; ghi
 vào `dot-f-cho-duyet.md`). Thử tay thêm: F4-8, F4-9, F6-12 (checklist tổng, khối "Đợt F").
 
+### KTF-01 lần 2 (sau soát lại của kiểm tra độc lập trên `f037b79`)
+
+Soát lại: 7/8 mã đúng; KTF-01 còn sai — `SquareUp` chỉ nắn góc, không gộp hai cạnh song song gần trùng ở hai bên chỗ lõm:
+T 2 dốc nhiễu ±2 mm 13/30 lần ra nóc 6603 (đúng 4293); L 12 × 12 m có bậc 2 mm ở cạnh trong ra 5 mảnh, nóc 6603 (đúng 4871);
+T 2 dốc ở 30° ra 3 mảnh. Gốc lỗi thứ hai: phần cánh bị cắt ở nóc mái chính luôn nhận nóc **ngang** mái chính, nên khi chân T
+nhỉnh hơn thanh ngang vài mm (thành mái chính), hai nửa thanh ngang có nóc chạy ngang chiều dài 6 m của chúng → nóc 6603.
+
+Sửa (`Core/RoofRightAngled.cs`):
+- `SquareUp` gộp các mức x (cạnh đứng) / y (cạnh ngang) cách nhau ≤ max(`SnapMinMm` = 5 mm, `SquareTol` × cỡ nhà) thành một
+  (trung bình), rồi bỏ cạnh dài 0 / đỉnh thẳng hàng (`Clean`); kết quả phải còn là đường bao góc vuông.
+- Phần cánh bị cắt lấy nóc theo **cạnh dài của chính nó** (như cánh không bị cắt), không còn bị ép nóc ngang mái chính.
+- Bề rộng chênh nhau < `WidthTieMm` (50 mm) coi là bằng nhau khi chọn mái chính (rồi chọn hình lớn hơn) và khi xét mái nào
+  cao hơn (`EndInHigherRidges`), nên nhiễu vài mm không đổi mái chính.
+
+Bậc lõm / lồi nhỏ có thật (50, 100, 220, 500 mm; cạnh trong, cạnh ngoài, mặt sau nhà T, sân trong nhà U): đã thử, sau sửa
+nóc 2 dốc **không bao giờ cao hơn** mái 4 dốc cùng nhà, bản mái dày đều, tối đa 7 mảnh (≤ 12). Nên **không** thêm ngưỡng bỏ
+bậc (không có số mới khách gặp); bậc được dựng đúng như vẽ.
+
+Test (`KiemTraDocLapDotFTests`, 1189 test lõi): T nhiễu ±2 mm 30 hạt cố định (2 dốc và 4 dốc đều 2 mảnh, nóc 4293); L bậc 2 / 3 /
+5 / 10 / 20 mm ở cạnh trong (2 mảnh, nóc 4871); 20 ca bậc thật (nóc 2 dốc ≤ nóc 4 dốc, ≤ 12 mảnh, bản mái dày đúng); T 30° xoay
++ làm tròn ra 2 mảnh. Test mái F3 cũ giữ nguyên, vẫn xanh.
+
+Số kỹ thuật bên trong (không cần duyệt): `SnapMinMm` 5 mm, `WidthTieMm` 50 mm. Nhiễu ±4 mm ở cánh hẹp 1,5 m vẫn có thể bị từ
+chối "không phải góc vuông" (ngưỡng `StairLogic.SquareTol` 2e-3 có từ đợt E): giữ nguyên, ghi để biết.
+
+Ghi chú nhẹ của người soát:
+- (c) checklist tổng: F6-12 xếp lại sau F6-11.
+- (b) `list_entities` theo khung trong UCS xoay đo từng hình theo trục UCS (tạo bản sao để đo), bản vẽ rất nhiều khối 3D có thể
+  chậm: thêm mục thử tay F7-10.
+- (a) block thư viện đuôi `-TV` đã có sẵn thì dùng lại mà không kiểm cỡ lần nữa (hiếm: cần cả block gốc lẫn block `-TV` khác cỡ):
+  ghi ở đây, không sửa.
+
+Thử tay thêm: F6-4b (nhà T vẽ tay lệch + bậc 220 mm).
+
