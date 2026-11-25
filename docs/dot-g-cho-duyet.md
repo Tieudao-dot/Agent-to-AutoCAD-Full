@@ -89,6 +89,7 @@ Mọi số ở `G1Numbers` (`Core/DrawingSet.cs`).
 | Tối đa **30** tờ một bộ, **10** tầng | bộ quá lớn bị từ chối | chặn trường hợp lỗi; nhà ở thường dưới 15 tờ |
 | Tên file PDF **`<bản vẽ>-bo-ho-so.pdf`**, nằm cạnh bản vẽ | tên file | không dấu, chạy được trên mọi máy / ổ mạng |
 | Khổ giấy mặc định A3 ngang | khổ tờ | giữ đúng luật đợt F2 |
+| Mỗi lần tối đa **8** đường cắt khách chỉ, **10** vùng mặt bằng 2D; mỗi hình dùng tối đa **500** khối 3D | nhiều hơn thì bị từ chối hoặc có ghi chú | thread rà bổ sung dòng này 25/11, số đã có sẵn trong code |
 
 ### Quyết định tự chọn
 
@@ -104,12 +105,21 @@ Mọi số ở `G1Numbers` (`Core/DrawingSet.cs`).
 | Bản vẽ chỉ có các tờ của bộ cũ | tạo lại `Layout1` trước khi xóa tờ cũ | AutoCAD buộc giữ ít nhất một tờ |
 | Macro chạy trên bản vẽ đã có bộ hồ sơ | từ chối | macro không bấm thẻ được |
 | Máy gói 3D | vẽ các hình trong Model, không có tờ in / PDF | tờ và PDF thuộc nhóm 2D |
+| Khách cho một tỉ lệ mà hình không vừa tờ | vẫn theo tỉ lệ của khách, có ghi chú gợi ý tỉ lệ / khổ lớn hơn | thread rà thêm 25/11 |
+| Nhà quá 10 tầng | vẫn ra 10 tầng dưới cùng, có ghi chú | thread rà thêm 25/11 |
+
+### Sau khi rà (25/11 22h23)
+
+Thread rà sửa 4 lỗi, không đổi số nào: nhà quá 10 tầng bị bỏ bớt tầng mà không báo; hình không vừa tờ mà không báo; trên máy
+gói 3D mã thẻ "thay bộ cũ" giống nhau ở mọi bản vẽ; ô khung tên lạ làm mất bộ cũ mà không ra bộ mới (nay từ chối trước khi
+đổi gì). Nhánh `full/nang-cap-g1-test` @ `99aaab7` (code `9c7c95f`), CI 45642708237 xanh, lõi 1237, trợ lý 367.
 
 ### Chưa kiểm được
 
 - Chưa chạy trên AutoCAD thật: hình mặt bằng / mặt đứng / mặt cắt / phối cảnh ra đúng, khung nhìn xoay theo UCS, in PDF cả
   bộ, thẻ chạy lại, macro.
 - Chưa đo tốc độ với nhà lớn.
+- Trường hợp lỗi lạ xảy ra giữa chừng, sau khi bộ cũ đã bị xóa (khi đó một lần U hoàn tác cả lượt).
 
 ### Token lúc mở chat sau G1 + G2 (ước tính)
 

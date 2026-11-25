@@ -169,7 +169,7 @@ Chủ dự án chọn làm tiếp cả 5 tính năng mới luồng chính đề 
 
 | Đợt | Thread viết | Thread rà | Nhánh | Trạng thái |
 | --- | --- | --- | --- | --- |
-| G1 | Thread đợt F2 `session_01D56HmFcYrzsme7GoBm8tNC` (giao 25/11 21h25) | Thread đợt F1 `session_01D56HmFAo4dZ7c8sbeNB9eh` (giao 25/11 22h02), nhánh `full/nang-cap-g1-test` | `full/nang-cap-g1` (từ `a6da118`) | Viết xong 22h00: `dd29c9b` (code `28ca6c2`), CI 45638049687 xanh, lõi 1228, trợ lý 367, ≈ $10–15. Đang rà |
+| G1 | Thread đợt F2 `session_01D56HmFcYrzsme7GoBm8tNC` (giao 25/11 21h25) | Thread đợt F1 `session_01D56HmFAo4dZ7c8sbeNB9eh` (giao 25/11 22h02), nhánh `full/nang-cap-g1-test` | `full/nang-cap-g1` (từ `a6da118`) | Viết xong 22h00: `dd29c9b` (code `28ca6c2`), CI 45638049687 xanh, lõi 1228, trợ lý 367, ≈ $10–15. **Rà xong 22h23:** sửa 4 lỗi, `full/nang-cap-g1-test` @ `99aaab7` (code `9c7c95f`), CI 45642708237 xanh, lõi 1237, trợ lý 367, ≈ $6 |
 | G2 | Thread đợt F1 `session_01D56HmFAo4dZ7c8sbeNB9eh` (giao 25/11 21h27) | Thread Test & sửa F1 `session_01D56HmFrL65iF9oJokvqXw5` (giao 25/11 21h50), nhánh `full/nang-cap-g2-test` | `full/nang-cap-g2` (từ `a6da118`) | Viết xong 21h48: `8bbc27c` (code `aa91157`), CI 45636296067 xanh, lõi 1240, trợ lý 369, ≈ $7. **Rà xong 22h13:** sửa 4 lỗi, `full/nang-cap-g2-test` @ `f49e717` (code `7b9be8f`), CI 45640452138 xanh, lõi 1255, trợ lý 373, ≈ $6–9 |
 | G3 | Thread đợt F2 `session_01D56HmFcYrzsme7GoBm8tNC` (giao 25/11 22h17): gộp G1 + G2 trước, CI xanh rồi viết | Giao sau khi viết xong | `full/nang-cap-g3` (từ `full/nang-cap-g1-test`, gộp `full/nang-cap-g2-test` @ `f49e717`) | Đang gộp |
 | G4 | — | — | — | Chờ G1 + G2 |
