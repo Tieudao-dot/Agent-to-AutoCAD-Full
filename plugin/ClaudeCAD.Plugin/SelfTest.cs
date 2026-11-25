@@ -977,6 +977,69 @@ namespace ClaudeCAD.Plugin
                     : new SelfTestRules.Verdict(false, string.Join("; ", errs));
             });
 
+            // Nâng cấp đợt G2: check_drawing finds a copy, a zero-length line and an empty text; fix_drawing only after the card
+            Check("Nâng cấp đợt G2: soát bản vẽ (hình trùng, đường dài 0, chữ rỗng), sửa chỉ sau thẻ Đồng ý", () =>
+            {
+                const double cx = 52000;
+                var errs = new List<string>();
+                var db = doc.Database;
+                T Run<T>(Func<ToolContext, Transaction, T> f)
+                {
+                    using (doc.LockDocument())
+                    using (var tr = doc.TransactionManager.StartTransaction())
+                    {
+                        var r = f(new ToolContext(doc, tr, true, null), tr);
+                        tr.Commit();
+                        return r;
+                    }
+                }
+                var made = Run((ctx, tr) =>
+                {
+                    var ms = (BlockTableRecord)tr.GetObject(SymbolUtilityServices.GetBlockModelSpaceId(db), OpenMode.ForWrite);
+                    string Add(Entity e) { e.SetDatabaseDefaults(db); ms.AppendEntity(e); tr.AddNewlyCreatedDBObject(e, true); return e.Handle.ToString(); }
+                    return new[]
+                    {
+                        Add(new Line(new Point3d(cx, 0, 0), new Point3d(cx + 3000, 0, 0))),
+                        Add(new Line(new Point3d(cx + 3000, 0, 0), new Point3d(cx, 0, 0))), // the same line drawn backwards
+                        Add(new Line(new Point3d(cx, 500, 0), new Point3d(cx, 500, 0))),
+                        Add(new DBText { Position = new Point3d(cx, 1000, 0), Height = 250, TextString = " " }),
+                    };
+                });
+                string copy = made[1], zero = made[2], empty = made[3];
+                var chk = Run((ctx, tr) => (Dictionary<string, object>)DrawingService.CheckDrawing(ctx, new Params("check_drawing", new Dictionary<string, object>
+                {
+                    ["groups"] = new List<object> { "duplicates", "zero_length", "empty_text" }, ["examples"] = 50,
+                })));
+                bool Has(string g, string h) => ((List<Dictionary<string, object>>)chk["groups"]).Any(x => (string)x["id"] == g && ((List<object>)x["examples"]).Contains(h));
+                if (!Has("duplicates", copy)) errs.Add("không thấy hình trùng");
+                if (!Has("zero_length", zero)) errs.Add("không thấy đường dài 0");
+                if (!Has("empty_text", empty)) errs.Add("không thấy chữ rỗng");
+                if (Has("duplicates", made[0])) errs.Add("hình gốc bị coi là bản thừa");
+                var fixP = new Dictionary<string, object> { ["fix"] = "zero_length", ["handles"] = new List<object> { zero } };
+                string token = null;
+                try { Run((ctx, tr) => DrawingService.FixDrawing(ctx, new Params("fix_drawing", fixP))); errs.Add("sửa khi chưa có thẻ: không bị từ chối"); }
+                catch (ToolException ex)
+                {
+                    var m = System.Text.RegularExpressions.Regex.Match(ex.Message, "\\[\"([0-9A-F]+)\"");
+                    token = m.Success ? m.Groups[1].Value : null;
+                    if (token == null) errs.Add("thẻ không ghi mã: " + ex.Message);
+                }
+                bool zeroLeft = Run((ctx, tr) => !Acad.IdFromHandle(db, zero, true).IsErased);
+                if (!zeroLeft) errs.Add("đã xóa trước khi Đồng ý");
+                if (token != null)
+                {
+                    fixP[SolidLogic.UserConfirmedParam] = new List<object> { token };
+                    var done = Run((ctx, tr) => (Dictionary<string, object>)DrawingService.FixDrawing(ctx, new Params("fix_drawing", fixP)));
+                    if (Convert.ToInt32(done["fixed"]) != 1) errs.Add($"sửa {done["fixed"]} đối tượng (cần 1)");
+                    if (!Run((ctx, tr) => Acad.IdFromHandle(db, zero, true).IsErased)) errs.Add("đường dài 0 vẫn còn sau Đồng ý");
+                }
+                // leave the test drawing as before for the next steps
+                Run((ctx, tr) => { foreach (var h in made) { var id = Acad.IdFromHandle(db, h, true); if (!id.IsErased) tr.GetObject(id, OpenMode.ForWrite).Erase(); } return 0; });
+                return errs.Count == 0
+                    ? new SelfTestRules.Verdict(true, $"quét {chk["scanned"]} / {chk["total"]} đối tượng; thấy hình trùng, đường dài 0, chữ rỗng; chưa Đồng ý thì không sửa, Đồng ý thì xóa đúng 1")
+                    : new SelfTestRules.Verdict(false, string.Join("; ", errs));
+            });
+
             string versionFile = Path.Combine(dir, "version-copy.dwg");
             Do("Bản sao phiên bản (Wblock + SaveAs)", () =>
             {

@@ -357,7 +357,9 @@ const CARD_PARAM_TOOLS = new Set([...PLUGIN_CONFIRMED, ...REPLACE_TOOLS]);
  * refuses with the handles for the card; Claude repeats them in confirm_handles after Đồng ý, and only those on the card
  * the user approved reach the plugin as user_confirmed (a typed yes never does).
  */
-export const F5_CARD_TOOLS = new Set(['plot_pdf', 'export_stl', 'named_view', 'set_material', 'block_schedule', 'area_schedule', 'volume_schedule', 'check_interference']);
+export const F5_CARD_TOOLS = new Set(['plot_pdf', 'export_stl', 'named_view', 'set_material', 'block_schedule', 'area_schedule', 'volume_schedule', 'check_interference',
+  // nâng cấp đợt G2: repairing the drawing (one token per fix), the Excel list of the check
+  'fix_drawing', 'check_drawing']);
 
 function flaggedF5(params: Record<string, unknown>, g: GateState): Record<string, unknown> {
   const { [USER_CONFIRMED_PARAM]: _ignored, confirm_handles: asked, ...rest } = params;
