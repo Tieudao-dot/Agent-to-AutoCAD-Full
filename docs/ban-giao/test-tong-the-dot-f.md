@@ -182,3 +182,8 @@ KTF-09 và một nghi vấn, sửa ở đây.
 - **Test:** thêm 5 test lõi (`KiemTraDocLapDotFTests`: KTF-09 ×3 nhà, tường xiên, cách nạp theo cuộc chat); sửa 2 dòng trong
   `NangCapF5Tests` (chữ dòng giải thích, dòng code gửi `defer_tools`) và 2 dòng trong `TongTheDotFTests` (tiêu đề khối,
   file F5 trỏ về checklist tổng).
+- **Sau soát bổ sung của kiểm tra độc lập trên `7fe215c`** (KTF-09 đúng, 4480 ca; ô theo cuộc chat đúng): công tắc khẩn cấp
+  (`CLAUDECAD_DEFER_TOOLS=0` / `tool-search-off`) vẫn thắng cách nạp của cuộc chat đang dở — chỉ sửa tài liệu, không đổi code
+  (commit code cuối vẫn là `7fe215c`): `bo-cai/README.md` và bàn giao F5 dặn bấm Chat mới sau khi bật / tắt công tắc; checklist
+  tổng F9-1 thêm bước Chat mới, thêm F9-2 (cần Claude thật: bật công tắc rồi nhắn tiếp cuộc chat cũ); `dot-f-cho-duyet.md`
+  ghi vào quyết định và "chưa kiểm được". CI #54 (run 45630097088) chạy trên `7fe215c`.

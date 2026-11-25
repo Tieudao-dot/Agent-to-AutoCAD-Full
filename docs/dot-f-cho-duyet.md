@@ -303,11 +303,16 @@ Người rà chọn thêm:
 | Kích thước bản vẽ mét | Hiện **"4"**, "4.5" (bỏ số 0 thừa), không phải "4.00". Muốn luôn 2 số lẻ thì đổi cài đặt kiểu kích thước (việc nhỏ) |
 | Đường bao mái vẽ tay lệch vài mm (KTF-01, KTF-09) | Tự nắn góc vuông trước khi dựng mái; hai đường tường song song cách nhau rất ít coi là một; cạnh ngắn lệch ngang vài mm vẫn nhận là góc vuông; tường xiên thật vẫn bị từ chối |
 | Ô "Nạp gọn lệnh" đổi giữa cuộc chat | Giữ cách nạp của cuộc chat tới "Chat mới" (xem mục Đợt F5) |
+| Công tắc khẩn cấp (`CLAUDECAD_DEFER_TOOLS=0` / file `tool-search-off`) | Vẫn thắng cả cách nạp của cuộc chat đang dở (không đổi code). Hướng dẫn dặn: bật / tắt công tắc rồi bấm **Chat mới** |
 
 ### Hai điểm không sửa (để cậu quyết)
 
 - **Chữ trông như số trong file Excel** (vd chuỗi số dài, "1.10") được đổi thành số khi xuất Excel, nên Excel có thể bỏ số 0
   cuối / hiện dạng số mũ. Muốn giữ nguyên là chữ cho các ô kiểu mã thì nói.
+- **Chưa kiểm được (cần Claude thật): công tắc khẩn cấp với cuộc chat đang dở.** Cuộc chat bắt đầu ở kiểu nạp gọn (Claude đã
+  tìm lệnh ít gặp), rồi bật công tắc và mở lại AutoCAD: lượt sau nối tiếp cuộc chat cũ mà không còn cách tìm lệnh, có thể
+  bị báo lỗi. Đã dặn bấm Chat mới trong hướng dẫn; thử tay F9-2 sẽ cho biết có lỗi thật không. Có lỗi thì sửa nhỏ: công
+  tắc đổi thì tự bắt đầu cuộc chat mới.
 - **Bảng thống kê / diện tích không xoay theo UCS:** đặt đúng điểm theo UCS nhưng bảng luôn nằm ngang theo màn hình (giới
   hạn đã ghi ở F1).
 

@@ -18,7 +18,9 @@ trên AutoCAD / Claude thật. Phần chỉ kiểm được trên AutoCAD: bư�
   - Đổi bản vẽ: mỗi cuộc chat dùng cách nạp của chính nó (trợ lý khởi động lại, nối tiếp, khi hai cuộc khác nhau). File
     chat lưu trước bản này mà đã có cuộc chat: coi là bật (trước F5 mọi cuộc chat đều nạp gọn).
 - Biến môi trường `CLAUDECAD_DEFER_TOOLS=0` / file `tool-search-off` (Test & sửa F4) **thắng ô này**: khi có, mọi lệnh nạp
-  đủ dù ô bật, và ô không làm khởi động lại.
+  đủ dù ô bật, và ô không làm khởi động lại. Công tắc thắng **cả cách nạp của cuộc chat đang dở** (bản chốt đợt F không đổi
+  điều này): bật / tắt công tắc rồi mở lại AutoCAD thì nên bấm **Chat mới**; nối tiếp cuộc chat cũ có lỗi không thì cần Claude
+  thật mới biết (checklist tổng F9-2).
 - Code: `PaletteSettings.DeferTools`, `UI/ChatControl.cs` (`_deferTools`), `ChatController.cs` (`PlanContext`,
   `OnSettingsChanged`), `agent/src/ipc/protocol.ts` (`defer_tools`), `agent/src/agent/session.ts` (`applyPaletteDefer`).
 

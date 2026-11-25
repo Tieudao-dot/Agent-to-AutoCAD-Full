@@ -377,7 +377,8 @@ Bản vẽ **đã lưu**, có vài phòng (polyline kín + tên phòng có dấu
 
 | # | Cần | Làm gì | Thấy gì là đạt |
 | --- | --- | --- | --- |
-| F9-1 | Công tắc, Claude | Đóng AutoCAD, tạo file trống `tool-search-off` trong `%LocalAppData%\ClaudeCAD` (bỏ đuôi `.txt`), mở AutoCAD, "kéo giãn hình chữ nhật" (F4-C3) | Làm được như trước F4; log trợ lý có `tools: all in full (deferring switched off)`. Xóa file, mở lại: log `tools: most used in full, the rest behind ToolSearch` |
+| F9-1 | Công tắc, Claude | Đóng AutoCAD, tạo file trống `tool-search-off` trong `%LocalAppData%\ClaudeCAD` (bỏ đuôi `.txt`), mở AutoCAD, bấm **Chat mới**, "kéo giãn hình chữ nhật" (F4-C3) | Làm được như trước F4; log trợ lý có `tools: all in full (deferring switched off)`. Xóa file, mở lại: log `tools: most used in full, the rest behind ToolSearch` |
+| F9-2 | Công tắc, Claude (**cần Claude thật**) | Chưa có file công tắc: trong một cuộc chat nhờ một việc dùng lệnh ít gặp (vd "kéo giãn hình chữ nhật"). Đóng AutoCAD, tạo file `tool-search-off`, mở lại, **không** bấm Chat mới, nhắn tiếp "vẽ thêm một hình tròn bán kính 300" trong cuộc chat cũ | Ghi lại: Claude làm được hay báo lỗi. Báo lỗi thì bấm Chat mới, thử lại phải được (vì vậy hướng dẫn công tắc dặn bấm Chat mới). Xóa file khi xong |
 
 ## F11. Đợt F5: ô "Nạp gọn lệnh", thẻ xác nhận ghi đè, ghi chú có mũi tên (~25 phút)
 
