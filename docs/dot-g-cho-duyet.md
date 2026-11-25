@@ -176,3 +176,58 @@ Mọi số ở `G3Numbers` (`Core/Estimate.cs`).
 - Chưa chạy trên AutoCAD thật (bảng vẽ, thẻ ghi đè, macro).
 - Chưa mở file bằng Excel thật, LibreOffice hay Google Sheets (công thức tính lại, dấu tách hàng nghìn theo máy).
 - Chưa thử với Claude thật xem có giữ đúng luật "không tự đặt giá" khi khách ép không.
+
+## G4: render thật
+
+Khách nói "render" hoặc "ra ảnh đẹp" (gói 3D / Full). AutoCAD render góc nhìn đã lưu hoặc góc đang xem ra file PNG cạnh bản
+vẽ. Trong lúc chờ, khung chat hiện tiến độ và AutoCAD không bị treo; bấm Dừng trong khung chat hoặc Esc trong AutoCAD là
+dừng. Nền và ánh sáng chỉ đổi tạm trong lúc render rồi tự trả lại.
+
+**Đường lui:** lệnh render lỗi, máy không có lệnh render hoặc chờ quá thời gian tối đa thì plugin lưu ảnh chụp như hiện nay
+vào đúng file đó, và Claude nói rõ đây là ảnh chụp chứ không phải ảnh render.
+
+**Vật liệu:** AutoCAD không cho chương trình tự lấy vật liệu từ thư viện Autodesk. Vì vậy plugin chỉ dùng vật liệu thư viện
+khi bản vẽ đã có sẵn (khách kéo vào từ Materials Browser); không có thì dùng vật liệu màu đơn giản của đợt F3 và nói rõ.
+
+**Điểm rủi ro nhất của cả đợt G:** cách plugin trả lời các câu hỏi của lệnh render được viết theo trí nhớ, chưa đối chiếu
+được với tài liệu Autodesk và chưa chạy trên AutoCAD thật. Nếu thứ tự câu hỏi khác đi thì khách phải chờ hết thời gian tối
+đa rồi mới nhận ảnh chụp. Mục này cần cậu thử tay trước tiên (`docs/checklist-dot-g4.md`).
+
+Bàn giao đầy đủ: `docs/ban-giao/nang-cap-g4.md` trên nhánh `full/nang-cap-g4`.
+
+### Con số
+
+Mọi số ở `G4Numbers` (`Core/Render.cs`).
+
+| Số | Khách thấy gì | Vì sao đề xuất |
+| --- | --- | --- |
+| Cỡ ảnh mặc định **1920 × 1080** | cỡ file ảnh | Full HD, vừa màn hình và slide |
+| Cỡ ảnh khách chọn: **64 – 4096** điểm mỗi cạnh; cho một cạnh thì cạnh kia theo tỉ lệ 16:9 | — | giới hạn an toàn cho bộ nhớ |
+| Ba mức: nhanh, **vừa** (mặc định), đẹp | chất lượng và thời gian chờ | ba mức có sẵn của AutoCAD (Low / Medium / High) |
+| Thời gian ước lượng ở cỡ Full HD: nhanh **20 s**, vừa **60 s**, đẹp **180 s** | dòng tiến độ trong khung chat | ước lượng thô, chưa đo trên máy thật |
+| Thời gian chờ tối đa: nhanh **120 s**, vừa **300 s**, đẹp **900 s** | quá thì dừng và lưu ảnh chụp | không để khách chờ vô hạn; đủ cho máy văn phòng |
+| Nền mặc định **trắng** | nền ảnh | an toàn, dễ in |
+| Nền "trời": xanh nhạt chuyển dần xuống gần trắng | nền ảnh | có trời mà không cần đặt mặt trời |
+| Ánh sáng mặc định: dùng đèn / mặt trời của bản vẽ nếu có, không thì đèn mặc định của AutoCAD | độ sáng ảnh | không đổi ánh sáng khách đã đặt |
+| Giờ nắng: **chưa đặt** | — | đặt giờ cần vị trí địa lý; làm sau nếu cậu muốn |
+| Ảnh chụp khi đi đường lui: cạnh dài tối đa **1568** điểm | cỡ ảnh chụp | như ảnh của đợt F3 |
+| Bảng từ khóa vật liệu (bê tông, gạch, vữa / sơn, kính, gỗ, ngói, thép / kim loại, đá) khớp với tên vật liệu thư viện tiếng Anh | vật liệu nào được chọn | khớp nguyên từ trong tên; nhiều cái khớp thì lấy cái đầu theo tên |
+| Tên file `<bản vẽ>-<góc nhìn>-render.png` | tên file | theo cách đặt tên ảnh của đợt F3 |
+
+### Quyết định tự chọn
+
+| Tình huống | Đã chọn | Ghi chú |
+| --- | --- | --- |
+| Lệnh mới hay thêm vào lệnh cũ | thêm lựa chọn "render" vào lệnh góc nhìn sẵn có | không tăng phần mô tả nạp sẵn; tách thành lệnh riêng sau cũng được |
+| Khách không nói góc nhìn nào | render cái khách đang nhìn | "ra ảnh đẹp" là ảnh của cái đang xem |
+| Khách bấm Dừng | không tự lưu ảnh chụp thay thế | khách chủ động dừng |
+| Đường lui ghi vào đâu | cùng file khách đã đồng ý ghi | |
+| File ảnh đã có | hỏi qua thẻ Đồng ý / Hủy trước khi đổi bất cứ gì | như đợt F5 |
+| Chế độ "Chỉ xem" | vẫn render được, dùng nền và ánh sáng của bản vẽ, không đổi gì | |
+| AutoCAD bị tắt giữa lúc render | nền tạm có thể còn lại trong bản vẽ; khách đổi lại bằng tay | rủi ro đã biết, hiếm |
+| Đang có lệnh AutoCAD chạy dở | từ chối, nhờ khách bấm Esc | |
+
+### Chưa kiểm được
+
+- Chưa chạy trên AutoCAD thật: thứ tự câu hỏi của lệnh render trên AutoCAD 2022–2027; Dừng / Esc có ngắt được render đang
+  chạy không; nền trắng / trời có vào ảnh không; thời gian render thật (để chỉnh số ước lượng).
