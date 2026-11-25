@@ -276,8 +276,9 @@ Kết quả luôn ghi rõ là **bản nháp cần khách kiểm kích thước**
 
 **Hai điểm rủi ro, chỉ biết được khi thử thật:**
 
-- Claude xem bản scan qua ảnh chụp của AutoCAD. Nếu AutoCAD không đưa ảnh nền vào ảnh chụp thì Claude không thấy bản scan.
-  Bước tự kiểm G5 trong plugin kiểm đúng điều này; cần chạy nó trước tiên.
+- Với ảnh (PNG, JPG…), Claude xem bản scan qua ảnh plugin tự dựng từ chính file ảnh gốc, nên không phụ thuộc AutoCAD. Với
+  **PDF**, Claude vẫn xem qua ảnh chụp của AutoCAD; nếu trang ra trắng thì plugin bảo Claude dừng và nhờ khách xuất PNG / JPG,
+  không vẽ mò. Cần thử thật để biết ảnh dựng có đúng chỗ không và PDF có hiện không.
 - Chưa biết Claude đọc tường, chữ, kích thước trên ảnh chính xác tới đâu.
 
 Mỗi lần "vẽ lại" tốn thêm của khách khoảng 6–8 nghìn token cho phần xem ảnh (ước lượng), chưa kể các lệnh vẽ.
@@ -315,9 +316,27 @@ Mọi số ở `G5Numbers` (`Core/Trace.cs`), trừ số lần xem ở `agent/sr
 | Macro | không ghi lại | như lệnh sửa lỗi bản vẽ của G2 |
 | UCS nghiêng khỏi mặt bằng | từ chối, nhờ khách đưa UCS về mặt bằng | |
 | Chữ viết trong ảnh | coi là nội dung bản vẽ, không phải lệnh cho Claude | ghi rõ trong mô tả lệnh |
+| File Claude được gắn | mọi ảnh / PDF mà Claude biết đường dẫn (chưa giới hạn chỉ file khách vừa đưa); loại file kiểm theo nội dung, không chỉ theo đuôi tên | thread rà ghi 26/11; muốn chặt hơn thì chỉ cho gắn file khách đưa trong cuộc chat |
+| Bản vẽ chưa lưu (chưa có thư mục) | ảnh khách dán được chép vào thư mục Documents | thread rà thêm 26/11 |
+
+### Sau khi rà (26/11 01h11)
+
+Thread rà sửa 5 lỗi, không đổi số nào:
+
+- **Nặng:** khi khách đã dời hoặc xoay hệ tọa độ (UCS), các điểm bị hiểu theo hệ tọa độ gốc, nên ảnh co / xoay sai điểm và
+  vùng xem lệch chỗ. Nay đọc và trả điểm theo đúng UCS.
+- Ảnh Claude xem nay dựng thẳng từ file ảnh gốc, nét đã vẽ phủ lên trên (xem mục rủi ro ở trên).
+- Loại file kiểm theo nội dung: file đổi đuôi (vd ảnh HEIC / WebP đặt đuôi .png, file chữ đặt đuôi .jpg) bị từ chối kèm
+  hướng dẫn.
+- Lệnh soát bản vẽ (G2) không còn báo nhầm layer ảnh nền; bộ hồ sơ (G1) không tính ảnh nền vào mặt bằng 2D.
+
+Thread rà cũng xác nhận: không chỗ nào gõ đường dẫn file vào dòng lệnh AutoCAD (loại lỗi nặng của G4), và không có cách
+gọi nào vượt được giới hạn 8 lần xem.
+
+Nhánh `full/nang-cap-g5-test` @ `e3eda7b` (code `464b6e5`), CI 45670027419 xanh, lõi 1364, trợ lý 400.
 
 ### Chưa kiểm được
 
-- Chưa chạy trên AutoCAD thật: gắn ảnh / PDF, ảnh nền có hiện trong ảnh Claude xem không, U hoàn tác ảnh nền, đường dẫn có dấu
-  tiếng Việt.
+- Chưa chạy trên AutoCAD thật: gắn ảnh / PDF, ảnh xem dựng từ file có đúng chỗ không, AutoCAD có vẽ trang PDF khi chụp
+  không, U hoàn tác ảnh nền, đường dẫn có dấu tiếng Việt.
 - Chưa thử với Claude thật: đọc ảnh tốt tới đâu, số lần xem thực tế, kích thước lệch bao nhiêu.
