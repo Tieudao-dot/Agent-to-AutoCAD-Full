@@ -83,6 +83,7 @@ namespace ClaudeCAD.Plugin.Drawing
             RegisterStandards2D(d);
             RegisterRender(d); // nâng cấp đợt F3: materials, named views
             RegisterDrawingSet(d); // nâng cấp đợt G1: drawing set
+            RegisterEstimate(d); // nâng cấp đợt G3: cost_estimate
             RegisterDrawingCheck(d); // nâng cấp đợt G2: check_drawing, fix_drawing (Drawing/DrawingCheckTools.cs)
         }
 

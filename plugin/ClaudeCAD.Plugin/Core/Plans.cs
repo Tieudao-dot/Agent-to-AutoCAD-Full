@@ -84,6 +84,8 @@ namespace ClaudeCAD.Plugin.Core
                 "insert_library_block layer_state " +
                 // nâng cấp đợt G1 (Drawing/DrawingSetTools.cs): the drawing set; each part inside needs its own tool's group
                 "create_drawing_set " +
+                // nâng cấp đợt G3 (Drawing/EstimateTools.cs): needs the plan group of its source schedule (checked inside)
+                "cost_estimate " +
                 // basic curves: 3D uses them as profiles and paths
                 "draw_line draw_polyline draw_circle draw_arc draw_spline draw_ellipse draw_rectangle draw_polygon draw_point draw_ray draw_xline");
             Add(ToolGroup.TwoD,
@@ -152,6 +154,7 @@ namespace ClaudeCAD.Plugin.Core
             // schedules only return their numbers to Claude (shown in the chat), the table is inserted on Full only
             ["volume_schedule"] = "table_position",
             ["check_interference"] = "table_position",
+            ["cost_estimate"] = "table_position", // nâng cấp đợt G3: a drawn estimate table is text (2D)
         };
 
         /// <summary>

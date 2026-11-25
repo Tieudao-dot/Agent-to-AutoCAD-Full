@@ -57,6 +57,7 @@ namespace ClaudeCAD.Plugin.Core
             switch (v)
             {
                 case null: return "";
+                case XlsxCell xc: return CellValue(xc.Value); // nâng cấp đợt G3: a formula cell, sized by its value
                 case double d: return double.IsNaN(d) || double.IsInfinity(d) ? (object)"" : d;
                 case float fl: return (double)fl;
                 case int i: return (double)i;
@@ -160,6 +161,21 @@ namespace ClaudeCAD.Plugin.Core
                 {
                     string refName = Column(c) + (r + 1).ToString(CultureInfo.InvariantCulture);
                     string style = r == 0 ? " s=\"1\"" : "";
+                    // nâng cấp đợt G3: a formula (with the value it gives) and / or a style (money = thousands separated)
+                    if (row[c] is XlsxCell xc)
+                    {
+                        string st = xc.Style > 0 ? " s=\"" + xc.Style.ToString(CultureInfo.InvariantCulture) + "\"" : style;
+                        var cv = CellValue(xc.Value);
+                        if (string.IsNullOrEmpty(xc.Formula))
+                        {
+                            if (cv is double xd) sb.Append("<c r=\"").Append(refName).Append('"').Append(st).Append("><v>").Append(xd.ToString("R", CultureInfo.InvariantCulture)).Append("</v></c>");
+                            else if (st.Length > 0) sb.Append("<c r=\"").Append(refName).Append('"').Append(st).Append("/>");
+                            continue;
+                        }
+                        sb.Append("<c r=\"").Append(refName).Append('"').Append(st).Append(cv is double ? "" : " t=\"str\"").Append("><f>").Append(Esc(xc.Formula)).Append("</f>");
+                        sb.Append("<v>").Append(cv is double fd ? fd.ToString("R", CultureInfo.InvariantCulture) : Esc((string)cv)).Append("</v></c>");
+                        continue;
+                    }
                     var v = CellValue(row[c]);
                     if (v is double d)
                         sb.Append("<c r=\"").Append(refName).Append('"').Append(style).Append("><v>")
@@ -205,18 +221,21 @@ namespace ClaudeCAD.Plugin.Core
         private const string Styles =
             "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>" +
             "<styleSheet xmlns=\"http://schemas.openxmlformats.org/spreadsheetml/2006/main\">" +
+            "<numFmts count=\"1\"><numFmt numFmtId=\"164\" formatCode=\"" + G3Numbers.ExcelMoneyFormat + "\"/></numFmts>" +
             "<fonts count=\"2\"><font><sz val=\"11\"/><name val=\"Calibri\"/></font><font><b/><sz val=\"11\"/><name val=\"Calibri\"/></font></fonts>" +
             "<fills count=\"2\"><fill><patternFill patternType=\"none\"/></fill><fill><patternFill patternType=\"gray125\"/></fill></fills>" +
             "<borders count=\"1\"><border><left/><right/><top/><bottom/><diagonal/></border></borders>" +
             "<cellStyleXfs count=\"1\"><xf numFmtId=\"0\" fontId=\"0\" fillId=\"0\" borderId=\"0\"/></cellStyleXfs>" +
-            "<cellXfs count=\"2\"><xf numFmtId=\"0\" fontId=\"0\" fillId=\"0\" borderId=\"0\" xfId=\"0\"/><xf numFmtId=\"0\" fontId=\"1\" fillId=\"0\" borderId=\"0\" xfId=\"0\" applyFont=\"1\"/></cellXfs>" +
+            "<cellXfs count=\"4\"><xf numFmtId=\"0\" fontId=\"0\" fillId=\"0\" borderId=\"0\" xfId=\"0\"/><xf numFmtId=\"0\" fontId=\"1\" fillId=\"0\" borderId=\"0\" xfId=\"0\" applyFont=\"1\"/>" +
+            // nâng cấp đợt G3: 2 = money, 3 = money bold (cost_estimate)
+            "<xf numFmtId=\"164\" fontId=\"0\" fillId=\"0\" borderId=\"0\" xfId=\"0\" applyNumberFormat=\"1\"/><xf numFmtId=\"164\" fontId=\"1\" fillId=\"0\" borderId=\"0\" xfId=\"0\" applyNumberFormat=\"1\" applyFont=\"1\"/></cellXfs>" +
             "<cellStyles count=\"1\"><cellStyle name=\"Normal\" xfId=\"0\" builtinId=\"0\"/></cellStyles>" +
             "</styleSheet>";
 
         private static string WorkbookXml(string sheet) =>
             "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>" +
             "<workbook xmlns=\"http://schemas.openxmlformats.org/spreadsheetml/2006/main\" xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\">" +
-            "<sheets><sheet name=\"" + Esc(SafeSheetName(sheet)) + "\" sheetId=\"1\" r:id=\"rId1\"/></sheets></workbook>";
+            "<sheets><sheet name=\"" + Esc(SafeSheetName(sheet)) + "\" sheetId=\"1\" r:id=\"rId1\"/></sheets><calcPr fullCalcOnLoad=\"1\"/></workbook>";
 
         /// <summary>The whole .xlsx file.</summary>
         public static byte[] Build(IList<IList<object>> rows, string sheetName)

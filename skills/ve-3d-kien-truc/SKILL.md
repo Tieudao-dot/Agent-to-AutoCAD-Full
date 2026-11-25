@@ -156,6 +156,9 @@ báo lỗi → mái bằng, hoặc vẽ lại đường bao góc vuông. Đầu 
 
 Khối lượng: `volume_schedule` (theo layer; cột lồng trong tường / dầm chỉ tính một lần, vào cột). Va chạm:
 `check_interference`. Khách cần file Excel (nâng cấp đợt F4): thêm `excel: true` (file cạnh bản vẽ) hoặc `excel: "<tên>.xlsx"`.
+Dự toán ("lập dự toán", "tính tiền theo khối lượng"): `cost_estimate` với `quantities: "volume"` và **đơn giá khách đưa**
+(`prices`, theo tên layer); không tự đặt hay tra giá; dòng thiếu giá để trống, kể tên cho khách và hỏi. Thuế / chi phí khác chỉ
+khi khách nói phần trăm (`extra`). `excel: true` ra file có công thức (sửa giá trong Excel là tiền tự tính lại).
 
 Vật liệu và ảnh phối cảnh (nâng cấp đợt F3): `set_material` gán vật liệu mẫu cho khối (`handles`) hoặc cả layer
 (`layers`): `concrete` bê tông (tường, sàn, cột, dầm), `brick` gạch, `plaster` vữa trắng, `glass` kính (cửa sổ, lan can

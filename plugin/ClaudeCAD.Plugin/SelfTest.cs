@@ -1081,6 +1081,57 @@ namespace ClaudeCAD.Plugin
                     : new SelfTestRules.Verdict(false, string.Join("; ", errs));
             });
 
+            // Nâng cấp đợt G3: an estimate of the 3D volumes with one price given and one missing, into an .xlsx with formulas (not run on CI)
+            Check("Nâng cấp đợt G3: lập dự toán (dòng thiếu đơn giá để trống, Excel có công thức)", () =>
+            {
+                string la = "SELFTEST-G3-A", lb = "SELFTEST-G3-B";
+                using (doc.LockDocument())
+                using (var tr = doc.TransactionManager.StartTransaction())
+                {
+                    var c = new ToolContext(doc, tr, true, null);
+                    var ms = (BlockTableRecord)tr.GetObject(SymbolUtilityServices.GetBlockModelSpaceId(doc.Database), OpenMode.ForWrite);
+                    var lt = (LayerTable)tr.GetObject(doc.Database.LayerTableId, OpenMode.ForWrite);
+                    foreach (var (ln, x) in new[] { (la, 400000.0), (lb, 410000.0) })
+                    {
+                        if (!lt.Has(ln)) { var l = new LayerTableRecord { Name = ln }; lt.Add(l); tr.AddNewlyCreatedDBObject(l, true); }
+                        var s = new Solid3d();
+                        s.CreateBox(1000, 1000, 1000);
+                        s.TransformBy(Matrix3d.Displacement(new Vector3d(x, 0, 500)));
+                        s.Layer = ln;
+                        ms.AppendEntity(s);
+                        tr.AddNewlyCreatedDBObject(s, true);
+                    }
+                    tr.Commit();
+                }
+                string xlsx = Path.Combine(dir, "selftest-du-toan.xlsx");
+                if (File.Exists(xlsx)) File.Delete(xlsx);
+                Dictionary<string, object> r;
+                using (doc.LockDocument())
+                using (var tr = doc.TransactionManager.StartTransaction())
+                {
+                    r = (Dictionary<string, object>)DrawingService.CostEstimate(new ToolContext(doc, tr, false, null), new Params("cost_estimate", new Dictionary<string, object>
+                    {
+                        ["quantities"] = "volume",
+                        ["quantities_params"] = new Dictionary<string, object> { ["layers"] = new List<object> { la, lb } },
+                        ["prices"] = new List<object> { new Dictionary<string, object> { ["item"] = la, ["unit_price"] = 1000000.0 } },
+                        ["excel"] = xlsx,
+                    }));
+                    tr.Abort();
+                }
+                var errs = new List<string>();
+                if (Math.Abs(Convert.ToDouble(r["total"]) - 1000000) > 1) errs.Add($"tổng {r["total"]} (cần 1.000.000)");
+                if (!(r.TryGetValue("missing_prices", out var mp) && ((List<object>)mp).Contains(lb))) errs.Add("không báo dòng thiếu đơn giá");
+                if (!File.Exists(xlsx)) errs.Add("không có file Excel");
+                else
+                {
+                    string sheet;
+                    using (var zip = System.IO.Compression.ZipFile.OpenRead(xlsx))
+                    using (var rd = new StreamReader(zip.GetEntry("xl/worksheets/sheet1.xml").Open(), Encoding.UTF8)) sheet = rd.ReadToEnd();
+                    if (!sheet.Contains("<f>SUM(")) errs.Add("file Excel không có công thức tổng");
+                }
+                return errs.Count == 0 ? new SelfTestRules.Verdict(true, "1 dòng có giá, 1 dòng thiếu; Excel có công thức") : new SelfTestRules.Verdict(false, string.Join("; ", errs));
+            });
+
             string versionFile = Path.Combine(dir, "version-copy.dwg");
             Do("Bản sao phiên bản (Wblock + SaveAs)", () =>
             {

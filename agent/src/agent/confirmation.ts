@@ -360,6 +360,8 @@ const CARD_PARAM_TOOLS = new Set([...PLUGIN_CONFIRMED, ...REPLACE_TOOLS]);
 export const F5_CARD_TOOLS = new Set(['plot_pdf', 'export_stl', 'named_view', 'set_material', 'block_schedule', 'area_schedule', 'volume_schedule', 'check_interference',
   // nâng cấp đợt G1: replacing the drawing set made before, and its PDF
   'create_drawing_set',
+  // nâng cấp đợt G3: the Excel file of the estimate
+  'cost_estimate',
   // nâng cấp đợt G2: repairing the drawing (one token per fix), the Excel list of the check
   'fix_drawing', 'check_drawing']);
 

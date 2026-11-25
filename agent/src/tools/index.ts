@@ -12,6 +12,7 @@ import { blockTools } from './blocks.js';
 import { captureTools } from './capture.js';
 import { drawTools } from './draw.js';
 import { drawingSetTools } from './drawingset.js';
+import { estimateTools } from './estimate.js';
 import { layerTools } from './layers.js';
 import { layoutTools } from './layouts.js';
 import { MATCH_PROPS_GENERAL, MATCH_PROPS_TEXT_DESC, modifyTools } from './modify.js';
@@ -69,6 +70,7 @@ export function buildTools(bridge: ToolBridge, allowed?: readonly string[], plan
     ...advancedTools(bridge),
     ...standards2dTools(bridge),
     ...drawingSetTools(bridge), // nâng cấp đợt G1
+    ...estimateTools(bridge), // nâng cấp đợt G3
     ...drawingCheckTools(bridge), // nâng cấp đợt G2
     ...systemTools(bridge),
   ];
@@ -93,6 +95,8 @@ export const PLAN_HIDDEN_PARAMS: Record<string, { needs: '2d' | '3d'; params: st
   // nâng cấp đợt D: a table in the drawing is text (2D); on the 3D plan the 3D schedules only return their numbers
   volume_schedule: { needs: '2d', params: ['table_position', 'title', 'text_height'], note: ' No tables in the drawing with the tools loaded here: show the numbers to the user in the chat.' },
   check_interference: { needs: '2d', params: ['table_position', 'title', 'text_height', 'decimals'], note: ' No clash table in the drawing with the tools loaded here: list the pairs in the chat.' },
+  // nâng cấp đợt G3: the estimate table in the drawing is text (2D); the 3D plan gets the numbers + Excel
+  cost_estimate: { needs: '2d', params: ['table_position', 'title', 'text_height', 'layer'], note: ' No table in the drawing with the tools loaded here: give the numbers in the chat and the Excel file.' },
 };
 
 function trimForPlan(t: AnyTool, plan: string): AnyTool {
