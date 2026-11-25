@@ -37,6 +37,7 @@ Không có lỗi nào cho phép vượt thẻ.
 - **Ô ⚙ "Nạp gọn lệnh":**
   - Thứ tự ưu tiên: biến môi trường > file `tool-search-off` > ô ⚙.
   - Bật / tắt giữa chat: trợ lý đóng tiến trình Claude cũ rồi mới mở lại (không chạy hai tiến trình), nối tiếp cuộc chat.
+    *(Bản chốt đợt F đổi lại: cuộc chat đã có tin giữ cách nạp tới "Chat mới"; xem `docs/ban-giao/nang-cap-f5.md` mục 1.)*
   - Khởi động sẵn nhận cài đặt mới. Máy gói 2D / 3D cũng có ô này.
 - **Ghi chú mũi tên:**
   - Kiểu theo đơn vị bản vẽ và tỷ lệ. Kiểu đã có mà khác thì cần thẻ.

@@ -27,7 +27,7 @@ namespace ClaudeCAD.Core.Tests
             Assert.False(s.Clone().DeferTools);
             Assert.Contains("Bật:", F5Numbers.DeferToolsTip);
             Assert.Contains("Tắt:", F5Numbers.DeferToolsTip);
-            Assert.Contains("tin nhắn tới", F5Numbers.DeferToolsTip);
+            Assert.Contains("cuộc chat mới", F5Numbers.DeferToolsTip); // bản chốt đợt F: was "tin nhắn tới" (fixed per chat now)
         }
 
         [Fact]
@@ -37,7 +37,7 @@ namespace ClaudeCAD.Core.Tests
             Assert.Contains("_deferTools = CheckRow(work, F5Numbers.DeferToolsLabel, F5Numbers.DeferToolsTip);", ui);
             Assert.Contains("_settings.DeferTools = _deferTools.IsChecked == true;", ui);
             var c = Plugin("ChatController.cs");
-            Assert.Contains("if (!_settings.DeferTools) ctx[\"defer_tools\"] = false;", c);
+            Assert.Contains("if (!ChatDefer()) ctx[\"defer_tools\"] = false;", c); // bản chốt đợt F: the chat's own way
             Assert.Contains("if (oldDefer != s.DeferTools && !_busy) SchedulePrewarm();", c);
         }
 

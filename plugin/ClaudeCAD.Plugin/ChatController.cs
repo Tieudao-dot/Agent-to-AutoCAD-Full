@@ -328,7 +328,8 @@ namespace ClaudeCAD.Plugin
             _settings.Save();
             if (oldModel != s.Model || oldEffort != s.Effort) SendOptions();
             if (oldTheme != s.Theme) ApplyTheme();
-            // nâng cấp đợt F5: "Nạp gọn lệnh" applies from the next message (same chat, resumed); Claude waits ready with it
+            // nâng cấp đợt F5 / bản chốt đợt F: "Nạp gọn lệnh" applies to a chat with no message yet (Claude waits ready with
+            // it); a chat that had a message keeps its own way until "Chat mới" (ChatDeferLogic)
             if (oldDefer != s.DeferTools && !_busy) SchedulePrewarm();
         }
 
@@ -649,12 +650,16 @@ namespace ClaudeCAD.Plugin
         private Dictionary<string, object> PlanContext(string servicePlan, string limitingMode)
         {
             var ctx = new Dictionary<string, object>();
-            if (!_settings.DeferTools) ctx["defer_tools"] = false; // nâng cấp đợt F5: ⚙ Nạp gọn lệnh off
+            if (!ChatDefer()) ctx["defer_tools"] = false; // nâng cấp đợt F5: ⚙ Nạp gọn lệnh off (of this chat)
             if (limitingMode != null) ctx["work_mode"] = limitingMode;
             ctx["service_plan"] = servicePlan;
             if (servicePlan != PlanLogic.PlanFull) ctx["plan_tools"] = PlanLogic.AllowedTools(servicePlan).Cast<object>().ToList();
             return ctx;
         }
+
+        /// <summary>Bản chốt đợt F: "Nạp gọn lệnh" of the current chat (fixed at its first message, ChatDeferLogic).</summary>
+        private bool ChatDefer() =>
+            ChatDeferLogic.Effective(_transcript?.DeferTools, !string.IsNullOrEmpty(_transcript?.SessionId), _settings.DeferTools);
 
         private void SendSwitchSession()
         {
@@ -833,6 +838,8 @@ namespace ClaudeCAD.Plugin
             _turnWorkMode = WorkModeLogic.Normalize(_settings.WorkMode);
             var servicePlan = WorkModeLogic.EffectivePlan(Activation.Plan, _turnWorkMode);
             var limitingMode = WorkModeLogic.Limiting(Activation.Plan, _turnWorkMode);
+            // bản chốt đợt F: the first message fixes "Nạp gọn lệnh" for this chat until "Chat mới" (saved with the chat)
+            if (_transcript != null && _transcript.DeferTools == null) _transcript.DeferTools = ChatDefer();
             foreach (var kv in PlanContext(servicePlan, limitingMode)) ctx[kv.Key] = kv.Value; // F4: the same as the prewarm
             var notes = NotesFor(doc);
             if (notes != null) ctx["notes"] = notes;
@@ -1010,6 +1017,7 @@ namespace ClaudeCAD.Plugin
                 _transcript.Entries.Clear();
                 _transcript.SessionId = null;
                 _transcript.Skills = null; // a new chat starts with the skills of the most recent chat (LastSkills)
+                _transcript.DeferTools = null; // bản chốt đợt F: a new chat takes ⚙ "Nạp gọn lệnh" as it is now
                 SaveTranscript();
                 Ui.LoadTranscript(_transcript, false);
             }

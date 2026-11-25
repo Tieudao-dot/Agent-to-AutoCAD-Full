@@ -193,6 +193,72 @@ namespace ClaudeCAD.Core.Tests
                 }
         }
 
+        // ------------------------------------------------------------ KTF-09: short edges of a hand-drawn outline
+
+        /// <summary>L with a 1.5 m wide wing, T and cross house: the short edges a few mm off were refused as "not 90°".</summary>
+        private static readonly List<double[]> NarrowWingL = P(0, 0, 10000, 0, 10000, 1500, 1500, 1500, 1500, 9000, 0, 9000);
+        private static readonly List<double[]> Cross = P(4000, 0, 6000, 0, 6000, 4000, 10000, 4000, 10000, 6000, 6000, 6000, 6000, 10000, 4000, 10000, 4000, 6000, 0, 6000, 0, 4000, 4000, 4000);
+
+        [Theory]
+        [InlineData("narrowWingL")]
+        [InlineData("tee")]
+        [InlineData("cross")]
+        public void Ktf09_a_hand_drawn_outline_with_short_edges_off_by_3_mm_is_always_built(string house)
+        {
+            var src = house == "tee" ? Tee : house == "cross" ? Cross : NarrowWingL;
+            foreach (var type in new[] { "gable", "hip" })
+            {
+                var exact = RoofLogic.Build(src, 3000, new RoofLogic.Options { Type = type });
+                for (int seed = 0; seed < 120; seed++)
+                {
+                    var rnd = new Random(1000 + seed);
+                    var noisy = src.Select(q => new[] { q[0] + rnd.Next(-3, 4), q[1] + rnd.Next(-3, 4) }).ToList();
+                    Assert.True(RoofLogic.IsRightAngled(noisy), $"{house} seed {seed}: refused as not right-angled");
+                    var lay = RoofLogic.Build(noisy, 3000, new RoofLogic.Options { Type = type });
+                    Assert.True(lay.Pieces.Count == exact.Pieces.Count && Math.Abs(lay.TopZ - exact.TopZ) < 5,
+                        $"{type} {house} seed {seed}: {lay.Pieces.Count} pieces (exact {exact.Pieces.Count}), top {lay.TopZ:0} (exact {exact.TopZ:0})");
+                }
+            }
+        }
+
+        [Fact]
+        public void Ktf09_a_really_slanted_wall_is_still_refused()
+        {
+            // the inner wall of the wing slanted: its far end 60 mm off sideways over 7.5 m (0.46°)
+            var slanted = P(0, 0, 10000, 0, 10000, 1500, 1500, 1500, 1560, 9000, 0, 9000);
+            Assert.False(RoofLogic.IsRightAngled(slanted));
+            Assert.Throws<ToolException>(() => RoofLogic.Build(slanted, 3000, new RoofLogic.Options { Type = "gable" }));
+            // a 5° wall of a plain L, and an outline with a 45° corner
+            Assert.False(RoofLogic.IsRightAngled(P(0, 0, 10000, 0, 10000, 5000, 5000, 5000 + 437, 5000, 10000, 0, 10000)));
+            Assert.False(RoofLogic.IsRightAngled(P(0, 0, 10000, 0, 10000, 5000, 7000, 8000, 7000, 10000, 0, 10000)));
+        }
+
+        // ------------------------------------------------------------ bản chốt đợt F: ⚙ Nạp gọn lệnh fixed per chat
+
+        [Fact]
+        public void The_way_of_loading_tools_is_fixed_per_chat_until_a_new_chat()
+        {
+            // no message yet: the ⚙ setting at once
+            Assert.True(ChatDeferLogic.Effective(null, false, true));
+            Assert.False(ChatDeferLogic.Effective(null, false, false));
+            // a chat that had a message keeps its own way, whatever ⚙ says now
+            Assert.True(ChatDeferLogic.Effective(true, true, false));
+            Assert.False(ChatDeferLogic.Effective(false, true, true));
+            // a chat saved before (no way recorded) with a conversation: it was "Nạp gọn"
+            Assert.True(ChatDeferLogic.Effective(null, true, false));
+            // saved with the chat, read back; an old chat file has none
+            var t = new ChatTranscript { SessionId = "s", DeferTools = false };
+            Assert.False(ChatTranscript.FromJson(t.ToJson()).DeferTools);
+            Assert.Null(ChatTranscript.FromJson(new ChatTranscript().ToJson()).DeferTools);
+            Assert.Null(ChatTranscript.FromJson("{\"version\":1,\"session_id\":\"s\"}").DeferTools);
+            var c = Src("plugin", "ClaudeCAD.Plugin", "ChatController.cs");
+            // fixed at the first message, cleared by Chat mới, used by the message and the prewarm (PlanContext)
+            Assert.Contains("if (_transcript != null && _transcript.DeferTools == null) _transcript.DeferTools = ChatDefer();", c);
+            Assert.Contains("_transcript.DeferTools = null;", c);
+            Assert.DoesNotContain("if (!_settings.DeferTools)", c);
+            Assert.Contains("Chat mới", F5Numbers.DeferToolsTip);
+        }
+
         [Fact]
         public void Ktf01_squaring_keeps_an_exact_outline_and_moves_a_corner_only_by_the_drawing_error()
         {

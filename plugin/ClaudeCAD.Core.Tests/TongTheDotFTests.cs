@@ -85,8 +85,9 @@ namespace ClaudeCAD.Core.Tests
             var check = Src("docs", "checklist-tong-the.md");
             Assert.DoesNotContain("chiếu nghỉ dày | **150 mm**", check);
             Assert.DoesNotContain("mặt mái) | **150 mm**", check);
-            Assert.Contains("# Đợt F (F1 → F4)", check);
-            foreach (var f in new[] { "checklist-dot-f2.md", "checklist-dot-f3.md", "checklist-dot-f4.md" })
+            Assert.Contains("# Đợt F (F1 → F5)", check);
+            Assert.Contains("## F11. Đợt F5", check);
+            foreach (var f in new[] { "checklist-dot-f2.md", "checklist-dot-f3.md", "checklist-dot-f4.md", "checklist-dot-f5.md" })
                 Assert.Contains("checklist-tong-the.md", Src("docs", f));
             var skill = Src("skills", "ve-3d-kien-truc", "SKILL.md");
             Assert.Contains("bản thang 120", skill);

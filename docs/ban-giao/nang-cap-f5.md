@@ -8,10 +8,15 @@ trên AutoCAD / Claude thật. Phần chỉ kiểm được trên AutoCAD: bư�
 
 - ⚙ → "CÁCH CLAUDE LÀM VIỆC" → ô **Nạp gọn lệnh**, mặc định bật, nhớ theo máy (`settings.json` `defer_tools`). Dòng giải
   thích: "Bật: mở chat nhanh và nhẹ hơn, Claude tự tìm lệnh ít dùng khi cần. Tắt: nạp đủ mô tả mọi lệnh như trước (tốn token
-  hơn). Áp dụng từ tin nhắn tới, đoạn chat giữ nguyên."
-- Cách chạy: mỗi tin (và tin khởi động sẵn) mang `defer_tools: false` khi ô tắt. Trợ lý đổi cách nạp lệnh từ **tin kế
-  tiếp**: khởi động lại Claude và **nối tiếp cùng cuộc chat** (như khi đổi chế độ F1), không mất đoạn chat. Đổi ô lúc rảnh
-  thì khởi động sẵn lại cho khớp; đang chạy thì lượt đó giữ cách cũ.
+  hơn). Áp dụng từ cuộc chat mới (bấm Chat mới); cuộc chat đã có tin nhắn giữ cách nạp lúc bắt đầu."
+- Cách chạy: mỗi tin (và tin khởi động sẵn) mang `defer_tools: false` khi cách nạp **của cuộc chat** là tắt.
+  - **Sửa ở bản chốt đợt F (25/11, sau rà F5):** cuộc chat đã có tin nhắn **giữ nguyên cách nạp tới khi bấm "Chat mới"**
+    (cách nạp lưu trong file chat của bản vẽ, `ChatTranscript.DeferTools`, `ChatDeferLogic`). Lý do: nếu Claude đã dùng
+    ToolSearch trong cuộc chat rồi khách tắt ô, lượt sau nối tiếp cuộc chat mà không còn ToolSearch, lịch sử còn các khối
+    tham chiếu lệnh nên có thể bị từ chối. Ô đổi vẫn được lưu và áp dụng cho cuộc chat mới.
+  - Cuộc chat chưa có tin nào (mới khởi động sẵn): áp dụng ngay, khởi động sẵn lại cho khớp.
+  - Đổi bản vẽ: mỗi cuộc chat dùng cách nạp của chính nó (trợ lý khởi động lại, nối tiếp, khi hai cuộc khác nhau). File
+    chat lưu trước bản này mà đã có cuộc chat: coi là bật (trước F5 mọi cuộc chat đều nạp gọn).
 - Biến môi trường `CLAUDECAD_DEFER_TOOLS=0` / file `tool-search-off` (Test & sửa F4) **thắng ô này**: khi có, mọi lệnh nạp
   đủ dù ô bật, và ô không làm khởi động lại.
 - Code: `PaletteSettings.DeferTools`, `UI/ChatControl.cs` (`_deferTools`), `ChatController.cs` (`PlanContext`,
@@ -65,7 +70,7 @@ trên AutoCAD / Claude thật. Phần chỉ kiểm được trên AutoCAD: bư�
 
 | Tình huống | Đã chọn | Muốn đổi thì |
 | --- | --- | --- |
-| Khi nào ô ⚙ có hiệu lực | từ tin nhắn kế tiếp, cùng cuộc chat (khởi động lại Claude, nối tiếp) | áp dụng ngay giữa lượt: không làm (lệnh đang gọi sẽ hỏng) |
+| Khi nào ô ⚙ có hiệu lực | **(sửa ở bản chốt đợt F)** từ cuộc chat mới; cuộc chat đã có tin giữ cách nạp lúc bắt đầu tới khi bấm "Chat mới"; cuộc chat chưa có tin thì áp dụng ngay | cho đổi giữa cuộc chat: chỉ khi đã thử trên Claude thật rằng nối tiếp không bị từ chối; bỏ dòng gán `DeferTools` trong `ChatController.Send` |
 | Ô ⚙ hay biến môi trường thắng | biến / file thắng (đường lui của người hỗ trợ) | đảo thứ tự trong `AgentSession.deferTools` |
 | Mã thẻ cho file (file không có handle) | mã 16 hex từ đường dẫn | — |
 | `overwrite` / `replace` cũ | vẫn nhận; chỉ thay được thẻ khi chạy macro | bỏ hẳn: cần sửa macro / skill cũ |

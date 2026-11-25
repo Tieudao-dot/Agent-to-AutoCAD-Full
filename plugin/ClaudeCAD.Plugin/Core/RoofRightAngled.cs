@@ -32,20 +32,42 @@ namespace ClaudeCAD.Plugin.Core
         public const int MaxRoofPieces = 12;
 
         /// <summary>Every edge is parallel or perpendicular to the first one (within StairLogic.SquareTol).</summary>
+        /// <remarks>KTF-09: or its two ends are off sideways (from the length-weighted frame of all edges, as in SquareUp) by
+        /// no more than the distance under which SquareUp merges two wall lines — a short edge of a hand-drawn outline 3–4 mm
+        /// off. Only widens what was taken before; a really slanted wall is still refused.</remarks>
         public static bool IsRightAngled(IList<double[]> pts)
         {
-            if (pts.Count < 4 || pts.Count % 2 != 0) return false;
+            int n = pts.Count;
+            if (n < 4 || n % 2 != 0) return false;
             var u = Dir(pts[0], pts[1]);
             if (u == null) return false;
-            for (int i = 0; i < pts.Count; i++)
+            double sx = 0, sy = 0;
+            for (int i = 0; i < n; i++)
             {
-                var e = Dir(pts[i], pts[(i + 1) % pts.Count]);
-                if (e == null) return false;
+                var a = pts[i]; var b = pts[(i + 1) % n];
+                double dx = b[0] - a[0], dy = b[1] - a[1], l = Math.Sqrt(dx * dx + dy * dy);
+                if (l < 1e-9) return false;
+                double t4 = 4 * Math.Atan2(dy, dx);
+                sx += l * Math.Cos(t4); sy += l * Math.Sin(t4);
+            }
+            double th = Math.Atan2(sy, sx) / 4, c = Math.Cos(th), s = Math.Sin(th);
+            var loc = pts.Select(q => new[] { q[0] * c + q[1] * s, -q[0] * s + q[1] * c }).ToList();
+            double size = Math.Max(loc.Max(q => q[0]) - loc.Min(q => q[0]), loc.Max(q => q[1]) - loc.Min(q => q[1]));
+            double tol = SnapTol(size);
+            for (int i = 0; i < n; i++)
+            {
+                var e = Dir(pts[i], pts[(i + 1) % n]);
                 double dot = Math.Abs(e[0] * u[0] + e[1] * u[1]);
-                if (dot > StairLogic.SquareTol && Math.Abs(dot - 1) > StairLogic.SquareTol) return false;
+                if (dot <= StairLogic.SquareTol || Math.Abs(dot - 1) <= StairLogic.SquareTol) continue;
+                var a = loc[i]; var b = loc[(i + 1) % n];
+                double side = Math.Min(Math.Abs(b[0] - a[0]), Math.Abs(b[1] - a[1])); // sideways offset of the two ends
+                if (side > tol) return false;
             }
             return true;
         }
+
+        /// <summary>Distance (mm) under which two parallel wall lines of an outline of this size are one line.</summary>
+        private static double SnapTol(double size) => Math.Max(SnapMinMm, StairLogic.SquareTol * size);
 
         /// <summary>
         /// KTF-01 (kiểm tra độc lập đợt F): a right-angled outline drawn by hand or turned and rounded is off by a little
@@ -89,7 +111,7 @@ namespace ClaudeCAD.Plugin.Core
             // KTF-01 (lần 2): levels closer than SnapTol are one level (a corner off by a few mm on both sides of an inward
             // corner, a 2 mm jog in a wall line): their edges become one line, the zero-length edges between them go
             double size = Math.Max(loc.Max(q => q[0]) - loc.Min(q => q[0]), loc.Max(q => q[1]) - loc.Min(q => q[1]));
-            double tol = Math.Max(SnapMinMm, StairLogic.SquareTol * size);
+            double tol = SnapTol(size);
             Snap(lvl, alongX, true, tol);
             Snap(lvl, alongX, false, tol);
             var res = new List<double[]>(n);

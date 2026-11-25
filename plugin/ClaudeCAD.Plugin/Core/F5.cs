@@ -22,7 +22,22 @@ namespace ClaudeCAD.Plugin.Core
         public const string DeferToolsLabel = "Nạp gọn lệnh";
         public const string DeferToolsTip =
             "Bật: mở chat nhanh và nhẹ hơn, Claude tự tìm lệnh ít dùng khi cần. Tắt: nạp đủ mô tả mọi lệnh như trước (tốn token hơn). " +
-            "Áp dụng từ tin nhắn tới, đoạn chat giữ nguyên.";
+            "Áp dụng từ cuộc chat mới (bấm Chat mới); cuộc chat đã có tin nhắn giữ cách nạp lúc bắt đầu.";
+    }
+
+    /// <summary>
+    /// Bản chốt đợt F (sau rà F5): the way of loading the tools is fixed per chat. A chat that already had a message keeps the
+    /// way it started with until "Chat mới" (a resumed chat whose history holds tool references found by ToolSearch must not
+    /// go on without ToolSearch); a chat with no message yet takes the ⚙ setting at once (the prewarm restarts with it).
+    /// </summary>
+    public static class ChatDeferLogic
+    {
+        /// <summary>
+        /// The way of loading for the next message / prewarm of a chat: its own (fixed at its first message), else on for a chat
+        /// saved before F5 that already has a conversation (every chat was "Nạp gọn" then), else the ⚙ setting.
+        /// </summary>
+        public static bool Effective(bool? chatDefer, bool hasConversation, bool setting) =>
+            chatDefer ?? (hasConversation ? true : setting);
     }
 
     /// <summary>

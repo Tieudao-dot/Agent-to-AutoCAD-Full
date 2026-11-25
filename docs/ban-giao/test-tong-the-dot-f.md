@@ -151,3 +151,34 @@ Ghi chú nhẹ của người soát:
 
 Thử tay thêm: F6-4b (nhà T vẽ tay lệch + bậc 220 mm).
 
+
+## Chốt nhánh trước bộ cài thử bản 4 (25/11/2026)
+
+Soát cuối của kiểm tra độc lập trên `fc92cd6`: KTF-01 lần 2 đúng (0/1680 ca sai), đợt F5 không có lỗi chứng minh được; còn
+KTF-09 và một nghi vấn, sửa ở đây.
+
+- **Nhánh:** `full/nang-cap-f-tong-the` tiến thẳng (fast-forward) tới `origin/full/nang-cap-f5-test` @ `fc92cd6`
+  (= `03bf163` + đợt F5 `1dc03b9` + bản sửa của người rà F5).
+- **KTF-09 (nhẹ, F3, có từ F3):** nhà vẽ tay có cạnh ngắn lệch vài mm bị từ chối "không phải góc vuông" (L cánh hẹp 1,5 m
+  nhiễu ±2–3 mm: 22/120 lần 2 dốc, 14/120 lần 4 dốc), vì lệch 4 mm trên cạnh 1,5 m = 2,7e-3 > ngưỡng góc 2e-3. Sửa
+  (`RoofLogic.IsRightAngled`): một cạnh còn được nhận khi hai đầu của nó lệch ngang (theo hệ trục trung bình theo độ dài
+  của mọi cạnh, như `SquareUp`) không quá khoảng cách gộp hai đường tường của `SquareUp` (max(`SnapMinMm` 5 mm, 2e-3 × cỡ
+  nhà); nhà 10 m là 20 mm). Chỉ nới thêm, cái gì nhận trước vẫn nhận; tường xiên thật vẫn bị từ chối. Test: L cánh hẹp,
+  T, chữ thập nhiễu ±3 mm, 120 hạt cố định × 2 kiểu mái: lần nào cũng dựng được, số mảnh và nóc như nhà vuông; tường xiên
+  60 mm / 7,5 m, tường 5°, góc 45° vẫn bị từ chối. Bỏ phần sửa thì 3 ca nhiễu đỏ.
+- **Ô "Nạp gọn lệnh" đổi giữa cuộc chat (nghi vấn, chưa thử được với Claude thật):** chọn cách an toàn. Cuộc chat đã có
+  tin giữ cách nạp lúc bắt đầu tới khi bấm "Chat mới"; cuộc chat chưa có tin thì áp dụng ngay (khởi động sẵn lại như F5).
+  Cách nạp lưu trong file chat của bản vẽ (`ChatTranscript.DeferTools`, ghi ở tin đầu, xóa khi Chat mới); file chat cũ đã
+  có cuộc chat coi là bật (trước F5 mọi cuộc chat đều nạp gọn); `ChatDeferLogic.Effective`; tin và khởi động sẵn cùng dùng
+  `ChatController.ChatDefer()`. Trợ lý không đổi (vẫn khởi động lại nối tiếp khi cách nạp khác, nay chỉ xảy ra khi chuyển
+  sang cuộc chat của bản vẽ khác có cách nạp khác — đúng cách nạp của cuộc chat đó). Dòng giải thích dưới ô: "Áp dụng từ
+  cuộc chat mới (bấm Chat mới); cuộc chat đã có tin nhắn giữ cách nạp lúc bắt đầu."
+- **Quyết định tự chọn:** hai điểm trên (ghi cả trong `docs/dot-f-cho-duyet.md` và bàn giao F5).
+- **Tài liệu:** `docs/checklist-dot-f5.md` gộp vào khối "Đợt F" của checklist tổng (mục F11, có mục "đổi ô ⚙ rồi Chat mới"
+  F11-3 và mái cánh hẹp F11-13), file riêng để dòng trỏ; `docs/dot-f-cho-duyet.md` thêm mục "Đợt F5" và "Sau kiểm tra độc
+  lập", soát lại cả file với code (hai "điểm để cậu xem lại" về ghi đè đã được F5 làm: gạch đi và ghi rõ); bàn giao F5,
+  `bo-cai/README.md` cập nhật.
+- **Số kỹ thuật bên trong:** không thêm số mới (dùng lại `SnapMinMm` 5 mm và `StairLogic.SquareTol` 2e-3).
+- **Test:** thêm 5 test lõi (`KiemTraDocLapDotFTests`: KTF-09 ×3 nhà, tường xiên, cách nạp theo cuộc chat); sửa 2 dòng trong
+  `NangCapF5Tests` (chữ dòng giải thích, dòng code gửi `defer_tools`) và 2 dòng trong `TongTheDotFTests` (tiêu đề khối,
+  file F5 trỏ về checklist tổng).

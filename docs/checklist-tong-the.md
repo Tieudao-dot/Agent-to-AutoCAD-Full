@@ -245,11 +245,11 @@ cậu muốn đổi số mặc định thì báo luồng chính:
 | Khe giữa 2 vế cầu thang chữ U | **100 mm** | R3, V2: nhìn từ trên thấy khe hở giữa hai vế |
 | Bản mái dốc dày (đo vuông góc mặt mái) | **120 mm** (đợt F3 đổi từ 150; mái bằng vẫn 150) | R7, R8, V1: mép mái đua |
 
-# Đợt F (F1 → F4): thử với bộ cài thử bản 4 (gộp 25/11/2026)
+# Đợt F (F1 → F5): thử với bộ cài thử bản 4 (gộp 25/11/2026)
 
 *Test tổng thể đợt F, nhánh `full/nang-cap-f-tong-the`. Chi tiết: `docs/ban-giao/nang-cap-f1.md` … `-f4-test.md`,
-`docs/ban-giao/test-tong-the-dot-f.md`. Gộp từ khối F1 cũ và `checklist-dot-f2.md`, `-f3.md`, `-f4.md` (các file đó giờ
-trỏ về đây). Cần máy **gói Full** (bộ cài thử nội bộ là Full), một bản vẽ trống đơn vị mm. Tổng ~2 giờ; làm theo thứ tự
+`docs/ban-giao/test-tong-the-dot-f.md`, `nang-cap-f5.md`, `nang-cap-f5-test.md`. Gộp từ khối F1 cũ và `checklist-dot-f2.md`,
+`-f3.md`, `-f4.md`, `-f5.md` (các file đó giờ trỏ về đây; F5 ở mục F11). Cần máy **gói Full** (bộ cài thử nội bộ là Full), một bản vẽ trống đơn vị mm. Tổng ~2 giờ; làm theo thứ tự
 dưới (dễ trước, khó sau), dừng ở đâu cũng được.*
 
 Ký hiệu cột "Cần": **—** không cần gì thêm; **Claude** = gõ trong khung chat (Claude thật trả lời, tốn hạn mức);
@@ -263,7 +263,7 @@ nhà hoặc xoay trục theo hướng nhà; biểu tượng trục X / Y ở gó
 
 | # | Cần | Làm gì | Thấy gì là đạt |
 | --- | --- | --- | --- |
-| F0-1 | — | Gõ `CLAUDECHATSELFTEST` | Các dòng "Nâng cấp đợt F3 …", "Nâng cấp đợt F2 …", "Nâng cấp đợt F4 …" đều ✓; dòng "Bản vẽ của cậu không bị đụng tới" ✓. Dòng F4 không còn phụ thuộc dòng F2 (tự tạo block riêng) |
+| F0-1 | — | Gõ `CLAUDECHATSELFTEST` | Các dòng "Nâng cấp đợt F3 …", "Nâng cấp đợt F2 …", "Nâng cấp đợt F4 …", "Nâng cấp đợt F5 …" đều ✓; dòng "Bản vẽ của cậu không bị đụng tới" ✓. Dòng F4 không còn phụ thuộc dòng F2 (tự tạo block riêng) |
 
 ## F1. Mở chat nhanh (~5 phút)
 
@@ -378,6 +378,26 @@ Bản vẽ **đã lưu**, có vài phòng (polyline kín + tên phòng có dấu
 | # | Cần | Làm gì | Thấy gì là đạt |
 | --- | --- | --- | --- |
 | F9-1 | Công tắc, Claude | Đóng AutoCAD, tạo file trống `tool-search-off` trong `%LocalAppData%\ClaudeCAD` (bỏ đuôi `.txt`), mở AutoCAD, "kéo giãn hình chữ nhật" (F4-C3) | Làm được như trước F4; log trợ lý có `tools: all in full (deferring switched off)`. Xóa file, mở lại: log `tools: most used in full, the rest behind ToolSearch` |
+
+## F11. Đợt F5: ô "Nạp gọn lệnh", thẻ xác nhận ghi đè, ghi chú có mũi tên (~25 phút)
+
+Bản vẽ đã lưu (có tên file). Mã trong ngoặc là mục của `checklist-dot-f5.md`.
+
+| # | Cần | Làm gì | Thấy gì là đạt |
+| --- | --- | --- | --- |
+| F11-1 | — | Mở ⚙ → phần "Cách Claude làm việc" (F5-B1) | Có ô **Nạp gọn lệnh** đang bật; rê chuột thấy dòng giải thích bật / tắt, có câu "Áp dụng từ cuộc chat mới" |
+| F11-2 | Claude | Đang chat dở, tắt ô, đóng ⚙, gửi "kéo giãn hình chữ nhật vừa vẽ" (F5-B2) | Claude làm được, vẫn nhớ đoạn chat trước. Cuộc chat này **vẫn nạp gọn** (ô chỉ áp dụng từ cuộc chat mới) |
+| F11-3 | Claude | **Đổi ô rồi Chat mới:** ô đang tắt, bấm **Chat mới**, gửi "vẽ hình tròn bán kính 500" rồi "chụp ảnh 3D"; bật lại ô, bấm Chat mới, gửi lại hai câu đó (F5-B2b) | Cả hai cuộc chat Claude đều làm được, không báo lỗi, không phải gửi lại |
+| F11-4 | — | Đóng hẳn AutoCAD, mở lại, mở ⚙ (F5-B3) | Ô nhớ đúng trạng thái lần trước (nhớ theo máy). Để bật cho các bước sau |
+| F11-5 | Claude | "In layout ra PDF" hai lần liền (F5-C1) | Lần 2 hiện **thẻ Đồng ý / Hủy** nói file PDF đã có. Hủy: file cũ giữ nguyên. Đồng ý: file mới thay file cũ |
+| F11-6 | Claude, Excel | "Xuất STL" hai lần; "xuất ảnh phối cảnh" hai lần; "thống kê block ra Excel" hai lần (F5-C2, C3) | Lần 2 mỗi việc hiện thẻ; Đồng ý mới ghi đè |
+| F11-7 | Claude | "Lưu góc nhìn tên Phối cảnh 1" hai lần, bấm **Đồng ý** ghi đè; ngay sau đó "xóa góc nhìn Phối cảnh 1" (F5-C4, C4b) | Lưu lần 2 và xóa đều hiện thẻ (đồng ý ghi đè không dùng được để xóa); Hủy thì gõ `VIEW` vẫn thấy góc nhìn |
+| F11-8 | Claude | "Gán vật liệu bê tông cho cả layer A-WALL-3D", rồi "đổi màu vật liệu Bê tông sang xám đậm"; "tạo vật liệu mới tên Gỗ lim màu nâu" (F5-C5, C5b) | Hai việc đầu hiện thẻ; tạo vật liệu mới không hiện thẻ. Gán cho vài khối chọn sẵn (≤ 20): không thẻ |
+| F11-9 | Claude | Xuất PDF / Excel ra **tên mới**; lưu macro cho một lượt "lưu góc nhìn tên A" (A chưa có) rồi chạy macro (F5-C6, C7) | Tên mới: không thẻ, ghi luôn. Macro chạy xong, không có thẻ nào treo |
+| F11-10 | Claude | "Thiết lập bộ style kiến trúc tỷ lệ 1:100", rồi "ghi chú 'Ống D110' có mũi tên chỉ vào góc phòng, chữ đặt lệch lên bên phải" (F5-D1, D2) | Gõ `MLEADERSTYLE`: `KT-ML-100` là kiểu hiện hành. Mũi tên đặc ở góc phòng, chữ kiểu `KT-ARIAL`, cao 250 trong bản vẽ mm (in ~2,5 mm ở 1:100) |
+| F11-11 | Claude | Xoay UCS 30° (`UCS` → `Z` → 30), ghi chú mũi tên lại (F5-D3) | Chữ và đường gãy ngang xoay theo UCS |
+| F11-12 | Claude | Chế độ **3D**: "ghi chú có mũi tên" (F5-D4) | Claude bảo đổi sang 2D hoặc Cả hai (máy gói 3D: nói gói không có) |
+| F11-13 | Claude | *(Bản chốt đợt F, KTF-09)* Vẽ tay đường bao nhà chữ L **cánh hẹp 1,5 m** (lệch vài mm, không bắt điểm), "dựng mái 2 dốc" rồi "mái 4 dốc" | Mái dựng được, nóc phẳng, không báo "không phải góc vuông". Vẽ hẳn một tường xiên rõ thì vẫn bị từ chối, Claude nêu cách khác |
 
 ## F10. Cần máy khác (làm khi có)
 

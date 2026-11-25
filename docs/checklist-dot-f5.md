@@ -1,5 +1,7 @@
 # Thử tay đợt F5: ô "Nạp gọn lệnh", thẻ xác nhận ghi đè, ghi chú có mũi tên
 
+*Đã gộp vào khối "Đợt F" của [`docs/checklist-tong-the.md`](checklist-tong-the.md) (mục F11), thử tay theo file đó.*
+
 *Nhánh `full/nang-cap-f5`. Chi tiết: `docs/ban-giao/nang-cap-f5.md`. Máy gói Full (bộ cài thử nội bộ), bản vẽ đã lưu (có
 tên file), đơn vị mm. Khoảng 25 phút. "Đạt" là thấy đúng như cột phải; khác thì chụp màn hình và ghi số thứ tự.*
 
@@ -14,7 +16,8 @@ tên file), đơn vị mm. Khoảng 25 phút. "Đạt" là thấy đúng như c�
 | # | Làm gì | Thấy gì là đạt |
 | --- | --- | --- |
 | B1 | Mở ⚙ → phần "Cách Claude làm việc" | Có ô **Nạp gọn lệnh** đang bật, rê chuột thấy dòng giải thích bật / tắt |
-| B2 | Đang chat dở, tắt ô, đóng ⚙, gửi "kéo giãn hình chữ nhật vừa vẽ" | Claude làm được; vẫn nhớ đoạn chat trước (vd hỏi "lúc nãy mình vẽ gì?") |
+| B2 | Đang chat dở, tắt ô, đóng ⚙, gửi "kéo giãn hình chữ nhật vừa vẽ" | Claude làm được, vẫn nhớ đoạn chat trước; cuộc chat này **vẫn nạp gọn** (bản chốt đợt F: ô áp dụng từ cuộc chat mới) |
+| B2b | *(Bản chốt đợt F)* Ô đang tắt, bấm **Chat mới**, gửi "vẽ hình tròn bán kính 500" rồi "chụp ảnh 3D" | Claude làm được cả hai, không báo lỗi; rê chuột vào ô thấy dòng "Áp dụng từ cuộc chat mới" |
 | B3 | Đóng hẳn AutoCAD, mở lại, mở ⚙ | Ô vẫn **tắt** (nhớ theo máy). Bật lại cho các bước sau |
 
 ## C. Thẻ xác nhận ghi đè (~12 phút)
