@@ -72,4 +72,5 @@ Không đổi số nào.
 
 ## CI
 
-*(điền sau khi chạy)*
+- Run **#45** (`45595009744`, `release=false`) trên `d3484f6` (bản code cuối): **xanh** (build 3 target, test lõi, trợ lý, UI test WPF).
+- Commit sau CI chỉ thêm mục này (tài liệu).
