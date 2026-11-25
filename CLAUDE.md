@@ -51,6 +51,11 @@ dự án gốc), `bo-cai/README.md`.
   - còn số chưa được xác nhận thì thread chưa báo "xong" phần đó;
   - không phải hỏi: số kỹ thuật bên trong mà khách không thấy và không làm đổi kết quả (dung sai tính toán, thời gian
     chờ, số trong test). Các số này ghi trong bàn giao;
+  - **khi cậu đã dặn "cứ triển khai, không hỏi lại" cho một chuỗi** (đợt F, dặn 25/11/2026): không dừng chuỗi để hỏi.
+    Thread dùng số đề xuất, để mọi số ở một chỗ dễ đổi, và lập bảng "Con số chờ chủ dự án duyệt" trong bàn giao; luồng
+    chính gom các bảng, đưa cậu duyệt một lần ở báo cáo cuối chuỗi, trước khi báo "hoàn thành". Điểm cần chọn khác thì
+    chọn cách rẻ, an toàn, đổi lại được và ghi vào "Quyết định tự chọn" để cậu xem lại. Việc khó đảo ngược hoặc hướng
+    ra ngoài (merge `main`, phát hành…) vẫn phải hỏi;
   - tin giao việc và prompt mở thread mới ghi sẵn quy tắc này.
 - **Tác vụ đang chạy hiện ở thanh bên phải (task list) (chủ dự án yêu cầu 13/11/2026):**
   - luồng chính giữ trên thanh bên phải của thread chính mỗi việc đang chạy là 1 task: tên thread / đợt + việc
@@ -220,6 +225,8 @@ dự án gốc), `bo-cai/README.md`.
 | ↳ Commit & CI (con của Tối ưu khung chat) | `session_01D56HmETMC8GaiKLR7th4ha` | Chủ dự án yêu cầu mở 15/11 (thread cha bị chế độ Auto chặn commit / push): áp bản vá của thread cha lên nhánh `full/toi-uu-khung-chat` (từ `full/nang-cap-tong-the` @ `b0da814`), build, test, commit, push, 1 lượt CI. Báo về thread cha, tin cập nhật ngắn gửi luồng chính |
 | Nâng cấp đợt F1 | `session_01D56HmFAo4dZ7c8sbeNB9eh` | Nhánh `full/nang-cap-f1` (tách từ `full/nang-cap-f-goc` @ `2dbeee2`): mọi lệnh vẽ hiểu UCS; nút chế độ "Cả hai / 2D / 3D" cho máy gói Full. Viết xong tự mở thread con Test & sửa (`full/nang-cap-f1-test`). Bàn giao: `docs/ban-giao/nang-cap-f1.md`. Kế hoạch: `docs/ke-hoach-nang-cap-lenh.md` mục "Đợt F" |
 | ↳ Test & sửa đợt F1 (con của Nâng cấp đợt F1) | `session_01D56HmFrL65iF9oJokvqXw5` | Nhánh `full/nang-cap-f1-test` (tách từ `full/nang-cap-f1` @ `8110e45`): rà soát, thêm test tự động, sửa lỗi đợt F1; 1 lượt CI. Báo về thread đợt F1, tin cập nhật ngắn gửi luồng chính. Bàn giao: `docs/ban-giao/nang-cap-f1-test.md` |
+| Nâng cấp đợt F2 | `session_01D56HmFcYrzsme7GoBm8tNC` | Nhánh `full/nang-cap-f2` (tách từ `full/nang-cap-f1-test` @ `b2e6431`), chạy cùng lúc với F3: bộ style chuẩn Việt Nam, layout có khung tên, block từ thư viện, trạng thái layer. Viết xong tự mở thread con Test & sửa (`full/nang-cap-f2-test`). Thử tay: `docs/checklist-dot-f2.md`. Bàn giao: `docs/ban-giao/nang-cap-f2.md` |
+| Nâng cấp đợt F3 | `session_01D56HmFBfQ8mQ37WLtVFweF` | Nhánh `full/nang-cap-f3` (tách từ `full/nang-cap-f1-test` @ `b2e6431`), chạy cùng lúc với F2: mái liền khối nhà chữ L / T, vật liệu + render, lưu góc nhìn, bản thang và bản mái dốc về 120 mm. Viết xong tự mở thread con Test & sửa (`full/nang-cap-f3-test`). Thử tay: `docs/checklist-dot-f3.md`. Bàn giao: `docs/ban-giao/nang-cap-f3.md` |
 
 Link mở thread: `https://claude.ai/code/<session id>`.
 

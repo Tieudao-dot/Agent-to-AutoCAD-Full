@@ -81,6 +81,7 @@ quy tắc làm việc và danh bạ thread: [`../CLAUDE.md`](../CLAUDE.md).
 | 25/11 | Số mặc định cầu thang / mái dốc | Đổi: bản thang + chiếu nghỉ dày **120** mm (trước 150), bản mái dốc dày **120** mm (trước 150); giữ khe giữa 2 vế thang chữ U **100** mm. Mái bằng dày 150 giữ như đã chốt 13/11. Sửa trong đợt F3 |
 | 25/11 | Số mặc định lan can | Xác nhận giữ: cao 1100; khe giữa các song ≤ 100; trụ cách nhau ≤ 1500; tay vịn và trụ 50 × 50; song 20 × 20; thanh dưới cách sàn 100; tấm kín dày 20 (mm) |
 | 25/11 | Cách chạy đợt F | Sau F1: F2 và F3 chạy cùng lúc, mỗi đợt có Test & sửa riêng; thread F4 gộp hai nhánh, CI xanh rồi mới làm F4. Nhanh hơn ~1,5 giờ, thêm ~$5–10 |
+| 25/11 | Chạy liền, không hỏi lại | Chủ dự án dặn cứ triển khai đợt F theo kế hoạch, không hỏi lại. Con số: thread dùng số đề xuất, gom bảng "Con số chờ chủ dự án duyệt"; quyết định khác ghi "Quyết định tự chọn"; chủ dự án duyệt một lần ở báo cáo cuối. Vẫn dừng trước phát hành |
 | 12/11 | Cách làm việc | Luồng chính điều phối; mỗi đợt một thread, thread đợt tự mở thread con "Test & sửa" |
 
 ## 4. Đã làm
@@ -143,3 +144,6 @@ trong 5 phút chỉ tốn ~10%.
 - **25/11/2026:** chủ dự án thử thật bản 3: chạy ổn; chốt làm đợt F ngay (4 đợt) và yêu cầu kiểm tra trước khi báo hoàn
   thành. Tạo nhánh gốc `full/nang-cap-f-goc` @ `2dbeee2` có file quyền; mở thread Nâng cấp đợt F1
   (`session_01D56HmFAo4dZ7c8sbeNB9eh`).
+  - 15h51: đợt F1 xong (viết + Test & sửa, 4 lỗi sửa, ~$21, `full/nang-cap-f1-test` @ `b2e6431`, CI 45578496260 xanh).
+    Chủ dự án chốt thêm: con số phải xác nhận; bản thang và bản mái dốc 120 mm; F2 + F3 chạy cùng lúc; chạy liền không
+    hỏi lại. 15h53 mở F2 (`session_01D56HmFcYrzsme7GoBm8tNC`) và F3 (`session_01D56HmFBfQ8mQ37WLtVFweF`).

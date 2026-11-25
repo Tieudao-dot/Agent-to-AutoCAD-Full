@@ -117,17 +117,20 @@ tiếp; đợt sau xuất phát từ commit cuối của bước Test & sửa đ
   - cuối chuỗi: test tổng thể + kiểm tra độc lập, lỗi sửa xong và được soát lại;
   - luồng chính tự kiểm CI và file bộ cài rồi mới báo chủ dự án.
 - F4 (mở chat nhanh, xuất Excel) là ý của luồng chính, chủ dự án chọn 25/11. Còn để sau: vẽ lại từ ảnh / PDF scan.
-- **Con số phải được chủ dự án xác nhận trước khi làm** (yêu cầu 25/11): thread đợt F gom các số khách sẽ gặp (cỡ chữ,
-  kích thước khung tên, độ dày, góc…) gửi luồng chính trước khi đưa vào code; luồng chính hỏi rồi chuyển xuống.
+- **Con số phải được chủ dự án xác nhận** (yêu cầu 25/11): thread đợt F gom các số khách sẽ gặp (cỡ chữ, kích thước
+  khung tên, độ dày, góc…) thành bảng "Con số chờ chủ dự án duyệt".
+- **Chạy liền, không hỏi lại (chủ dự án dặn 25/11 ~15h52):** chuỗi không dừng để hỏi. Thread dùng số đề xuất, để ở một
+  chỗ dễ đổi; điểm cần chọn thì chọn cách rẻ, an toàn, đổi lại được và ghi "Quyết định tự chọn". Luồng chính gom bảng
+  con số và các quyết định, đưa chủ dự án duyệt một lần ở báo cáo cuối chuỗi. Vẫn dừng trước phát hành.
 
 ### Tiến độ đợt F
 
 | Đợt | Thread viết | Thread con Test & sửa | Nhánh | Trạng thái |
 | --- | --- | --- | --- | --- |
-| F1 | `session_01D56HmFAo4dZ7c8sbeNB9eh` (25/11 14h27 → 15h19) | `session_01D56HmFrL65iF9oJokvqXw5` (đang rà) | `full/nang-cap-f1` @ `8110e45`, CI 45573567269 xanh (lõi 952, trợ lý 307, UI 37) → `full/nang-cap-f1-test` | Viết xong; token mở chat Full 58k → 39k (2D) / 40k (3D) khi chọn chế độ riêng. Đang Test & sửa |
-| F2 | — | — | — | Chờ F1 |
-| F3 | — | — | — | Chờ F2 |
-| F4 | — | — | — | Chờ F3 |
+| F1 | `session_01D56HmFAo4dZ7c8sbeNB9eh` (25/11 14h27 → 15h19, $14,8) | `session_01D56HmFrL65iF9oJokvqXw5` (15h19 → 15h51, $6,3; 4 lỗi sửa) | `full/nang-cap-f1` @ `8110e45`, CI 45573567269 xanh → `full/nang-cap-f1-test` @ `b2e6431`, CI 45578496260 xanh (lõi 973, trợ lý 311) | **Xong**, ~$21, 1 giờ 24 phút. Token mở chat Full 58k → 39k (2D) / 40k (3D) khi chọn chế độ riêng. Không có con số nào cần duyệt |
+| F2 | `session_01D56HmFcYrzsme7GoBm8tNC` (mở 25/11 15h53) | — | `full/nang-cap-f2` (từ `b2e6431`) | Đang viết, cùng lúc với F3 |
+| F3 | `session_01D56HmFBfQ8mQ37WLtVFweF` (mở 25/11 15h53) | — | `full/nang-cap-f3` (từ `b2e6431`) | Đang viết, cùng lúc với F2 |
+| F4 | — | — | — | Chờ F2 và F3; thread F4 gộp hai nhánh trước |
 | Cuối | — | — | — | Chờ F4 |
 
 ### Số mặc định chủ dự án xác nhận 25/11/2026
