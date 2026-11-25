@@ -217,6 +217,8 @@ export interface UserContext {
   notes?: string;
   /** false = the user turned off visual self-checks (capture_view). */
   visual_check?: boolean;
+  /** Nâng cấp đợt F5: ⚙ "Nạp gọn lệnh" off (every tool in full). Absent = on. CLAUDECAD_DEFER_TOOLS=0 / tool-search-off win. */
+  defer_tools?: false;
   /** false = the user turned off plan cards before big tasks. */
   plan_first?: boolean;
   /** false = the user turned off next-step buttons. */
@@ -227,7 +229,15 @@ export interface UserContext {
   service_plan?: ServicePlan;
   /** The plugin's tools open to that plan; Claude is given only these. Absent = every tool. */
   plan_tools?: string[];
+  /**
+   * Nâng cấp đợt F1: a Full machine whose user chose the 2D or 3D work mode in the palette. service_plan / plan_tools are
+   * then that mode's; Claude is told to switch the mode, never to buy a plan. Absent = no mode limits the chat.
+   */
+  work_mode?: WorkMode;
 }
+
+export const WORK_MODES = ['2d', '3d'] as const;
+export type WorkMode = (typeof WORK_MODES)[number];
 
 export const SERVICE_PLANS = ['2d', '3d', '2d3d'] as const;
 export type ServicePlan = (typeof SERVICE_PLANS)[number];
@@ -319,6 +329,16 @@ export interface NewSessionMessage {
   type: 'new_session';
 }
 
+/**
+ * Nâng cấp đợt F4: start the Claude process before the first message, with the plan / work mode / skills the next
+ * message will carry, so that message does not wait for the start. Nothing is sent to Claude (no tokens).
+ */
+export interface PrewarmMessage {
+  type: 'prewarm';
+  context?: UserContext;
+  skills?: string[];
+}
+
 export interface ToolError {
   code: ErrorCode;
   message: string;
@@ -345,6 +365,7 @@ export type PluginToSidecar =
   | SetOptionsMessage
   | SwitchSessionMessage
   | ReloadSkillsMessage
+  | PrewarmMessage
   | ToolResponse;
 
 const MEDIA_TYPES = new Set(['image/png', 'image/jpeg', 'image/gif', 'image/webp']);
@@ -394,6 +415,7 @@ function parseContext(v: unknown): UserContext | undefined {
   if (c.read_only === true) out.read_only = true;
   if (typeof c.notes === 'string' && c.notes.trim()) out.notes = c.notes.trim().slice(0, 9000);
   if (c.visual_check === false) out.visual_check = false;
+  if (c.defer_tools === false) out.defer_tools = false;
   if (c.plan_first === false) out.plan_first = false;
   if (c.suggestions === false) out.suggestions = false;
   const manual = parseManualChanges(c.manual_changes);
@@ -402,6 +424,9 @@ function parseContext(v: unknown): UserContext | undefined {
     out.service_plan = c.service_plan as ServicePlan;
     if (Array.isArray(c.plan_tools))
       out.plan_tools = c.plan_tools.filter((t): t is string => typeof t === 'string' && TOOL_NAME_RX.test(t)).slice(0, 1000);
+    // a work mode only narrows a plan to itself (2D mode = the 2D plan's tools): anything else is ignored
+    if (typeof c.work_mode === 'string' && c.work_mode === out.service_plan && (WORK_MODES as readonly string[]).includes(c.work_mode))
+      out.work_mode = c.work_mode as WorkMode;
   }
   return Object.keys(out).length > 0 ? out : undefined;
 }
@@ -472,6 +497,16 @@ export function parsePluginMessage(value: unknown): PluginToSidecar {
       return { type: 'cancel' };
     case 'new_session':
       return { type: 'new_session' };
+    case 'prewarm': {
+      const context = parseContext(m.context);
+      return {
+        type: 'prewarm',
+        ...(context ? { context } : {}),
+        ...(Array.isArray(m.skills)
+          ? { skills: [...new Set(m.skills.filter((x: unknown): x is string => typeof x === 'string' && /^[a-z0-9][a-z0-9-]{0,63}$/.test(x)))] }
+          : {}),
+      };
+    }
     default:
       throw new ProtocolError(`unknown message type: ${JSON.stringify(m.type)}`);
   }

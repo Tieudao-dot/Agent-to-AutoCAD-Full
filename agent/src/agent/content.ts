@@ -42,7 +42,11 @@ export function contextPreamble(msg: UserMessage): string[] {
   }
   if (msg.context?.scale) lines.push(`[Tỷ lệ in người dùng chọn: ${msg.context.scale} — size text/dimensions for this scale]`);
   const plan = msg.context?.service_plan;
-  if (plan && plan !== '2d3d') {
+  const mode = msg.context?.work_mode;
+  if (plan && plan !== '2d3d' && mode === plan) {
+    // nâng cấp đợt F1: a Full machine in the 2D / 3D work mode — the way out is the mode switch, not a plan
+    lines.push(`[Chế độ người dùng chọn: ${servicePlanLabel(plan)} (máy gói Full) — only the ${servicePlanLabel(plan)} tools are loaded; for anything else ask them to switch the mode (Cả hai / ${plan === '2d' ? '3D' : '2D'}), never to buy a plan]`);
+  } else if (plan && plan !== '2d3d') {
     lines.push(`[Gói của máy này: ${servicePlanLabel(plan)} — only the tools of this plan exist; for anything outside it say so, do not imitate it]`);
   }
   if (msg.context?.read_only) {

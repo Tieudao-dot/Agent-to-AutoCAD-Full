@@ -296,6 +296,8 @@ namespace ClaudeCAD.Plugin.Drawing
             var pageMedia = new List<string>();
             // KT2-16: remember the file before plotting, so an old PDF (or one open in a viewer) is not reported as the new plot
             bool existedBefore = File.Exists(output);
+            // nâng cấp đợt F5: an existing PDF is replaced only after the card's Đồng ý (before: replaced without asking)
+            if (existedBefore) RequireCard(ctx, p, "plot_pdf", $"overwrite the existing file '{output}'", new[] { F5Confirm.FileToken(output) });
             DateTime? before = existedBefore ? File.GetLastWriteTimeUtc(output) : (DateTime?)null;
             if (existedBefore)
             {

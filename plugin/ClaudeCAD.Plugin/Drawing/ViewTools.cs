@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using Autodesk.AutoCAD.ApplicationServices;
 using Autodesk.AutoCAD.DatabaseServices;
 using Autodesk.AutoCAD.Geometry;
@@ -97,6 +98,13 @@ namespace ClaudeCAD.Plugin.Drawing
             var a = p.Point("p1");
             var b = p.Point("p2");
             if (Math.Abs(a[0] - b[0]) < Geometry.Eps && Math.Abs(a[1] - b[1]) < Geometry.Eps) throw ToolException.Invalid("zoom_window: p1 and p2 must differ.");
+            if (UcsScope.Input != null)
+            {
+                // F1: the window is a rectangle along the UCS axes: zoom to the WCS box around its 4 corners
+                var cs = UcsScope.Input.WindowCorners(a, b);
+                a = new[] { cs.Min(q => q[0]), cs.Min(q => q[1]) };
+                b = new[] { cs.Max(q => q[0]), cs.Max(q => q[1]) };
+            }
             ZoomTo(ctx, new Point3d(Math.Min(a[0], b[0]), Math.Min(a[1], b[1]), 0), new Point3d(Math.Max(a[0], b[0]), Math.Max(a[1], b[1]), 0), 1.0);
             return new Dictionary<string, object> { ["ok"] = true };
         }

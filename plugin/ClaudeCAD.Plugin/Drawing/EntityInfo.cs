@@ -46,8 +46,8 @@ namespace ClaudeCAD.Plugin.Drawing
                 case Arc a:
                     d["center"] = Acad.J(a.Center);
                     d["radius"] = Acad.R(a.Radius);
-                    d["start_angle"] = Acad.Deg(a.StartAngle);
-                    d["end_angle"] = Acad.Deg(a.EndAngle);
+                    d["start_angle"] = Acad.OutDeg(a.StartAngle);
+                    d["end_angle"] = Acad.OutDeg(a.EndAngle);
                     break;
                 case Ellipse el:
                     d["center"] = Acad.J(el.Center);
@@ -77,7 +77,7 @@ namespace ClaudeCAD.Plugin.Drawing
                 case BlockReference br:
                     d["name"] = BlockName(ctx, br);
                     d["position"] = Acad.J(br.Position);
-                    d["rotation"] = Acad.Deg(br.Rotation);
+                    d["rotation"] = Acad.OutDeg(br.Rotation);
                     var s = br.ScaleFactors;
                     if (Math.Abs(s.X - 1) > 1e-9 || Math.Abs(s.Y - 1) > 1e-9) d["scale"] = new List<object> { Acad.R(s.X), Acad.R(s.Y), Acad.R(s.Z) };
                     if (br.AttributeCollection.Count > 0) d["attributes"] = br.AttributeCollection.Count;
@@ -154,7 +154,7 @@ namespace ClaudeCAD.Plugin.Drawing
                     break;
                 case DBText t:
                     d["text"] = t.TextString;
-                    d["rotation"] = Acad.Deg(t.Rotation);
+                    d["rotation"] = Acad.OutDeg(t.Rotation);
                     d["style"] = StyleName(ctx, t.TextStyleId);
                     d["justify"] = t.Justify.ToString();
                     d["width_factor"] = Acad.R(t.WidthFactor);
@@ -163,7 +163,7 @@ namespace ClaudeCAD.Plugin.Drawing
                     d["text"] = mt.Text;
                     d["contents"] = mt.Contents;
                     d["width"] = Acad.R(mt.Width);
-                    d["rotation"] = Acad.Deg(mt.Rotation);
+                    d["rotation"] = Acad.OutDeg(mt.Rotation);
                     d["style"] = StyleName(ctx, mt.TextStyleId);
                     d["attachment"] = mt.Attachment.ToString();
                     break;
@@ -192,12 +192,12 @@ namespace ClaudeCAD.Plugin.Drawing
                     break;
                 case Hatch h:
                     d["scale"] = Acad.R(h.PatternScale);
-                    d["angle"] = Acad.Deg(h.PatternAngle);
+                    d["angle"] = Acad.OutDeg(h.PatternAngle);
                     d["associative"] = h.Associative;
                     d["loops"] = h.NumberOfLoops;
                     break;
                 case Line l:
-                    d["angle"] = Acad.Deg(l.Angle);
+                    d["angle"] = Acad.OutDeg(l.Angle);
                     break;
             }
             return d;
@@ -209,7 +209,7 @@ namespace ClaudeCAD.Plugin.Drawing
             {
                 case RotatedDimension r:
                     d["p1"] = Acad.J(r.XLine1Point); d["p2"] = Acad.J(r.XLine2Point); d["dim_line_point"] = Acad.J(r.DimLinePoint);
-                    d["rotation"] = Acad.Deg(r.Rotation);
+                    d["rotation"] = Acad.OutDeg(r.Rotation);
                     break;
                 case AlignedDimension a:
                     d["p1"] = Acad.J(a.XLine1Point); d["p2"] = Acad.J(a.XLine2Point); d["dim_line_point"] = Acad.J(a.DimLinePoint);

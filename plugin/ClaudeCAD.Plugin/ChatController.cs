@@ -78,6 +78,8 @@ namespace ClaudeCAD.Plugin
         private MacroStore _macroStore;
         private Autodesk.AutoCAD.DatabaseServices.Database _turnDb;
         private bool _macroRunning;
+        // F1: the work mode the last message was sent with (the running turn keeps it when the user switches)
+        private string _turnWorkMode;
         private volatile bool _macroCancel;
         private readonly List<string> _turnSuggestions = new List<string>();
         private (string id, string kind)? _pendingPlan;
@@ -152,6 +154,7 @@ namespace ClaudeCAD.Plugin
             ui.ConfirmAnswered += (id, yes) => Guard("confirm", () => AnswerConfirm(id, yes));
             ui.ExportRequested += () => Guard("export", () => MainThread.Post(Export));
             ui.SettingsChanged += s => Guard("settings", () => OnSettingsChanged(s));
+            ui.WorkModeChanged += m => Guard("work mode", () => OnWorkModeChanged(m));
             ui.AddSkillRequested += () => Guard("add skill", () => MainThread.Post(AddSkill));
             ui.SkillToggled += (n, on) => Guard("toggle skill", () => ToggleSkill(n, on));
             ui.SkillEditRequested += n => Guard("edit skill", () => EditSkill(n));
@@ -306,6 +309,7 @@ namespace ClaudeCAD.Plugin
         private void OnSettingsChanged(PaletteSettings s)
         {
             string oldModel = _settings.Model, oldEffort = _settings.Effort, oldTheme = _settings.Theme;
+            bool oldDefer = _settings.DeferTools;
             _settings.Scale = s.Scale;
             _settings.Model = s.Model;
             _settings.Effort = s.Effort;
@@ -313,6 +317,7 @@ namespace ClaudeCAD.Plugin
             _settings.Notify = s.Notify;
             _settings.FontSize = s.FontSize;
             _settings.VisualCheck = s.VisualCheck;
+            _settings.DeferTools = s.DeferTools;
             _settings.PlanFirst = s.PlanFirst;
             _settings.Suggestions = s.Suggestions;
             _settings.Hotkey = s.Hotkey;
@@ -323,6 +328,23 @@ namespace ClaudeCAD.Plugin
             _settings.Save();
             if (oldModel != s.Model || oldEffort != s.Effort) SendOptions();
             if (oldTheme != s.Theme) ApplyTheme();
+            // nâng cấp đợt F5 / bản chốt đợt F: "Nạp gọn lệnh" applies to a chat with no message yet (Claude waits ready with
+            // it); a chat that had a message keeps its own way until "Chat mới" (ChatDeferLogic)
+            if (oldDefer != s.DeferTools && !_busy) SchedulePrewarm();
+        }
+
+        /// <summary>F1: the user picked "Cả hai" / "2D" / "3D" (Full machines): kept in the settings, used from the next message.</summary>
+        private void OnWorkModeChanged(string mode)
+        {
+            var m = WorkModeLogic.Normalize(mode);
+            if (!WorkModeLogic.ShowsSwitch(Activation.Plan)) { ShowPlan(); return; } // a stale switch on a 2D / 3D machine: hide it
+            if (m == WorkModeLogic.Normalize(_settings.WorkMode)) return;
+            _settings.WorkMode = m;
+            _settings.Save();
+            Logger.Info("work mode: " + m);
+            ShowPlan();
+            Ui.AddNote(WorkModeLogic.ChangedNote(m, _busy));
+            if (!_busy) SchedulePrewarm(); // F4: the next message finds Claude ready with the new mode
         }
 
         private void SendOptions()
@@ -591,11 +613,60 @@ namespace ClaudeCAD.Plugin
             if (t != null) _store.Save(t);
         }
 
+        // ================================================================= nâng cấp đợt F4: prewarm
+
+        /// <summary>Delay after the assistant is ready before the Claude process is started (AutoCAD finishes opening first).</summary>
+        internal const int PrewarmDelayMs = 3000;
+        private System.Threading.Timer _prewarmTimer;
+
+        /// <summary>
+        /// Starts the Claude process ahead of the first message (the assistant only starts it, nothing is sent to Claude, no
+        /// tokens), with the plan / work mode / skills the next message carries. Only on an activated, allowed machine.
+        /// </summary>
+        private void SchedulePrewarm()
+        {
+            try
+            {
+                _prewarmTimer?.Dispose();
+                _prewarmTimer = new System.Threading.Timer(_ => MainThread.Post(() => Guard("prewarm", SendPrewarm)), null, PrewarmDelayMs, System.Threading.Timeout.Infinite);
+            }
+            catch (Exception ex) { Logger.Warn("prewarm not scheduled: " + ex.Message); }
+        }
+
+        private void SendPrewarm()
+        {
+            if (_busy || !Activation.IsAllowed) return;
+            var mode = WorkModeLogic.Normalize(_settings.WorkMode);
+            var plan = WorkModeLogic.EffectivePlan(Activation.Plan, mode);
+            _ipc.Send(new Dictionary<string, object>
+            {
+                ["type"] = "prewarm",
+                ["context"] = PlanContext(plan, WorkModeLogic.Limiting(Activation.Plan, mode)),
+                ["skills"] = ChatSkills().Cast<object>().ToList(),
+            });
+        }
+
+        /// <summary>service_plan / plan_tools / work_mode as a message carries them (F1); shared by Send and the prewarm.</summary>
+        private Dictionary<string, object> PlanContext(string servicePlan, string limitingMode)
+        {
+            var ctx = new Dictionary<string, object>();
+            if (!ChatDefer()) ctx["defer_tools"] = false; // nâng cấp đợt F5: ⚙ Nạp gọn lệnh off (of this chat)
+            if (limitingMode != null) ctx["work_mode"] = limitingMode;
+            ctx["service_plan"] = servicePlan;
+            if (servicePlan != PlanLogic.PlanFull) ctx["plan_tools"] = PlanLogic.AllowedTools(servicePlan).Cast<object>().ToList();
+            return ctx;
+        }
+
+        /// <summary>Bản chốt đợt F: "Nạp gọn lệnh" of the current chat (fixed at its first message, ChatDeferLogic).</summary>
+        private bool ChatDefer() =>
+            ChatDeferLogic.Effective(_transcript?.DeferTools, !string.IsNullOrEmpty(_transcript?.SessionId), _settings.DeferTools);
+
         private void SendSwitchSession()
         {
             var m = new Dictionary<string, object> { ["type"] = "switch_session" };
             if (!string.IsNullOrEmpty(_transcript?.SessionId)) m["session_id"] = _transcript.SessionId;
             _ipc.Send(m);
+            SchedulePrewarm(); // KTF (nghi vấn F4): the other drawing's chat waits ready with its own skills
         }
 
         // ================================================================= sending
@@ -762,9 +833,14 @@ namespace ClaudeCAD.Plugin
             if (!string.IsNullOrEmpty(_settings.Scale)) ctx["scale"] = _settings.Scale;
             if (_transcript?.ReadOnly == true) ctx["read_only"] = true;
             // service plan: the assistant loads only the tools of the plan (the dispatcher refuses the others anyway)
-            var servicePlan = Activation.Plan;
-            ctx["service_plan"] = servicePlan;
-            if (servicePlan != PlanLogic.PlanFull) ctx["plan_tools"] = PlanLogic.AllowedTools(servicePlan).Cast<object>().ToList();
+            // F1: on a Full machine the work mode of the palette narrows the plan of this turn (2D / 3D tools only);
+            // it is taken here, once per message, so a switch during a running turn applies from the next message
+            _turnWorkMode = WorkModeLogic.Normalize(_settings.WorkMode);
+            var servicePlan = WorkModeLogic.EffectivePlan(Activation.Plan, _turnWorkMode);
+            var limitingMode = WorkModeLogic.Limiting(Activation.Plan, _turnWorkMode);
+            // bản chốt đợt F: the first message fixes "Nạp gọn lệnh" for this chat until "Chat mới" (saved with the chat)
+            if (_transcript != null && _transcript.DeferTools == null) _transcript.DeferTools = ChatDefer();
+            foreach (var kv in PlanContext(servicePlan, limitingMode)) ctx[kv.Key] = kv.Value; // F4: the same as the prewarm
             var notes = NotesFor(doc);
             if (notes != null) ctx["notes"] = notes;
             if (!_settings.VisualCheck) ctx["visual_check"] = false;
@@ -941,12 +1017,17 @@ namespace ClaudeCAD.Plugin
                 _transcript.Entries.Clear();
                 _transcript.SessionId = null;
                 _transcript.Skills = null; // a new chat starts with the skills of the most recent chat (LastSkills)
+                _transcript.DeferTools = null; // bản chốt đợt F: a new chat takes ⚙ "Nạp gọn lệnh" as it is now
                 SaveTranscript();
                 Ui.LoadTranscript(_transcript, false);
             }
             _undoAvailable = false;
             if (_sidecar.State == SidecarState.Failed) { if (Activation.IsAllowed) _sidecar.Restart(); }
-            else _ipc.Send(new Dictionary<string, object> { ["type"] = "new_session" });
+            else
+            {
+                _ipc.Send(new Dictionary<string, object> { ["type"] = "new_session" });
+                SchedulePrewarm(); // KTF (nghi vấn F4): the new chat waits ready with its skills
+            }
         }
 
         /// <summary>Ends the current turn: closes the undo group, saves the transcript, unlocks the UI. Thread-safe.</summary>
@@ -1437,7 +1518,7 @@ namespace ClaudeCAD.Plugin
                     var calls = g.Select(i => (object)new Dictionary<string, object>
                     {
                         ["tool"] = m.Calls[i].Tool,
-                        ["params"] = MacroLogic.Remap(m.Calls[i].Params, map),
+                        ["params"] = UcsLogic.MarkReplay(MacroLogic.Remap(m.Calls[i].Params, map) as Dictionary<string, object>),
                     }).ToList();
                     var batch = await RunMacroBatch(calls, ++n);
                     if (batch.error != null)
@@ -1533,7 +1614,8 @@ namespace ClaudeCAD.Plugin
             var running = new ToolLogEntry { Tool = tool, State = "running" };
             AddToolLog(running);
             var sw = Stopwatch.StartNew();
-            var resp = await _dispatcher.HandleAsync(new Dictionary<string, object> { ["id"] = "macro-" + n, ["tool"] = tool, ["params"] = p ?? new Dictionary<string, object>() });
+            // F1: a recorded call runs in the UCS it was recorded in (older macros: World), whatever the UCS is now
+            var resp = await _dispatcher.HandleAsync(new Dictionary<string, object> { ["id"] = "macro-" + n, ["tool"] = tool, ["params"] = UcsLogic.MarkReplay(p) });
             bool ok = resp.TryGetValue("ok", out var okv) && okv is bool b && b;
             var log = new ToolLogEntry { Tool = tool, State = ok ? "done" : "error", Ms = sw.ElapsedMilliseconds };
             var handles = new List<string>();
@@ -2091,11 +2173,17 @@ namespace ClaudeCAD.Plugin
         }
 
         /// <summary>"Gói: …" in the palette; hidden for a build without an activation service (every tool, no plans).</summary>
+        private void ShowPlan()
+        {
 #if BAN_THU_NOI_BO
-        private void ShowPlan() => Ui.SetPlan(Activation.PlanLabel); // bản thử nội bộ: always Full
+            bool shown = true; // bản thử nội bộ: always Full, so the plan and the F1 work mode switch always show
 #else
-        private void ShowPlan() => Ui.SetPlan(Activation.ServiceUrl == null || !Activation.IsActivated ? null : Activation.PlanLabel);
+            bool shown = !(Activation.ServiceUrl == null || !Activation.IsActivated);
 #endif
+            Ui.SetPlan(shown ? Activation.PlanLabel : null);
+            // F1: the work mode switch, on a Full machine only
+            Ui.SetWorkMode(shown && WorkModeLogic.ShowsSwitch(Activation.Plan), WorkModeLogic.Normalize(_settings.WorkMode));
+        }
 
         /// <summary>
         /// After a status check: the owner may have changed the plan in the device list. The palette shows it and the
@@ -2108,6 +2196,7 @@ namespace ClaudeCAD.Plugin
             if (now == planBefore || !Activation.IsActivated) return;
             Logger.Info($"service plan changed: {planBefore} -> {now}");
             Ui.ShowToast("Gói đã đổi sang " + PlanLogic.Label(now), ChatControl.ToastKind.Info, 8);
+            if (!_busy) SchedulePrewarm(); // F4: Claude waits ready with the tools of the new plan
         }
 
         /// <summary>The answer of a manual check, on whichever 🔒 card is live.</summary>
@@ -2246,8 +2335,17 @@ namespace ClaudeCAD.Plugin
 
         public void RecordCall(string tool, Dictionary<string, object> parameters, object result) => _recorder.Record(tool, parameters, result);
 
-        /// <summary>Service plan of this machine (2d / 3d / 2d3d), see Activation.Plan.</summary>
-        public string Plan => Activation.Plan;
+        /// <summary>
+        /// Service plan the tools are checked against: the machine's plan (Activation.Plan), narrowed on a Full machine to
+        /// the work mode the running turn was sent with (F1). A macro does not use Claude: it runs with the whole plan.
+        /// </summary>
+        public string Plan => _macroRunning ? Activation.Plan : WorkModeLogic.EffectivePlan(Activation.Plan, _turnWorkMode ?? _settings.WorkMode);
+
+        /// <summary>F1: "2d" / "3d" while a Full machine's chat is limited to that mode, else null (ITurnHost.WorkMode).</summary>
+        /// <summary>Nâng cấp đợt F5 (ITurnHost): a macro replay runs (the overwrite cards are not shown there).</summary>
+        public bool MacroRunning => _macroRunning;
+
+        public string WorkMode => _macroRunning ? null : WorkModeLogic.Limiting(Activation.Plan, _turnWorkMode ?? _settings.WorkMode);
 
         public string PlanContact => Activation.Contact;
 
@@ -2435,6 +2533,7 @@ namespace ClaudeCAD.Plugin
                         string info = msg.TryGetValue("info", out var i) ? i as string : null;
                         if (!string.IsNullOrEmpty(info)) _readyInfo = info;
                         Ui.SetConnection("Đã kết nối" + (string.IsNullOrEmpty(info) ? "" : " · " + info), true);
+                        SchedulePrewarm(); // F4: the assistant (re)started: have Claude ready for the first message
                         break;
                     }
                 case "skills_reloaded":
@@ -2691,6 +2790,7 @@ namespace ClaudeCAD.Plugin
         {
             try
             {
+                _prewarmTimer?.Dispose();
                 SaveTranscript();
                 _settings.Save();
                 var dm = AcApp.DocumentManager;

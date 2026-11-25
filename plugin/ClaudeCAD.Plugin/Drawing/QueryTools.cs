@@ -25,6 +25,8 @@ namespace ClaudeCAD.Plugin.Drawing
         public HashSet<string> Types;
         public List<string> Layers;
         public double[] WinMin, WinMax;
+        /// <summary>F1: the window is in this UCS (a Ref call in a UCS on model space); null = WCS as before.</summary>
+        public UcsFrame WinFrame;
         public bool Crossing;
         public int? Color;
         public string Layout;
@@ -49,6 +51,14 @@ namespace ClaudeCAD.Plugin.Drawing
             {
                 var a = win.Point("p1");
                 var b = win.Point("p2");
+                // F1: a window given in a UCS is tested in that UCS (back from the WCS the points were converted to)
+                var lay = p.Str("layout", null);
+                if (UcsScope.Input != null && (string.IsNullOrEmpty(lay) || lay.Equals("Model", StringComparison.OrdinalIgnoreCase)))
+                {
+                    f.WinFrame = UcsScope.Input;
+                    a = f.WinFrame.FromWcs(a);
+                    b = f.WinFrame.FromWcs(b);
+                }
                 f.WinMin = new[] { Math.Min(a[0], b[0]), Math.Min(a[1], b[1]) };
                 f.WinMax = new[] { Math.Max(a[0], b[0]), Math.Max(a[1], b[1]) };
                 f.Crossing = win.Bool("crossing", false);
@@ -70,6 +80,15 @@ namespace ClaudeCAD.Plugin.Drawing
                 if (!ext.HasValue) return false;
                 var mn = ext.Value.MinPoint;
                 var mx = ext.Value.MaxPoint;
+                if (WinFrame != null)
+                {
+                    // KTF-03: the entity's own box in the UCS (re-boxing its WCS box grows at angles other than 90°)
+                    var ub = Acad.ExtentsInUcs(e, WinFrame);
+                    if (!ub.HasValue) return false;
+                    var (bmin, bmax) = ub.Value;
+                    mn = new Point3d(bmin[0], bmin[1], bmin[2]);
+                    mx = new Point3d(bmax[0], bmax[1], bmax[2]);
+                }
                 bool inside = mn.X >= WinMin[0] && mn.Y >= WinMin[1] && mx.X <= WinMax[0] && mx.Y <= WinMax[1];
                 if (Crossing)
                 {

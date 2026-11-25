@@ -91,7 +91,8 @@ export function annotationTools(b: ToolBridge): AnyTool[] {
       { base_dim_handle: handle, points: points(1, 'extension points'), spacing: z.number().positive().optional(), ...entityProps }),
 
     cadTool(b, 'add_mleader',
-      'Multileader with arrow at arrow_point and MTEXT at text_point, e.g. pipe diameter "D110" or cable size notes. Line breaks with "\\n".' + RET,
+      'Multileader with arrow at arrow_point and MTEXT at text_point, e.g. pipe diameter "D110" or cable size notes. Line breaks with "\\n". ' +
+        'Without style / height: the current multileader style (after setup_standards: the standard\'s, sized for the scale).' + RET,
       {
         arrow_point: point, text_point: point, text: z.string().min(1),
         height: z.number().positive().optional(), style: z.string().optional().describe('Multileader style name.'),

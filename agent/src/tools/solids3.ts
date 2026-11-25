@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { cadTool, handle, handles, point, points, type AnyTool, type ToolBridge } from './common.js';
+import { cadTool, confirmDesc, excelParams, handle, handles, point, points, type AnyTool, type ToolBridge } from './common.js';
 
 /**
  * Nâng cấp đợt D (13/11/2026, docs/ban-giao/nang-cap-d.md): beams, PRESSPULL, STL export, volume schedule by layer.
@@ -16,7 +16,7 @@ export const STAIR_ROOF = {
   DefaultRiser: 160,
   DefaultTread: 280,
   DefaultWidth: 1000,
-  DefaultWaist: 150,
+  DefaultWaist: 120, // nâng cấp đợt F3 (chủ dự án chốt 25/11/2026): 150 → 120
   DefaultGap: 100,
   MinRiser: 100,
   MaxRiser: 250,
@@ -30,7 +30,8 @@ export const STAIR_ROOF = {
   MaxLanding: 10000,
   RailHeight: 900,
   StairLayer: 'A-STAIR-3D',
-  DefaultRoofThickness: 150,
+  DefaultFlatRoofThickness: 150,
+  DefaultSlopedRoofThickness: 120, // nâng cấp đợt F3 (25/11/2026): the sloped slab 150 → 120, flat stays 150
   DefaultSlopeDeg: 30,
   DefaultOverhang: 600,
   MinSlopeDeg: 5,
@@ -109,14 +110,15 @@ export function solid3Tools(b: ToolBridge): AnyTool[] {
 
     cadTool(b, 'export_stl',
       'EXPORT 3D solids to an STL file (3D printing / other software): handles, or every solid (on layers). One file, in mm, moved to start at 0 when it has negative or survey-size coordinates ' +
-        '(moved_by_mm). output: file path ending in .stl (default <drawing>-3d.stl next to the drawing; a relative name goes there too). An existing file needs overwrite: true ' +
-        '(ask the user first). Binary by default (ascii: true for text). The drawing is not changed.',
+        '(moved_by_mm). output: file path ending in .stl (default <drawing>-3d.stl next to the drawing; a relative name goes there too). An existing file needs the user\'s Đồng ý on a card ' +
+        '(the error lists the handles; then confirm_handles). Binary by default (ascii: true for text). The drawing is not changed.',
       {
         handles: handles.max(S.MaxStlSolids).optional(),
         layers: z.array(z.string()).optional(),
         output: z.string().min(1).max(260).optional(),
         ascii: z.boolean().optional(),
         overwrite: z.boolean().optional(),
+        confirm_handles: handles.max(50).optional().describe(confirmDesc),
       }),
 
     cadTool(b, 'volume_schedule',
@@ -131,6 +133,7 @@ export function solid3Tools(b: ToolBridge): AnyTool[] {
         surface_area: z.boolean().optional().describe('Also the surface area (default true).'),
         decimals: z.number().int().min(0).max(6).optional(),
         ...solidTable,
+        ...excelParams,
       }),
 
     cadTool(b, 'build_stair',
@@ -163,11 +166,11 @@ export function solid3Tools(b: ToolBridge): AnyTool[] {
       }),
 
     cadTool(b, 'build_roof',
-      `ROOF (mái) as one solid on ${E.RoofLayer}: type flat (mái bằng, slab thickness default ${E.DefaultRoofThickness}), gable (2 dốc, rectangle only; ridge along the long side, or ridge short) ` +
-        `or hip (4 dốc, convex outline only). Sloped: slope default ${E.DefaultSlopeDeg}°, slab ${E.DefaultRoofThickness} mm, overhang (eave past the walls) default ${E.DefaultOverhang} mm (flat: 0); ` +
+      `ROOF (mái) as one solid on ${E.RoofLayer}: type flat (mái bằng, slab thickness default ${E.DefaultFlatRoofThickness}), gable (2 dốc; ridge along the long side, or ridge short) ` +
+        `or hip (4 dốc). Gable / hip: a rectangle, a convex outline (hip) or a right-angled L / T / U house (one solid with valleys, gable: the widest part has the main ridge, narrower wings end in the ridges they run into). Sloped: slope default ${E.DefaultSlopeDeg}°, slab ${E.DefaultSlopedRoofThickness} mm, overhang (eave past the walls) default ${E.DefaultOverhang} mm (flat: 0); ` +
         "use the user's numbers when given. Outline = outer face of the walls: outline_handle (closed polyline), outline_points, or from_walls: true (box around the wall solids). " +
-        'It sits on the wall top: wall_top_z (mm) or, by default, the top of the wall solids under it (wall_layers, default A-WALL-3D: the top storey; a roof slab on A-SLAB-3D lying on them: its top). An L / T house cannot take a hip ' +
-        'or gable roof: the error says so; tell the user (flat, or split it into rectangles: then say first that the roofs overlap at the joint, to fix by hand, and the volume schedule counts it twice). Gable ends are left open. Returns handle, eave_z_mm, top_z_mm, ridge_length_m, plan_area_m2, roof_area_m2, volume_m3, wall_top_from.',
+        'It sits on the wall top: wall_top_z (mm) or, by default, the top of the wall solids under it (wall_layers, default A-WALL-3D: the top storey; a roof slab on A-SLAB-3D lying on them: its top). Other concave outlines (slanted walls) are refused: tell the user the options in the error. ' +
+        'Gable ends are left open. Returns handle, eave_z_mm, top_z_mm, ridge_length_m, plan_area_m2, roof_area_m2, volume_m3, wall_top_from.',
       {
         type: z.enum(['flat', 'gable', 'hip']).describe('flat = mái bằng, gable = 2 dốc, hip = 4 dốc.'),
         outline_handle: handle.optional(),

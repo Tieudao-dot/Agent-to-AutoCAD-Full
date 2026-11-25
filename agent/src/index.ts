@@ -9,7 +9,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { parseArgs } from 'node:util';
-import { AgentSession } from './agent/session.js';
+import { AgentSession, DEFER_OFF_FILE, deferToolsEnabled } from './agent/session.js';
 import { connectPipe } from './ipc/connection.js';
 import { DEFAULT_TOOL_TIMEOUT_MS } from './ipc/protocol.js';
 import { ToolRpc } from './ipc/rpc.js';
@@ -44,6 +44,10 @@ async function main(): Promise<void> {
     values['work-dir'] ??
     path.join(process.env.LOCALAPPDATA ?? path.join(os.homedir(), '.local', 'share'), 'ClaudeCAD', 'workspace');
   fs.mkdirSync(workDir, { recursive: true });
+  // Test & sửa đợt F4: the way back to "every tool in full" without a new build (see deferToolsEnabled)
+  const appDir = path.join(process.env.LOCALAPPDATA ?? path.join(os.homedir(), '.local', 'share'), 'ClaudeCAD');
+  const deferTools = deferToolsEnabled(process.env, fs.existsSync(path.join(appDir, DEFER_OFF_FILE)));
+  log(`tools: ${deferTools ? 'most used in full, the rest behind ToolSearch' : 'all in full (deferring switched off)'}`);
 
   const conn = await connectPipe(values.pipe);
   log(`connected to pipe ${values.pipe}`);
@@ -81,6 +85,7 @@ async function main(): Promise<void> {
     skillsDir: values.skills,
     model: process.env.CLAUDECAD_MODEL || 'claude-opus-5-5',
     fallbackModel: process.env.CLAUDECAD_FALLBACK_MODEL || 'claude-sonnet-5-5',
+    deferTools,
     log,
     onCancel: () => rpc.failAll('ACAD_ERROR', 'Cancelled by the user (Stop). Do not continue this task.'),
   });
@@ -111,6 +116,9 @@ async function main(): Promise<void> {
       case 'new_session':
         session.reset();
         break;
+      case 'prewarm':
+        session.prewarm(msg);
+        break;
     }
   });
   conn.on('invalid', (err, line) => {
@@ -140,7 +148,13 @@ async function main(): Promise<void> {
         process.kill(parentPid, 0);
       } catch {
         log('parent process gone; exiting');
-        process.exit(0);
+        // KTF (nghi vấn F4): close the (prewarmed) Claude process too, so none is left behind without AutoCAD
+        try {
+          session.close();
+        } catch {
+          /* exiting anyway */
+        }
+        setTimeout(() => process.exit(0), 200);
       }
     }, 5000).unref();
   }

@@ -65,6 +65,9 @@ const DESTRUCTIVE: Record<string, (p: Record<string, unknown>) => number> = {
   // nâng cấp đợt C: replacing text changes existing objects (step 2, with handles); the preview changes nothing.
   // It always needs the card's Đồng ý (REPLACE_TOOLS below), whatever the count.
   find_replace_text: (p) => len(p.handles),
+  // nâng cấp đợt F3: a material on existing objects (the 20-object rule, like set_entity_props); deleting a named view
+  set_material: (p) => (p.list === true ? 0 : len(p.handles)),
+  named_view: (p) => (p.action === 'delete' || p.replace === true ? 1 : 0),
 };
 
 /**
@@ -343,9 +346,36 @@ export const PLUGIN_CONFIRMED = new Set(['explode_entities', 'erase_entities']);
  * always needs the Đồng ý button of a confirmation card that listed those handles, whatever the count; a typed yes or the
  * plan card's "Làm" does not. The plugin checks it too (user_confirmed, added by applyUserConfirmation).
  */
-export const REPLACE_TOOLS = new Set(['find_replace_text']);
+export const REPLACE_TOOLS = new Set(['find_replace_text',
+  // nâng cấp đợt F2: overwriting an existing style that differs (setup_standards) or a layer state (save over / delete)
+  'setup_standards', 'layer_state']);
 /** Tools that get user_confirmed (the handles on the approved card): the 3D ones above and find_replace_text. */
 const CARD_PARAM_TOOLS = new Set([...PLUGIN_CONFIRMED, ...REPLACE_TOOLS]);
+
+/**
+ * Nâng cấp đợt F5: overwriting a file (PDF, STL, PNG, Excel) or a saved view, a material for whole layers. The plugin
+ * refuses with the handles for the card; Claude repeats them in confirm_handles after Đồng ý, and only those on the card
+ * the user approved reach the plugin as user_confirmed (a typed yes never does).
+ */
+export const F5_CARD_TOOLS = new Set(['plot_pdf', 'export_stl', 'named_view', 'set_material', 'block_schedule', 'area_schedule', 'volume_schedule', 'check_interference']);
+
+function flaggedF5(params: Record<string, unknown>, g: GateState): Record<string, unknown> {
+  const { [USER_CONFIRMED_PARAM]: _ignored, confirm_handles: asked, ...rest } = params;
+  const hs = Array.isArray(asked) ? (asked as unknown[]).filter((h): h is string => typeof h === 'string') : [];
+  const ok = [...new Set(hs.map((h) => h.toUpperCase()))].filter((h) => g.cardConfirmed?.has(h));
+  return ok.length > 0 ? { ...rest, [USER_CONFIRMED_PARAM]: ok } : rest;
+}
+
+/** Nâng cấp đợt F2: the REPLACE_TOOLS that overwrite styles / layer states (their refusal names them, not text). */
+const F2_OVERWRITE = new Set(['setup_standards', 'layer_state']);
+
+/** A batch call of this tool with handles that are not on the approved card. */
+function batchHas(params: Record<string, unknown>, tool: string, g: GateState): boolean {
+  if (!Array.isArray(params.calls)) return false;
+  return (params.calls as Array<{ tool?: unknown; params?: unknown }>).some(
+    (c) => c && c.tool === tool && replaceNotApproved(tool, (c.params as Record<string, unknown>) ?? {}, g).length > 0,
+  );
+}
 
 /** The handles of a replace call (or of the replace calls in a batch) that are not on the card the user approved. */
 export function replaceNotApproved(tool: string, params: Record<string, unknown>, g: GateState): string[] {
@@ -374,6 +404,7 @@ function flagged(params: Record<string, unknown>, g: GateState): Record<string, 
  * user_confirmed = their handles that the user approved on the confirmation card of this turn, and nothing otherwise.
  */
 export function applyUserConfirmation(tool: string, params: Record<string, unknown>, g: GateState): Record<string, unknown> {
+  if (F5_CARD_TOOLS.has(tool)) return flaggedF5(params, g); // nâng cấp đợt F5
   if (CARD_PARAM_TOOLS.has(tool)) return flagged(params, g);
   if (WINDOW_TOOLS.has(tool)) return windowLimited(params, isWindowCall(tool, params) ? windowLimit(g, 1) : undefined);
   if (tool === 'batch_execute' && Array.isArray(params.calls)) {
@@ -390,6 +421,12 @@ export function applyUserConfirmation(tool: string, params: Record<string, unkno
       if (WINDOW_TOOLS.has(call.tool)) {
         const next = windowLimited(p, isWindowCall(call.tool, p) ? windowLimit(g, windows) : undefined);
         if (!(WINDOW_LIMIT_PARAM in p) && !(WINDOW_LIMIT_PARAM in next)) return c;
+        changed = true;
+        return { ...call, params: next };
+      }
+      if (F5_CARD_TOOLS.has(call.tool)) {
+        const next = flaggedF5(p, g);
+        if (!(USER_CONFIRMED_PARAM in p) && !(USER_CONFIRMED_PARAM in next) && !('confirm_handles' in p)) return c;
         changed = true;
         return { ...call, params: next };
       }
@@ -498,6 +535,15 @@ export function confirmationError(tool: string, params: Record<string, unknown>,
     );
   }
   const texts = replaceNotApproved(tool, params, g);
+  const f2 = F2_OVERWRITE.has(tool) ? tool : tool === 'batch_execute' ? [...F2_OVERWRITE].find((t) => batchHas(params, t, g)) : undefined;
+  if (texts.length > 0 && f2) {
+    return (
+      `Confirmation required: ${f2} would overwrite or delete ${texts.length} existing item(s) (${texts.slice(0, 20).join(', ')}) that are not on a confirmation card the user approved. ` +
+      'Only the Đồng ý button of a card listing these handles allows it; a typed "ok" / "đồng ý" does not count. Do not retry now. ' +
+      'Call request_confirmation with exactly these handles and one Vietnamese sentence saying what will be overwritten or deleted, and end your turn. ' +
+      'After Đồng ý, call it again with the same parameters and these handles.'
+    );
+  }
   if (texts.length > 0) {
     return (
       `Confirmation required: find_replace_text would change ${texts.length} existing text object(s) that are not on a confirmation card the user approved. ` +

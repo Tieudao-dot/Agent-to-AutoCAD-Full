@@ -25,6 +25,8 @@ namespace ClaudeCAD.Plugin.UI
             ["chevron-up"] = ("M3.5,10 L8,5.5 L12.5,10", false),
             ["add"] = ("M8,3 V13 M3,8 H13", false),
             ["skills"] = ("M2,3 H6 A2,2 0 0 1 8,5 V13.5 A1.5,1.5 0 0 0 6.5,12 H2 Z M14,3 H10 A2,2 0 0 0 8,5 V13.5 A1.5,1.5 0 0 1 9.5,12 H14 Z", false),
+            // nâng cấp đợt F1: the work mode switch (a flat square in front of a cube: 2D and 3D)
+            ["mode"] = ("M1.5,6.5 H9.5 V14.5 H1.5 Z M4.5,6.5 V3.5 H14.5 V11.5 H9.5 M4.5,3.5 L1.5,6.5 M14.5,3.5 L9.5,8.5", false),
             ["layers"] = ("M8,2.5 L14,5.5 L8,8.5 L2,5.5 Z M2,8.5 L8,11.5 L14,8.5 M2,11 L8,14 L14,11", false),
             ["macro"] = ("M5,3 L12.5,8 L5,13 Z", false),
             ["notes"] = ("M3,1.5 H10 L13,4.5 V14.5 H3 Z M10,1.5 V4.5 H13 M5.5,7.5 H10.5 M5.5,10 H10.5 M5.5,12.5 H8.5", false),

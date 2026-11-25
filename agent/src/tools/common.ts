@@ -76,7 +76,22 @@ export const point = z
   .array(z.number())
   .min(2)
   .max(3)
-  .describe('Point [x, y] or [x, y, z] in millimetres, WCS. Missing z = 0. Example: [4000, 3600]');
+  .describe('Point [x, y] or [x, y, z] in millimetres, current UCS. Missing z = 0. Example: [4000, 3600]');
+
+
+/** Nâng cấp đợt F1: points of the few tools that ignore the UCS on purpose (set_ucs itself, plot windows, viewport centers). */
+export const wcsPoint = z
+  .array(z.number())
+  .min(2)
+  .max(3)
+  .describe('Point [x, y] or [x, y, z] in millimetres, WCS (this tool ignores the UCS). Missing z = 0.');
+
+/** A point on a layout sheet (paper-space units), not a model point. */
+export const paperPoint = z
+  .array(z.number())
+  .min(2)
+  .max(3)
+  .describe('Point [x, y] on the layout sheet (paper units, mm).');
 
 export const points = (min: number, what = 'points') =>
   z.array(point).min(min).describe(`Array of ${what} [[x, y], ...] in mm (at least ${min}).`);
@@ -87,6 +102,25 @@ export const handle = z
   .describe('Entity handle: hex string exactly as returned by other tools, e.g. "2F4A".');
 
 export const handles = z.array(handle).min(1).describe('Entity handles (hex strings) returned by previous tools.');
+
+/**
+ * Nâng cấp đợt F4: the schedules (block_schedule, area_schedule, volume_schedule, check_interference) also write their
+ * table to an Excel file (Core/Xlsx.cs; no Excel needed on the machine). Same file rules as export_stl.
+ */
+/**
+ * Nâng cấp đợt F5: overwriting a file (PDF, STL, PNG, Excel) or a saved view, or a material for whole layers, needs the
+ * Đồng ý of a confirmation card: the error lists the handles for request_confirmation; after Đồng ý call again with them.
+ */
+export const confirmDesc = 'After the user pressed Đồng ý on the card: the handles the "Confirmation required" error listed.';
+
+export const excelParams = {
+  excel: z
+    .union([z.boolean(), z.string().min(1)])
+    .optional()
+    .describe('Also write the table to Excel (.xlsx): true = <drawing>-<table>.xlsx next to the drawing, or a file name / path ending in .xlsx.'),
+  overwrite: z.boolean().optional().describe('Old parameter, kept for skills; an existing file now needs the card (confirm_handles).'),
+  confirm_handles: handles.max(50).optional().describe(confirmDesc),
+};
 
 export const color = z
   .union([z.number().int().min(0).max(256), z.enum(['bylayer', 'byblock'])])

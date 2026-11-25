@@ -74,6 +74,59 @@ namespace ClaudeCAD.Plugin.Drawing
             return ids;
         }
 
+        /// <summary>
+        /// Nâng cấp đợt F3: the roof over a right-angled outline as one solid: ∪ (piece top ∩ its top planes) − ∪ (piece
+        /// footprint ∩ its underside planes). Where two pieces meet the higher slab stays and nothing is counted twice.
+        /// </summary>
+        private static Solid3d RightAngledRoof(RoofLogic.Layout lay, double f, string tool)
+        {
+            Solid3d Part(Prism3 basePrism, IEnumerable<Prism3> planes, string what)
+            {
+                var s = MakePrism(basePrism, f, tool, what);
+                try
+                {
+                    foreach (var c in planes)
+                        using (var cut = MakePrism(c, f, tool, what)) BooleanInto(s, cut, BooleanOperationType.BoolIntersect);
+                    return s;
+                }
+                catch { s.Dispose(); throw; }
+            }
+            Solid3d Union(Func<RoofPiece, Solid3d> make)
+            {
+                Solid3d all = null;
+                try
+                {
+                    foreach (var k in lay.Pieces)
+                    {
+                        var s = make(k);
+                        if (IsEmpty(s)) { s.Dispose(); continue; }
+                        if (all == null) { all = s; continue; }
+                        try { BooleanInto(all, s, BooleanOperationType.BoolUnite); }
+                        finally { s.Dispose(); }
+                    }
+                    return all;
+                }
+                catch { all?.Dispose(); throw; }
+            }
+            Solid3d top = null, under = null;
+            try
+            {
+                top = Union(k => Part(k.Top, k.TopPlanes, "roof piece"));
+                if (top == null) throw ToolException.Invalid($"{tool}: the roof came out empty (AutoCAD). Nothing was built.");
+                under = Union(k => Part(k.Foot, k.UnderPlanes, "roof underside"));
+                if (under != null) BooleanInto(top, under, BooleanOperationType.BoolSubtract);
+                if (IsEmpty(top)) throw ToolException.Invalid($"{tool}: the roof came out empty (AutoCAD). Nothing was built.");
+                var r = top;
+                top = null;
+                return r;
+            }
+            catch (Autodesk.AutoCAD.Runtime.Exception ex)
+            {
+                throw ToolException.Invalid($"{tool}: AutoCAD could not join the roof pieces ({ex.ErrorStatus}). Nothing was built. Options: type flat, or a simpler outline.");
+            }
+            finally { top?.Dispose(); under?.Dispose(); }
+        }
+
         /// <summary>The points (WCS) of a closed lightweight polyline with straight segments.</summary>
         private static List<Point3d> ClosedOutline(ToolContext ctx, string h, string tool, string what)
         {
@@ -106,7 +159,7 @@ namespace ClaudeCAD.Plugin.Drawing
                 Riser = p.Num("riser", StairLogic.DefaultRiser),
                 Tread = p.Num("tread", StairLogic.DefaultTread),
                 Width = p.Num("width", StairLogic.DefaultWidth),
-                Waist = p.Num("waist", StairLogic.DefaultWaist),
+                Waist = p.Num("waist", StairLogic.DefaultWaist), // F3: default 120 (chủ dự án chốt 25/11/2026)
                 Gap = p.Num("gap", StairLogic.DefaultGap),
                 Landing = p.NumOpt("landing"),
                 FirstRisers = p.Has("first_flight_risers") ? p.Int("first_flight_risers") : (int?)null,
@@ -253,7 +306,7 @@ namespace ClaudeCAD.Plugin.Drawing
             var o = new RoofLogic.Options
             {
                 Type = p.Str("type", "hip"),
-                Thickness = p.Num("thickness", RoofLogic.DefaultThickness),
+                Thickness = p.NumOpt("thickness") ?? double.NaN, // F3: default by type (flat 150, sloped 120), RoofLogic.Check
                 SlopeDeg = p.Num("slope", RoofLogic.DefaultSlopeDeg),
                 Overhang = p.NumOpt("overhang"),
                 Ridge = p.Str("ridge", "long"),
@@ -313,16 +366,17 @@ namespace ClaudeCAD.Plugin.Drawing
             var lay = RoofLogic.Build(outline.Select(q => new[] { q[0] * f, q[1] * f }).ToList(), wallTopMm, o, tool);
             string layer = p.Str("layer", RoofLogic.Layer3d);
             var layersCreated = new List<string>();
-            if (EnsureLayer(ctx, layer, 30)) layersCreated.Add(layer);
-            var roof = MakePrism(lay.Base, f, tool, "roof");
+            if (EnsureLayer(ctx, layer, RoofLogic.Layer3dColor)) layersCreated.Add(layer);
+            // nâng cấp đợt F3: a right-angled outline (L / T / U…): the union of the pieces' tops minus the union of their undersides
+            var roof = lay.Pieces.Count > 0 ? RightAngledRoof(lay, f, tool) : MakePrism(lay.Base, f, tool, "roof");
             try
             {
-                foreach (var c in lay.Outer)
+                foreach (var c in lay.Pieces.Count > 0 ? new List<Prism3>() : lay.Outer)
                 {
                     using (var cut = MakePrism(c, f, tool, "roof plane")) BooleanInto(roof, cut, BooleanOperationType.BoolIntersect);
                     if (IsEmpty(roof)) throw ToolException.Invalid($"{tool}: the roof came out empty (AutoCAD). Nothing was built.");
                 }
-                if (lay.Inner.Count > 0)
+                if (lay.Pieces.Count == 0 && lay.Inner.Count > 0)
                 {
                     using (var inner = MakePrism(lay.Inner[0], f, tool, "roof underside"))
                     {

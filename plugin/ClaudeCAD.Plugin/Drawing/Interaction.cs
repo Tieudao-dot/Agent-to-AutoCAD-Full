@@ -113,6 +113,8 @@ namespace ClaudeCAD.Plugin.Drawing
             var ed = doc.Editor;
             var pts = new List<Point3d>();
             Point3d? lastUcs = null;
+            // F1: the tools take points in the UCS of model space (Acad.UcsOf; World on a layout), so picked points are sent in it
+            var frame = Acad.UcsOf(doc);
             while (true)
             {
                 var o = new PromptPointOptions(pts.Count == 0 ? "\nChọn điểm cho Claude: " : "\nĐiểm tiếp theo (Enter để xong): ") { AllowNone = true };
@@ -120,8 +122,10 @@ namespace ClaudeCAD.Plugin.Drawing
                 var r = ed.GetPoint(o);
                 if (r.Status != PromptStatus.OK) break;
                 lastUcs = r.Value;
-                // GetPoint returns UCS; the protocol is WCS
-                pts.Add(r.Value.TransformBy(ed.CurrentUserCoordinateSystem));
+                // GetPoint returns the current UCS; to WCS, then into the UCS the tools work in (World: WCS as before)
+                var w = r.Value.TransformBy(ed.CurrentUserCoordinateSystem);
+                var u = frame.IsWorld ? new[] { w.X, w.Y, w.Z } : frame.FromWcs(new[] { w.X, w.Y, w.Z });
+                pts.Add(new Point3d(u[0], u[1], u[2]));
                 if (pts.Count >= 50) break;
             }
             if (pts.Count > 0) PointsPicked?.Invoke(pts);

@@ -14,7 +14,7 @@ Quy ước chung: đơn vị mm, WCS. Tỷ lệ in mặc định **1:100** (nế
 
 1. Gọi `get_drawing_info` và `list_layers` (thêm `list_styles` nếu sẽ ghi chữ/kích thước) để biết bản vẽ đang có gì.
 2. So với bảng layer ở mục 2: tạo **trong một `batch_execute`** mọi layer còn thiếu bằng `create_layer` đúng tên, màu, linetype, lineweight. Không đổi thuộc tính của layer đã có trừ khi người dùng yêu cầu.
-3. Nếu chưa có: tạo text style `KT-ARIAL` (`create_text_style` font "Arial", width_factor 0.85) và dim style `KT-100` theo mục 4 (`create_dim_style`), rồi `set_current_styles`.
+3. Chữ / kích thước: gọi `setup_standards` với `standard` "ve-kien-truc" và tỷ lệ in (vd "1:100"): tạo text style `KT-ARIAL`, dim style `KT-100` và kiểu ghi chú mũi tên `KT-ML-100` (cho `add_mleader`: mũi tên ở `arrow_point`, chữ ở `text_point`) đúng mục 4 (chạy lại không tạo trùng), đặt làm hiện hành và trả `text_heights`. Máy không có lệnh đó: tạo bằng `create_text_style` (font "Arial", width_factor 0.85) và `create_dim_style` theo mục 4, rồi `set_current_styles`.
 4. Xác định gốc vẽ: bản vẽ trắng → góc dưới-trái trục đầu tiên tại [0, 0]; bản vẽ đã có đối tượng → đặt bên phải extents hiện có, cách 5000, trừ khi người dùng chỉ vị trí.
 5. Sau đó mới vẽ, mỗi nhóm đối tượng một `batch_execute`.
 
@@ -67,12 +67,15 @@ Dim style `KT-100` (thay số 100 theo tỷ lệ): `create_dim_style` với `{"n
 
 **Cửa sổ** (rộng W): lỗ trong tường như cửa đi; vẽ 3 nét song song trong bề dày tường (hai nét mép tường + một nét giữa), hoặc 4 nét chia đều với tường 220. Layer `A-WIND`.
 
-Khi cùng một loại cửa dùng nhiều lần: vẽ một lần, `define_block` tên `CUA-DI-<W>` / `CUA-SO-<W>` với base point tại bản lề, rồi `insert_block` (xoay theo hướng tường).
+Khi cùng một loại cửa dùng nhiều lần: dùng `insert_library_block` (`cua_di`, `cua_di_2_canh`, `cua_truot`, `cua_so`; block `CUA-DI-<W>` / `CUA-SO-<W>` gốc tại bản lề / góc lỗ, xoay theo hướng tường, `flip` để đổi bên bản lề). Thiết bị vệ sinh, nội thất, cây: cũng lấy từ thư viện đó. Không có lệnh thư viện: vẽ một lần, `define_block` tên `CUA-DI-<W>` / `CUA-SO-<W>` với base point tại bản lề, rồi `insert_block`.
+
+Trang in: `create_sheet` (khổ A3 / A1…, khung tên điền công trình, hạng mục, tên bản vẽ, người vẽ, số bản vẽ), rồi `plot_pdf`.
 
 ## 6. Chữ trong phòng
 
 - Tên phòng (IN HOA, ví dụ "PHÒNG NGỦ") ở tâm phòng, `add_text` justify `middle_center`, cao theo bảng mục 4, layer `A-TEXT`, style `KT-ARIAL`.
 - Dòng diện tích ngay dưới, cách 1.5 × chiều cao chữ: `S = 21.85 m²` — diện tích **thông thủy** (đo bằng `measure_area` của polyline nét tường trong, hoặc tính (dài − dày tường) × (rộng − dày tường)), 2 chữ số thập phân.
+- Bảng diện tích các phòng / thống kê block: `area_schedule` (group_by "room") / `block_schedule`; khách cần file Excel thì thêm `excel: true` (file cạnh bản vẽ).
 
 ## 7. Ví dụ hoàn chỉnh: phòng 4x6 m, tường 220, cửa đi 900 ở cạnh dài, ghi kích thước (tỷ lệ 1:100)
 

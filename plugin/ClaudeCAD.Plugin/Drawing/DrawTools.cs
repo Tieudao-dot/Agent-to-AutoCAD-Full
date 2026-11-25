@@ -156,7 +156,8 @@ namespace ClaudeCAD.Plugin.Drawing
             var hatch = new Hatch();
             var id = Acad.Add(ctx, hatch, p); // must be database-resident before loops are added
             hatch.Normal = Vector3d.ZAxis;
-            hatch.Elevation = 0;
+            // F1: boundary points given in a UCS moved up / down (z still up) lie at the UCS origin z (World: 0 as before)
+            hatch.Elevation = points != null && UcsScope.Input != null && UcsScope.Input.ZUp ? UcsScope.Input.O[2] : 0;
             hatch.PatternScale = scale;
             hatch.PatternAngle = angle;
             try

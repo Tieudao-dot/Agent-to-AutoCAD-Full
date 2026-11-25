@@ -17,7 +17,7 @@ export const entityFilter = {
       crossing: z.boolean().optional().describe('false (default): entity fully inside; true: touching/crossing the window.'),
     })
     .optional()
-    .describe('Rectangular selection window in WCS.'),
+    .describe('Rectangular selection window (current UCS).'),
   layout: z.string().optional().describe('Search this paper-space layout instead of model space.'),
 };
 

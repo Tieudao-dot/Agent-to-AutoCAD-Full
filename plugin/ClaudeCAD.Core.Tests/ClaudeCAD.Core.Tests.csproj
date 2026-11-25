@@ -12,6 +12,8 @@
   <ItemGroup>
     <Compile Include="..\ClaudeCAD.Plugin\Core\JsonCodec.cs" Link="Core\JsonCodec.cs" />
     <Compile Include="..\ClaudeCAD.Plugin\Core\Params.cs" Link="Core\Params.cs" />
+    <Compile Include="..\ClaudeCAD.Plugin\Core\Ucs.cs" Link="Core\Ucs.cs" />
+    <Compile Include="..\ClaudeCAD.Plugin\Core\Xlsx.cs" Link="Core\Xlsx.cs" />
     <Compile Include="..\ClaudeCAD.Plugin\Core\ToolException.cs" Link="Core\ToolException.cs" />
     <Compile Include="..\ClaudeCAD.Plugin\Core\Geometry.cs" Link="Core\Geometry.cs" />
     <Compile Include="..\ClaudeCAD.Plugin\Core\UpdateLogic.cs" Link="Core\UpdateLogic.cs" />
@@ -33,10 +35,14 @@
     <Compile Include="..\ClaudeCAD.Plugin\Core\FloorPlan.cs" Link="Core\FloorPlan.cs" />
     <Compile Include="..\ClaudeCAD.Plugin\Core\Railing.cs" Link="Core\Railing.cs" />
     <Compile Include="..\ClaudeCAD.Plugin\Core\StairRoof.cs" Link="Core\StairRoof.cs" />
+    <Compile Include="..\ClaudeCAD.Plugin\Core\RoofRightAngled.cs" Link="Core\RoofRightAngled.cs" />
+    <Compile Include="..\ClaudeCAD.Plugin\Core\Materials.cs" Link="Core\Materials.cs" />
     <Compile Include="..\ClaudeCAD.Plugin\Core\SelfTestRules.cs" Link="Core\SelfTestRules.cs" />
     <Compile Include="..\ClaudeCAD.Plugin\Core\InternalBuild.cs" Link="Core\InternalBuild.cs" />
     <Compile Include="..\ClaudeCAD.Plugin\Core\Edit2D.cs" Link="Core\Edit2D.cs" />
     <Compile Include="..\ClaudeCAD.Plugin\Core\Util2D.cs" Link="Core\Util2D.cs" />
+    <Compile Include="..\ClaudeCAD.Plugin\Core\Standards2D.cs" Link="Core\Standards2D.cs" />
+    <Compile Include="..\ClaudeCAD.Plugin\Core\F5.cs" Link="Core\F5.cs" />
     <Compile Include="..\ClaudeCAD.Plugin\Core\Solids3.cs" Link="Core\Solids3.cs" />
   </ItemGroup>
   <ItemGroup>

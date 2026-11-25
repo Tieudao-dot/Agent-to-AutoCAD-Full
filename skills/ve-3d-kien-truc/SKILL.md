@@ -136,25 +136,33 @@ Dầm: `build_beam` theo đường (`path_handles`: line / cung / polyline, mỗ
 
 Cầu thang: `build_stair`, `type` `straight` (1 vế) / `l` (chữ L) / `u` (chữ U), `height` = cao tầng (sàn tới sàn, bắt
 buộc). Mặc định (khách nói số thì theo số của khách): cao bậc 160 (chia đều thành số bậc nguyên gần nhất, vd 3300 → 21
-bậc × 157,1), rộng bậc 280, vế rộng 1000, chiếu nghỉ rộng bằng vế (L / U, ở giữa chiều cao), bản thang 150, khe giữa
+bậc × 157,1), rộng bậc 280, vế rộng 1000, chiếu nghỉ rộng bằng vế (L / U, ở giữa chiều cao), bản thang 120, khe giữa
 2 vế chữ U 100. Đặt theo `start` (giữa mép dưới bậc đầu) + `direction` (độ, hướng đi lên vế 1) + `turn` (trái / phải),
 hoặc theo ô cầu thang (`well_handle` polyline kín): không có `start` thì tự đặt vừa ô; không vừa ô → lỗi kèm kích thước
 cần, báo khách (đổi kiểu L / U, vế hẹp hơn, bậc ngắn hơn), không tự dựng ra ngoài. `base_z` = cao độ sàn dưới. Lan
 can: `railing` `left` / `right` / `both` (tay vịn 900 + trụ dọc các vế; chiếu nghỉ chưa có lan can → `build_railing`).
 Báo lại số bậc và cao bậc thực (`risers`, `riser_mm`).
 
-Mái: `build_roof`, `type` `flat` (mái bằng, dày 150, mặc định không đua) / `gable` (2 dốc, chỉ nhà chữ nhật; nóc theo
-cạnh dài, `ridge` `short` để đổi) / `hip` (4 dốc, đường bao lồi). Mái dốc mặc định 30°, bản mái 150, đua 600. Đường
+Mái: `build_roof`, `type` `flat` (mái bằng, dày 150, mặc định không đua) / `gable` (2 dốc; nóc theo cạnh dài, `ridge`
+`short` để đổi) / `hip` (4 dốc). Mái dốc mặc định 30°, bản mái 120, đua 600. Đường
 bao = mặt ngoài tường: `outline_handle` (polyline kín), `outline_points`, hoặc `from_walls: true` (hình chữ nhật bao
 các khối tường). Mái đặt trên đỉnh tường: mặc định đỉnh cao nhất của khối tường `A-WALL-3D` dưới đường bao (tầng trên
 cùng; có sàn mái `roof_slab` nằm trên đỉnh tường thì mái đặt trên mặt sàn mái), hoặc `wall_top_z`. Đã có sàn
-mái thì không dựng thêm mái bằng (thành hai lớp sàn). Nhà chữ L / T: 4 dốc và 2 dốc báo lỗi → mái bằng, hoặc chia đường bao thành các hình chữ nhật rồi
-dựng từng mái: **báo trước** khách là hai mái sẽ chồng nhau ở chỗ nối (mỗi mái đua qua đường chia), cần sửa tay, và
-bảng khối lượng (`volume_schedule`) tính phần chồng hai lần (mái liền cho nhà chữ L để đợt sau). Đầu hồi mái 2 dốc để hở (tường hồi: `extrude` / `presspull`). Báo `top_z_mm`,
+mái thì không dựng thêm mái bằng (thành hai lớp sàn). Nhà chữ L / T / U (mọi góc vuông): 4 dốc và 2 dốc dựng thành **một
+khối liền**, có khe mái ở chỗ hai cánh gặp nhau, không chồng thể tích (bảng khối lượng tính đúng); 2 dốc: cánh rộng
+nhất là mái chính, các cánh hẹp hơn có nóc chạy vào nóc mái cao hơn mà nó gặp (nhà chữ U: thanh ngang dừng ở nóc hai cánh). Đường bao có góc lõm không vuông (tường xiên) thì 4 dốc / 2 dốc
+báo lỗi → mái bằng, hoặc vẽ lại đường bao góc vuông. Đầu hồi mái 2 dốc để hở (tường hồi: `extrude` / `presspull`). Báo `top_z_mm`,
 `roof_area_m2` (diện tích mặt mái nghiêng, để tính tôn / ngói).
 
 Khối lượng: `volume_schedule` (theo layer; cột lồng trong tường / dầm chỉ tính một lần, vào cột). Va chạm:
-`check_interference`.
+`check_interference`. Khách cần file Excel (nâng cấp đợt F4): thêm `excel: true` (file cạnh bản vẽ) hoặc `excel: "<tên>.xlsx"`.
+
+Vật liệu và ảnh phối cảnh (nâng cấp đợt F3): `set_material` gán vật liệu mẫu cho khối (`handles`) hoặc cả layer
+(`layers`): `concrete` bê tông (tường, sàn, cột, dầm), `brick` gạch, `plaster` vữa trắng, `glass` kính (cửa sổ, lan can
+kính), `wood` gỗ (cửa đi), `roof_tile` ngói (mái), `steel` thép (lan can), `stone` đá; tên khác thì đưa `color` [r, g, b].
+Gán theo layer cho nhanh (vd `A-ROOF-3D` → ngói). Xem: `capture_view` với `visual_style` `realistic`; ảnh cho khách:
+`named_view` `action` `image` (file PNG cạnh bản vẽ, báo khách đường dẫn file). Góc nhìn đẹp thì lưu tên bằng `named_view`
+`save` (vd "Phối cảnh 1"), gọi lại bằng `restore`.
 
 ## 4. Tự kiểm tra trước khi báo xong
 

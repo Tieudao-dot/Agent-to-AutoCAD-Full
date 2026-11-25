@@ -258,7 +258,7 @@ namespace ClaudeCAD.Plugin.Drawing
                 {
                     var s = new Solid3d();
                     pieces.Add(s);
-                    try { s.Extrude(reg, SolidLogic.ExtrudeHeightAlongNormal(dist, reg.Normal.Z), 0); }
+                    try { s.Extrude(reg, SolidLogic.ExtrudeHeightAlongNormal(dist, reg.Normal.DotProduct(Acad.UcsZ)), 0); }
                     catch (Autodesk.AutoCAD.Runtime.Exception ex) { throw ToolException.Invalid($"{tool}: AutoCAD could not pull the profile ({ex.ErrorStatus}). Nothing was changed."); }
                 }
             }
@@ -343,8 +343,8 @@ namespace ClaudeCAD.Plugin.Drawing
             if (!Directory.Exists(outDir)) throw ToolException.Invalid($"{tool}: folder '{outDir}' does not exist.");
             bool ascii = p.Bool("ascii", false);
             bool exists = File.Exists(full);
-            if (exists && !p.Bool("overwrite", false))
-                throw ToolException.Invalid($"{tool}: '{full}' already exists. Ask the user, then call again with overwrite: true, or give another file name.");
+            // nâng cấp đợt F5: an existing file needs the card's Đồng ý (a macro replay: overwrite as before)
+            RequireOverwriteCard(ctx, p, tool, full, exists, $"{tool}: '{full}' already exists. Ask the user, then call again with overwrite: true, or give another file name.", "overwrite");
 
             var tris = new List<float[]>();
             var temp = Path.Combine(Path.GetTempPath(), "claudecad-stl-" + Guid.NewGuid().ToString("N"));
@@ -506,6 +506,7 @@ namespace ClaudeCAD.Plugin.Drawing
                 var t = InsertSchedule(ctx, p, Solid3Logic.VolumeTable(res, decimals, f, withArea), withArea ? new[] { 5.0, 16, 7, 11, 13, 13, 13 } : new[] { 5.0, 16, 7, 11, 13, 13 }, "BẢNG KHỐI LƯỢNG 3D");
                 r["handles"] = t["handles"];
             }
+            ExportExcel(ctx, p, "volume_schedule", () => Solid3Logic.VolumeTable(res, decimals, f, withArea), r); // nâng cấp đợt F4 (also on the 3D plan)
             return r;
         }
     }

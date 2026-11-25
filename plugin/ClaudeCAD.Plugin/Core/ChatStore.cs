@@ -52,6 +52,8 @@ namespace ClaudeCAD.Plugin.Core
         public string Notes = "";
         /// <summary>Skills used in this chat ("−" removes one, "+" adds one from the library). null = not chosen yet.</summary>
         public List<string> Skills;
+        /// <summary>"Nạp gọn lệnh" of this chat, fixed at its first message until "Chat mới" (ChatDeferLogic). null = no message yet.</summary>
+        public bool? DeferTools;
         public List<ChatEntry> Entries = new List<ChatEntry>();
 
         public static string KeyFor(string drawingPath)
@@ -89,6 +91,7 @@ namespace ClaudeCAD.Plugin.Core
                 ["read_only"] = ReadOnly,
                 ["notes"] = Notes ?? "",
                 ["skills"] = Skills?.Cast<object>().ToList(),
+                ["defer_tools"] = DeferTools,
                 ["entries"] = Entries.Select(e => (object)new Dictionary<string, object>
                 {
                     ["role"] = e.Role,
@@ -121,6 +124,7 @@ namespace ClaudeCAD.Plugin.Core
                 ReadOnly = d.TryGetValue("read_only", out var ro) && ro is bool rb && rb,
                 Notes = S(d, "notes") ?? "",
             };
+            if (d.TryGetValue("defer_tools", out var dt) && dt is bool db) t.DeferTools = db;
             if (d.TryGetValue("skills", out var sk) && sk is List<object> skl) t.Skills = SkillSelection.Clean(skl.OfType<string>());
             if (d.TryGetValue("entries", out var ev) && ev is List<object> list)
             {

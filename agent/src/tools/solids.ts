@@ -1,7 +1,8 @@
 import { z } from 'zod';
-import { angle, cadTool, entityProps, handle, handles, point, points, type AnyTool, type ToolBridge } from './common.js';
+import { angle, cadTool, entityProps, excelParams, handle, handles, point, points, wcsPoint, type AnyTool, type ToolBridge } from './common.js';
 import { PLAN3D_TOOL_NAMES, plan3dTools } from './plan3d.js';
 import { SOLID3_TOOL_NAMES, STAIR_ROOF_TOOL_NAMES, solid3Tools, solidTable } from './solids3.js';
+import { RENDER_TOOL_NAMES, renderTools } from './render.js';
 
 /** The 3D tools: only machines on the 3D or Full plan load them (the plugin labels them ToolGroup.ThreeD). */
 export const SOLID_TOOL_NAMES = [
@@ -16,6 +17,8 @@ export const SOLID_TOOL_NAMES = [
   ...SOLID3_TOOL_NAMES,
   // nâng cấp đợt E (solids3.ts)
   ...STAIR_ROOF_TOOL_NAMES,
+  // nâng cấp đợt F3 (render.ts)
+  ...RENDER_TOOL_NAMES,
 ] as const;
 
 /**
@@ -190,6 +193,7 @@ export function solidTools(b: ToolBridge): AnyTool[] {
     ...solidTools2(b),
     ...plan3dTools(b),
     ...solid3Tools(b),
+    ...renderTools(b),
   ];
 }
 
@@ -328,18 +332,18 @@ function solidTools2(b: ToolBridge): AnyTool[] {
     cadTool(b, 'set_ucs',
       "Set the user's UCS (working plane) for their own drawing and view: preset (world, top, bottom, front, back, left, right; at origin, default [0,0,0]), " +
         'origin + x_axis + y_axis, a saved UCS by name, or just origin to move the current one. save_as stores it as a named UCS; plan_view turns the view to look straight at it. ' +
-        'It does NOT change your coordinates: every tool still takes and returns WCS. The user\'s U undoes it with the turn. Not allowed in read-only mode.',
+        'origin / x_axis / y_axis are WCS. Every later tool takes and returns points in the new UCS, like AutoCAD. The user\'s U undoes it with the turn. Not allowed in read-only mode.',
       {
         preset: z.enum(UCS_PRESETS).optional(),
-        origin: point.optional(),
-        x_axis: point.optional().describe('X direction [x, y, z] (with y_axis).'),
-        y_axis: point.optional().describe('A direction in the XY plane of the UCS, made perpendicular to x_axis.'),
+        origin: wcsPoint.optional(),
+        x_axis: wcsPoint.optional().describe('X direction [x, y, z] in WCS (with y_axis).'),
+        y_axis: wcsPoint.optional().describe('A WCS direction in the XY plane of the UCS, made perpendicular to x_axis.'),
         name: z.string().min(1).max(255).optional().describe('Restore this saved UCS.'),
         save_as: z.string().min(1).max(255).optional().describe('Save the new UCS under this name (must not exist).'),
         plan_view: z.boolean().optional(),
       }),
 
-    cadTool(b, 'reset_ucs', "Set the user's UCS back to World (WCS). Your coordinates were WCS all along; this only resets the user's working plane.", {}),
+    cadTool(b, 'reset_ucs', "Set the user's UCS back to World: later tools take and return WCS points again.", {}),
 
     cadTool(b, 'check_interference',
       'CHECK INTERFERENCE (clashes) between 3D solids: every pair of handles, or each of handles against each of other_handles (e.g. beams against ducts). ' +
@@ -349,6 +353,7 @@ function solidTools2(b: ToolBridge): AnyTool[] {
         other_handles: handles.max(SOLID2_LIMITS.MaxInterferenceSolids).optional(),
         ...solidTable,
         decimals: z.number().int().min(0).max(6).optional(),
+        ...excelParams,
       }),
   ];
 }

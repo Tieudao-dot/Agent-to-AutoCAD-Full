@@ -457,7 +457,8 @@ namespace ClaudeCAD.Plugin.Drawing
                 ["normal"] = pl.Normal.Select(x => (object)Acad.R(x)).ToList(),
                 ["right"] = u.Select(x => (object)Acad.R(x)).ToList(),
                 ["up"] = v.Select(x => (object)Acad.R(x)).ToList(),
-                ["rule"] = $"model point P is drawn at [{Acad.R(at[0] - box.min[0])} + (P − plane_point)·right, {Acad.R(at[1] - box.min[1])} + (P − plane_point)·up]",
+                ["frame_system"] = "WCS",
+                ["rule"] = $"model point P (WCS) is drawn at [{Acad.R(at[0] - box.min[0])} + (P − plane_point)·right, {Acad.R(at[1] - box.min[1])} + (P − plane_point)·up]",
             };
 
         private static object ProjectionView(ToolContext ctx, Params p)

@@ -720,11 +720,260 @@ namespace ClaudeCAD.Plugin
                 var rmin = (List<object>)roof["min"]; var rmax = (List<object>)roof["max"];
                 if (Math.Abs(Convert.ToDouble(rmin[2]) - lay.EaveZ) > 1 || Math.Abs(Convert.ToDouble(rmax[2]) - lay.TopZ) > 1)
                     errs.Add($"mái 4 dốc: z {rmin[2]}–{rmax[2]} (cần {lay.EaveZ:0}–{lay.TopZ:0})");
-                // a 150 slab over the sloped area, give or take the eave cuts and the hips
-                double approx = lay.RoofArea * 150, got = Convert.ToDouble(roof["volume_m3"]) * 1e9;
+                // the default slab over the sloped area (120 since nâng cấp đợt F3), give or take the eave cuts and the hips
+                double approx = lay.RoofArea * RoofLogic.DefaultSlopedThickness, got = Convert.ToDouble(roof["volume_m3"]) * 1e9;
                 if (Math.Abs(got - approx) > 0.1 * approx) errs.Add($"mái 4 dốc: thể tích {got / 1e9:0.###} m³ (khoảng {approx / 1e9:0.###})");
                 return errs.Count == 0
                     ? new SelfTestRules.Verdict(true, $"thang 1 vế 19 bậc, thang chữ U một khối + lan can, mái 4 dốc {got / 1e9:0.###} m³")
+                    : new SelfTestRules.Verdict(false, string.Join("; ", errs));
+            });
+
+            // Nâng cấp đợt F3: the same code paths as build_roof over an L house, set_material and named_view (not run on CI)
+            Check("Nâng cấp đợt F3: mái 4 dốc nhà chữ L một khối, vật liệu, góc nhìn đã lưu + ảnh PNG", () =>
+            {
+                const double dx = 130000;
+                var errs = new List<string>();
+                T Run<T>(Func<ToolContext, Transaction, T> f)
+                {
+                    using (doc.LockDocument())
+                    using (var tr = doc.TransactionManager.StartTransaction())
+                    {
+                        var r = f(new ToolContext(doc, tr, true, null), tr);
+                        tr.Commit();
+                        return r;
+                    }
+                }
+                List<object> Pt(double x, double y) => new List<object> { x, y };
+                var ell = new List<double[]> { new[] { 0.0, 0 }, new[] { 8000.0, 0 }, new[] { 8000.0, 4000 }, new[] { 4000.0, 4000 }, new[] { 4000.0, 8000 }, new[] { 0.0, 8000 } };
+                var roof = Run((ctx, tr) => (Dictionary<string, object>)DrawingService.BuildRoof(ctx, new Params("build_roof", new Dictionary<string, object>
+                {
+                    ["type"] = "hip", ["outline_points"] = ell.Select(q => (object)Pt(dx + q[0], q[1])).ToList(), ["wall_top_z"] = 3000.0, ["layer"] = "0",
+                })));
+                var lay = RoofLogic.Build(ell, 3000, new RoofLogic.Options { Type = "hip" });
+                // one slab everywhere (no overlap): volume = eave area × vertical thickness
+                double want = lay.PlanArea * RoofLogic.DefaultSlopedThickness / Math.Cos(Math.PI / 6), got = Convert.ToDouble(roof["volume_m3"]) * 1e9;
+                if (Math.Abs(got - want) > 0.02 * want) errs.Add($"mái chữ L: thể tích {got / 1e9:0.###} m³ (cần {want / 1e9:0.###})");
+                var rh = ((List<object>)roof["handles"])[0].ToString();
+                if (((List<object>)roof["handles"]).Count != 1) errs.Add("mái chữ L: không phải một khối");
+                // material: a preset made once and given to the roof
+                var m = Run((ctx, tr) => (Dictionary<string, object>)DrawingService.SetMaterial(ctx, new Params("set_material", new Dictionary<string, object>
+                {
+                    ["material"] = "roof_tile", ["handles"] = new List<object> { rh },
+                })));
+                if (((List<object>)m["handles"]).Count != 1) errs.Add("vật liệu: không gán được cho mái");
+                Run((ctx, tr) =>
+                {
+                    var e = (Entity)tr.GetObject(Acad.IdFromHandle(ctx.Db, rh), OpenMode.ForRead);
+                    if (e.Material != "Ngói") errs.Add($"vật liệu: mái mang '{e.Material}' (cần Ngói)");
+                    return 0;
+                });
+                // named view: save, list, restore, image, delete
+                string vname = "CCAD-SELFTEST-" + DateTime.Now.ToString("HHmmss");
+                var sv = (Dictionary<string, object>)DrawingService.NamedView(new ToolContext(doc, null, true, null), new Params("named_view", new Dictionary<string, object> { ["action"] = "save", ["name"] = vname }));
+                var lv = (Dictionary<string, object>)DrawingService.NamedView(new ToolContext(doc, null, false, null), new Params("named_view", new Dictionary<string, object> { ["action"] = "list" }));
+                if (!((List<object>)lv["views"]).Any(o => ((Dictionary<string, object>)o)["name"].ToString() == vname)) errs.Add("góc nhìn: không thấy trong danh sách sau khi lưu");
+                DrawingService.NamedView(new ToolContext(doc, null, true, null), new Params("named_view", new Dictionary<string, object> { ["action"] = "restore", ["name"] = vname }));
+                string png = Path.Combine(dir, "f3-view.png");
+                if (File.Exists(png)) File.Delete(png);
+                var im = (Dictionary<string, object>)DrawingService.NamedView(new ToolContext(doc, null, false, null), new Params("named_view", new Dictionary<string, object>
+                {
+                    ["action"] = "image", ["name"] = vname, ["output"] = png, ["handles"] = new List<object> { rh },
+                }));
+                if (!File.Exists(png) || new FileInfo(png).Length < 1000) errs.Add("ảnh PNG: không có file hoặc file rỗng");
+                DrawingService.NamedView(new ToolContext(doc, null, true, null), new Params("named_view", new Dictionary<string, object> { ["action"] = "delete", ["name"] = vname }));
+                return errs.Count == 0
+                    ? new SelfTestRules.Verdict(true, $"mái chữ L {got / 1e9:0.###} m³ một khối, vật liệu Ngói, góc nhìn lưu / gọi / xóa, ảnh {im["width"]}×{im["height"]}")
+                    : new SelfTestRules.Verdict(false, string.Join("; ", errs));
+            });
+
+            // Nâng cấp đợt F2: the same code paths as setup_standards, insert_library_block, layer_state and create_sheet
+            Check("Nâng cấp đợt F2: style chuẩn 1:100 (chạy lại không trùng), cửa đi thư viện, trạng thái layer, trang in A3 có khung tên", () =>
+            {
+                var errs = new List<string>();
+                T Run<T>(Func<ToolContext, T> f)
+                {
+                    using (doc.LockDocument())
+                    using (var tr = doc.TransactionManager.StartTransaction())
+                    {
+                        var r = f(new ToolContext(doc, tr, true, null));
+                        tr.Commit();
+                        return r;
+                    }
+                }
+                Dictionary<string, object> P(params (string k, object v)[] kv) => kv.ToDictionary(x => x.k, x => x.v);
+
+                // styles: created on the first run, unchanged on the second (no duplicate), dimension style sized for 1:100
+                var s1 = Run(ctx => (Dictionary<string, object>)DrawingService.SetupStandards(ctx, new Params("setup_standards", P(("scale", "1:100")))));
+                var s2 = Run(ctx => (Dictionary<string, object>)DrawingService.SetupStandards(ctx, new Params("setup_standards", P(("scale", "1:100")))));
+                string St(Dictionary<string, object> r, string k) => (string)((Dictionary<string, object>)r[k])["status"];
+                if (St(s1, "dim_style") != "created" && St(s1, "dim_style") != "unchanged") errs.Add($"dim style lần 1: {St(s1, "dim_style")}");
+                if (St(s2, "text_style") != "unchanged" || St(s2, "dim_style") != "unchanged") errs.Add($"chạy lại: {St(s2, "text_style")} / {St(s2, "dim_style")} (cần unchanged)");
+                Run(ctx =>
+                {
+                    var dst = (DimStyleTable)ctx.Tr.GetObject(ctx.Db.DimStyleTableId, OpenMode.ForRead);
+                    string dn = (string)((Dictionary<string, object>)s1["dim_style"])["name"];
+                    if (!dst.Has(dn)) errs.Add("thiếu dim style " + dn);
+                    else if (Math.Abs(((DimStyleTableRecord)ctx.Tr.GetObject(dst[dn], OpenMode.ForRead)).Dimscale - 100.0 / FloorPlanLogic.MmPerUnit(Convert.ToInt32(ctx.Db.Insunits), out _)) > 1e-6) errs.Add("DIMSCALE sai");
+                    return 0;
+                });
+
+                // library door 900: one block CUA-DI-900, 900 wide
+                var door = Run(ctx => (Dictionary<string, object>)DrawingService.InsertLibraryBlock(ctx, new Params("insert_library_block", P(("name", "cửa đi"), ("position", new List<object> { 120000.0, 0.0 })))));
+                if ((string)door["block"] != "CUA-DI-900") errs.Add("tên block cửa: " + door["block"]);
+                Run(ctx =>
+                {
+                    var e = Acad.GetEntity(ctx, (string)((List<object>)door["handles"])[0], false);
+                    var x = e.GeometricExtents;
+                    double f = FloorPlanLogic.MmPerUnit(Convert.ToInt32(ctx.Db.Insunits), out _);
+                    if (Math.Abs((x.MaxPoint.X - x.MinPoint.X) * f - 900) > 1) errs.Add($"cửa rộng {(x.MaxPoint.X - x.MinPoint.X) * f:0.#} mm (cần 900)");
+                    return 0;
+                });
+
+                // layer state: save, change a layer, restore → back; deleting without the card is refused
+                Run(ctx => DrawingService.LayerState(ctx, new Params("layer_state", P(("action", "save"), ("name", "selftest-f2")))));
+                Run(ctx =>
+                {
+                    var lt = (LayerTable)ctx.Tr.GetObject(ctx.Db.LayerTableId, OpenMode.ForRead);
+                    var l0 = (LayerTableRecord)ctx.Tr.GetObject(lt["0"], OpenMode.ForWrite);
+                    l0.Color = Autodesk.AutoCAD.Colors.Color.FromColorIndex(Autodesk.AutoCAD.Colors.ColorMethod.ByAci, 1);
+                    return 0;
+                });
+                var rs = Run(ctx => (Dictionary<string, object>)DrawingService.LayerState(ctx, new Params("layer_state", P(("action", "restore"), ("name", "selftest-f2")))));
+                Run(ctx =>
+                {
+                    var lt = (LayerTable)ctx.Tr.GetObject(ctx.Db.LayerTableId, OpenMode.ForRead);
+                    var l0 = (LayerTableRecord)ctx.Tr.GetObject(lt["0"], OpenMode.ForRead);
+                    if (l0.Color.ColorIndex == 1) errs.Add("gọi lại trạng thái layer: layer 0 vẫn màu đỏ");
+                    return 0;
+                });
+                bool refused = false;
+                try { Run(ctx => DrawingService.LayerState(ctx, new Params("layer_state", P(("action", "delete"), ("name", "selftest-f2"))))); }
+                catch (ToolException ex) { refused = ex.Message.StartsWith("Confirmation required", StringComparison.Ordinal); }
+                if (!refused) errs.Add("xóa trạng thái layer không qua thẻ mà không bị chặn");
+
+                // A3 sheet: layout with frame, title block (fields) and a 1:100 viewport
+                var sh = (Dictionary<string, object>)DrawingService.CreateSheet(new ToolContext(doc, null, true, null), new Params("create_sheet", P(
+                    ("name", "SELFTEST-F2"), ("paper", "A3"), ("scale", "1:100"), ("fields", P(("project", "THỬ"), ("title", "MẶT BẰNG"))))));
+                Run(ctx =>
+                {
+                    var br = Acad.GetEntity(ctx, (string)sh["title_block_handle"], false) as BlockReference;
+                    int atts = br == null ? 0 : br.AttributeCollection.Count;
+                    if (atts != SheetLogic.Fields.Length) errs.Add($"khung tên có {atts} ô (cần {SheetLogic.Fields.Length})");
+                    var vp = Acad.GetEntity(ctx, (string)sh["viewport_handle"], false) as Viewport;
+                    double f = FloorPlanLogic.MmPerUnit(Convert.ToInt32(ctx.Db.Insunits), out _);
+                    if (vp == null || Math.Abs(vp.CustomScale - f / 100) > 1e-9) errs.Add("khung nhìn không đúng 1:100");
+                    return 0;
+                });
+                return errs.Count == 0
+                    ? new SelfTestRules.Verdict(true, $"style {((Dictionary<string, object>)s1["dim_style"])["name"]} (chạy lại: unchanged), CUA-DI-900, trạng thái layer gọi lại {rs["changed_layers"]} layer, trang SELFTEST-F2 {sh["media"]}")
+                    : new SelfTestRules.Verdict(false, string.Join("; ", errs));
+            });
+
+            // Nâng cấp đợt F4: block_schedule with excel writes an .xlsx (the F2 step above inserted CUA-DI-900); it is read back
+            Check("Nâng cấp đợt F4: thống kê block xuất file Excel (.xlsx) đọc lại được", () =>
+            {
+                string xlsx = Path.Combine(dir, "selftest-f4.xlsx");
+                // test tổng thể đợt F: its own block (not the door block of the F2 step), so this step needs no other step
+                const string blockName = "SELFTEST-F4";
+                using (doc.LockDocument())
+                using (var tr = doc.TransactionManager.StartTransaction())
+                {
+                    var bt = (BlockTable)tr.GetObject(doc.Database.BlockTableId, OpenMode.ForRead);
+                    ObjectId bid;
+                    if (bt.Has(blockName)) bid = bt[blockName];
+                    else
+                    {
+                        var btr = new BlockTableRecord { Name = blockName };
+                        bt.UpgradeOpen();
+                        bid = bt.Add(btr);
+                        tr.AddNewlyCreatedDBObject(btr, true);
+                        var ln = new Line(Point3d.Origin, new Point3d(500, 0, 0));
+                        btr.AppendEntity(ln);
+                        tr.AddNewlyCreatedDBObject(ln, true);
+                    }
+                    var ms = (BlockTableRecord)tr.GetObject(SymbolUtilityServices.GetBlockModelSpaceId(doc.Database), OpenMode.ForWrite);
+                    var br = new BlockReference(new Point3d(160000, 0, 0), bid);
+                    ms.AppendEntity(br);
+                    tr.AddNewlyCreatedDBObject(br, true);
+                    tr.Commit();
+                }
+                Dictionary<string, object> r;
+                using (doc.LockDocument())
+                using (var tr = doc.TransactionManager.StartTransaction())
+                {
+                    r = (Dictionary<string, object>)DrawingService.BlockSchedule(new ToolContext(doc, tr, false, null),
+                        new Params("block_schedule", new Dictionary<string, object> { ["excel"] = xlsx, ["overwrite"] = true }));
+                    tr.Abort();
+                }
+                if (!File.Exists(xlsx)) return new SelfTestRules.Verdict(false, "không có file " + xlsx);
+                string sheet;
+                using (var zip = System.IO.Compression.ZipFile.OpenRead(xlsx))
+                using (var rd = new StreamReader(zip.GetEntry("xl/worksheets/sheet1.xml").Open(), Encoding.UTF8)) sheet = rd.ReadToEnd();
+                bool ok = sheet.Contains("Tên block") && sheet.Contains(blockName);
+                var ex = (Dictionary<string, object>)r["excel"];
+                return ok ? new SelfTestRules.Verdict(true, $"{ex["rows"]} dòng → {Path.GetFileName(xlsx)}")
+                          : new SelfTestRules.Verdict(false, "file Excel thiếu tiêu đề cột hoặc block " + blockName);
+            });
+
+            // Nâng cấp đợt F5: multileader style of the standard + add_mleader on it; the overwrite card of a saved view (not run on CI)
+            Check("Nâng cấp đợt F5: kiểu ghi chú mũi tên của bộ chuẩn, thẻ xác nhận ghi đè góc nhìn", () =>
+            {
+                var errs = new List<string>();
+                T Run<T>(Func<ToolContext, Transaction, T> f)
+                {
+                    using (doc.LockDocument())
+                    using (var tr = doc.TransactionManager.StartTransaction())
+                    {
+                        var r = f(new ToolContext(doc, tr, true, null), tr);
+                        tr.Commit();
+                        return r;
+                    }
+                }
+                var st = Run((ctx, tr) => (Dictionary<string, object>)DrawingService.SetupStandards(ctx, new Params("setup_standards", new Dictionary<string, object> { ["standard"] = "ve-kien-truc", ["scale"] = "1:100" })));
+                var mls = st.TryGetValue("mleader_style", out var o) ? o as Dictionary<string, object> : null;
+                if (mls == null) errs.Add("setup_standards: thiếu mleader_style");
+                double f = FloorPlanLogic.MmPerUnit(Convert.ToInt32(doc.Database.Insunits), out _);
+                double want = MLeaderStyleLogic.DrawingHeight(F5Numbers.MLeaderTextHeight, 100 / f);
+                var ml = Run((ctx, tr) => (Dictionary<string, object>)DrawingService.AddMLeader(ctx, new Params("add_mleader", new Dictionary<string, object>
+                {
+                    ["arrow_point"] = new List<object> { 160000.0, 0.0 }, ["text_point"] = new List<object> { 161000.0, 1000.0 }, ["text"] = "D110", ["layer"] = "0",
+                })));
+                Run((ctx, tr) =>
+                {
+                    var e = (MLeader)tr.GetObject(Acad.IdFromHandle(ctx.Db, ((List<object>)ml["handles"])[0].ToString()), OpenMode.ForRead);
+                    var name = ((MLeaderStyle)tr.GetObject(e.MLeaderStyle, OpenMode.ForRead)).Name;
+                    if (!MLeaderStyleLogic.IsStandardName(name)) errs.Add($"add_mleader: kiểu {name} (cần KT-ML-…)");
+                    if (Math.Abs(e.MText.TextHeight - want) > 1e-6 * Math.Max(1, want)) errs.Add($"add_mleader: chữ cao {e.MText.TextHeight:0.###} (cần {want:0.###})");
+                    return 0;
+                });
+                // a saved view saved again: refused until the card's Đồng ý (its handle), then replaced
+                string vname = "CCAD-F5-" + DateTime.Now.ToString("HHmmss");
+                var p0 = new Dictionary<string, object> { ["action"] = "save", ["name"] = vname };
+                var sv = (Dictionary<string, object>)DrawingService.NamedView(new ToolContext(doc, null, true, null), new Params("named_view", p0));
+                string vh = null;
+                try { DrawingService.NamedView(new ToolContext(doc, null, true, null), new Params("named_view", p0)); errs.Add("góc nhìn: ghi đè không cần thẻ"); }
+                catch (ToolException ex)
+                {
+                    if (!ex.Message.StartsWith("Confirmation required")) errs.Add("góc nhìn: lỗi khác thẻ: " + ex.Message);
+                    var m = System.Text.RegularExpressions.Regex.Match(ex.Message, "\\[\"([0-9A-F]+)\"");
+                    vh = m.Success ? m.Groups[1].Value : null;
+                }
+                if (vh != null)
+                    DrawingService.NamedView(new ToolContext(doc, null, true, null), new Params("named_view", new Dictionary<string, object>
+                    {
+                        ["action"] = "save", ["name"] = vname, [SolidLogic.UserConfirmedParam] = new List<object> { vh },
+                    }));
+                else errs.Add("góc nhìn: thẻ không ghi handle");
+                try
+                {
+                    DrawingService.NamedView(new ToolContext(doc, null, true, null), new Params("named_view", new Dictionary<string, object>
+                    {
+                        ["action"] = "delete", ["name"] = vname, [SolidLogic.UserConfirmedParam] = new List<object> { vh ?? "0" },
+                    }));
+                }
+                catch (ToolException ex) { errs.Add("góc nhìn: xóa sau Đồng ý lỗi: " + ex.Message); }
+                return errs.Count == 0
+                    ? new SelfTestRules.Verdict(true, $"kiểu {mls?["name"]}, ghi chú chữ cao {want:0.###}, ghi đè / xóa góc nhìn qua thẻ")
                     : new SelfTestRules.Verdict(false, string.Join("; ", errs));
             });
 

@@ -101,6 +101,8 @@ namespace ClaudeCAD.Plugin.UI
             ["build_railing"] = "Dựng lan can",
             ["build_stair"] = "Dựng cầu thang",
             ["build_roof"] = "Dựng mái",
+            ["set_material"] = "Gán vật liệu",
+            ["named_view"] = "Góc nhìn đã lưu",
             ["draw_box"] = "Dựng khối hộp",
             ["draw_cylinder"] = "Dựng khối trụ / nón",
             ["draw_sphere"] = "Dựng khối cầu",
@@ -145,6 +147,10 @@ namespace ClaudeCAD.Plugin.UI
             ["presspull"] = "Kéo / ấn mặt khối",
             ["export_stl"] = "Xuất STL",
             ["volume_schedule"] = "Bảng khối lượng",
+            ["setup_standards"] = "Thiết lập style chuẩn",
+            ["create_sheet"] = "Tạo trang in có khung tên",
+            ["insert_library_block"] = "Chèn block thư viện",
+            ["layer_state"] = "Trạng thái layer",
         };
 
         public static string Describe(string tool)
