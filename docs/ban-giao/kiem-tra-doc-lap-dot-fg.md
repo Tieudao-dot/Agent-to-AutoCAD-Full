@@ -345,3 +345,206 @@ Quyết định luồng chính chọn khi giao (cách rẻ, an toàn, đổi l�
 | --- | --- |
 | Thread đợt F1 (G2) | 26/11 01h50: sửa hết KFG-07, 08, 15, 16, 17, 18 và 3 nghi vấn, `full/nang-cap-g-sua-kfg-a` @ `2e1dfe2`, lõi 1375, trợ lý 400, ≈ $6. 01h56: chỉnh xong KFG-08 theo quyết định trên @ `cbc1b03` (có thêm tham số `sheets` để khách nhờ soát cả tab mặc định), lõi 1376, trợ lý 400, ≈ $2 |
 | Thread Test & sửa F1 (G4, G5, F5) | 26/11 01h54: sửa hết KFG-01, 04, 05, 06, 10, 11, 12, 13, 27, phần `Trace.cs` của KFG-14 và các nghi vấn G4 / G5, `full/nang-cap-g-sua-kfg-b` @ `468dc09` (code `f48747c`), lõi 1388, trợ lý 404. Số mới chờ duyệt: giữ ảnh dán 7 ngày; chờ sau khi lệnh render kết thúc = số lớn hơn giữa 20 giây và thời gian ước lượng. Quyết định mới: ảnh dán vào bản vẽ chưa lưu thì nhờ khách lưu bản vẽ trước (không chép vào Documents nữa); đường dẫn mạng lạ bị chặn lúc gắn ảnh |
+
+## Soát lại lượt 1 (26/11 02h17)
+
+*Nguyên văn báo cáo soát lại của thread kiểm tra độc lập.*
+
+Bản soát: `full/nang-cap-g-tong-the` @ `20e3812`, so với `881b12e`. Tớ không sửa code, không commit / push / CI.
+
+Tóm tắt:
+- 27 mã: 26 sửa đúng; KFG-07 sửa chưa đủ (còn hatch của `section_view` đặt layer riêng).
+- Hai chỗ sửa đúng nhưng sinh lỗi mới ngay ở chỗ sửa: KFG-03 (mẫu `*`, lỗi mới KFG-30) và KFG-13 / nghi vấn đường dẫn G5 (lỗi mới KFG-28, 29).
+- 11 lỗi mới KFG-28…38: 3 vừa, 8 nhẹ. Không có lỗi nặng.
+
+### Test và build @ `20e3812`
+
+| Hạng mục | Kết quả |
+| --- | --- |
+| Lõi | 1409 / 1409 đạt |
+| Trợ lý | 407 / 407 đạt |
+| Build net48 / net8.0-windows / net10.0-windows | 0 lỗi, 0 cảnh báo cả 3 |
+| Test thử lượt trước, chạy lại trên bản mới (project tạm link Core) | G1 + G2: 3 test mới đạt. G5 + F5: ProbeTests + Probe2Tests (test `IncrementalUpdate` cũ fail chỉ vì nó kỳ vọng số sai cũ là 4, nay đúng là 2). G3 + G4: console chạy lại các ca |
+
+Test bị sửa trong diff: 4 test, ở `nangcapg5.test.ts`, `NangCapF5Tests`, `NangCapG3Tests`, `NangCapG3TestSuaTests`. Mỗi test đổi đúng 1 kỳ vọng theo bản sửa (KFG-12 bọc ngoặc kép, KFG-10 mã layer + vật liệu, KFG-26 style 4 / `cellXfs` 5). Không có test nào bị nới cho qua.
+
+Các file nhiều nhánh cùng sửa (`ChatController.cs`, `index.ts`, `systemPrompt.ts`, `F5.cs`, `Xlsx.cs`, `Standards2DTools.cs`, `ChatAttachments.cs`, `content.ts`): gộp sạch, không có chỗ đè nhau.
+
+### 27 mã
+
+| Mã | Kết luận | Bằng chứng ngắn |
+| --- | --- | --- |
+| KFG-01 | Sửa đúng; còn chưa Dispose ở nhánh từ chối (KFG-31) | `NamedViewCopy` clone trong transaction; self-test có thêm nhánh có tên |
+| KFG-02 | Sửa đúng | Có `contains_others` mà không có `allow_nested` thì từ chối; `source_warnings` chép warning / warnings / contains_others / left_out_layers / skipped / note |
+| KFG-03 | Sửa đúng với tên thường; mẫu `*` chưa đúng (KFG-30) | Sân / Sàn mỗi dòng đúng giá; "San" khi có cả hai thì để trống cả hai, có `ambiguous_prices`; A-WALL / A_WALL đúng; "Da" / "Đá" đúng; chữ tổ hợp đúng |
+| KFG-04 | Sửa đúng | `LightPlan("auto",2,…,true)` = `(False, null)`; `LightsIn` đếm cả đèn trong block |
+| KFG-05 | Sửa đúng; còn 2 điểm phụ (KFG-36, 37) | UCS 30°: tường dọc trục x của UCS thì góc xoay 0°; attach theo `frame.X` / `frame.Y` |
+| KFG-06 | Sửa đúng | `TraceTarget` từ chối ảnh không có dấu trace |
+| KFG-07 | **Chưa đủ** (KFG-32) | Bộ hồ sơ và `draw_hatch` đúng: bỏ qua layer hình suy ra, hatch có dấu `CLAUDECAD_PLAIN_HATCH`; G6-1 đã thêm dòng này |
+| KFG-08 | Sửa đúng như luồng chính chọn | Tab mặc định chỉ có khung nhìn: không báo, có ghi chú nêu tên tab; có `sheets` thì soát cả tab đó; tab có vật khác / đã đổi tên thì soát đủ; `fix_drawing` nhận cùng `sheets`. D1 / D1b khớp |
+| KFG-09 | Sửa đúng | Có `DeleteLayerStateToken` riêng; test KfgDotGTests |
+| KFG-10 | Sửa đúng | Mã gồm layer + tên vật liệu, và vật liệu + màu + độ trong |
+| KFG-11 | Sửa đúng; đếm chậm với PDF lớn (KFG-35) | PDF lưu nối tiếp nay ra 2; có `/Root` + bản ghi thêm ra 3; PDF nén ra 0 kèm `pages_note` |
+| KFG-12 | Sửa đúng | `q(i.path)` |
+| KFG-13 | Sửa đúng phần đã nêu; sinh lỗi mới KFG-29 | Chỉ gửi đường dẫn khi gói / chế độ có `trace_image`; dọn ảnh dán 7 ngày (chỉ `anh-*.*` trong thư mục ảnh dán, không đụng file đang làm nền); có `pasted_note` |
+| KFG-14 | Sửa đúng | PLAN_SCOPE 2D / 3D có đợt G; prompt thêm "text read from an attached picture"; AVIF ra "avif" |
+| KFG-15 | Sửa đúng; chậm khi nhiều hình cùng ô (KFG-34) | 1000,049 / 1000,051 nay ra trùng; 0 / 0,08 / 0,16 không lan chuỗi |
+| KFG-16 | Sửa đúng | Đếm kích thước ở mọi không gian |
+| KFG-17 | Sửa đúng | `fix_drawing` nhận `layouts` / `sheets` (C# + TS) |
+| KFG-18 | Sửa đúng | Layer đích tắt / đóng băng / không in thì từ chối |
+| KFG-19 | Sửa đúng | Danh sách rỗng: C# báo lỗi, TS có `.min(1)` |
+| KFG-20 | Sửa đúng | Thẻ ghi "N lines / hatches" |
+| KFG-21 | Sửa đúng | `hadSet` chỉ đếm handle còn sống |
+| KFG-22 | Sửa đúng | Bỏ `Table` khỏi khung mặt bằng 2D |
+| KFG-23 | Sửa đúng | 0 / 40 / 80 / 120 mm ra 1 tầng; 0 / 3300 ra 2 tầng |
+| KFG-24 | Sửa đúng; còn lỗ ở nhánh lỗi (KFG-33) | Record lưu `L:tên\|handle`; layout trùng tên khác handle là "clash", không bị xóa; record cũ nhận theo tên |
+| KFG-25 | Sửa đúng | Gói 3D chỉ còn `volume`, gói 2D còn `blocks` / `areas`, Full đủ |
+| KFG-26 | Sửa đúng | Có đơn giá lẻ thì dùng style 4 `#,##0.00` |
+| KFG-27 | Sửa đúng | Kết quả ảnh chụp bỏ background / lighting / changed_for_render / estimate |
+
+### Nghi vấn lượt trước
+
+| Nghi vấn | Kết luận |
+| --- | --- |
+| G4: render chạy tiếp sau khi lệnh xong | Làm đúng như luồng chính chọn: `EndGrace = max(20, ước lượng)`. Xem nhận xét cuối |
+| G4: Dừng / quá giờ trả cảnh trước khi lệnh dừng hẳn | Giảm nhẹ: trả cảnh ngay vẫn giữ (có ghi lý do); file tạm cũ hơn 1 giờ được dọn ở lần render sau |
+| G4: thứ tự câu trả lời `-RENDER` / `_R` lọt ra thành REDRAW | Chưa sửa; không hại |
+| G4: bấm U nhảy góc nhìn | Code đã đặt `SetCurrentView` trong `DisableUndoRecording`; cần AutoCAD thật |
+| G4: đèn trong block | Sửa: `LightsIn` đệ quy 8 tầng |
+| G5: đường dẫn mạng / UNC | **Chưa đủ:** KFG-28, KFG-29 |
+| G5: ảnh xem trống nhầm (PDF) | Sửa: màu nền cố định khớp `Capture` |
+| G5: bản vẽ chưa lưu | Sửa: từ chối, nhờ khách lưu trước |
+| G5: tiền tố thư mục thiếu `\`, BigTIFF | Sửa |
+| G1: cạnh trùng của bộ hồ sơ bị `fix_drawing` xóa | Sửa: `DupItemOf` bỏ qua layer hình suy ra. Layer riêng của `section_view` vẫn còn (KFG-32) |
+| G1: lỗi AutoCAD giữa chừng mất record | Sửa: `catch` ghi lại record rồi ném tiếp; sinh KFG-33 |
+| G1: macro ghi đè PDF | Sửa: macro giữ PDF cũ, có ghi chú |
+| G2: khung nhìn "của tờ" | Sửa: `Layout.GetViewports()[0]`; layout chưa mở lần nào cần AutoCAD thật |
+| G2: override bằng một dấu cách | Sửa: `HidesMeasurement(" ")` = true |
+
+### Lỗi mới
+
+**KFG-28 — Vừa — G5 (bảo mật): luật đường dẫn bị lách bằng tiền tố thiết bị.**
+- **Chỗ:**
+  - `Core/Trace.cs` 87–95 (`UncShare`): chỉ đổi `\\?\UNC\`; mọi `\\?\…` / `\\.\…` khác trả null.
+  - `Drawing/TraceTools.cs` 236–243 (`CheckPathAllowed`): chỉ kiểm `DriveType.Network` khi `root[1] == ':'`.
+- **Tái hiện (test thử), bản vẽ ở `\\nas\duan\…`:**
+  - `\\.\UNC\evil\x\a.png` → không bị từ chối;
+  - `\\?\GLOBALROOT\Device\Mup\evil\x\a.png` → không bị từ chối;
+  - `\\?\Z:\a.png` / `\\.\Z:\a.png` với Z: là ổ mạng ánh xạ: `GetPathRoot` = `\\?\Z:\`, bước kiểm ổ mạng bị bỏ qua, nên cho qua.
+- **Hậu quả:** .NET mở được các đường này, và Windows kết nối SMB tới máy lạ. Đúng là việc luật mới định chặn: chữ trong ảnh / tài liệu dụ Claude gọi.
+- **Đúng phải là:** chỉ ổ đĩa của máy, file đính kèm, hoặc UNC cùng máy chủ + share với bản vẽ.
+- **Hướng sửa:** `UncShare` đổi cả `\\.\UNC\`; từ chối mọi `\\?\` / `\\.\` khác, trừ `\\?\<ổ>:\`, và dạng đó thì lấy ký tự ổ để kiểm `DriveType`.
+
+**KFG-29 — Vừa — G5: file khách kéo vào chat từ thư mục mạng bị từ chối, và lời khuyên dẫn vào vòng lặp.**
+- **Chỗ:**
+  - `UI/ChatControl.cs` 1345 / 1356 (`ImageAttachment.FromFile`): file kéo vào giữ `SourcePath` gốc.
+  - `CheckPathAllowed` chỉ miễn cho thư mục ảnh dán.
+  - `Core/Trace.cs` ~262 / ~265 và checklist G5 mục 3 khuyên "chép file về máy **hoặc kéo vào khung chat**".
+- **Tái hiện:** kéo `\\nas\anh\scan.jpg` (khác share với bản vẽ) vào chat → `trace_image attach` bị từ chối. Làm theo lời khuyên (kéo vào chat) thì bị từ chối lần nữa.
+- **Lệch ý luồng chính chọn:** "file khách đính kèm" được phép.
+- **Hướng sửa:** file kéo / chọn từ ổ mạng thì chép vào thư mục `anh-dinh-kem` (hoặc ghi danh sách đường dẫn khách đã đính kèm và cho qua); hoặc bỏ "kéo vào chat" khỏi lời khuyên.
+
+**KFG-30 — Vừa — G3: mẫu `*` gõ không dấu vẫn khớp cả các tên chỉ khác dấu.**
+- **Chỗ:** `Core/Estimate.cs` 177. Mẫu không dấu so theo `Key` (bỏ dấu); luật "khớp nhiều dòng khác nhau thì để trống" chỉ áp cho tên thường.
+- **Test thử:** dòng "Sân phơi" và "Sàn gỗ", giá "San*" 9 → cả hai được giá 9, không ghi chú, không có `ambiguous_prices`.
+- **Hậu quả:** đúng là trường hợp Sân / Sàn mà KFG-03 định chặn; lệch `dot-g-cho-duyet.md` ("không dấu chỉ khi … khớp một dòng").
+- **Hướng sửa:** mẫu không dấu khớp các dòng mà phần chữ cố định khác dấu nhau thì đưa vào `Ambiguous`, để trống và kể ra.
+
+**KFG-31 — Nhẹ–vừa — G4: bản sao góc nhìn không được Dispose ở nhánh từ chối bình thường.**
+- **Chỗ:** `Drawing/RenderG4.cs` ~131–135. `named = NamedViewCopy(...)` tạo trước `ImagePath`, kiểm thư mục và `RequireOverwriteCard`; cả ba có thể ném lỗi trước mọi `try` / `Dispose`.
+- **Tái hiện:** "render lại góc Phối cảnh 1" khi PNG đã có. Lần gọi đầu luôn bị từ chối để hỏi thẻ, và bản sao `ViewTableRecord` bị bỏ cho GC dọn.
+- **Hậu quả:** đối tượng AutoCAD ngoài bản vẽ bị GC dọn thay vì Dispose có thể gây lỗi. Bàn giao `nang-cap-g-sua-kfg-b.md` ghi "Dispose ở mọi nhánh", lệch code.
+- **Hướng sửa:** gọi `NamedViewCopy` sau `RequireOverwriteCard`, hoặc `try { … } catch { named?.Dispose(); throw; }`.
+
+**KFG-32 — Nhẹ — G2 (KFG-07 chưa đủ): `section_view` / `projection_view` đặt layer riêng vẫn bị báo sai.**
+- **Chỗ:**
+  - `Drawing/SectionTools.cs` 297 / 483 cho đặt `layer` / `hatch_layer` / `behind_layer`;
+  - `SectionTools.cs` ~383 không gọi `MarkPlainHatch` (chỉ `DrawTools.cs` 210 / 244 gọi).
+- **Hậu quả:**
+  - hatch mặt cắt trên layer riêng vẫn bị báo "mất liên kết";
+  - nét trên layer riêng vẫn được so trùng, nên `fix_drawing duplicates` có thể xóa nét của hình chiếu.
+- **Hướng sửa:** gọi `MarkPlainHatch` sau `EvaluateHatch` trong `SectionView`. Nét trùng: gắn dấu tương tự, hoặc ghi rõ trong tài liệu.
+
+**KFG-33 — Nhẹ — G1: nhánh lỗi làm mất handle của tờ cũ, nên KFG-24 có thể quay lại.**
+- **Chỗ:** `Drawing/DrawingSetTools.cs`, `catch` mới (~372–381) và `WriteSetRecord` (~494–497).
+- **Nguyên nhân:** `keep.Layouts` gồm cả `last.Layouts` mà `RemoveSet` đã xóa; `WriteSetRecord` tính lại handle theo tên, tên không còn thì ghi handle `""`. `OurLayouts` gặp handle rỗng thì nhận theo tên.
+- **Hậu quả:** sau một lần AutoCAD lỗi giữa chừng, layout khách tự tạo trùng tên tờ cũ (vd KT-05) lần sau bị coi là của bộ và bị xóa (sau thẻ).
+- **Hướng sửa:** trong `catch` chỉ giữ tên còn tồn tại; hoặc `WriteSetRecord` bỏ tên không tìm thấy thay vì ghi handle rỗng.
+
+**KFG-34 — Nhẹ — G2: so trùng chậm khi nhiều hình cùng ô.**
+- **Chỗ:** `Core/DrawingCheck.cs`, `DuplicateIndices(IList<DupItem>, tol)` mới. Chỉ băm theo số đầu, các hình chung ô so từng cặp, tức O(n²).
+- **Test thử:** 20 000 đường cùng x đầu, y khác nhau: 2,4 s riêng bước này. Có `MaxScan` chặn nên không treo.
+- **Hướng sửa:** băm theo (x, y), xét 9 ô kề.
+
+**KFG-35 — Nhẹ — G5: đếm trang PDF có thể treo AutoCAD vài giây.**
+- **Chỗ:** `Core/Trace.cs` ~288, regex `(\d+)\s+(\d+)\s+obj\s*<<(?:(?!endobj).){0,4000}?/Type\s*/Page`. Không có thời hạn, chạy trên luồng chính, khi không đọc được `/Root`.
+- **Test thử:** PDF giả 45,7 MB, 15 000 object: 7,8 s, ra 0 trang. PDF scan thật ít object nên nhanh.
+- **Hướng sửa:** `matchTimeout` (vd 2 s, hết giờ coi là 0 trang, đã có `pages_note`), hoặc quét bằng `IndexOf`.
+
+**KFG-36 — Nhẹ — G5: chỗ đặt ảnh mặc định đè lên bản vẽ khi UCS xoay lớn.**
+- **Chỗ:** `Drawing/TraceTools.cs`, attach không có `insert`. `InsertPoint` (`Core/Trace.cs` 245–250) tính theo khung WCS, còn ảnh xoay quanh góc dưới trái nên lấn sang trái một đoạn h·sin θ.
+- **Ví dụ:** ảnh vuông 10 m, khoảng cách 5 000 mm: θ > 30° là đè; θ = 90° nằm hẳn trên bản vẽ.
+- **Hướng sửa:** tính chỗ đặt từ khung bản vẽ trong UCS, hoặc dời `at` thêm h·max(0, sin θ).
+
+**KFG-37 — Nhẹ — G5: `min` / `max` của PDF sau scale / straighten và của action `info` vẫn là khung WCS.**
+- **Chỗ:** `Corners()` với `PdfReference` và `TraceInfo` dùng `GeometricExtents`.
+- **Hậu quả:** khi UCS xoay, hai điểm này không phải góc ảnh trong UCS; lệch với `corners` lúc attach.
+- **Hướng sửa:** lưu `at`, `w`, `h` vào dấu trace, hoặc lấy góc từ `Position` + `Transform`.
+
+**KFG-38 — Nhẹ — G2 (test / chú thích).**
+- `NangCapG2Tests.cs` 101–110 vẫn test `ShapeKey` + `DuplicateIndices(IList<string>)` kiểu cũ, mà code không còn gọi. So trùng polyline chiều ngược qua `DupItemOf` mới không có test.
+- `DrawingCheck.cs` ~194: summary cũ dính lên `class DupItem`; `TargetLayerStateError` có hai `<summary>`.
+- **Hướng sửa:** chuyển test sang `DupItem`, xóa hàm chết, sửa chú thích.
+
+### Nhận xét (không tính lỗi, vì đúng như luồng chính chọn)
+
+- **G4, ngưỡng chờ:** nếu `-RENDER` kết thúc lệnh ngay rồi render chạy nền, thì ngưỡng cắt thực tế là thời gian *ước lượng* (vừa 60 s, đẹp 180 s), không còn là tối đa (300 / 900 s).
+  - Render chậm hơn ước lượng sẽ thành ảnh chụp, trong khi dòng tiến độ vẫn báo "tự dừng ở 300 s".
+  - Checklist G4 G.3 đã nhờ đo trên máy thật. Nếu đúng là chạy nền thì nên chờ tới mức tối đa.
+- **G2:** `IsDerivedViewLayer` bỏ luôn việc so trùng cho nét khách tự vẽ trên A-ELEV / A-SECT. Rủi ro thấp, vì skill định nghĩa các layer này cho hình suy ra.
+- **G5:**
+  - Bản vẽ mở từ Z: (= `\\nas\duan`) với ảnh ghi `\\nas\duan\…` bị từ chối (`UncShare("Z:\…")` = null): sai theo hướng an toàn.
+  - Đường tương đối gặp `File.Exists` trước lần kiểm thứ hai (`TraceTools.cs` 64): nếu thư mục hiện tại của AutoCAD trên ổ mạng thì có thể chạm máy kia trước khi bị từ chối. Nghi vấn, chưa chứng minh.
+
+### Tài liệu
+
+- **Checklist "Đợt G":** các mục G2-D1, D1b, G6-1, G6-2, G0-3, G4 A.3, G7-1/4/5/6, G4 G.1–G.5 khớp code. G4 A.5 (bấm U) khớp code nhưng chưa thử được.
+  - Lệch: G5 mục 3 và lời khuyên "kéo vào chat" (KFG-29).
+- **`dot-g-cho-duyet.md` mục sau kiểm tra độc lập:** khớp code, trừ ba chỗ:
+  - câu "không dấu … khớp nhiều dòng thì để trống" không đúng với mẫu `*` (KFG-30);
+  - "tờ của bộ cũ được nhận theo mã riêng" chưa đúng ở nhánh lỗi (KFG-33);
+  - chưa ghi giới hạn của luật đường dẫn với dạng `\\.\` / `\\?\` (KFG-28).
+- **Bàn giao `nang-cap-g-sua-kfg-b.md`:** câu "Dispose ở mọi nhánh" lệch code (KFG-31).
+
+### Chưa kiểm được
+
+- Cần AutoCAD thật:
+  - render (chuỗi trả lời, render có chạy nền sau khi lệnh kết thúc không, U hoàn tác);
+  - viewport của layout chưa mở lần nào;
+  - ảnh raster / PDF underlay trên UCS xoay;
+  - kéo file mạng vào khung chat (UI WPF).
+- Excel thật tính lại công thức (chỉ soát XML).
+- Claude thật làm theo prompt mới.
+
+### Thời gian, chi phí
+
+- Lượt soát lại khoảng 30 phút.
+- Chi phí thread khoảng $19,7 (lượt trước khoảng $11,4, nên lượt này khoảng $8,3, gồm 3 tác vụ con tiếp tục từ lượt trước).
+- Tốn nhất: 3 tác vụ con đọc diff và chạy lại project test tạm.
+
+## Phân việc sửa lượt 2 (luồng chính, 26/11 02h20)
+
+Kết quả lượt soát lại 1: 26 / 27 lỗi sửa đúng, KFG-07 sửa chưa đủ; 11 lỗi mới KFG-28 … 38 (3 vừa, 8 nhẹ), không có lỗi
+nặng. Chia như lượt trước, mỗi thread gộp `full/nang-cap-g-tong-the` @ `20e3812` vào nhánh mình trước khi sửa.
+
+| Thread | Nhánh | Lỗi nhận |
+| --- | --- | --- |
+| Thread đợt F1 (G2) | `full/nang-cap-g-sua-kfg-a` | KFG-32 (phần còn lại của KFG-07), 34, 38 |
+| Thread Test & sửa F1 (G4, G5) | `full/nang-cap-g-sua-kfg-b` | KFG-28, 29, 31, 35, 36, 37; hai nhận xét G5 (đường tương đối, ổ mạng đã ánh xạ) |
+| Thread đợt F2 (G1, G3; giữ nhánh tích hợp) | `full/nang-cap-g-tong-the` | KFG-30, 33; ba chỗ tài liệu lệch; gộp hai nhánh trên, CI |
+
+Quyết định luồng chính giữ nguyên sau nhận xét của thread kiểm tra:
+
+- **Chờ sau khi lệnh render kết thúc:** vẫn là số lớn hơn giữa 20 giây và thời gian ước lượng. Chưa ai biết lệnh render của
+  AutoCAD kết thúc trước hay sau khi ảnh ra; nếu thử thật thấy lệnh kết thúc ngay còn ảnh ra sau thì đổi thành chờ tới thời
+  gian tối đa (một chỗ: `RenderLogic.EndGrace`). Đây là mục cần chủ dự án thử tay trước tiên.
