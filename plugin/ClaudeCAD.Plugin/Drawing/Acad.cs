@@ -55,6 +55,29 @@ namespace ClaudeCAD.Plugin.Drawing
         public static Matrix3d ToWcsMatrix(UcsFrame f) => new Matrix3d(f.ToWcsMatrix());
 
         /// <summary>
+        /// KTF-03: the bounding box of the entity itself in the UCS (a copy turned into the UCS, its extents): tight for a
+        /// UCS turned by any angle. Null without extents. Falls back to the WCS box re-boxed when AutoCAD cannot copy it.
+        /// </summary>
+        public static (double[] min, double[] max)? ExtentsInUcs(Entity e, UcsFrame f)
+        {
+            var ext = EntityInfo.Extents(e);
+            if (!ext.HasValue) return null;
+            var w0 = ext.Value.MinPoint; var w1 = ext.Value.MaxPoint;
+            try
+            {
+                using (var c = e.GetTransformedCopy(ToWcsMatrix(f).Inverse()))
+                {
+                    var x = c.GeometricExtents;
+                    return (new[] { x.MinPoint.X, x.MinPoint.Y, x.MinPoint.Z }, new[] { x.MaxPoint.X, x.MaxPoint.Y, x.MaxPoint.Z });
+                }
+            }
+            catch (Exception)
+            {
+                return f.BoxFromWcs(new[] { w0.X, w0.Y, w0.Z }, new[] { w1.X, w1.Y, w1.Z });
+            }
+        }
+
+        /// <summary>
         /// The UCS the tools work in for this drawing: the current UCS of model space (its active viewport); World on a
         /// layout's paper space (paper-space tools take paper coordinates as before) and when it cannot be read.
         /// </summary>
