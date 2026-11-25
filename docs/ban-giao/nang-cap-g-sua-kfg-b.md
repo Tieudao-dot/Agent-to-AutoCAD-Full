@@ -62,7 +62,8 @@ cấp.
 ## 6. Test
 
 - Lõi `dotnet test plugin/ClaudeCAD.Core.Tests`: **1388** (1368 + 20).
-- Trợ lý `cd agent && npm ci && npm test`: xem mục cập nhật cuối file.
+- Trợ lý `cd agent && npm ci && npm test`: **404** (400 + 4 `test/suakfgb.test.ts`).
+- Chạy lại cả hai sau lần sửa code cuối (`f48747c`); CI chưa chạy (thread giữ nhánh tích hợp chạy sau khi gộp).
 - Build 3 target (xóa obj / bin giữa các lần): 0 cảnh báo.
 
 ## 7. Chưa kiểm được
