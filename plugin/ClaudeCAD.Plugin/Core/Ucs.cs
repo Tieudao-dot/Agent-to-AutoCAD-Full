@@ -312,6 +312,8 @@ namespace ClaudeCAD.Plugin.Core
             "list_xrefs", "reload_xref", "detach_xref", "bind_xref", "export_stl",
             // nâng cấp đợt F2 (create_sheet is Ref: its view_center is a UCS point, the viewport turns with a turned UCS)
             "setup_standards", "layer_state",
+            // nâng cấp đợt F3: no coordinates (materials; views are saved / shown as they are)
+            "set_material", "named_view",
         };
 
         /// <summary>Params that are directions / displacements (turned, not moved) in Ref mode, any tool.</summary>

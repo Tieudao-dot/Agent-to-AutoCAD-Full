@@ -720,11 +720,69 @@ namespace ClaudeCAD.Plugin
                 var rmin = (List<object>)roof["min"]; var rmax = (List<object>)roof["max"];
                 if (Math.Abs(Convert.ToDouble(rmin[2]) - lay.EaveZ) > 1 || Math.Abs(Convert.ToDouble(rmax[2]) - lay.TopZ) > 1)
                     errs.Add($"mái 4 dốc: z {rmin[2]}–{rmax[2]} (cần {lay.EaveZ:0}–{lay.TopZ:0})");
-                // a 150 slab over the sloped area, give or take the eave cuts and the hips
-                double approx = lay.RoofArea * 150, got = Convert.ToDouble(roof["volume_m3"]) * 1e9;
+                // the default slab over the sloped area (120 since nâng cấp đợt F3), give or take the eave cuts and the hips
+                double approx = lay.RoofArea * RoofLogic.DefaultSlopedThickness, got = Convert.ToDouble(roof["volume_m3"]) * 1e9;
                 if (Math.Abs(got - approx) > 0.1 * approx) errs.Add($"mái 4 dốc: thể tích {got / 1e9:0.###} m³ (khoảng {approx / 1e9:0.###})");
                 return errs.Count == 0
                     ? new SelfTestRules.Verdict(true, $"thang 1 vế 19 bậc, thang chữ U một khối + lan can, mái 4 dốc {got / 1e9:0.###} m³")
+                    : new SelfTestRules.Verdict(false, string.Join("; ", errs));
+            });
+
+            // Nâng cấp đợt F3: the same code paths as build_roof over an L house, set_material and named_view (not run on CI)
+            Check("Nâng cấp đợt F3: mái 4 dốc nhà chữ L một khối, vật liệu, góc nhìn đã lưu + ảnh PNG", () =>
+            {
+                const double dx = 130000;
+                var errs = new List<string>();
+                T Run<T>(Func<ToolContext, Transaction, T> f)
+                {
+                    using (doc.LockDocument())
+                    using (var tr = doc.TransactionManager.StartTransaction())
+                    {
+                        var r = f(new ToolContext(doc, tr, true, null), tr);
+                        tr.Commit();
+                        return r;
+                    }
+                }
+                List<object> Pt(double x, double y) => new List<object> { x, y };
+                var ell = new List<double[]> { new[] { 0.0, 0 }, new[] { 8000.0, 0 }, new[] { 8000.0, 4000 }, new[] { 4000.0, 4000 }, new[] { 4000.0, 8000 }, new[] { 0.0, 8000 } };
+                var roof = Run((ctx, tr) => (Dictionary<string, object>)DrawingService.BuildRoof(ctx, new Params("build_roof", new Dictionary<string, object>
+                {
+                    ["type"] = "hip", ["outline_points"] = ell.Select(q => (object)Pt(dx + q[0], q[1])).ToList(), ["wall_top_z"] = 3000.0, ["layer"] = "0",
+                })));
+                var lay = RoofLogic.Build(ell, 3000, new RoofLogic.Options { Type = "hip" });
+                // one slab everywhere (no overlap): volume = eave area × vertical thickness
+                double want = lay.PlanArea * RoofLogic.DefaultSlopedThickness / Math.Cos(Math.PI / 6), got = Convert.ToDouble(roof["volume_m3"]) * 1e9;
+                if (Math.Abs(got - want) > 0.02 * want) errs.Add($"mái chữ L: thể tích {got / 1e9:0.###} m³ (cần {want / 1e9:0.###})");
+                var rh = ((List<object>)roof["handles"])[0].ToString();
+                if (((List<object>)roof["handles"]).Count != 1) errs.Add("mái chữ L: không phải một khối");
+                // material: a preset made once and given to the roof
+                var m = Run((ctx, tr) => (Dictionary<string, object>)DrawingService.SetMaterial(ctx, new Params("set_material", new Dictionary<string, object>
+                {
+                    ["material"] = "roof_tile", ["handles"] = new List<object> { rh },
+                })));
+                if (((List<object>)m["handles"]).Count != 1) errs.Add("vật liệu: không gán được cho mái");
+                Run((ctx, tr) =>
+                {
+                    var e = (Entity)tr.GetObject(Acad.IdFromHandle(ctx.Db, rh), OpenMode.ForRead);
+                    if (e.Material != "Ngói") errs.Add($"vật liệu: mái mang '{e.Material}' (cần Ngói)");
+                    return 0;
+                });
+                // named view: save, list, restore, image, delete
+                string vname = "CCAD-SELFTEST-" + DateTime.Now.ToString("HHmmss");
+                var sv = (Dictionary<string, object>)DrawingService.NamedView(new ToolContext(doc, null, true, null), new Params("named_view", new Dictionary<string, object> { ["action"] = "save", ["name"] = vname }));
+                var lv = (Dictionary<string, object>)DrawingService.NamedView(new ToolContext(doc, null, false, null), new Params("named_view", new Dictionary<string, object> { ["action"] = "list" }));
+                if (!((List<object>)lv["views"]).Any(o => ((Dictionary<string, object>)o)["name"].ToString() == vname)) errs.Add("góc nhìn: không thấy trong danh sách sau khi lưu");
+                DrawingService.NamedView(new ToolContext(doc, null, true, null), new Params("named_view", new Dictionary<string, object> { ["action"] = "restore", ["name"] = vname }));
+                string png = Path.Combine(dir, "f3-view.png");
+                if (File.Exists(png)) File.Delete(png);
+                var im = (Dictionary<string, object>)DrawingService.NamedView(new ToolContext(doc, null, false, null), new Params("named_view", new Dictionary<string, object>
+                {
+                    ["action"] = "image", ["name"] = vname, ["output"] = png, ["handles"] = new List<object> { rh },
+                }));
+                if (!File.Exists(png) || new FileInfo(png).Length < 1000) errs.Add("ảnh PNG: không có file hoặc file rỗng");
+                DrawingService.NamedView(new ToolContext(doc, null, true, null), new Params("named_view", new Dictionary<string, object> { ["action"] = "delete", ["name"] = vname }));
+                return errs.Count == 0
+                    ? new SelfTestRules.Verdict(true, $"mái chữ L {got / 1e9:0.###} m³ một khối, vật liệu Ngói, góc nhìn lưu / gọi / xóa, ảnh {im["width"]}×{im["height"]}")
                     : new SelfTestRules.Verdict(false, string.Join("; ", errs));
             });
 

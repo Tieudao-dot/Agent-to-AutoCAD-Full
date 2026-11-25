@@ -101,6 +101,8 @@ namespace ClaudeCAD.Plugin.UI
             ["build_railing"] = "Dựng lan can",
             ["build_stair"] = "Dựng cầu thang",
             ["build_roof"] = "Dựng mái",
+            ["set_material"] = "Gán vật liệu",
+            ["named_view"] = "Góc nhìn đã lưu",
             ["draw_box"] = "Dựng khối hộp",
             ["draw_cylinder"] = "Dựng khối trụ / nón",
             ["draw_sphere"] = "Dựng khối cầu",

@@ -81,6 +81,7 @@ namespace ClaudeCAD.Plugin.Drawing
             RegisterStairRoof(d);
             // nâng cấp đợt F2: standards, sheets (2D), library blocks, layer states (every plan)
             RegisterStandards2D(d);
+            RegisterRender(d); // nâng cấp đợt F3: materials, named views
         }
 
         private static void RegisterSystem(ToolDispatcher d, ITurnHost host)

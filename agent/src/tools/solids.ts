@@ -2,6 +2,7 @@ import { z } from 'zod';
 import { angle, cadTool, entityProps, handle, handles, point, points, wcsPoint, type AnyTool, type ToolBridge } from './common.js';
 import { PLAN3D_TOOL_NAMES, plan3dTools } from './plan3d.js';
 import { SOLID3_TOOL_NAMES, STAIR_ROOF_TOOL_NAMES, solid3Tools, solidTable } from './solids3.js';
+import { RENDER_TOOL_NAMES, renderTools } from './render.js';
 
 /** The 3D tools: only machines on the 3D or Full plan load them (the plugin labels them ToolGroup.ThreeD). */
 export const SOLID_TOOL_NAMES = [
@@ -16,6 +17,8 @@ export const SOLID_TOOL_NAMES = [
   ...SOLID3_TOOL_NAMES,
   // nâng cấp đợt E (solids3.ts)
   ...STAIR_ROOF_TOOL_NAMES,
+  // nâng cấp đợt F3 (render.ts)
+  ...RENDER_TOOL_NAMES,
 ] as const;
 
 /**
@@ -190,6 +193,7 @@ export function solidTools(b: ToolBridge): AnyTool[] {
     ...solidTools2(b),
     ...plan3dTools(b),
     ...solid3Tools(b),
+    ...renderTools(b),
   ];
 }
 

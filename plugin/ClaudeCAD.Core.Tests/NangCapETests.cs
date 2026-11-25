@@ -84,7 +84,9 @@ namespace ClaudeCAD.Core.Tests
             Assert.Equal(160, StairLogic.DefaultRiser);
             Assert.Equal(280, StairLogic.DefaultTread);
             Assert.Equal(1000, StairLogic.DefaultWidth);
-            Assert.Equal(150, RoofLogic.DefaultThickness);
+            // nâng cấp đợt F3 (chủ dự án chốt 25/11/2026): sloped roof slab 120, flat roof slab stays 150
+            Assert.Equal(150, RoofLogic.DefaultFlatThickness);
+            Assert.Equal(120, RoofLogic.DefaultSlopedThickness);
             Assert.Equal(30, RoofLogic.DefaultSlopeDeg);
             Assert.Equal(600, RoofLogic.DefaultOverhang);
             Assert.Equal("A-STAIR-3D", StairLogic.Layer3d);
@@ -129,9 +131,9 @@ namespace ClaudeCAD.Core.Tests
             }
             // the last riser reaches the upper floor
             Assert.True(InStair(l, 20 * t + 50, 500, 3300 - 1));
-            // the waist under the middle of the flight: 150 mm thick (perpendicular), nothing below it
+            // the waist under the middle of the flight: DefaultWaist thick (perpendicular; 120 since nâng cấp đợt F3), nothing below it
             double tan = r / t, cos = t / Math.Sqrt(r * r + t * t), uMid = 10 * t;
-            double under = uMid * tan - 150 / cos;
+            double under = uMid * tan - StairLogic.DefaultWaist / cos;
             Assert.True(InStair(l, uMid, 500, under + 2));
             Assert.False(InStair(l, uMid, 500, under - 2));
             Assert.Contains(l.Warnings, w => w.Contains("21 risers"));
@@ -148,7 +150,7 @@ namespace ClaudeCAD.Core.Tests
             Assert.Equal(L1, l.Flights[1].BaseZ, 6);
             Assert.Equal(R1 + 1000, l.Length, 6);
             Assert.Equal(1000 + (n2 - 1) * t, l.Breadth, 6);
-            // landing top at L1, 150 thick
+            // landing top at L1, DefaultWaist thick (120 since nâng cấp đợt F3)
             Assert.True(InStair(l, R1 + 500, 500, L1 - 1));
             Assert.False(InStair(l, R1 + 500, 500, L1 + 1));
             Assert.False(InStair(l, R1 + 500, 500, L1 - 151));
@@ -302,7 +304,7 @@ namespace ClaudeCAD.Core.Tests
             var lay = RoofLogic.Build(Rect, 3300, new RoofLogic.Options { Type = "hip" });
             Assert.Equal(600, lay.Overhang);
             Assert.Equal(4, lay.Outer.Count);
-            double tan = Math.Tan(30 * Math.PI / 180), up = 150 / Math.Cos(30 * Math.PI / 180);
+            double tan = Math.Tan(30 * Math.PI / 180), up = RoofLogic.DefaultSlopedThickness / Math.Cos(30 * Math.PI / 180); // F3: 120
             Assert.Equal(3300 - 600 * tan, lay.EaveZ, 6);
             Assert.Equal(lay.EaveZ + 3600 * tan + up, lay.RidgeZ, 3);
             Assert.Equal(11200 - 7200, lay.RidgeLength, 6);
@@ -310,7 +312,7 @@ namespace ClaudeCAD.Core.Tests
             // the underside meets the wall top at the wall line
             Assert.True(lay.Contains(new[] { 5000.0, 0 + 1, 3300 + 5 }));
             Assert.False(lay.Contains(new[] { 5000.0, 0 + 1, 3300 - 5 }));
-            CheckSloped(lay, new[] { 0, 1, 2, 3 }, 150, 30);
+            CheckSloped(lay, new[] { 0, 1, 2, 3 }, RoofLogic.DefaultSlopedThickness, 30);
         }
 
         [Fact]
@@ -321,7 +323,7 @@ namespace ClaudeCAD.Core.Tests
             Assert.Equal(10800, lay.RidgeLength, 6);
             var e = lay.Eave;
             int first = RoofLogic.Dist(e[0], e[1]) > RoofLogic.Dist(e[1], e[2]) ? 0 : 1;
-            CheckSloped(lay, new[] { first, first + 2 }, 150, 25);
+            CheckSloped(lay, new[] { first, first + 2 }, RoofLogic.DefaultSlopedThickness, 25);
             var shortRidge = RoofLogic.Build(Rect, 3300, new RoofLogic.Options { Type = "gable", Ridge = "short" });
             Assert.Equal(7200, shortRidge.RidgeLength, 6);
             Assert.True(shortRidge.RidgeZ > lay.RidgeZ);
@@ -332,11 +334,14 @@ namespace ClaudeCAD.Core.Tests
         {
             var hex = Enumerable.Range(0, 6).Select(i => new[] { 5000 * Math.Cos(i * Math.PI / 3), 5000 * Math.Sin(i * Math.PI / 3) }).ToList();
             var lay = RoofLogic.Build(hex, 3000, new RoofLogic.Options { Type = "hip", Overhang = 0 });
-            CheckSloped(lay, Enumerable.Range(0, 6), 150, 30);
-            Assert.Equal(3000 + 5000 * Math.Cos(Math.PI / 6) * Math.Tan(Math.PI / 6) + 150 / Math.Cos(Math.PI / 6), lay.RidgeZ, 0);
+            CheckSloped(lay, Enumerable.Range(0, 6), RoofLogic.DefaultSlopedThickness, 30);
+            Assert.Equal(3000 + 5000 * Math.Cos(Math.PI / 6) * Math.Tan(Math.PI / 6) + RoofLogic.DefaultSlopedThickness / Math.Cos(Math.PI / 6), lay.RidgeZ, 0);
             var ell = new List<double[]> { new[] { 0.0, 0 }, new[] { 8000.0, 0 }, new[] { 8000.0, 4000 }, new[] { 4000.0, 4000 }, new[] { 4000.0, 8000 }, new[] { 0.0, 8000 } };
-            Assert.Contains("convex", Assert.Throws<ToolException>(() => RoofLogic.Build(ell, 3000, new RoofLogic.Options { Type = "hip" })).Message);
-            Assert.Contains("rectangle", Assert.Throws<ToolException>(() => RoofLogic.Build(ell, 3000, new RoofLogic.Options { Type = "gable" })).Message);
+            // nâng cấp đợt F3: the L house is built from pieces; a concave outline that is not right-angled is refused
+            Assert.Equal(2, RoofLogic.Build(ell, 3000, new RoofLogic.Options { Type = "hip" }).Pieces.Count);
+            var arrow = new List<double[]> { new[] { 0.0, 0 }, new[] { 8000.0, 0 }, new[] { 8000.0, 8000 }, new[] { 4000.0, 3000 }, new[] { 0.0, 8000 } };
+            Assert.Contains("convex", Assert.Throws<ToolException>(() => RoofLogic.Build(arrow, 3000, new RoofLogic.Options { Type = "hip" })).Message);
+            Assert.Contains("rectangle", Assert.Throws<ToolException>(() => RoofLogic.Build(arrow, 3000, new RoofLogic.Options { Type = "gable" })).Message);
             // a flat roof takes any outline, the overhang mitred at the inward corner
             var flat = RoofLogic.Build(ell, 3000, new RoofLogic.Options { Type = "flat", Overhang = 500 });
             Assert.Equal(6, flat.Eave.Count);
