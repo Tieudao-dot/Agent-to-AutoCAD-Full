@@ -99,3 +99,14 @@ Kiểm từng điểm trên code nhánh này, không dùng bản vá của threa
 
 - Mọi thứ trên AutoCAD thật (như F2): `LayerStateManager`, tên font AutoCAD đọc lại, khổ giấy DWG To PDF, khung nhìn xoay
   theo UCS, `Layout.Initialize()`, block thư viện qua UCS. Thử tay: mục A–F của `docs/checklist-dot-f2.md`.
+
+## CI
+
+- Lượt 1: run **#42** (`45588692165`, `release=false`) trên `e65e799` (F2T-1…F2T-4): **xanh**.
+- Lượt 2: run **#43** (`45590233177`, `release=false`) trên `6e9f622` (thêm F2T-5…F2T-7, đối chiếu 7 điểm): **xanh**
+  (build 3 target, lõi 1048, trợ lý 322, UI test WPF). Đây là bản code cuối; commit sau chỉ thêm mục này.
+
+## Đã kiểm trước khi báo
+
+- Đọc diff F2 so với `b2e6431`; đối chiếu từng điểm của lượt rà khác trên code nhánh này.
+- Sau lần sửa code cuối: build lại 3 target (xóa obj / bin), lõi 1048 xanh, trợ lý 322 xanh, rồi CI #43.
