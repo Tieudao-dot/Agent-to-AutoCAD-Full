@@ -134,7 +134,7 @@ namespace ClaudeCAD.Core.Tests
             Assert.Contains("s=\"2\"", sheet);
             Assert.Contains("s=\"3\"", sheet);
             Assert.Contains("formatCode=\"#,##0\"", files["xl/styles.xml"]);
-            Assert.Contains("cellXfs count=\"4\"", files["xl/styles.xml"]);
+            Assert.Contains("cellXfs count=\"5\"", files["xl/styles.xml"]); // KFG-26: + the unit price with decimals
             Assert.Contains("fullCalcOnLoad=\"1\"", files["xl/workbook.xml"]);
             Assert.Contains("name=\"Dự toán\"", files["xl/workbook.xml"]);
             // the old schedules' files are unchanged apart from the shared styles: plain numbers, no formulas

@@ -101,7 +101,13 @@ export const PLAN_HIDDEN_PARAMS: Record<string, { needs: '2d' | '3d'; params: st
   cost_estimate: { needs: '2d', params: ['table_position', 'title', 'text_height', 'layer'], note: ' No table in the drawing with the tools loaded here: give the numbers in the chat and the Excel file.' },
 };
 
-function trimForPlan(t: AnyTool, plan: string): AnyTool {
+function trimForPlan(t0: AnyTool, plan: string): AnyTool {
+  let t = t0;
+  // KFG-25: cost_estimate offers only the quantities of the plan's schedules (volumes: 3D; blocks / areas: 2D)
+  if (t.name === 'cost_estimate' && (plan === '2d' || plan === '3d')) {
+    const q = plan === '3d' ? z.enum(['volume']) : z.enum(['blocks', 'areas']);
+    t = { ...t, inputSchema: { ...(t.inputSchema as Record<string, unknown>), quantities: q.describe('Which schedule gives the quantities.') } } as AnyTool;
+  }
   // KT2-14 (kiểm tra độc lập nâng cấp): without 2D, match_properties offers only the general properties (the plugin
   // refuses text / dimension there: PlanLogic.TextValues), so Claude is not invited to a call that is sure to fail
   if (t.name === 'match_properties' && plan !== '2d' && plan !== '2d3d') {

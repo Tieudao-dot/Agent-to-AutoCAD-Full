@@ -110,7 +110,7 @@ namespace ClaudeCAD.Core.Tests
             Assert.Equal("ROUND(F5*D7/100,0)", Cell(d, "F7").Element(X + "f").Value);
             Assert.Equal("F5+F6+F7", Cell(d, "F8").Element(X + "f").Value);
             Assert.Equal(r.Total, double.Parse(Cell(d, "F8").Element(X + "v").Value, System.Globalization.CultureInfo.InvariantCulture));
-            Assert.Equal("2", (string)Cell(d, "E2").Attribute("s")); // money format
+            Assert.Equal("4", (string)Cell(d, "E2").Attribute("s")); // money format, with 2 decimals: the price 1 234 567,5 has one (KFG-26)
         }
 
         [Fact]

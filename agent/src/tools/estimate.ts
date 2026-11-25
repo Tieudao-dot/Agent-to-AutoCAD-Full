@@ -12,12 +12,12 @@ export function estimateTools(b: ToolBridge): AnyTool[] {
       'COST ESTIMATE ("lập dự toán"): quantities of a schedule (quantities volume = m³ by layer of the 3D solids, blocks = block counts, ' +
         'areas = room / layer areas; quantities_params = that schedule\'s filters) × the unit prices THE USER GAVE → amounts, subtotal, total. ' +
         'Never invent, estimate or look up a price: a row without the user\'s price stays empty, is not in the total and is listed in missing_prices ' +
-        '(ask the user for it). Prices match rows by name (accents / case do not matter; "A-WALL*" patterns). extra: percent lines (VAT…) only when the user says. ' +
+        '(ask the user for it). Prices match rows by name: case / spaces do not matter, accents do ("Sân" ≠ "Sàn"; a price typed without accents also fits the accented name when only one item fits), "A-WALL*" patterns; a name fitting several items is left empty (ambiguous_prices: ask). extra: percent lines (VAT…) only when the user says. ' +
         'excel writes an .xlsx with formulas (amount = quantity × price, SUM), so prices changed in Excel update; an existing file needs the card ' +
-        '(confirm_handles after Đồng ý). table_position also draws the table.',
+        '(confirm_handles after Đồng ý). table_position also draws the table. Pass on source_warnings.',
       {
         quantities: z.enum(['volume', 'blocks', 'areas']).describe('Which schedule gives the quantities.'),
-        quantities_params: z.record(z.string(), z.unknown()).optional().describe('Filters of the source schedule, e.g. {"layers": ["A-WALL-3D"]} or {"group_by": "room"}.'),
+        quantities_params: z.record(z.string(), z.unknown()).optional().describe('Filters of the source schedule, e.g. {"layers": ["A-WALL-3D"]} or {"group_by": "room"}; nested areas are refused unless allow_nested (ask first).'),
         prices: z.array(z.object({ item: z.string().min(1), unit_price: z.number().min(0), unit: z.string().optional() })).max(500).optional()
           .describe('Unit prices exactly as the user gave them (per m³ / m² / cái of that row).'),
         extra: z.array(z.object({ name: z.string().min(1), percent: z.number().min(0).max(100) })).max(5).optional()

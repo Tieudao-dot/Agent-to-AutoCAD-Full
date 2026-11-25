@@ -40,6 +40,12 @@ namespace ClaudeCAD.Plugin.Drawing
                 : source == "blocks" ? BlockSchedule(ctx, new Params(sourceTool, sp)) : AreaSchedule(ctx, new Params(sourceTool, sp)));
             string quantity = p.Str("quantity", "net").Trim().ToLowerInvariant();
             if (quantity != "net" && quantity != "gross") throw ToolException.Invalid($"{tool}: quantity must be net or gross (volumes).");
+            // KFG-02: areas that contain other areas of the list (a building outline around the rooms) would be priced twice:
+            // refused as area_schedule refuses its table, unless the user allows it (quantities_params allow_nested)
+            if (source == "areas" && src.ContainsKey("contains_others") && !(sp.TryGetValue("allow_nested", out var an) && an is bool anb && anb))
+                throw ToolException.Invalid($"{tool}: some areas contain other areas of the list ({string.Join(", ", ((IEnumerable<object>)src["contains_others"]).Take(20))}), e.g. a building " +
+                    "outline around the rooms, so they would be priced twice. Nothing was priced. Ask the user: leave them out (quantities_params layers / handles without them) " +
+                    "or keep them (quantities_params allow_nested: true).");
             var rows = EstimateLogic.RowsOf(source, src, quantity);
             if (rows.Count == 0) throw ToolException.Invalid($"{tool}: the {sourceTool} found no rows (check quantities_params: layers, handles, names), so there is nothing to price.");
 
@@ -86,6 +92,13 @@ namespace ClaudeCAD.Plugin.Drawing
                 res["warning"] = $"{est.Missing.Count} row(s) have no unit price from the user: they are empty and NOT in the total. Tell the user which, and ask for their prices; never fill them in yourself.";
             }
             if (est.Unused.Count > 0) res["unused_prices"] = est.Unused.Cast<object>().ToList();
+            // KFG-03: a price name that fits several items once accents / separators are dropped: none of them got it
+            if (est.Ambiguous.Count > 0)
+                res["ambiguous_prices"] = est.Ambiguous.Select(a => (object)new Dictionary<string, object> { ["price"] = a.price, ["items"] = a.items.Cast<object>().ToList() }).ToList();
+            // KFG-02: the warnings of the source schedule are the estimate's too
+            var sw = new Dictionary<string, object>();
+            foreach (var k in EstimateLogic.SourceWarningKeys) if (src.TryGetValue(k, out var v) && v != null) sw[k] = v;
+            if (sw.Count > 0) res["source_warnings"] = sw;
 
             if (p.Has("table_position"))
             {

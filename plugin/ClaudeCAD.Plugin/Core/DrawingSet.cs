@@ -123,8 +123,9 @@ namespace ClaudeCAD.Plugin.Core
         {
             var z = bottoms.Where(v => !double.IsNaN(v) && !double.IsInfinity(v)).OrderBy(v => v).ToList();
             var outl = new List<double>();
-            foreach (var v in z)
-                if (outl.Count == 0 || v - outl[outl.Count - 1] > tol) outl.Add(v);
+            // KFG-23: a gap larger than tol between two neighbours starts a storey (0 / 40 / 80 / 120 is one storey, not two)
+            for (int i = 0; i < z.Count; i++)
+                if (i == 0 || z[i] - z[i - 1] > tol) outl.Add(z[i]);
             return outl.Take(G1Numbers.MaxLevels).ToList();
         }
 
@@ -146,7 +147,7 @@ namespace ClaudeCAD.Plugin.Core
             var z = walls.Where(w => w.height * f >= LevelMinWallMm).Select(w => w.bottom).Where(v => !double.IsNaN(v) && !double.IsInfinity(v)).OrderBy(v => v).ToList();
             int n = 0;
             double lastZ = double.NegativeInfinity;
-            foreach (var v in z) if (n == 0 || v - lastZ > LevelTolMm / f) { n++; lastZ = v; }
+            foreach (var v in z) { if (n == 0 || v - lastZ > LevelTolMm / f) n++; lastZ = v; } // KFG-23: neighbours, as Levels
             return n;
         }
 
@@ -260,6 +261,13 @@ namespace ClaudeCAD.Plugin.Core
         {
             var p = new Plan();
             var kinds = CheckKinds(r.Kinds);
+            // KFG-19: an empty list is a mistake, not "none of them" (the set would come out short without a word)
+            if (r.Elevations != null && r.Elevations.Count == 0 && kinds.Contains("elevation"))
+                throw ToolException.Invalid($"{Tool}: elevations is empty. Leave it out for all four, or leave elevation out of kinds.");
+            if (r.Sections != null && r.Sections.Count == 0 && kinds.Contains("section"))
+                throw ToolException.Invalid($"{Tool}: sections is empty. Leave it out for the two default sections, or leave section out of kinds.");
+            if (r.PlanAreas != null && r.PlanAreas.Count == 0 && kinds.Contains("plan"))
+                throw ToolException.Invalid($"{Tool}: plan_areas is empty. Leave it out for the whole 2D drawing, or leave plan out of kinds.");
             var src = (r.PlanSource ?? "auto").Trim().ToLowerInvariant();
             if (src != "auto" && src != "2d" && src != "3d") throw ToolException.Invalid($"{Tool}: plan_source must be auto, 3d or 2d.");
             foreach (var k in kinds)
@@ -417,10 +425,15 @@ namespace ClaudeCAD.Plugin.Core
         {
             public List<string> Layouts = new List<string>();
             public List<string> Handles = new List<string>();
+            /// <summary>KFG-24: the handle of each layout of Layouts ("" = unknown, a record written before).</summary>
+            public List<string> LayoutHandles = new List<string>();
+
+            public string HandleOf(int i) => i < LayoutHandles.Count ? LayoutHandles[i] ?? "" : "";
         }
 
+        /// <summary>"L:name|handle" (a layout name cannot hold '|'), "H:handle".</summary>
         public static List<string> Encode(Record r) =>
-            r.Layouts.Select(l => "L:" + l).Concat(r.Handles.Select(h => "H:" + h)).ToList();
+            r.Layouts.Select((l, i) => "L:" + l + (r.HandleOf(i).Length > 0 ? "|" + r.HandleOf(i) : "")).Concat(r.Handles.Select(h => "H:" + h)).ToList();
 
         public static Record Decode(IEnumerable<string> lines)
         {
@@ -428,10 +441,34 @@ namespace ClaudeCAD.Plugin.Core
             foreach (var s in lines ?? Enumerable.Empty<string>())
             {
                 if (s == null || s.Length < 3) continue;
-                if (s.StartsWith("L:", StringComparison.Ordinal)) r.Layouts.Add(s.Substring(2));
+                if (s.StartsWith("L:", StringComparison.Ordinal))
+                {
+                    var v = s.Substring(2);
+                    int bar = v.LastIndexOf('|');
+                    r.Layouts.Add(bar >= 0 ? v.Substring(0, bar) : v);
+                    r.LayoutHandles.Add(bar >= 0 ? v.Substring(bar + 1) : "");
+                }
                 else if (s.StartsWith("H:", StringComparison.Ordinal)) r.Handles.Add(s.Substring(2));
             }
             return r;
+        }
+
+        /// <summary>
+        /// KFG-24: the layouts of the drawing (name → handle) that are the last set's: the same handle as recorded (a layout the
+        /// user made later under the same name is not); a record without handles (written before) matches by name.
+        /// </summary>
+        public static List<string> OurLayouts(IDictionary<string, string> existing, Record last)
+        {
+            var outl = new List<string>();
+            if (last == null || existing == null) return outl;
+            var byName = new Dictionary<string, string>(existing, StringComparer.OrdinalIgnoreCase);
+            for (int i = 0; i < last.Layouts.Count; i++)
+            {
+                if (!byName.TryGetValue(last.Layouts[i], out var h)) continue;
+                var want = last.HandleOf(i);
+                if (want.Length == 0 || string.Equals(want, h, StringComparison.OrdinalIgnoreCase)) outl.Add(byName.Keys.First(k => k.Equals(last.Layouts[i], StringComparison.OrdinalIgnoreCase)));
+            }
+            return outl;
         }
 
         /// <summary>The card token of replacing the last set (its layouts, in any order, case-free).</summary>
@@ -458,10 +495,14 @@ namespace ClaudeCAD.Plugin.Core
         }
 
         /// <summary>Layout names of the new set that exist and are not the last set's: the user's own layouts, never touched.</summary>
-        public static List<string> Clashes(IEnumerable<string> wanted, IEnumerable<string> existing, Record last)
+        public static List<string> Clashes(IEnumerable<string> wanted, IEnumerable<string> existing, Record last) =>
+            Clashes(wanted, existing.ToDictionary(e => e, e => "", StringComparer.OrdinalIgnoreCase), last);
+
+        /// <summary>KFG-24: the same, the layouts known with their handles (a same-named layout of the user's is a clash).</summary>
+        public static List<string> Clashes(IEnumerable<string> wanted, IDictionary<string, string> existing, Record last)
         {
-            var ours = new HashSet<string>(last?.Layouts ?? new List<string>(), StringComparer.OrdinalIgnoreCase);
-            var have = new HashSet<string>(existing, StringComparer.OrdinalIgnoreCase);
+            var ours = new HashSet<string>(OurLayouts(existing, last), StringComparer.OrdinalIgnoreCase);
+            var have = new HashSet<string>(existing.Keys, StringComparer.OrdinalIgnoreCase);
             return wanted.Where(w => have.Contains(w) && !ours.Contains(w)).ToList();
         }
 

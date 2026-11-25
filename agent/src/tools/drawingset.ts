@@ -18,11 +18,11 @@ export function drawingSetTools(b: ToolBridge): AnyTool[] {
         'the user\'s own layouts are never touched. Returns sheets, missing, skipped.',
       {
         kinds: z.array(z.enum(['plan', 'elevation', 'section', 'perspective'])).min(1).max(4).optional().describe('Default all four.'),
-        elevations: z.array(z.enum(['front', 'back', 'left', 'right'])).max(4).optional().describe('Default all four; front looks +Y of the UCS.'),
-        sections: z.array(z.object({ line: z.array(xy).length(2), name: z.string().max(60).optional() })).max(8).optional()
+        elevations: z.array(z.enum(['front', 'back', 'left', 'right'])).min(1).max(4).optional().describe('Default all four; front looks +Y of the UCS.'),
+        sections: z.array(z.object({ line: z.array(xy).length(2), name: z.string().max(60).optional() })).min(1).max(8).optional()
           .describe('Section lines in plan (default two through the middle); name e.g. "MẶT CẮT 1-1".'),
         plan_source: z.enum(['auto', '3d', '2d']).optional().describe('auto (default): cuts of the solids when there are some, else the 2D drawing.'),
-        plan_areas: z.array(z.object({ min: xy, max: xy, title: z.string().max(60).optional() })).max(10).optional()
+        plan_areas: z.array(z.object({ min: xy, max: xy, title: z.string().max(60).optional() })).min(1).max(10).optional()
           .describe('2D plans drawn side by side (one per storey): their rectangles; with plan_source 2d.'),
         paper: z.enum(['A0', 'A1', 'A2', 'A3', 'A4']).optional().describe('Default A3.'),
         orientation: z.enum(['landscape', 'portrait']).optional(),

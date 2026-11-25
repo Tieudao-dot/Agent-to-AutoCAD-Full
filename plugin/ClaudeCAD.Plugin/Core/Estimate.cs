@@ -19,6 +19,8 @@ namespace ClaudeCAD.Plugin.Core
         public const int MoneyDecimals = 0;
         /// <summary>Excel number format of the money columns (thousands separated; Excel shows the separator of the user's language).</summary>
         public const string ExcelMoneyFormat = "#,##0";
+        /// <summary>KFG-26: the unit price column when a price has decimals (12,5 USD shows 12.50, not 13).</summary>
+        public const string ExcelPriceDecimalsFormat = "#,##0.00";
         /// <summary>Drawing table / chat: thousands separator and decimal comma (Vietnamese), e.g. 1.234.567 and 12,5.</summary>
         public const string ThousandsSeparator = ".", DecimalSeparator = ",";
         /// <summary>Quantities keep this many decimals.</summary>
@@ -40,7 +42,7 @@ namespace ClaudeCAD.Plugin.Core
     {
         public object Value;
         public string Formula;
-        /// <summary>0 normal, 1 bold, 2 money, 3 money bold.</summary>
+        /// <summary>0 normal, 1 bold, 2 money, 3 money bold, 4 money with 2 decimals (KFG-26).</summary>
         public int Style;
     }
 
@@ -57,6 +59,9 @@ namespace ClaudeCAD.Plugin.Core
         {
             ["volume"] = "volume_schedule", ["blocks"] = "block_schedule", ["areas"] = "area_schedule",
         };
+
+        /// <summary>KFG-02: keys of a source schedule's result that warn about its numbers; the estimate passes them on.</summary>
+        public static readonly string[] SourceWarningKeys = { "warning", "warnings", "contains_others", "left_out_layers", "skipped", "note", "notes" };
 
         public sealed class Row
         {
@@ -97,6 +102,8 @@ namespace ClaudeCAD.Plugin.Core
             public List<Percent> Percents = new List<Percent>();
             public double Total;
             public List<string> Missing = new List<string>();
+            /// <summary>KFG-03: a price name that fits several different items once accents / separators are dropped (price → items).</summary>
+            public List<(string price, List<string> items)> Ambiguous = new List<(string, List<string>)>();
             public List<string> Unused = new List<string>();
         }
 
@@ -120,6 +127,16 @@ namespace ClaudeCAD.Plugin.Core
         public static string UnitKey(string unit) =>
             Regex.Replace(Key((unit ?? "").Normalize(NormalizationForm.FormKD)).Replace("^", ""), @"\s+", "");
 
+        /// <summary>KFG-03: level 1 — the name as written, accents kept: lower case, spaces collapsed.</summary>
+        public static string KeyExact(string s) => Regex.Replace((s ?? "").Normalize(NormalizationForm.FormC).Trim().ToLowerInvariant(), @"\s+", " ");
+
+        /// <summary>KFG-03: level 2 — accents kept, '-' '_' '.' as spaces ("A-WALL" = "A WALL"), used only when it fits one item.</summary>
+        public static string KeySep(string s) =>
+            Regex.Replace(KeyExact(s).Replace('-', ' ').Replace('_', ' ').Replace('.', ' '), @"\s+", " ").Trim();
+
+        /// <summary>KFG-03: a name written with accents (then it must match them: "Sân" is not "Sàn").</summary>
+        public static bool HasAccents(string s) => Key(s) != KeySep(s);
+
         private static bool Wild(string key, string pattern)
         {
             var rx = "^" + string.Join(".*", pattern.Split('*').Select(Regex.Escape)) + "$";
@@ -127,25 +144,37 @@ namespace ClaudeCAD.Plugin.Core
         }
 
         /// <summary>
-        /// The price of a row: the entry with the same name (Key: accents, case, '-' / spaces do not matter), else the one
-        /// pattern with '*' that fits ("A-WALL*"). Two patterns with different prices: no price (ambiguous), never a guess.
+        /// The price of a row (KFG-03: money, so rather empty than a wrong price): (1) a price with the same name, accents kept
+        /// (case and spaces do not matter); else (2) the same name with '-' '_' '.' as spaces; else (3), only for a price the
+        /// user typed without accents, the same name without accents. Levels 2 and 3 count only when that price name fits one
+        /// item of the list (else: ambiguous, left empty and reported). Else the one pattern with '*' that fits. Two prices
+        /// that differ for the same row: none (ambiguous), never a guess.
         /// </summary>
-        public static Price Match(string item, IList<Price> prices, out string note) => Match(item, prices, out note, out _);
+        public static Price Match(string item, IList<Price> prices, out string note) => Match(item, prices, out note, out _, new[] { item });
 
-        /// <summary>Test & sửa G3: also the entries that fit the row (when they disagree, none is used but none is "unused").</summary>
-        public static Price Match(string item, IList<Price> prices, out string note, out List<Price> fitting)
+        public static Price Match(string item, IList<Price> prices, out string note, out List<Price> fitting) => Match(item, prices, out note, out fitting, new[] { item });
+
+        /// <summary>The same, knowing every item of the list (for the "fits one item only" rule of levels 2 and 3).</summary>
+        public static Price Match(string item, IList<Price> prices, out string note, out List<Price> fitting, IEnumerable<string> allItems)
         {
             note = null;
             fitting = new List<Price>();
-            var k = Key(item);
-            var exact = prices.Where(p => !p.Item.Contains("*") && Key(p.Item) == k).ToList();
-            if (exact.Count > 0)
+            var items = allItems.Select(KeyExact).Distinct().ToList();
+            bool Unique(Price p, Func<string, string> key) => items.Count(i => key(i) == key(p.Item)) <= 1;
+            var plain = prices.Where(p => !p.Item.Contains("*")).ToList();
+            var level = new List<Func<string, string>> { KeyExact, KeySep, Key };
+            for (int l = 0; l < level.Count; l++)
             {
-                fitting = exact;
-                if (exact.Select(p => p.UnitPrice).Distinct().Count() > 1) { note = "several unit prices given for this item"; return null; }
-                return exact[0];
+                var key = level[l];
+                var hit = plain.Where(p => (l < 2 || !HasAccents(p.Item)) && key(p.Item) == key(item)).ToList();
+                if (hit.Count == 0) continue;
+                fitting = hit;
+                var sure = l == 0 ? hit : hit.Where(p => Unique(p, key)).ToList();
+                if (sure.Count == 0) { note = "the price name fits several items (" + string.Join(", ", hit.Select(p => p.Item)) + "): ask which"; return null; }
+                if (sure.Select(p => p.UnitPrice).Distinct().Count() > 1) { note = "several unit prices given for this item"; return null; }
+                return sure[0];
             }
-            var wild = prices.Where(p => p.Item.Contains("*") && Wild(k, Key(p.Item))).ToList();
+            var wild = prices.Where(p => p.Item.Contains("*") && (HasAccents(p.Item) ? Wild(KeySep(item), KeySep(p.Item)) : Wild(Key(item), Key(p.Item)))).ToList();
             fitting = wild;
             if (wild.Count == 0) return null;
             if (wild.Select(p => p.UnitPrice).Distinct().Count() > 1) { note = "several price patterns fit (" + string.Join(", ", wild.Select(p => p.Item)) + ")"; return null; }
@@ -169,7 +198,7 @@ namespace ClaudeCAD.Plugin.Core
             var used = new HashSet<Price>();
             foreach (var row in rows)
             {
-                var pr = Match(row.Item, prices, out var note, out var fitting);
+                var pr = Match(row.Item, prices, out var note, out var fitting, rows.Select(x => x.Item));
                 foreach (var fp in fitting) used.Add(fp); // Test & sửa G3: an ambiguous price fitted a row, it is not "unused"
                 // the quantity as shown (and as the Excel formula multiplies it)
                 double q = Math.Round(row.Quantity, G3Numbers.QuantityDecimals, MidpointRounding.AwayFromZero);
@@ -194,6 +223,16 @@ namespace ClaudeCAD.Plugin.Core
             }
             r.Total = r.Subtotal + r.Percents.Sum(x => x.Amount);
             r.Unused = prices.Where(p => !used.Contains(p)).Select(p => p.Item).ToList();
+            // KFG-03: the price names that fit several items, and those items (Claude asks which one is meant)
+            foreach (var p in prices.Where(p => !p.Item.Contains("*")))
+            {
+                foreach (var key in new Func<string, string>[] { KeySep, Key })
+                {
+                    if (key == Key && HasAccents(p.Item)) continue;
+                    var its = rows.Select(x => x.Item).Where(i => key(i) == key(p.Item)).Distinct().ToList();
+                    if (its.Select(KeyExact).Distinct().Count() > 1 && !rows.Any(x => KeyExact(x.Item) == KeyExact(p.Item))) { r.Ambiguous.Add((p.Item, its)); break; }
+                }
+            }
             return r;
         }
 
@@ -233,6 +272,7 @@ namespace ClaudeCAD.Plugin.Core
         {
             int d = G3Numbers.MoneyDecimals;
             var rows = new List<List<object>> { Header(currency).Cast<object>().ToList() };
+            bool priceDecimals = r.Lines.Any(l => l.UnitPrice.HasValue && Math.Abs(l.UnitPrice.Value - Math.Round(l.UnitPrice.Value)) > 1e-9);
             int first = 2;
             foreach (var l in r.Lines)
             {
@@ -241,7 +281,8 @@ namespace ClaudeCAD.Plugin.Core
                 {
                     // Test & sửa G3: names stay text in Excel (a room "101" or a layer "2024" is not a number)
                     (double)(n - 1), new XlsxCell { Value = l.Item }, new XlsxCell { Value = l.Unit }, Math.Round(l.Quantity, G3Numbers.QuantityDecimals),
-                    new XlsxCell { Value = l.UnitPrice.HasValue ? (object)l.UnitPrice.Value : null, Style = 2 },
+                    // KFG-26: a unit price with decimals (12,5 USD) keeps them in Excel
+                    new XlsxCell { Value = l.UnitPrice.HasValue ? (object)l.UnitPrice.Value : null, Style = priceDecimals ? 4 : 2 },
                     new XlsxCell { Formula = $"IF(E{n}=\"\",\"\",ROUND(D{n}*E{n},{d}))", Value = l.Amount.HasValue ? (object)l.Amount.Value : null, Style = 2 },
                 });
             }

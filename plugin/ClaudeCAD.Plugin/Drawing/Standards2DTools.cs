@@ -736,7 +736,7 @@ namespace ClaudeCAD.Plugin.Drawing
                 default: // delete
                 {
                     if (!exists) throw ToolException.Invalid($"layer_state: no layer state '{name}'.");
-                    string h = Acad.H(stateId);
+                    string h = F5Confirm.DeleteLayerStateToken(Acad.H(stateId)); // KFG-09: its own token, not the overwrite's
                     var ok = ApprovedOverwrites(p, "layer_state", $"delete the layer state '{name}'");
                     if (!ok.Contains(h)) throw new ToolException(ErrorCodes.InvalidParams, F2Confirm.CardMessage("layer_state", $"delete the layer state '{name}'", new[] { h }));
                     lsm.DeleteLayerState(name);

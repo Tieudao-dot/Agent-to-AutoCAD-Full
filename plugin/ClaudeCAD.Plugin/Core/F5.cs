@@ -61,6 +61,9 @@ namespace ClaudeCAD.Plugin.Core
         /// </summary>
         public static string DeleteViewToken(string viewHandle) => Fnv("delete-view:" + (viewHandle ?? "").Trim().ToUpperInvariant());
 
+        /// <summary>KFG-09: the same for deleting a layer state (its overwrite is approved with the state's own handle).</summary>
+        public static string DeleteLayerStateToken(string stateHandle) => Fnv("delete-layer-state:" + (stateHandle ?? "").Trim().ToUpperInvariant());
+
         private static string Fnv(string s)
         {
             ulong h = 14695981039346656037UL;

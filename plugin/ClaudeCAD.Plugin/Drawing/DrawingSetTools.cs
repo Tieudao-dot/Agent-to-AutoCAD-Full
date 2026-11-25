@@ -101,6 +101,8 @@ namespace ClaudeCAD.Plugin.Drawing
             double[] min2 = null, max2 = null;          // 2D drawing box (UCS)
             double allMaxX = double.NegativeInfinity, allMinY = double.PositiveInfinity;
             var layoutNames = new List<string>();
+            var layoutHandles = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase); // KFG-24
+            int aliveViews = 0; // KFG-21: objects of the last set's views still in the drawing
             var solidLayers = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
             DrawingSetLogic.Record last;
             var generated = new HashSet<string>(new[] { SectionLogic.OutlineLayer, SectionLogic.HatchLayer, SectionLogic.BehindLayer, SectionLogic.ElevationLayer,
@@ -126,12 +128,15 @@ namespace ClaudeCAD.Plugin.Drawing
                         solidLayers.Add(e.Layer);
                         continue;
                     }
-                    if (e is Autodesk.AutoCAD.DatabaseServices.Surface || e is Body || e is Autodesk.AutoCAD.DatabaseServices.Section || generated.Contains(e.Layer) || lastHandles.Contains(Acad.H(id))) continue;
+                    if (lastHandles.Contains(Acad.H(id))) { aliveViews++; continue; }
+                    // KFG-22: a schedule / estimate table beside the plan is not part of the plan's frame
+                    if (e is Autodesk.AutoCAD.DatabaseServices.Surface || e is Body || e is Autodesk.AutoCAD.DatabaseServices.Section || e is Table || generated.Contains(e.Layer)) continue;
                     if (min2 == null) { min2 = new[] { bmin[0], bmin[1] }; max2 = new[] { bmax[0], bmax[1] }; }
                     else { min2[0] = Math.Min(min2[0], bmin[0]); min2[1] = Math.Min(min2[1], bmin[1]); max2[0] = Math.Max(max2[0], bmax[0]); max2[1] = Math.Max(max2[1], bmax[1]); }
                 }
                 var dict = (DBDictionary)tr.GetObject(db.LayoutDictionaryId, OpenMode.ForRead);
-                foreach (DBDictionaryEntry de in dict) if (!de.Key.Equals("Model", StringComparison.OrdinalIgnoreCase)) layoutNames.Add(de.Key);
+                foreach (DBDictionaryEntry de in dict)
+                    if (!de.Key.Equals("Model", StringComparison.OrdinalIgnoreCase)) { layoutNames.Add(de.Key); layoutHandles[de.Key] = Acad.H(de.Value); }
                 tr.Abort();
             }
             if (solids.Count > SectionLogic.MaxSolids)
@@ -174,11 +179,12 @@ namespace ClaudeCAD.Plugin.Drawing
 
             // ---- the set made before, the user's own layouts, the card
             var wanted = makeSheets ? set.Sheets.Select(s => s.Number).ToList() : new List<string>();
-            var clashes = DrawingSetLogic.Clashes(wanted, layoutNames, last);
+            var clashes = DrawingSetLogic.Clashes(wanted, layoutHandles, last);
             if (clashes.Count > 0)
                 throw ToolException.Invalid($"{tool}: layout(s) {string.Join(", ", clashes)} already exist and are not from the set made before (the user's own; never touched). Nothing was changed. Use another prefix (e.g. \"KT2\").");
-            var oldLayouts = last.Layouts.Where(l => layoutNames.Contains(l, StringComparer.OrdinalIgnoreCase)).ToList();
-            bool hadSet = oldLayouts.Count > 0 || last.Handles.Count > 0;
+            var oldLayouts = DrawingSetLogic.OurLayouts(layoutHandles, last);
+            // KFG-21: a set whose sheets and views the user already erased by hand is not asked about
+            bool hadSet = oldLayouts.Count > 0 || aliveViews > 0;
             string pdfPath = null;
             if (wantPdf)
             {
@@ -196,7 +202,14 @@ namespace ClaudeCAD.Plugin.Drawing
             if (hadSet)
             {
                 tokens.Add(DrawingSetLogic.ReplaceToken(last.Layouts, last.Handles)); // Test & sửa G1: with the views it drew
-                what.Add($"replace the drawing set made before (layouts {string.Join(", ", oldLayouts.DefaultIfEmpty("—"))} and the {last.Handles.Count} views it drew; edits made on them are lost)");
+                what.Add($"replace the drawing set made before (layouts {string.Join(", ", oldLayouts.DefaultIfEmpty("—"))} and the {aliveViews} lines / hatches of the views it drew; edits made on them are lost)"); // KFG-20
+            }
+            if (pdfPath != null && File.Exists(pdfPath) && ctx.Dispatcher?.MacroRunning == true)
+            {
+                // nghi vấn G1: a macro cannot answer the card, so an existing PDF is kept (the sheets are still made)
+                notes.Add($"The PDF '{pdfPath}' already exists: a macro does not overwrite it. Print with plot_pdf from the chat (a card asks first).");
+                pdfPath = null;
+                wantPdf = false;
             }
             if (pdfPath != null && File.Exists(pdfPath))
             {
@@ -206,10 +219,11 @@ namespace ClaudeCAD.Plugin.Drawing
             if (tokens.Count > 0) RequireCard(ctx, p, tool, string.Join(" and ", what), tokens);
 
             var result = new Dictionary<string, object>();
+            var record = new DrawingSetLogic.Record();
             using (doc.LockDocument())
+            try
             {
                 if (hadSet) RemoveSet(ctx, last, oldLayouts);
-                var record = new DrawingSetLogic.Record();
 
                 // ---- the 2D views in model space, in a row right of everything
                 var views = set.Sheets.Where(s => s.Kind == SheetKind.Elevation || s.Kind == SheetKind.Section || (s.Kind == SheetKind.Plan && s.Level >= 0)).ToList();
@@ -304,6 +318,7 @@ namespace ClaudeCAD.Plugin.Drawing
                             Dictionary<string, object> r;
                             using (UcsScope.Suspend()) r = (Dictionary<string, object>)CreateSheet(ctx, new Params(DrawingSetLogic.SheetTool, cp));
                             madeLayouts.Add(s.Number);
+                            record.Layouts.Add(s.Number);
                             AdjustSheetViewport(ctx, s, (string)r["viewport_handle"], frame, wmin, wmax, solidLayers, notes);
                             var row = new Dictionary<string, object>
                             {
@@ -325,7 +340,6 @@ namespace ClaudeCAD.Plugin.Drawing
                     foreach (var s in views.Where(centers.ContainsKey))
                         made.Add(new Dictionary<string, object> { ["title"] = s.Title, ["kind"] = s.Kind.ToString().ToLowerInvariant(), ["in_model_space_at"] = UcsLogic.OutPoint(new[] { centers[s][0], centers[s][1], 0 }).Take(2).Select(v => (object)Acad.R(v)).ToList() });
                 }
-                record.Layouts.AddRange(madeLayouts);
                 WriteSetRecord(doc, db, record);
 
                 result["sheets"] = made;
@@ -354,6 +368,16 @@ namespace ClaudeCAD.Plugin.Drawing
                         result["pdf_error"] = ex.Message;
                     }
                 }
+            }
+            catch
+            {
+                // nghi vấn G1: an AutoCAD error part way (after the old set was removed): what was made, and what is left of the
+                // old set, stay in the record, so the next run (or its card) still knows them
+                var keep = new DrawingSetLogic.Record();
+                keep.Layouts.AddRange(record.Layouts.Concat(last.Layouts).Distinct(StringComparer.OrdinalIgnoreCase));
+                keep.Handles.AddRange(record.Handles.Concat(last.Handles).Distinct(StringComparer.OrdinalIgnoreCase));
+                try { WriteSetRecord(doc, db, keep); } catch (Exception) { }
+                throw;
             }
             if (notes.Count > 0) result["notes"] = notes.Take(20).Cast<object>().ToList();
             result["next"] = "Change a title field with set_block_attributes on title_block_handle. Running create_drawing_set again replaces this set (after a card).";
@@ -467,6 +491,10 @@ namespace ClaudeCAD.Plugin.Drawing
             using (var tr = doc.TransactionManager.StartTransaction())
             {
                 var nod = (DBDictionary)tr.GetObject(db.NamedObjectsDictionaryId, OpenMode.ForWrite);
+                // KFG-24: keep each sheet's layout handle, so a sheet the user renamed (or a new one with the old name) is told apart
+                var layouts = (DBDictionary)tr.GetObject(db.LayoutDictionaryId, OpenMode.ForRead);
+                r.LayoutHandles.Clear();
+                foreach (var name in r.Layouts) r.LayoutHandles.Add(layouts.Contains(name) ? Acad.H(layouts.GetAt(name)) : "");
                 var rb = new ResultBuffer(DrawingSetLogic.Encode(r).Select(s => new TypedValue((int)DxfCode.Text, s)).ToArray());
                 if (nod.Contains(DrawingSetLogic.RecordKey))
                 {
