@@ -260,3 +260,64 @@ Nhánh `full/nang-cap-g4-test` @ `29a2e6c` (code `fdeb306`), CI 45661671404 xanh
 - Chưa chạy trên AutoCAD thật: thứ tự câu hỏi thật của lệnh render trên AutoCAD 2022–2027 và tên các mức chất lượng; AutoCAD
   có trả lời plugin trong lúc đang render không; Dừng / Esc có ngắt được render đang chạy không; nền trắng / trời có vào ảnh
   không; lệnh render có ghi cài đặt vào bản vẽ không (kể cả khi "Chỉ xem"); thời gian render thật (để chỉnh số ước lượng).
+
+## G5: vẽ lại từ ảnh / PDF scan
+
+Khách kéo hoặc dán ảnh chụp, bản scan vào khung chat (hoặc nói đường dẫn ảnh / PDF) rồi gõ "vẽ lại bản này" (gói 2D / Full).
+Các bước Claude làm:
+
+1. gắn ảnh hoặc trang PDF làm nền trên một layer riêng (khóa, không in), nằm bên phải bản vẽ đang có;
+2. tìm một kích thước ghi trên bản scan hoặc hỏi khách, rồi co ảnh cho đúng tỉ lệ thật. Không có kích thước thật thì Claude
+   hỏi, không đoán;
+3. ảnh chụp nghiêng thì xoay cho thẳng theo một bức tường;
+4. xem ảnh có lưới tọa độ, vẽ tường, cửa, cửa sổ, tên phòng, kích thước chính đè lên ảnh, rồi xem lại để so.
+
+Kết quả luôn ghi rõ là **bản nháp cần khách kiểm kích thước**, kể các chỗ đọc không chắc. Một lần U hoàn tác cả lượt.
+
+**Hai điểm rủi ro, chỉ biết được khi thử thật:**
+
+- Claude xem bản scan qua ảnh chụp của AutoCAD. Nếu AutoCAD không đưa ảnh nền vào ảnh chụp thì Claude không thấy bản scan.
+  Bước tự kiểm G5 trong plugin kiểm đúng điều này; cần chạy nó trước tiên.
+- Chưa biết Claude đọc tường, chữ, kích thước trên ảnh chính xác tới đâu.
+
+Mỗi lần "vẽ lại" tốn thêm của khách khoảng 6–8 nghìn token cho phần xem ảnh (ước lượng), chưa kể các lệnh vẽ.
+
+Bàn giao đầy đủ: `docs/ban-giao/nang-cap-g5.md` trên nhánh `full/nang-cap-g5`.
+
+### Con số
+
+Mọi số ở `G5Numbers` (`Core/Trace.cs`), trừ số lần xem ở `agent/src/tools/trace.ts`.
+
+| Số | Khách thấy gì | Vì sao đề xuất |
+| --- | --- | --- |
+| Tối đa **8** lần xem ảnh mỗi yêu cầu | quá thì Claude dừng xem, hoàn tất bản nháp và nói phần chưa soát | 1 lần xem cả ảnh + khoảng 5 phần + 1–2 lần so; mỗi lần khoảng 1 nghìn token |
+| Ảnh gửi Claude: cạnh dài **1024** điểm (Claude xin được tới 1568) | — (ảnh hưởng số token) | đủ đọc nét chính; chữ nhỏ thì xem phóng to từng phần |
+| Bước lưới tự chọn số tròn (100 mm … 50 m), khoảng **10** đường trên cạnh dài | lưới trên ảnh Claude xem | nhãn tròn số, dễ đọc |
+| File tối đa **50 MB** | lớn hơn bị từ chối, nhờ khách scan nhỏ hơn | bản scan 300 dpi khổ A1 khoảng 20–40 MB |
+| Loại file: PNG, JPG, BMP, TIF, GIF, PDF | loại khác bị từ chối kèm hướng dẫn | các loại AutoCAD gắn được |
+| Layer ảnh nền **`X-ANH-GOC`**, màu xám, khóa, không in | tên layer trong bản vẽ | đứng riêng khỏi các layer vẽ |
+| Lúc mới gắn (chưa đặt tỉ lệ) ảnh rộng **10 m** | cỡ ảnh trước khi đặt tỉ lệ | cỡ một mặt bằng nhà, dễ nhìn |
+| Ảnh đặt cách bản vẽ đang có **5 m** về bên phải | chỗ ảnh nằm | không đè lên hình có sẵn |
+| Tường dày **200 mm** khi không đọc được độ dày trên bản scan (Claude nói rõ đã lấy số này) | độ dày tường trong bản nháp | tường gạch thường gặp |
+| Xoay thẳng tối đa **45°** | xoay nhiều hơn bị từ chối | ảnh nghiêng thật hiếm khi quá vài độ; quá 45° thường là chọn sai cặp điểm |
+
+### Quyết định tự chọn
+
+| Tình huống | Đã chọn | Ghi chú |
+| --- | --- | --- |
+| Chưa có kích thước thật | không bao giờ tự đặt tỉ lệ theo điểm ảnh; kết quả nhắc đặt tỉ lệ | |
+| Ảnh khách dán vào khung chat | lưu rồi chép cạnh bản vẽ (`<bản vẽ>-anh-goc-<mã>.png`) | thư mục tạm của khung chat có thể bị dọn |
+| Ảnh khách kéo từ file | dùng chính file đó, không chép | khách tự giữ file |
+| Khách chỉ hỏi về ảnh, chưa bảo vẽ | không gắn gì vào bản vẽ | |
+| Ảnh chụp bị méo phối cảnh | chỉ xoay thẳng, không sửa méo; Claude nói rõ | |
+| PDF xuất từ phần mềm CAD (không phải scan) | vẫn gắn được, kèm gợi ý dùng lệnh nhập PDF của AutoCAD | plugin không tự nhận ra loại PDF này |
+| Hướng dẫn cách làm đặt ở đâu | trong mô tả lệnh (nạp khi cần) và một mục của skill vẽ kiến trúc; không tạo skill mới | máy đã cài skill cũ không nhận được file skill mới |
+| Macro | không ghi lại | như lệnh sửa lỗi bản vẽ của G2 |
+| UCS nghiêng khỏi mặt bằng | từ chối, nhờ khách đưa UCS về mặt bằng | |
+| Chữ viết trong ảnh | coi là nội dung bản vẽ, không phải lệnh cho Claude | ghi rõ trong mô tả lệnh |
+
+### Chưa kiểm được
+
+- Chưa chạy trên AutoCAD thật: gắn ảnh / PDF, ảnh nền có hiện trong ảnh Claude xem không, U hoàn tác ảnh nền, đường dẫn có dấu
+  tiếng Việt.
+- Chưa thử với Claude thật: đọc ảnh tốt tới đâu, số lần xem thực tế, kích thước lệch bao nhiêu.
