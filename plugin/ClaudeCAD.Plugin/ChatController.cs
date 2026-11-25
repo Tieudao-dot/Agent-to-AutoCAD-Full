@@ -1437,7 +1437,7 @@ namespace ClaudeCAD.Plugin
                     var calls = g.Select(i => (object)new Dictionary<string, object>
                     {
                         ["tool"] = m.Calls[i].Tool,
-                        ["params"] = MacroLogic.Remap(m.Calls[i].Params, map),
+                        ["params"] = UcsLogic.MarkReplay(MacroLogic.Remap(m.Calls[i].Params, map) as Dictionary<string, object>),
                     }).ToList();
                     var batch = await RunMacroBatch(calls, ++n);
                     if (batch.error != null)
@@ -1533,7 +1533,8 @@ namespace ClaudeCAD.Plugin
             var running = new ToolLogEntry { Tool = tool, State = "running" };
             AddToolLog(running);
             var sw = Stopwatch.StartNew();
-            var resp = await _dispatcher.HandleAsync(new Dictionary<string, object> { ["id"] = "macro-" + n, ["tool"] = tool, ["params"] = p ?? new Dictionary<string, object>() });
+            // F1: a recorded call runs in the UCS it was recorded in (older macros: World), whatever the UCS is now
+            var resp = await _dispatcher.HandleAsync(new Dictionary<string, object> { ["id"] = "macro-" + n, ["tool"] = tool, ["params"] = UcsLogic.MarkReplay(p) });
             bool ok = resp.TryGetValue("ok", out var okv) && okv is bool b && b;
             var log = new ToolLogEntry { Tool = tool, State = ok ? "done" : "error", Ms = sw.ElapsedMilliseconds };
             var handles = new List<string>();

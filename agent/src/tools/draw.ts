@@ -7,7 +7,7 @@ const RET = ' Returns {"handles": [...]} of the created entity.';
 export function drawTools(b: ToolBridge): AnyTool[] {
   return [
     cadTool(b, 'draw_line',
-      'Draw one straight LINE from start to end (mm, WCS). For more than a couple of lines use batch_execute.' + RET,
+      'Draw one straight LINE from start to end (mm, current UCS). For more than a couple of lines use batch_execute.' + RET,
       { start: point.describe('Start point [x, y], e.g. [0, 0]'), end: point.describe('End point [x, y], e.g. [4000, 0]'), ...entityProps }),
 
     cadTool(b, 'draw_polyline',

@@ -6,7 +6,7 @@ export function viewTools(b: ToolBridge): AnyTool[] {
   return [
     cadTool(b, 'zoom_extents', 'Zoom the current view to show the whole drawing. Good after drawing something new.', {}),
 
-    cadTool(b, 'zoom_window', 'Zoom the current view to the rectangle p1–p2 (WCS, mm).', { p1: point, p2: point }),
+    cadTool(b, 'zoom_window', 'Zoom the current view to the rectangle p1–p2 (current UCS, mm).', { p1: point, p2: point }),
 
     cadTool(b, 'regen', 'Regenerate the display (rarely needed; batch_execute already refreshes the screen).', {}, { readOnly: true }),
 

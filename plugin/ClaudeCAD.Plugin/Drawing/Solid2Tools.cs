@@ -245,7 +245,7 @@ namespace ClaudeCAD.Plugin.Drawing
                         ["center"] = f.Center != null ? R3(f.Center) : null,
                         ["area"] = Acad.R(f.Area),
                     };
-                    if (f.Normal != null) o["normal"] = f.Normal.Select(x => (object)Math.Round(x, 4)).ToList();
+                    if (f.Normal != null) o["normal"] = UcsLogic.OutVector(f.Normal).Select(x => (object)Math.Round(x, 4)).ToList();
                     if (sideOf.TryGetValue(f.Index, out var side)) o["side"] = side;
                     return (object)o;
                 }).ToList();
@@ -253,7 +253,8 @@ namespace ClaudeCAD.Plugin.Drawing
             }
         }
 
-        private static List<object> R3(double[] p) => new List<object> { Acad.R(p[0]), Acad.R(p[1]), Acad.R(p[2]) };
+        // F1: a result point of a call in a UCS is shown in the UCS (UcsLogic.OutPoint; World: as before)
+        private static List<object> R3(double[] p) { p = UcsLogic.OutPoint(p); return new List<object> { Acad.R(p[0]), Acad.R(p[1]), Acad.R(p[2]) }; }
 
         // ================================================================= selection of edges / faces
 
@@ -955,7 +956,7 @@ namespace ClaudeCAD.Plugin.Drawing
                 ["x_axis"] = new List<object> { Math.Round(cs.Xaxis.X, 6), Math.Round(cs.Xaxis.Y, 6), Math.Round(cs.Xaxis.Z, 6) },
                 ["y_axis"] = new List<object> { Math.Round(cs.Yaxis.X, 6), Math.Round(cs.Yaxis.Y, 6), Math.Round(cs.Yaxis.Z, 6) },
                 ["z_axis"] = new List<object> { Math.Round(cs.Zaxis.X, 6), Math.Round(cs.Zaxis.Y, 6), Math.Round(cs.Zaxis.Z, 6) },
-                ["note"] = "Only the user's working plane changed. Every tool still takes and returns WCS coordinates.",
+                ["note"] = "origin / axes are WCS. From now on every tool takes and returns points in this UCS (World: WCS), like AutoCAD.",
             };
         }
 

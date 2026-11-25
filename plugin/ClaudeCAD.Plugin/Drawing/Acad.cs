@@ -15,20 +15,100 @@ namespace ClaudeCAD.Plugin.Drawing
         public static Point2d P2(double[] p) => new Point2d(p[0], p[1]);
         public static Vector3d V3(double[] v) => new Vector3d(v[0], v[1], v.Length > 2 ? v[2] : 0);
 
-        public static List<object> J(Point3d p) =>
-            Math.Abs(p.Z) > 1e-9 ? new List<object> { R(p.X), R(p.Y), R(p.Z) } : new List<object> { R(p.X), R(p.Y) };
+        // nâng cấp đợt F1: every point / vector a result shows goes through these, so in a Ref call with a UCS
+        // (UcsScope.Output) it is shown in the UCS; World and the other calls: exactly as before.
+
+        public static List<object> J(Point3d p)
+        {
+            p = Out(p);
+            return Math.Abs(p.Z) > 1e-9 ? new List<object> { R(p.X), R(p.Y), R(p.Z) } : new List<object> { R(p.X), R(p.Y) };
+        }
 
         /// <summary>Always [x, y, z] (3D results: volumes, centroids, bounding boxes).</summary>
-        public static List<object> J3(Point3d p) => new List<object> { R(p.X), R(p.Y), R(p.Z) };
+        public static List<object> J3(Point3d p)
+        {
+            p = Out(p);
+            return new List<object> { R(p.X), R(p.Y), R(p.Z) };
+        }
 
-        public static List<object> J(Point2d p) => new List<object> { R(p.X), R(p.Y) };
+        public static List<object> J(Point2d p) =>
+            UcsScope.Output == null ? new List<object> { R(p.X), R(p.Y) } : J(new Point3d(p.X, p.Y, 0));
 
-        public static List<object> J(Vector3d v) => new List<object> { R(v.X), R(v.Y), R(v.Z) };
+        public static List<object> J(Vector3d v)
+        {
+            if (UcsScope.Output != null) { var o = UcsScope.Output.VecFromWcs(new[] { v.X, v.Y, v.Z }); v = new Vector3d(o[0], o[1], o[2]); }
+            return new List<object> { R(v.X), R(v.Y), R(v.Z) };
+        }
+
+        private static Point3d Out(Point3d p)
+        {
+            if (UcsScope.Output == null) return p;
+            var o = UcsScope.Output.FromWcs(new[] { p.X, p.Y, p.Z });
+            return new Point3d(o[0], o[1], o[2]);
+        }
+
+        /// <summary>Axes of the running call's UCS in WCS (Ref tools that turn about z or lay out rows); WCS axes otherwise.</summary>
+        public static Vector3d UcsX => UcsScope.Input == null ? Vector3d.XAxis : V3(UcsScope.Input.X);
+        public static Vector3d UcsY => UcsScope.Input == null ? Vector3d.YAxis : V3(UcsScope.Input.Y);
+        public static Vector3d UcsZ => UcsScope.Input == null ? Vector3d.ZAxis : V3(UcsScope.Input.Z);
+
+        public static Matrix3d ToWcsMatrix(UcsFrame f) => new Matrix3d(f.ToWcsMatrix());
+
+        /// <summary>
+        /// The UCS the tools work in for this drawing: the current UCS of model space (its active viewport); World on a
+        /// layout's paper space (paper-space tools take paper coordinates as before) and when it cannot be read.
+        /// </summary>
+        public static UcsFrame UcsOf(Autodesk.AutoCAD.ApplicationServices.Document doc)
+        {
+            try
+            {
+                if (doc == null) return UcsFrame.World;
+                bool model;
+                if (doc == Autodesk.AutoCAD.ApplicationServices.Application.DocumentManager.MdiActiveDocument)
+                    model = Convert.ToInt32(Autodesk.AutoCAD.ApplicationServices.Application.GetSystemVariable("TILEMODE")) == 1
+                        || Convert.ToInt32(Autodesk.AutoCAD.ApplicationServices.Application.GetSystemVariable("CVPORT")) > 1;
+                else model = doc.Database.TileMode;
+                if (!model) return UcsFrame.World;
+                var cs = doc.Editor.CurrentUserCoordinateSystem.CoordinateSystem3d;
+                var f = new UcsFrame(new[] { cs.Origin.X, cs.Origin.Y, cs.Origin.Z }, new[] { cs.Xaxis.X, cs.Xaxis.Y, cs.Xaxis.Z },
+                    new[] { cs.Yaxis.X, cs.Yaxis.Y, cs.Yaxis.Z }, UcsName(doc));
+                return f.IsWorld ? UcsFrame.World : f;
+            }
+            catch (Exception ex)
+            {
+                Logger.Warn("UCS read failed, using World: " + ex.Message);
+                return UcsFrame.World;
+            }
+        }
+
+        private static string UcsName(Autodesk.AutoCAD.ApplicationServices.Document doc)
+        {
+            try
+            {
+                if (doc != Autodesk.AutoCAD.ApplicationServices.Application.DocumentManager.MdiActiveDocument) return null;
+                var n = Autodesk.AutoCAD.ApplicationServices.Application.GetSystemVariable("UCSNAME") as string;
+                return string.IsNullOrWhiteSpace(n) ? null : n;
+            }
+            catch (Exception) { return null; }
+        }
 
         /// <summary>Round to 1e-6 mm to keep payloads short.</summary>
         public static double R(double d) => Math.Round(d, 6);
 
         public static double Deg(double rad) => R(Geometry.RadToDeg(rad));
+
+        /// <summary>
+        /// An absolute plan angle of a result (text / block rotation, arc angles, line angle), degrees: in a Ref call with a
+        /// UCS whose z is up it is measured from the UCS x axis (0–360); otherwise exactly Deg.
+        /// </summary>
+        public static double OutDeg(double rad)
+        {
+            var f = UcsScope.Output;
+            if (f == null || !f.ZUp) return Deg(rad);
+            double d = Geometry.RadToDeg(rad) - f.PlanAngleDeg;
+            d %= 360; if (d < 0) d += 360;
+            return R(d);
+        }
 
         public static string H(ObjectId id) => id.Handle.ToString();
 

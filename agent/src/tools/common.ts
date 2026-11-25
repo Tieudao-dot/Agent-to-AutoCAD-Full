@@ -76,7 +76,7 @@ export const point = z
   .array(z.number())
   .min(2)
   .max(3)
-  .describe('Point [x, y] or [x, y, z] in millimetres, WCS. Missing z = 0. Example: [4000, 3600]');
+  .describe('Point [x, y] or [x, y, z] in millimetres, current UCS. Missing z = 0. Example: [4000, 3600]');
 
 export const points = (min: number, what = 'points') =>
   z.array(point).min(min).describe(`Array of ${what} [[x, y], ...] in mm (at least ${min}).`);

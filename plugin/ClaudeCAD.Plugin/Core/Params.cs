@@ -55,8 +55,9 @@ namespace ClaudeCAD.Plugin.Core
         public double Num(string name)
         {
             var v = Get(name);
-            if (v is double d && !double.IsNaN(d) && !double.IsInfinity(d)) return d;
-            if (v is string s && double.TryParse(s, NumberStyles.Float, CultureInfo.InvariantCulture, out var p)) return p;
+            // nâng cấp đợt F1: absolute plan angles / z heights of the running call follow the UCS (UcsScope; World: unchanged)
+            if (v is double d && !double.IsNaN(d) && !double.IsInfinity(d)) return UcsScope.ConvertNumber(name, d);
+            if (v is string s && double.TryParse(s, NumberStyles.Float, CultureInfo.InvariantCulture, out var p)) return UcsScope.ConvertNumber(name, p);
             throw Bad(name, "a number", v);
         }
 
@@ -134,7 +135,8 @@ namespace ClaudeCAD.Plugin.Core
         public double[] Point(string name)
         {
             var v = Get(name);
-            if (TryPoint(v, out var pt)) return pt;
+            // nâng cấp đợt F1: a point of the running call is in the current UCS (UcsScope converts it to WCS; World: unchanged)
+            if (TryPoint(v, out var pt)) return UcsScope.ConvertInput(name, pt);
             throw Bad(name, "a point [x, y] or [x, y, z] in mm", v);
         }
 
@@ -150,7 +152,7 @@ namespace ClaudeCAD.Plugin.Core
             for (int i = 0; i < list.Count; i++)
             {
                 if (!TryPoint(list[i], out var pt)) throw Bad($"{name}[{i}]", "a point [x, y] or [x, y, z]", list[i]);
-                r.Add(pt);
+                r.Add(UcsScope.ConvertInput(name, pt));
             }
             return r;
         }
@@ -269,6 +271,7 @@ namespace ClaudeCAD.Plugin.Core
         public static List<object> ToJsonPoint(double[] p)
         {
             if (p == null) return null;
+            p = UcsLogic.OutPoint(p); // nâng cấp đợt F1: a result point of a Ref call in a UCS is shown in the UCS
             return p.Length >= 3 && Math.Abs(p[2]) > 1e-12
                 ? new List<object> { p[0], p[1], p[2] }
                 : new List<object> { p[0], p[1] };

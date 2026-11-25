@@ -125,6 +125,16 @@ namespace ClaudeCAD.Plugin.Drawing
                 ["textsize"] = Acad.R(db.Textsize),
                 ["modified"] = SafeBool(() => System.Convert.ToInt32(Autodesk.AutoCAD.ApplicationServices.Application.GetSystemVariable("DBMOD")) != 0),
             };
+            // F1: the UCS the tools work in, only when it is not World (World: the same result as before)
+            var ucs = ctx.Dispatcher?.CurrentFrame;
+            if (ucs != null && !ucs.IsWorld)
+            {
+                var u = ucs.ToJson();
+                u["z_up"] = ucs.ZUp;
+                if (ucs.ZUp) u["plan_angle"] = Math.Round(ucs.PlanAngleDeg, 6);
+                u["note"] = "origin / axes in WCS. Every point you give or get back is in this UCS (its origin is [0,0,0]).";
+                info["ucs"] = u;
+            }
             if (insunits != 4)
                 info["warning"] = "Drawing units are not millimeters (INSUNITS != 4). Coordinates are still interpreted as drawing units = mm.";
             return info;

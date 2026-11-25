@@ -30,7 +30,12 @@ namespace ClaudeCAD.Plugin.Drawing
 
         internal static object StretchEntities(ToolContext ctx, Params p)
         {
-            var window = Edit2DLogic.StretchWindow(p.PointOpt("corner1"), p.PointOpt("corner2"), p.Has("polygon") ? p.Points("polygon", 3, 1000) : null);
+            var c1 = p.PointOpt("corner1");
+            var c2 = p.PointOpt("corner2");
+            var poly = p.Has("polygon") ? p.Points("polygon", 3, 1000) : null;
+            // F1: a corner1 / corner2 window in a turned UCS is the rectangle along the UCS axes, passed on as its polygon
+            if (UcsScope.Input != null && poly == null && c1 != null && c2 != null) { poly = UcsScope.Input.WindowCorners(c1, c2); c1 = null; c2 = null; }
+            var window = Edit2DLogic.StretchWindow(c1, c2, poly);
             Vector3d v = p.Has("displacement") ? Acad.V3(p.Point("displacement")) : Acad.P3(p.Point("to")) - Acad.P3(p.Point("from"));
             if (v.Length < Geometry.Eps) throw ToolException.Invalid("stretch_entities: the displacement is zero.");
             bool named = p.Has("handles");

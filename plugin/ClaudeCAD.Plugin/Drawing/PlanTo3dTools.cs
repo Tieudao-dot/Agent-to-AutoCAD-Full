@@ -1161,7 +1161,7 @@ namespace ClaudeCAD.Plugin.Drawing
         private static List<object> SkipList(List<PlanSkip> skipped) =>
             skipped.Take(FloorPlanLogic.MaxReportItems).Select(s => (object)new Dictionary<string, object> { ["handle"] = s.Handle, ["type"] = s.Type, ["reason"] = s.Reason }).ToList();
 
-        private static List<object> P2(double[] p, double f) => new List<object> { Acad.R(p[0]), Acad.R(p[1]) };
+        private static List<object> P2(double[] p, double f) => Acad.J(new Point2d(p[0], p[1])); // F1: in the UCS of the call
 
         /// <summary>What was recognised, for Claude to check and to ask the user about.</summary>
         private static Dictionary<string, object> Report(PlanResult res, PlanInput input, double f, string unitName, FloorPlanLogic.Heights hmm, double baseZ)

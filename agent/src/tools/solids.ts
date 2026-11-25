@@ -328,7 +328,7 @@ function solidTools2(b: ToolBridge): AnyTool[] {
     cadTool(b, 'set_ucs',
       "Set the user's UCS (working plane) for their own drawing and view: preset (world, top, bottom, front, back, left, right; at origin, default [0,0,0]), " +
         'origin + x_axis + y_axis, a saved UCS by name, or just origin to move the current one. save_as stores it as a named UCS; plan_view turns the view to look straight at it. ' +
-        'It does NOT change your coordinates: every tool still takes and returns WCS. The user\'s U undoes it with the turn. Not allowed in read-only mode.',
+        'origin / x_axis / y_axis are WCS. Every later tool takes and returns points in the new UCS, like AutoCAD. The user\'s U undoes it with the turn. Not allowed in read-only mode.',
       {
         preset: z.enum(UCS_PRESETS).optional(),
         origin: point.optional(),
@@ -339,7 +339,7 @@ function solidTools2(b: ToolBridge): AnyTool[] {
         plan_view: z.boolean().optional(),
       }),
 
-    cadTool(b, 'reset_ucs', "Set the user's UCS back to World (WCS). Your coordinates were WCS all along; this only resets the user's working plane.", {}),
+    cadTool(b, 'reset_ucs', "Set the user's UCS back to World: later tools take and return WCS points again.", {}),
 
     cadTool(b, 'check_interference',
       'CHECK INTERFERENCE (clashes) between 3D solids: every pair of handles, or each of handles against each of other_handles (e.g. beams against ducts). ' +

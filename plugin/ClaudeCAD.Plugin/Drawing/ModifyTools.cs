@@ -54,7 +54,7 @@ namespace ClaudeCAD.Plugin.Drawing
         }
 
         private static object RotateEntities(ToolContext ctx, Params p) =>
-            Transform(ctx, p, Matrix3d.Rotation(Geometry.DegToRad(p.Num("angle")), Vector3d.ZAxis, Acad.P3(p.Point("base"))));
+            Transform(ctx, p, Matrix3d.Rotation(Geometry.DegToRad(p.Num("angle")), Acad.UcsZ, Acad.P3(p.Point("base")))); // F1: about the UCS z (World: Z)
 
         private static object ScaleEntities(ToolContext ctx, Params p) =>
             Transform(ctx, p, Matrix3d.Scaling(p.Positive("factor"), Acad.P3(p.Point("base"))));
@@ -155,15 +155,16 @@ namespace ClaudeCAD.Plugin.Drawing
             long total = (long)rows * cols * levels * hs.Count;
             if (total > MaxArrayCopies)
                 throw new ToolException(ErrorCodes.TooManyEntities, $"array_rect would create {total} entities; the limit is {MaxArrayCopies}.");
-            var ux = new Vector3d(Math.Cos(ang), Math.Sin(ang), 0);
-            var uy = new Vector3d(-Math.Sin(ang), Math.Cos(ang), 0);
+            // F1: rows / columns / levels follow the UCS axes (World: X, Y, Z as before)
+            var ux = Acad.UcsX * Math.Cos(ang) + Acad.UcsY * Math.Sin(ang);
+            var uy = Acad.UcsX * -Math.Sin(ang) + Acad.UcsY * Math.Cos(ang);
             var all = new List<object>();
             for (int l = 0; l < levels; l++)
                 for (int r = 0; r < rows; r++)
                     for (int c = 0; c < cols; c++)
                     {
                         if (l == 0 && r == 0 && c == 0) continue; // the original is the first item
-                        var v = ux * (c * cs) + uy * (r * rs) + Vector3d.ZAxis * (l * ls);
+                        var v = ux * (c * cs) + uy * (r * rs) + (UcsScope.Input == null ? Vector3d.ZAxis * (l * ls) : Acad.UcsZ * (l * ls));
                         all.AddRange(CloneEntities(ctx, hs, Matrix3d.Displacement(v)).Select(Acad.H));
                     }
             var res = new Dictionary<string, object>
@@ -205,8 +206,8 @@ namespace ClaudeCAD.Plugin.Drawing
             {
                 double a = Geometry.DegToRad(step * i);
                 Matrix3d m;
-                if (rotate) m = Matrix3d.Rotation(a, Vector3d.ZAxis, center);
-                else m = Matrix3d.Displacement(refPt.TransformBy(Matrix3d.Rotation(a, Vector3d.ZAxis, center)) - refPt);
+                if (rotate) m = Matrix3d.Rotation(a, Acad.UcsZ, center); // F1: about the UCS z (World: Z)
+                else m = Matrix3d.Displacement(refPt.TransformBy(Matrix3d.Rotation(a, Acad.UcsZ, center)) - refPt);
                 all.AddRange(CloneEntities(ctx, hs, m).Select(Acad.H));
             }
             return new Dictionary<string, object> { ["handles"] = all, ["items"] = count, ["angle_step"] = Acad.R(step) };

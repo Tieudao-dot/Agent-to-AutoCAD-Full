@@ -122,9 +122,17 @@ namespace ClaudeCAD.Plugin.Drawing
                 if (paramsObj != null && !(paramsObj is Dictionary<string, object>))
                     throw ToolException.Invalid($"{tool}: 'params' must be a JSON object.");
                 RequireParamsInPlan(tool, paramsObj as Dictionary<string, object>);
-                var p = new Params(tool, paramsObj as Dictionary<string, object>);
+                // nâng cấp đợt F1: a macro call carries the UCS it was recorded in ("world" for older macros)
+                var pd = paramsObj as Dictionary<string, object>;
+                UcsFrame fixedFrame = null;
+                if (pd != null && pd.ContainsKey(UcsLogic.MacroKey))
+                {
+                    pd = new Dictionary<string, object>(pd);
+                    fixedFrame = UcsLogic.TakeMacroFrame(pd);
+                }
+                var p = new Params(tool, pd);
 
-                var result = await MainThread.InvokeAsync(() => ExecuteOnMain(def, p)).ConfigureAwait(false);
+                var result = await MainThread.InvokeAsync(() => ExecuteOnMain(def, p, fixedFrame)).ConfigureAwait(false);
                 Logger.Info($"tool {tool} ok in {sw.ElapsedMilliseconds} ms");
                 return Ok(id, result);
             }
@@ -224,10 +232,29 @@ namespace ClaudeCAD.Plugin.Drawing
 
         // -------------------------------------------------------------- main thread
 
-        private object ExecuteOnMain(ToolDef def, Params p)
+        // UCS of the running request (main thread only): the drawing's current UCS, or the one stored with a macro call
+        private UcsFrame _frame = UcsFrame.World;
+
+        /// <summary>The UCS of the request running now (World outside a request).</summary>
+        internal UcsFrame CurrentFrame => _frame ?? UcsFrame.World;
+
+        private object ExecuteOnMain(ToolDef def, Params p, UcsFrame fixedFrame)
         {
             if (def.NoDocument) return def.Handler(null, p);
             var doc = _host.ResolveDocument();
+            _frame = fixedFrame ?? Acad.UcsOf(doc);
+            try
+            {
+                return ExecuteOnMainIn(def, p, doc);
+            }
+            finally
+            {
+                _frame = UcsFrame.World;
+            }
+        }
+
+        private object ExecuteOnMainIn(ToolDef def, Params p, Document doc)
+        {
             bool writes = def.WritesFor(p) || (def.Name == "batch_execute" && BatchWrites(p));
             // undo_last_turn is registered as a read (it only queues U) but it changes the drawing
             // save_drawing writes the DWG on disk (with a path it also renames the drawing): a change too, even
@@ -245,8 +272,8 @@ namespace ClaudeCAD.Plugin.Drawing
             {
                 if (writes && !viewOnly) _host.Undo.EnsureStarted(doc);
                 var ctx0 = new ToolContext(doc, null, writes, this);
-                var r0 = def.Handler(ctx0, p);
-                if (MacroLogic.ShouldRecord(def.Name, writes)) _host.RecordCall(def.Name, p.Raw, r0);
+                var r0 = RunHandler(def, ctx0, p, _frame);
+                if (MacroLogic.ShouldRecord(def.Name, writes)) _host.RecordCall(def.Name, UcsLogic.ForMacro(p.Raw, _frame), r0);
                 return r0;
             }
 
@@ -262,7 +289,7 @@ namespace ClaudeCAD.Plugin.Drawing
             if (def.Name == "batch_execute")
                 foreach (var (t, bp, br) in _pendingRecords) _host.RecordCall(t, bp, br);
             else if (MacroLogic.ShouldRecord(def.Name, true))
-                _host.RecordCall(def.Name, p.Raw, result);
+                _host.RecordCall(def.Name, UcsLogic.ForMacro(p.Raw, _frame), result);
             _pendingRecords.Clear();
             return result;
         }
@@ -273,7 +300,7 @@ namespace ClaudeCAD.Plugin.Drawing
             using (var tr = tm.StartTransaction())
             {
                 var ctx = new ToolContext(doc, tr, writable, this);
-                var result = def.Handler(ctx, p);
+                var result = RunHandler(def, ctx, p, _frame);
                 if (writable)
                 {
                     tm.QueueForGraphicsFlush();
@@ -295,6 +322,54 @@ namespace ClaudeCAD.Plugin.Drawing
                 return result;
             }
             // Dispose without Commit == rollback when the handler threw.
+        }
+
+        /// <summary>
+        /// Nâng cấp đợt F1: runs one handler in the UCS of the call (UcsLogic.ModeOf). World, or a tool that stays WCS: the
+        /// handler alone, exactly as before. Create: the handler builds as if the UCS were World, then its new model-space
+        /// objects are carried into the UCS. Ref: point params are converted to WCS as they are read and result points back.
+        /// </summary>
+        internal object RunHandler(ToolDef def, ToolContext ctx, Params p, UcsFrame frame)
+        {
+            var mode = UcsLogic.ModeOf(def.Name, p.Raw);
+            if (frame == null || frame.IsWorld || mode == UcsMode.Wcs) return def.Handler(ctx, p);
+            if (mode == UcsMode.Ref)
+            {
+                object r;
+                using (UcsScope.Enter(frame, UcsMode.Ref, def.Name)) r = def.Handler(ctx, p);
+                return UcsLogic.FixResult(r, frame);
+            }
+            if (ctx.Tr == null || !ctx.Writable)
+            {
+                // a Create tool always writes in a transaction; refuse rather than draw in the wrong place
+                throw new ToolException(ErrorCodes.AcadError, def.Name + ": cannot place new objects in the UCS without a transaction (plugin bug).");
+            }
+            var appended = new List<ObjectId>();
+            ObjectEventHandler onAppend = (s, e) => { try { appended.Add(e.DBObject.ObjectId); } catch (Exception) { } };
+            object result;
+            ctx.Db.ObjectAppended += onAppend;
+            try
+            {
+                using (UcsScope.Enter(frame, UcsMode.Create, def.Name)) result = def.Handler(ctx, p);
+            }
+            finally
+            {
+                ctx.Db.ObjectAppended -= onAppend;
+            }
+            var m = Acad.ToWcsMatrix(frame);
+            var ms = ctx.ModelSpace.ObjectId;
+            var done = new HashSet<ObjectId>();
+            foreach (var id in appended)
+            {
+                if (id.IsNull || id.IsErased || !done.Add(id)) continue;
+                if (!(ctx.Tr.GetObject(id, OpenMode.ForRead) is Entity e0) || e0.OwnerId != ms) continue;
+                // a new object on a locked layer is still placed (like the drawing commands)
+                var e = (Entity)ctx.Tr.GetObject(id, OpenMode.ForWrite, false, true);
+                e.TransformBy(m);
+            }
+            if (result is Dictionary<string, object> d && !d.ContainsKey("coordinates"))
+                d["coordinates"] = UcsLogic.CoordinatesNote(frame);
+            return result;
         }
 
         private bool BatchWrites(Params p)
@@ -338,6 +413,13 @@ namespace ClaudeCAD.Plugin.Drawing
                             throw ToolException.Invalid($"batch_execute: '{tool}' cannot run inside a batch; call it on its own.");
                         var pobj = call.TryGetValue("params", out var pv) ? pv as Dictionary<string, object> : null;
                         RequireParamsInPlan(tool, pobj);
+                        // F1: a macro call of the batch carries its own UCS
+                        var callFrame = _frame;
+                        if (pobj != null && pobj.ContainsKey(UcsLogic.MacroKey))
+                        {
+                            pobj = new Dictionary<string, object>(pobj);
+                            callFrame = UcsLogic.TakeMacroFrame(pobj);
+                        }
                         var p = new Params(tool, pobj);
                         if (def.WritesFor(p) && !ctx.Writable) ctx.RequireWritable(tool);
 
@@ -348,7 +430,7 @@ namespace ClaudeCAD.Plugin.Drawing
                             object r;
                             try
                             {
-                                r = def.Handler(ctx, p);
+                                r = RunHandler(def, ctx, p, callFrame);
                             }
                             finally
                             {
@@ -356,7 +438,7 @@ namespace ClaudeCAD.Plugin.Drawing
                                 ctx.ResetCache();
                             }
                             nested.Commit();
-                            if (MacroLogic.ShouldRecord(tool, def.WritesFor(p))) _pendingRecords.Add((tool, p.Raw, r));
+                            if (MacroLogic.ShouldRecord(tool, def.WritesFor(p))) _pendingRecords.Add((tool, UcsLogic.ForMacro(p.Raw, callFrame), r));
                             results.Add(new Dictionary<string, object> { ["index"] = i, ["tool"] = tool, ["ok"] = true, ["result"] = r });
                         }
                     }
