@@ -51,7 +51,8 @@ Không có điểm cần chủ dự án chốt.
 
 ## CI
 
-*(điền sau khi chạy)*
+- Run **#58** (`45640452138`, `release=false`) trên `7b9be8f` (commit code cuối): **xanh** (job `windows`: build 3 target, lõi,
+  trợ lý, UI test WPF). Dùng 1 / 2 lượt. Commit sau đó chỉ thêm mục này.
 
 ## Chưa kiểm được
 
