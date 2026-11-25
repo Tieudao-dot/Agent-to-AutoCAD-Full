@@ -48,6 +48,14 @@ dự án gốc), `bo-cai/README.md`.
   - sub-thread cũng hiện tác vụ của mình ở thanh bên phải của thread đó, kể cả tác vụ chạy nền (chờ CI). Tin giao việc
     và prompt mở thread mới ghi sẵn quy tắc này.
 - Push noti khi xong một việc hoặc phải dừng chờ cậu quyết; không push cho từng bước nhỏ.
+- **Kiểm tra trước khi báo hoàn thành (chủ dự án yêu cầu 25/11/2026):**
+  - mỗi đợt có thread viết và một thread khác rà lại + sửa (Test & sửa), mỗi thread CI xanh; cuối một chuỗi lớn có test
+    tổng thể và kiểm tra độc lập bằng agent mới, lỗi sửa xong và được soát lại;
+  - thread chỉ báo "xong" sau khi chạy lại đủ test sau lần sửa cuối và CI xanh; báo cáo ghi rõ đã kiểm gì (số run CI)
+    và phần nào chưa kiểm được (vd chưa chạy trên AutoCAD thật);
+  - luồng chính tự kiểm lại trước khi báo cậu: CI xanh thật trên đúng commit, nhánh đã push, file bộ cài tải được; rồi
+    mới báo "hoàn thành" kèm danh sách mục cậu thử tay;
+  - tin giao việc và prompt mở thread mới ghi sẵn quy tắc này.
 
 ## Token và thời gian
 
@@ -121,8 +129,15 @@ dự án gốc), `bo-cai/README.md`.
   - Chỉ mở thread cho việc đã được giao; không mở thread cho việc tự nghĩ ra, không mở trùng.
   - Mỗi thread mới: báo ngay session id về thread cha; thread cha báo lên luồng chính để ghi danh bạ.
   - Giới hạn chi phí, số lượt CI vẫn theo tin giao việc. Đóng / lưu trữ thread vẫn phải hỏi cậu.
-  - Quyền chạy lệnh này nằm trong `.claude/settings.json` (`permissions.allow`), do **chủ dự án tự thêm**: thread
-    không được tự sửa file quyền. Nhánh mới phải tách từ nhánh đã có file đó thì thread con mới dùng được quyền.
+  - Quyền chạy lệnh nằm trong `.claude/settings.json` (`permissions.allow`), do **chủ dự án tự thêm**: thread
+    không được tự sửa file quyền. Nhánh mới phải tách từ nhánh đã có file đó thì thread mới dùng được quyền.
+  - **File quyền hiện có (25/11/2026):** trên `full/nang-cap-f-goc` @ `2dbeee2` (= `full/nang-cap-tong-the` @ `012ed29`
+    + file quyền; luồng chính thêm hộ, chủ dự án cho phép 25/11, ngoại lệ một lần). File cho thread tự chạy `git add`,
+    `git commit`, `git push -u origin full/…` và `gh api repos/Tieudao-dot/Agent-to-AutoCAD-Full/actions/…` (chạy / xem
+    CI); không cho đẩy `main`. Thread viết lệnh đúng dạng đó. Khi cài secret CI để phát hành thật: bỏ dòng
+    `gh api …/actions/…` trước, vì dòng đó cũng cho chạy CI ở chế độ phát hành.
+  - Lý do cần file: từ 14/11 chế độ Auto chặn `git commit` / `git push` ở thread mới (việc giao qua tin nhắn giữa các
+    thread không được coi là chủ dự án yêu cầu); thread "Tối ưu khung chat" từng kẹt khoảng 10 giờ vì vậy.
 
 ## Git và phát hành
 
@@ -130,7 +145,9 @@ dự án gốc), `bo-cai/README.md`.
   `release: true` khi cậu chưa đồng ý rõ ràng: merge `main` có phiên bản mới là CI tự phát hành bộ cài cho
   người dùng.
 - Không bỏ / tắt test để CI xanh. Luôn cập nhật `bo-cai/README.md` và tài liệu trong `docs/` cùng với thay đổi.
-- Không đưa tên hay ID model vào commit, PR, code.
+- Không đưa tên hay ID model vào commit, PR, code. Dòng ghi công trong commit: `Co-Authored-By: Claude
+  <noreply@anthropic.com>` (không kèm tên model). Hai commit ngày 15/11 lỡ ghi tên model (`0c9fc6f` trên nhánh luồng
+  chính, `e2bea8d` trên `full/toi-uu-khung-chat`): không viết lại lịch sử, squash khi gộp `main` sẽ bỏ.
 - **Gộp bản Full vào `main` (chốt 13/11/2026):** khi chủ dự án đồng ý phát hành, gộp nhánh tích hợp vào `main` thành
   **một commit gọn** (squash), không giữ từng commit. Lý do: 2 commit đầu của dự án (`d8b1b58`, `f570344`, ngày 12/11)
   có tên model trong dòng ghi công; squash giữ lịch sử `main` sạch. Không viết lại lịch sử các nhánh làm việc; lịch sử
@@ -150,6 +167,9 @@ dự án gốc), `bo-cai/README.md`.
 - Lõi: `dotnet test plugin/ClaudeCAD.Core.Tests`. Trợ lý: `cd agent && npm ci && npm test`.
 - UI test WPF chỉ chạy trên Windows CI: `.github/workflows/build.yml`, workflow_dispatch với `release: "false"`
   cho nhánh.
+- Công cụ GitHub MCP (`mcp__github__*`) đã ngừng từ 25/11/2026; `gh pr`, `gh run`… không chạy được. Chạy và xem CI
+  bằng `gh api` dạng REST, vd
+  `gh api repos/Tieudao-dot/Agent-to-AutoCAD-Full/actions/workflows/build.yml/dispatches -f ref=<nhánh> -f 'inputs[release]=false'`.
 
 ## Danh bạ thread (cập nhật khi thêm thread)
 
@@ -182,6 +202,7 @@ dự án gốc), `bo-cai/README.md`.
 | Bảo mật | `session_01D56HmJNNATNAVHRZejGSMu` | Trao đổi với chủ dự án về bảo mật, khóa key, máy chủ kích hoạt, quản lý thiết bị / gói, mã máy không có mạng, bộ cài thử nội bộ. Đọc code `full/nang-cap-tong-the`, không sửa code / Apps Script / bộ cài / CI; chỉ viết tài liệu `docs/` trên nhánh `full/bao-mat` khi chủ dự án yêu cầu. Lỗi / điểm yếu / việc cần quyết thì chuyển về luồng chính |
 | Tối ưu khung chat | `session_01D56HmJHAPE5osZWP7986Jp` | Nhánh `full/toi-uu-khung-chat` (tách từ `full/nang-cap-tong-the` @ `b0da814`): sửa khung chat giật khi cuộn / gõ lúc chat dài (chủ dự án báo khi thử thật 14/11), không đổi cách dùng; ≤ 2 lượt CI, không mở thread con. Báo về luồng chính. Bàn giao: `docs/ban-giao/toi-uu-khung-chat.md` |
 | ↳ Commit & CI (con của Tối ưu khung chat) | `session_01D56HmETMC8GaiKLR7th4ha` | Chủ dự án yêu cầu mở 15/11 (thread cha bị chế độ Auto chặn commit / push): áp bản vá của thread cha lên nhánh `full/toi-uu-khung-chat` (từ `full/nang-cap-tong-the` @ `b0da814`), build, test, commit, push, 1 lượt CI. Báo về thread cha, tin cập nhật ngắn gửi luồng chính |
+| Nâng cấp đợt F1 | `session_01D56HmFAo4dZ7c8sbeNB9eh` | Nhánh `full/nang-cap-f1` (tách từ `full/nang-cap-f-goc` @ `2dbeee2`): mọi lệnh vẽ hiểu UCS; nút chế độ "Cả hai / 2D / 3D" cho máy gói Full. Viết xong tự mở thread con Test & sửa (`full/nang-cap-f1-test`). Bàn giao: `docs/ban-giao/nang-cap-f1.md`. Kế hoạch: `docs/ke-hoach-nang-cap-lenh.md` mục "Đợt F" |
 
 Link mở thread: `https://claude.ai/code/<session id>`.
 

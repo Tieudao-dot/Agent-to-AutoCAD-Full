@@ -28,7 +28,7 @@ từng đợt; kiểu cầu thang / mái đợt E đã chốt; chỉ dừng hỏ
 | C (2D) | Hatch bấm một điểm; tự ghi kích thước cả mặt bằng; thống kê block ra bảng, đếm theo thuộc tính; tổng diện tích phòng / layer ra bảng; tìm & thay chữ (có thẻ xác nhận); in nhiều layout vào một PDF | 2D / Full |
 | D (3D) | Dầm; tường cong; PRESSPULL; xuất STL; bảng khối lượng theo layer; va chạm ra bảng | 3D / Full |
 | E (lớn) | Cầu thang (1 vế / chữ L / chữ U); mái bằng / 2 mái / 4 mái. Số mặc định: điểm 6 | 3D / Full |
-| F (sau phát hành) | Mọi lệnh hiểu UCS (hiện theo WCS); vật liệu / render; block từ thư viện; bộ layout khung tên; layer state; lưu góc nhìn; bộ style chuẩn Việt Nam; nút chọn chế độ "Cả hai / 2D / 3D" cho máy gói Full (mặc định Cả hai; chọn riêng thì bớt ~1/3 token mỗi lần mở chat), quyết sau khi thử thật (chốt 14/11) | — |
+| F (ban đầu để sau phát hành; 25/11 chốt làm ngay, xem mục "Đợt F") | Mọi lệnh hiểu UCS (hiện theo WCS); vật liệu / render; block từ thư viện; bộ layout khung tên; layer state; lưu góc nhìn; bộ style chuẩn Việt Nam; nút chọn chế độ "Cả hai / 2D / 3D" cho máy gói Full (mặc định Cả hai; chọn riêng thì bớt ~1/3 token mỗi lần mở chat), quyết sau khi thử thật (chốt 14/11) | — |
 
 ## Chi phí ước
 
@@ -91,3 +91,35 @@ cách rẻ, đổi lại được, chủ dự án xem trong báo cáo cuối):
 
 **Chuỗi xong 14/11 ~1h40.** Bộ cài thử nội bộ build lại có đủ nâng cấp (CI 43481896536). Báo cáo:
 [`bao-cao-nang-cap-14-11.md`](bao-cao-nang-cap-14-11.md). Dừng trước phát hành.
+
+## Đợt F (chốt 25/11/2026)
+
+Chủ dự án đã thử thật bộ cài thử bản 3 (chạy ổn) và chốt **làm đợt F ngay, trước khi phát hành**, cả 4 nhóm. Chạy nối
+tiếp; đợt sau xuất phát từ commit cuối của bước Test & sửa đợt trước.
+
+| Đợt | Nội dung | Gói | Ước |
+| --- | --- | --- | --- |
+| F1 | Mọi lệnh vẽ hiểu UCS (UCS World thì y như cũ); nút chế độ "Cả hai / 2D / 3D" cho máy gói Full | UCS: mọi gói. Nút: chỉ gói Full | $25–45 |
+| F2 | Bộ style chuẩn Việt Nam; layout có khung tên; block từ thư viện; lưu / gọi layer state | 2D / Full | $25–40 |
+| F3 | Mái liền khối nhà chữ L / T; vật liệu + render; lưu góc nhìn | 3D / Full | $25–40 |
+| F4 | Mở chat nhanh hơn (trợ lý khởi động sẵn, chỉ nạp mô tả lệnh cần dùng); xuất bảng khối lượng / thống kê ra Excel | Theo gói của bảng nguồn | $20–35 |
+| Cuối | Test tổng thể đợt F; kiểm tra độc lập (agent mới); bộ cài thử bản 4 | — | $30–40 |
+
+- Tổng ước $125–200, khoảng 12–14 giờ. Ước theo số thật của chuỗi A → E; các thread đợt F chạy cùng cấu hình với chuỗi đó.
+- F1 trước vì đụng nhiều lệnh nhất: lệnh mới ở các đợt sau theo UCS ngay từ đầu. F4 sau cùng để đo token trên đủ bộ lệnh.
+- Nhánh gốc: `full/nang-cap-f-goc` @ `2dbeee2` (nhánh tích hợp `012ed29` + file quyền `.claude/settings.json`).
+- **Kiểm tra trước khi báo hoàn thành** (chủ dự án yêu cầu 25/11):
+  - mỗi đợt có thread viết + thread con Test & sửa, mỗi thread CI xanh;
+  - cuối chuỗi: test tổng thể + kiểm tra độc lập, lỗi sửa xong và được soát lại;
+  - luồng chính tự kiểm CI và file bộ cài rồi mới báo chủ dự án.
+- F4 (mở chat nhanh, xuất Excel) là ý của luồng chính, chủ dự án chọn 25/11. Còn để sau: vẽ lại từ ảnh / PDF scan.
+
+### Tiến độ đợt F
+
+| Đợt | Thread viết | Thread con Test & sửa | Nhánh | Trạng thái |
+| --- | --- | --- | --- | --- |
+| F1 | `session_01D56HmFAo4dZ7c8sbeNB9eh` (mở 25/11 14h27) | — | `full/nang-cap-f1` | Đang viết |
+| F2 | — | — | — | Chờ F1 |
+| F3 | — | — | — | Chờ F2 |
+| F4 | — | — | — | Chờ F3 |
+| Cuối | — | — | — | Chờ F4 |
