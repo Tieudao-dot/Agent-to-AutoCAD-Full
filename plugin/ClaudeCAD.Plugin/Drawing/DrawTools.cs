@@ -207,6 +207,7 @@ namespace ClaudeCAD.Plugin.Drawing
                 res["islands"] = loops.Count - 1;
                 res["area"] = Acad.R(EntityInfo.SafeArea(hatch));
                 if (!keep) foreach (var b in boundaryIds) ((Entity)ctx.Tr.GetObject(b, OpenMode.ForWrite)).Erase();
+                MarkPlainHatch(ctx, hatch); // Sửa KFG-07: no boundary kept on purpose (check_drawing does not call it "mất liên kết")
                 return res;
             }
 
@@ -240,6 +241,7 @@ namespace ClaudeCAD.Plugin.Drawing
                 hatch.AppendLoop(HatchLoopTypes.Polyline, pts2, bs);
             }
             hatch.EvaluateHatch(true);
+            MarkPlainHatch(ctx, hatch); // Sửa KFG-07: a hatch by points has no boundary object by design
             return Acad.Handles(id);
         }
 

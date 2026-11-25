@@ -102,7 +102,7 @@ namespace ClaudeCAD.Plugin.UI
             ["build_stair"] = "Dựng cầu thang",
             ["build_roof"] = "Dựng mái",
             ["set_material"] = "Gán vật liệu",
-            ["named_view"] = "Góc nhìn đã lưu",
+            ["named_view"] = "Góc nhìn / ảnh render",
             ["draw_box"] = "Dựng khối hộp",
             ["draw_cylinder"] = "Dựng khối trụ / nón",
             ["draw_sphere"] = "Dựng khối cầu",
@@ -151,6 +151,12 @@ namespace ClaudeCAD.Plugin.UI
             ["create_sheet"] = "Tạo trang in có khung tên",
             ["insert_library_block"] = "Chèn block thư viện",
             ["layer_state"] = "Trạng thái layer",
+            ["create_drawing_set"] = "Ra bộ hồ sơ", // nâng cấp đợt G1
+            ["cost_estimate"] = "Lập dự toán", // nâng cấp đợt G3
+            // nâng cấp đợt G2
+            ["check_drawing"] = "Soát bản vẽ",
+            ["trace_image"] = "Vẽ lại từ ảnh",
+            ["fix_drawing"] = "Sửa lỗi bản vẽ",
         };
 
         public static string Describe(string tool)

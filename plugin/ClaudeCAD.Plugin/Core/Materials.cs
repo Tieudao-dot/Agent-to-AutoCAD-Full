@@ -30,11 +30,11 @@ namespace ClaudeCAD.Plugin.Core
         {
             new Preset { Key = "concrete", Name = "Bê tông", R = 165, G = 165, B = 160, Aliases = new[] { "bê tông", "be tong", "betong" } },
             new Preset { Key = "brick", Name = "Gạch", R = 170, G = 74, B = 50, Aliases = new[] { "gạch", "gach", "tường gạch" } },
-            new Preset { Key = "plaster", Name = "Vữa trắng", R = 236, G = 232, B = 222, Aliases = new[] { "vữa", "vua", "sơn trắng", "son trang", "trát" } },
+            new Preset { Key = "plaster", Name = "Vữa trắng", R = 236, G = 232, B = 222, Aliases = new[] { "vữa", "vua", "sơn trắng", "son trang", "trát", "sơn", "son", "paint" } },
             new Preset { Key = "glass", Name = "Kính", R = 150, G = 200, B = 220, Opacity = 35, Aliases = new[] { "kính", "kinh" } },
             new Preset { Key = "wood", Name = "Gỗ", R = 150, G = 100, B = 60, Aliases = new[] { "gỗ", "go" } },
             new Preset { Key = "roof_tile", Name = "Ngói", R = 180, G = 80, B = 45, Aliases = new[] { "ngói", "ngoi", "tile", "roof tile" } },
-            new Preset { Key = "steel", Name = "Thép", R = 120, G = 130, B = 140, Aliases = new[] { "thép", "thep", "metal" } },
+            new Preset { Key = "steel", Name = "Thép", R = 120, G = 130, B = 140, Aliases = new[] { "thép", "thep", "metal", "kim loại", "kim loai" } },
             new Preset { Key = "stone", Name = "Đá", R = 140, G = 135, B = 125, Aliases = new[] { "đá", "da", "granite" } },
         };
 
@@ -83,7 +83,7 @@ namespace ClaudeCAD.Plugin.Core
 
         // ------------------------------------------------------------ named views
 
-        public static readonly string[] ViewActions = { "save", "restore", "list", "delete", "image" };
+        public static readonly string[] ViewActions = { "save", "restore", "list", "delete", "image", "render", "render_status", "render_stop" };
 
         /// <summary>Long side (px) of a picture saved by named_view image (the largest the off-screen capture renders).</summary>
         public const int DefaultImageSize = 1568;

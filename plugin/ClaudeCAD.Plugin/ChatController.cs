@@ -826,8 +826,17 @@ namespace ClaudeCAD.Plugin
                     ["total"] = m.Layers.Sum(l => m.LayerCounts.TryGetValue(l, out var n) ? n : 0),
                 };
             }
+            // Sửa KFG-13: the files of the pictures only where trace_image exists (2D / Full, work mode 2D / Cả hai)
+            bool tracePaths = m.Images.Count > 0 && PlanLogic.Allowed(WorkModeLogic.EffectivePlan(Activation.Plan, WorkModeLogic.Normalize(_settings.WorkMode)), "trace_image");
             if (m.Images.Count > 0)
-                attachments["images"] = m.Images.Select(i => (object)new Dictionary<string, object> { ["media_type"] = i.MediaType, ["data"] = i.Base64 }).ToList();
+                attachments["images"] = m.Images.Select(i =>
+                {
+                    var d = new Dictionary<string, object> { ["media_type"] = i.MediaType, ["data"] = i.Base64 };
+                    // nâng cấp đợt G5: the file of the picture, so Claude can attach it under the drawing (trace_image)
+                    var path = tracePaths ? (i.SourcePath != null ? UI.ChatAttachments.UserFile(i.SourcePath) : UI.ChatAttachments.Save(i.Base64, i.MediaType)) : null; // KFG-40: nothing read here; a network file is copied at attach
+                    if (path != null) d["path"] = path;
+                    return (object)d;
+                }).ToList();
             if (attachments.Count > 0) payload["attachments"] = attachments;
             var ctx = new Dictionary<string, object>();
             if (!string.IsNullOrEmpty(_settings.Scale)) ctx["scale"] = _settings.Scale;
@@ -988,6 +997,7 @@ namespace ClaudeCAD.Plugin
             ReturnQueuedToInput(); // stopping means rethinking: do not fire the queued message on its own
             Ui.SetToolStatus("Đang dừng...");
             _ipc.Send(new Dictionary<string, object> { ["type"] = "cancel" });
+            MainThread.Post(() => Drawing.DrawingService.StopRender()); // nâng cấp đợt G4: Dừng also stops a running render
             Task.Delay(CancelGrace).ContinueWith(_ =>
             {
                 if (_busy && seq == _turnSeq) EndTurn("Đã dừng lượt (trợ lý không phản hồi lệnh dừng).", false);
@@ -2638,7 +2648,8 @@ namespace ClaudeCAD.Plugin
                 var a = _assistant;
                 if (a != null)
                 {
-                    int idx = state == "running" ? -1 : a.Tools.FindIndex(x => x.State == "running" && x.Tool == tool);
+                    // nâng cấp đợt G4: a running status with a summary (render progress) updates the running row
+                    int idx = state == "running" && entry.Summary == null ? -1 : a.Tools.FindIndex(x => x.State == "running" && x.Tool == tool);
                     if (idx >= 0) a.Tools[idx] = entry; else a.Tools.Add(entry);
                 }
             }
@@ -2646,7 +2657,7 @@ namespace ClaudeCAD.Plugin
             string label = ToolLabels.Describe(tool);
             switch (state)
             {
-                case "running": Ui.SetToolStatus(label + "..."); break;
+                case "running": Ui.SetToolStatus(label + (string.IsNullOrEmpty(entry.Summary) ? "..." : ": " + entry.Summary)); break;
                 case "done": Ui.SetToolStatus("✓ " + label); break;
                 case "error": Ui.SetToolStatus("⚠ " + label + " lỗi"); break;
             }

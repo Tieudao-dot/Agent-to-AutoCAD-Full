@@ -6,10 +6,14 @@ import type { AnyTool, ToolBridge } from './common.js';
 import { advancedTools } from './advanced.js';
 import { annotationTools } from './annotation.js';
 import { utility2dTools } from './utility2d.js';
+import { drawingCheckTools } from './drawingCheck.js';
+import { traceTools } from './trace.js';
 import { batchTools } from './batch.js';
 import { blockTools } from './blocks.js';
 import { captureTools } from './capture.js';
 import { drawTools } from './draw.js';
+import { drawingSetTools } from './drawingset.js';
+import { estimateTools } from './estimate.js';
 import { layerTools } from './layers.js';
 import { layoutTools } from './layouts.js';
 import { MATCH_PROPS_GENERAL, MATCH_PROPS_TEXT_DESC, modifyTools } from './modify.js';
@@ -66,6 +70,10 @@ export function buildTools(bridge: ToolBridge, allowed?: readonly string[], plan
     ...layoutTools(bridge),
     ...advancedTools(bridge),
     ...standards2dTools(bridge),
+    ...drawingSetTools(bridge), // nâng cấp đợt G1
+    ...estimateTools(bridge), // nâng cấp đợt G3
+    ...drawingCheckTools(bridge), // nâng cấp đợt G2
+    ...traceTools(bridge), // nâng cấp đợt G5
     ...systemTools(bridge),
   ];
   const kept = allowed ? all.filter((t) => new Set(allowed).has(t.name)) : all;
@@ -89,9 +97,17 @@ export const PLAN_HIDDEN_PARAMS: Record<string, { needs: '2d' | '3d'; params: st
   // nâng cấp đợt D: a table in the drawing is text (2D); on the 3D plan the 3D schedules only return their numbers
   volume_schedule: { needs: '2d', params: ['table_position', 'title', 'text_height'], note: ' No tables in the drawing with the tools loaded here: show the numbers to the user in the chat.' },
   check_interference: { needs: '2d', params: ['table_position', 'title', 'text_height', 'decimals'], note: ' No clash table in the drawing with the tools loaded here: list the pairs in the chat.' },
+  // nâng cấp đợt G3: the estimate table in the drawing is text (2D); the 3D plan gets the numbers + Excel
+  cost_estimate: { needs: '2d', params: ['table_position', 'title', 'text_height', 'layer'], note: ' No table in the drawing with the tools loaded here: give the numbers in the chat and the Excel file.' },
 };
 
-function trimForPlan(t: AnyTool, plan: string): AnyTool {
+function trimForPlan(t0: AnyTool, plan: string): AnyTool {
+  let t = t0;
+  // KFG-25: cost_estimate offers only the quantities of the plan's schedules (volumes: 3D; blocks / areas: 2D)
+  if (t.name === 'cost_estimate' && (plan === '2d' || plan === '3d')) {
+    const q = plan === '3d' ? z.enum(['volume']) : z.enum(['blocks', 'areas']);
+    t = { ...t, inputSchema: { ...(t.inputSchema as Record<string, unknown>), quantities: q.describe('Which schedule gives the quantities.') } } as AnyTool;
+  }
   // KT2-14 (kiểm tra độc lập nâng cấp): without 2D, match_properties offers only the general properties (the plugin
   // refuses text / dimension there: PlanLogic.TextValues), so Claude is not invited to a call that is sure to fail
   if (t.name === 'match_properties' && plan !== '2d' && plan !== '2d3d') {

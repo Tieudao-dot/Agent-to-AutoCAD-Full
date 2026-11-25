@@ -977,6 +977,203 @@ namespace ClaudeCAD.Plugin
                     : new SelfTestRules.Verdict(false, string.Join("; ", errs));
             });
 
+            // Nâng cấp đợt G1: a drawing set of a box (one elevation + the perspective), then again: refused until the card, replaced after it (not run on CI)
+            Check("Nâng cấp đợt G1: ra bộ hồ sơ (mặt đứng + phối cảnh), chạy lại cần thẻ", () =>
+            {
+                var errs = new List<string>();
+                using (doc.LockDocument())
+                using (var tr = doc.TransactionManager.StartTransaction())
+                {
+                    var box = new Solid3d();
+                    box.CreateBox(3000, 2000, 2500);
+                    box.TransformBy(Matrix3d.Displacement(new Vector3d(300000, 0, 1250)));
+                    var ms = (BlockTableRecord)tr.GetObject(SymbolUtilityServices.GetBlockModelSpaceId(doc.Database), OpenMode.ForWrite);
+                    ms.AppendEntity(box);
+                    tr.AddNewlyCreatedDBObject(box, true);
+                    tr.Commit();
+                }
+                var args = new Dictionary<string, object>
+                {
+                    ["kinds"] = new List<object> { "elevation", "perspective" }, ["elevations"] = new List<object> { "front" }, ["prefix"] = "STG1",
+                };
+                var r1 = (Dictionary<string, object>)DrawingService.CreateDrawingSet(new ToolContext(doc, null, true, null), new Params("create_drawing_set", new Dictionary<string, object>(args)));
+                var sheets = (List<object>)r1["sheets"];
+                if (sheets.Count != 2) errs.Add($"lần 1: {sheets.Count} tờ (cần 2)");
+                if (!LayoutManager.Current.LayoutExists("STG1-01") || !LayoutManager.Current.LayoutExists("STG1-02")) errs.Add("thiếu layout STG1-01 / STG1-02");
+                string token = null;
+                try { DrawingService.CreateDrawingSet(new ToolContext(doc, null, true, null), new Params("create_drawing_set", new Dictionary<string, object>(args))); errs.Add("lần 2: thay bộ cũ không cần thẻ"); }
+                catch (ToolException ex)
+                {
+                    var m = System.Text.RegularExpressions.Regex.Match(ex.Message, "\\[\"([0-9A-F]+)\"");
+                    token = m.Success ? m.Groups[1].Value : null;
+                    if (token == null) errs.Add("lần 2: thẻ không ghi mã: " + ex.Message);
+                }
+                if (token != null)
+                {
+                    var a2 = new Dictionary<string, object>(args) { [SolidLogic.UserConfirmedParam] = new List<object> { token } };
+                    var r2 = (Dictionary<string, object>)DrawingService.CreateDrawingSet(new ToolContext(doc, null, true, null), new Params("create_drawing_set", a2));
+                    if (!r2.ContainsKey("replaced")) errs.Add("lần 3: không báo replaced");
+                    if (((List<object>)r2["sheets"]).Count != 2) errs.Add("lần 3: số tờ khác 2");
+                }
+                return errs.Count == 0 ? new SelfTestRules.Verdict(true, "STG1-01 mặt đứng, STG1-02 phối cảnh; chạy lại qua thẻ") : new SelfTestRules.Verdict(false, string.Join("; ", errs));
+            });
+
+            // Nâng cấp đợt G2: check_drawing finds a copy, a zero-length line and an empty text; fix_drawing only after the card
+            Check("Nâng cấp đợt G2: soát bản vẽ (hình trùng, đường dài 0, chữ rỗng), sửa chỉ sau thẻ Đồng ý", () =>
+            {
+                const double cx = 52000;
+                var errs = new List<string>();
+                var db = doc.Database;
+                T Run<T>(Func<ToolContext, Transaction, T> f)
+                {
+                    using (doc.LockDocument())
+                    using (var tr = doc.TransactionManager.StartTransaction())
+                    {
+                        var r = f(new ToolContext(doc, tr, true, null), tr);
+                        tr.Commit();
+                        return r;
+                    }
+                }
+                var made = Run((ctx, tr) =>
+                {
+                    var ms = (BlockTableRecord)tr.GetObject(SymbolUtilityServices.GetBlockModelSpaceId(db), OpenMode.ForWrite);
+                    string Add(Entity e) { e.SetDatabaseDefaults(db); ms.AppendEntity(e); tr.AddNewlyCreatedDBObject(e, true); return e.Handle.ToString(); }
+                    return new[]
+                    {
+                        Add(new Line(new Point3d(cx, 0, 0), new Point3d(cx + 3000, 0, 0))),
+                        Add(new Line(new Point3d(cx + 3000, 0, 0), new Point3d(cx, 0, 0))), // the same line drawn backwards
+                        Add(new Line(new Point3d(cx, 500, 0), new Point3d(cx, 500, 0))),
+                        Add(new DBText { Position = new Point3d(cx, 1000, 0), Height = 250, TextString = " " }),
+                    };
+                });
+                string copy = made[1], zero = made[2], empty = made[3];
+                var chk = Run((ctx, tr) => (Dictionary<string, object>)DrawingService.CheckDrawing(ctx, new Params("check_drawing", new Dictionary<string, object>
+                {
+                    ["groups"] = new List<object> { "duplicates", "zero_length", "empty_text" }, ["examples"] = 50,
+                })));
+                bool Has(string g, string h) => ((List<Dictionary<string, object>>)chk["groups"]).Any(x => (string)x["id"] == g && ((List<object>)x["examples"]).Contains(h));
+                if (!Has("duplicates", copy)) errs.Add("không thấy hình trùng");
+                if (!Has("zero_length", zero)) errs.Add("không thấy đường dài 0");
+                if (!Has("empty_text", empty)) errs.Add("không thấy chữ rỗng");
+                if (Has("duplicates", made[0])) errs.Add("hình gốc bị coi là bản thừa");
+                var fixP = new Dictionary<string, object> { ["fix"] = "zero_length", ["handles"] = new List<object> { zero } };
+                string token = null;
+                try { Run((ctx, tr) => DrawingService.FixDrawing(ctx, new Params("fix_drawing", fixP))); errs.Add("sửa khi chưa có thẻ: không bị từ chối"); }
+                catch (ToolException ex)
+                {
+                    var m = System.Text.RegularExpressions.Regex.Match(ex.Message, "\\[\"([0-9A-F]+)\"");
+                    token = m.Success ? m.Groups[1].Value : null;
+                    if (token == null) errs.Add("thẻ không ghi mã: " + ex.Message);
+                }
+                bool zeroLeft = Run((ctx, tr) => !Acad.IdFromHandle(db, zero, true).IsErased);
+                if (!zeroLeft) errs.Add("đã xóa trước khi Đồng ý");
+                if (token != null)
+                {
+                    fixP[SolidLogic.UserConfirmedParam] = new List<object> { token };
+                    var done = Run((ctx, tr) => (Dictionary<string, object>)DrawingService.FixDrawing(ctx, new Params("fix_drawing", fixP)));
+                    if (Convert.ToInt32(done["fixed"]) != 1) errs.Add($"sửa {done["fixed"]} đối tượng (cần 1)");
+                    if (!Run((ctx, tr) => Acad.IdFromHandle(db, zero, true).IsErased)) errs.Add("đường dài 0 vẫn còn sau Đồng ý");
+                }
+                // leave the test drawing as before for the next steps
+                Run((ctx, tr) => { foreach (var h in made) { var id = Acad.IdFromHandle(db, h, true); if (!id.IsErased) tr.GetObject(id, OpenMode.ForWrite).Erase(); } return 0; });
+                return errs.Count == 0
+                    ? new SelfTestRules.Verdict(true, $"quét {chk["scanned"]} / {chk["total"]} đối tượng; thấy hình trùng, đường dài 0, chữ rỗng; chưa Đồng ý thì không sửa, Đồng ý thì xóa đúng 1")
+                    : new SelfTestRules.Verdict(false, string.Join("; ", errs));
+            });
+
+            // Nâng cấp đợt G3: an estimate of the 3D volumes with one price given and one missing, into an .xlsx with formulas (not run on CI)
+            Check("Nâng cấp đợt G3: lập dự toán (dòng thiếu đơn giá để trống, Excel có công thức)", () =>
+            {
+                string la = "SELFTEST-G3-A", lb = "SELFTEST-G3-B";
+                using (doc.LockDocument())
+                using (var tr = doc.TransactionManager.StartTransaction())
+                {
+                    var c = new ToolContext(doc, tr, true, null);
+                    var ms = (BlockTableRecord)tr.GetObject(SymbolUtilityServices.GetBlockModelSpaceId(doc.Database), OpenMode.ForWrite);
+                    var lt = (LayerTable)tr.GetObject(doc.Database.LayerTableId, OpenMode.ForWrite);
+                    foreach (var (ln, x) in new[] { (la, 400000.0), (lb, 410000.0) })
+                    {
+                        if (!lt.Has(ln)) { var l = new LayerTableRecord { Name = ln }; lt.Add(l); tr.AddNewlyCreatedDBObject(l, true); }
+                        var s = new Solid3d();
+                        s.CreateBox(1000, 1000, 1000);
+                        s.TransformBy(Matrix3d.Displacement(new Vector3d(x, 0, 500)));
+                        s.Layer = ln;
+                        ms.AppendEntity(s);
+                        tr.AddNewlyCreatedDBObject(s, true);
+                    }
+                    tr.Commit();
+                }
+                string xlsx = Path.Combine(dir, "selftest-du-toan.xlsx");
+                if (File.Exists(xlsx)) File.Delete(xlsx);
+                Dictionary<string, object> r;
+                using (doc.LockDocument())
+                using (var tr = doc.TransactionManager.StartTransaction())
+                {
+                    r = (Dictionary<string, object>)DrawingService.CostEstimate(new ToolContext(doc, tr, false, null), new Params("cost_estimate", new Dictionary<string, object>
+                    {
+                        ["quantities"] = "volume",
+                        ["quantities_params"] = new Dictionary<string, object> { ["layers"] = new List<object> { la, lb } },
+                        ["prices"] = new List<object> { new Dictionary<string, object> { ["item"] = la, ["unit_price"] = 1000000.0 } },
+                        ["excel"] = xlsx,
+                    }));
+                    tr.Abort();
+                }
+                var errs = new List<string>();
+                if (Math.Abs(Convert.ToDouble(r["total"]) - 1000000) > 1) errs.Add($"tổng {r["total"]} (cần 1.000.000)");
+                if (!(r.TryGetValue("missing_prices", out var mp) && ((List<object>)mp).Contains(lb))) errs.Add("không báo dòng thiếu đơn giá");
+                if (!File.Exists(xlsx)) errs.Add("không có file Excel");
+                else
+                {
+                    string sheet;
+                    using (var zip = System.IO.Compression.ZipFile.OpenRead(xlsx))
+                    using (var rd = new StreamReader(zip.GetEntry("xl/worksheets/sheet1.xml").Open(), Encoding.UTF8)) sheet = rd.ReadToEnd();
+                    if (!sheet.Contains("<f>SUM(")) errs.Add("file Excel không có công thức tổng");
+                }
+                return errs.Count == 0 ? new SelfTestRules.Verdict(true, "1 dòng có giá, 1 dòng thiếu; Excel có công thức") : new SelfTestRules.Verdict(false, string.Join("; ", errs));
+            });
+
+            // Nâng cấp đợt G4: the scene of a render set and put back, the way back (a capture), a library material taken
+            Check("Nâng cấp đợt G4: render (nền trắng + đèn mặc định đặt tạm rồi trả lại), đường lui ảnh chụp, vật liệu thư viện có sẵn", () =>
+            {
+                var errs = DrawingService.SelfTestRenderScene(doc, Path.Combine(dir, "g4-render.png"), out string info);
+                const string libName = "Masonry - Brick - SelfTest";
+                using (doc.LockDocument())
+                using (var tr = doc.TransactionManager.StartTransaction())
+                {
+                    var md = (DBDictionary)tr.GetObject(doc.Database.MaterialDictionaryId, OpenMode.ForWrite);
+                    if (!md.Contains(libName))
+                    {
+                        var mat = new Autodesk.AutoCAD.DatabaseServices.Material { Name = libName };
+                        md.SetAt(libName, mat);
+                        tr.AddNewlyCreatedDBObject(mat, true);
+                    }
+                    var ms = (BlockTableRecord)tr.GetObject(SymbolUtilityServices.GetBlockModelSpaceId(doc.Database), OpenMode.ForWrite);
+                    var box = new Solid3d();
+                    box.CreateBox(1000, 1000, 1000);
+                    box.TransformBy(Matrix3d.Displacement(new Vector3d(160000, 0, 500)));
+                    box.SetDatabaseDefaults(doc.Database);
+                    ms.AppendEntity(box);
+                    tr.AddNewlyCreatedDBObject(box, true);
+                    var r = (Dictionary<string, object>)DrawingService.SetMaterial(new ToolContext(doc, tr, true, null), new Params("set_material", new Dictionary<string, object>
+                    {
+                        ["material"] = "gạch", ["handles"] = new List<object> { box.Handle.ToString() },
+                    }));
+                    if ((string)r["source"] != "library" || box.Material != libName) errs.Add($"vật liệu thư viện: dùng '{box.Material}' ({r["source"]})");
+                    box.Erase();
+                    tr.Commit();
+                }
+                return errs.Count == 0
+                    ? new SelfTestRules.Verdict(true, info + "; gạch → " + libName)
+                    : new SelfTestRules.Verdict(false, string.Join("; ", errs));
+            });
+
+            // Nâng cấp đợt G5: a picture attached under the drawing, scaled from a known length, looked at with a grid, erased
+            Check("Nâng cấp đợt G5: vẽ lại từ ảnh (gắn ảnh nền khóa không in, đặt tỉ lệ 8 m, xem có lưới)", () =>
+            {
+                var errs = DrawingService.SelfTestTrace(doc, dir, out string info);
+                return errs.Count == 0 ? new SelfTestRules.Verdict(true, info) : new SelfTestRules.Verdict(false, string.Join("; ", errs) + " (" + info + ")");
+            });
+
             string versionFile = Path.Combine(dir, "version-copy.dwg");
             Do("Bản sao phiên bản (Wblock + SaveAs)", () =>
             {

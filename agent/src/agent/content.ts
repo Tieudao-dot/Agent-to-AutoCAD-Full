@@ -123,7 +123,9 @@ export function toSdkUserMessage(msg: UserMessage): SDKUserMessage {
           type: 'text' as const,
           text:
             `${text}\n[Người dùng đính kèm ${images.length} ảnh ở trên (phác thảo, ảnh scan hoặc ảnh chụp màn hình). ` +
-            'Read dimensions and layout from it; ask if a needed size cannot be read.]',
+            'Read dimensions and layout from it; ask if a needed size cannot be read.]' +
+            // nâng cấp đợt G5: the files, for trace_image action attach ("vẽ lại bản này")
+            (images.some((i) => i.path) ? `\n[Files of the pictures: ${images.map((i, n) => `${n + 1}: ${i.path ? q(i.path) : '(none)'}`).join('; ')}]` : ''),
         },
       ],
     },

@@ -17,6 +17,8 @@ namespace ClaudeCAD.Plugin.UI
         public string Base64;
         public BitmapSource Thumbnail;
         public int Width, Height;
+        /// <summary>Nâng cấp đợt G5: the file the picture came from (null when pasted).</summary>
+        public string SourcePath;
 
         public static ImageAttachment FromBitmap(BitmapSource src)
         {
@@ -51,7 +53,9 @@ namespace ClaudeCAD.Plugin.UI
             bi.UriSource = new Uri(Path.GetFullPath(path));
             bi.EndInit();
             bi.Freeze();
-            return FromBitmap(bi);
+            var a = FromBitmap(bi);
+            a.SourcePath = Path.GetFullPath(path);
+            return a;
         }
 
         private static byte[] Encode(BitmapEncoder enc, BitmapSource bmp)

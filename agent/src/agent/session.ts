@@ -7,6 +7,7 @@ import {
 } from '@anthropic-ai/claude-agent-sdk';
 import type { PrewarmMessage, ServicePlan, SidecarToPlugin, UserMessage, WorkMode } from '../ipc/protocol.js';
 import { applyUserConfirmation, confirmationError, createdHandles, newlyAffected, planLayersOf, refusedForConfirmation, windowChanged, type GateState } from './confirmation.js';
+import { resetTraceViews } from '../tools/trace.js';
 import { toSdkUserMessage } from './content.js';
 import type { ToolBridge } from '../tools/common.js';
 import { MCP_SERVER_NAME, createCadServer } from '../tools/index.js';
@@ -388,6 +389,7 @@ export class AgentSession {
 
   /** Sends one user turn with attachments / context from the palette. */
   sendMessage(msg: UserMessage): void {
+    resetTraceViews(); // nâng cấp đợt G5: the looks at a traced picture are counted per request
     if (this.turnActive) {
       // The plugin only sends when it considers the previous turn over (e.g. it force-ended a
       // turn after Stop). Abandon that turn here too instead of rejecting the new message,

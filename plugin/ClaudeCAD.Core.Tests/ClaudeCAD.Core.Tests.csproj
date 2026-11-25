@@ -37,12 +37,18 @@
     <Compile Include="..\ClaudeCAD.Plugin\Core\StairRoof.cs" Link="Core\StairRoof.cs" />
     <Compile Include="..\ClaudeCAD.Plugin\Core\RoofRightAngled.cs" Link="Core\RoofRightAngled.cs" />
     <Compile Include="..\ClaudeCAD.Plugin\Core\Materials.cs" Link="Core\Materials.cs" />
+    <Compile Include="..\ClaudeCAD.Plugin\Core\Render.cs" Link="Core\Render.cs" />
+    <Compile Include="..\ClaudeCAD.Plugin\Core\Trace.cs" Link="Core\Trace.cs" />
+    <Compile Include="..\ClaudeCAD.Plugin\UI\ChatAttachments.cs" Link="UI\ChatAttachments.cs" />
     <Compile Include="..\ClaudeCAD.Plugin\Core\SelfTestRules.cs" Link="Core\SelfTestRules.cs" />
     <Compile Include="..\ClaudeCAD.Plugin\Core\InternalBuild.cs" Link="Core\InternalBuild.cs" />
     <Compile Include="..\ClaudeCAD.Plugin\Core\Edit2D.cs" Link="Core\Edit2D.cs" />
     <Compile Include="..\ClaudeCAD.Plugin\Core\Util2D.cs" Link="Core\Util2D.cs" />
     <Compile Include="..\ClaudeCAD.Plugin\Core\Standards2D.cs" Link="Core\Standards2D.cs" />
     <Compile Include="..\ClaudeCAD.Plugin\Core\F5.cs" Link="Core\F5.cs" />
+    <Compile Include="..\ClaudeCAD.Plugin\Core\DrawingSet.cs" Link="Core\DrawingSet.cs" />
+    <Compile Include="..\ClaudeCAD.Plugin\Core\Estimate.cs" Link="Core\Estimate.cs" />
+    <Compile Include="..\ClaudeCAD.Plugin\Core\DrawingCheck.cs" Link="Core\DrawingCheck.cs" />
     <Compile Include="..\ClaudeCAD.Plugin\Core\Solids3.cs" Link="Core\Solids3.cs" />
   </ItemGroup>
   <ItemGroup>

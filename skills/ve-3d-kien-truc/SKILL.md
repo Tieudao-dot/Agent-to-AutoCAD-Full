@@ -156,6 +156,11 @@ báo lỗi → mái bằng, hoặc vẽ lại đường bao góc vuông. Đầu 
 
 Khối lượng: `volume_schedule` (theo layer; cột lồng trong tường / dầm chỉ tính một lần, vào cột). Va chạm:
 `check_interference`. Khách cần file Excel (nâng cấp đợt F4): thêm `excel: true` (file cạnh bản vẽ) hoặc `excel: "<tên>.xlsx"`.
+Dự toán ("lập dự toán", "tính tiền theo khối lượng"): `cost_estimate` với `quantities: "volume"` và **đơn giá khách đưa**
+(`prices`, theo tên layer); không tự đặt hay tra giá; dòng thiếu giá để trống, kể tên cho khách và hỏi. Thuế / chi phí khác chỉ
+khi khách nói phần trăm (`extra`). `excel: true` ra file có công thức (sửa giá trong Excel là tiền tự tính lại). Ghép giá theo tên: không
+phân biệt hoa thường / khoảng trắng nhưng **giữ dấu** ("Sân" khác "Sàn"); tên giá khớp nhiều dòng thì để trống
+(`ambiguous_prices`): hỏi khách. Kể lại cho khách `source_warnings` nếu có.
 
 Vật liệu và ảnh phối cảnh (nâng cấp đợt F3): `set_material` gán vật liệu mẫu cho khối (`handles`) hoặc cả layer
 (`layers`): `concrete` bê tông (tường, sàn, cột, dầm), `brick` gạch, `plaster` vữa trắng, `glass` kính (cửa sổ, lan can
@@ -163,6 +168,13 @@ kính), `wood` gỗ (cửa đi), `roof_tile` ngói (mái), `steel` thép (lan ca
 Gán theo layer cho nhanh (vd `A-ROOF-3D` → ngói). Xem: `capture_view` với `visual_style` `realistic`; ảnh cho khách:
 `named_view` `action` `image` (file PNG cạnh bản vẽ, báo khách đường dẫn file). Góc nhìn đẹp thì lưu tên bằng `named_view`
 `save` (vd "Phối cảnh 1"), gọi lại bằng `restore`.
+
+Render thật (nâng cấp đợt G4): khách nói "render", "ra ảnh đẹp" → `named_view` `action` `render` (góc nhìn đã lưu `name`,
+không có thì góc nhìn hiện tại; `quality` low / medium / high, mặc định medium; `width` × `height`, mặc định 1920 × 1080;
+nền `white` mặc định / `sky` / `drawing`; ánh sáng `auto` mặc định). Lệnh tự chờ và hiện tiến độ; nền / ánh sáng / góc
+nhìn chỉ đổi trong lúc render rồi trả lại. Kết quả `method` `capture` nghĩa là không render được (quá lâu, lỗi): nói rõ
+với khách file là **ảnh chụp**, không phải ảnh render. Vật liệu mẫu tự dùng vật liệu thư viện Autodesk khi bản vẽ đã có
+(kết quả `source` `library`); không có thì dùng màu đơn giản và chuyển lời `library_note` cho khách.
 
 ## 4. Tự kiểm tra trước khi báo xong
 
@@ -208,3 +220,7 @@ Gán theo layer cho nhanh (vd `A-ROOF-3D` → ngói). Xem: `capture_view` với 
   `capture_view` `top` với handles của kết quả. Đặt nhiều hình: kết quả trả `size` và `frame` (điểm mô hình → điểm trên
   bản vẽ) để căn hình sau theo hình trước.
 - Máy gói 3D không có lệnh ghi kích thước / chữ: chỉ dựng hình; muốn ghi kích thước thì cần gói Full.
+- **Cả bộ hồ sơ** (mặt bằng từng tầng, 4 mặt đứng, 2 mặt cắt, phối cảnh lên các tờ có khung tên, in một PDF): một lệnh
+  `create_drawing_set`, không gọi từng `section_view` / `projection_view` / `create_sheet`. Mặt bằng mặc định là mặt cắt
+  ngang cao 1,2 m trên sàn mỗi tầng; khách chỉ vị trí cắt thì `sections` với `line`. Máy gói 3D: hình vẽ trong model, không
+  có tờ in (báo khách phần này cần gói Full / 2D). Chạy lại: thẻ xác nhận thay bộ cũ.

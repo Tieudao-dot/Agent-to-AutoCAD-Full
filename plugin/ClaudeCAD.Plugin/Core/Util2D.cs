@@ -14,6 +14,14 @@ namespace ClaudeCAD.Plugin.Core
     /// </summary>
     public static class Util2DLogic
     {
+        /// <summary>
+        /// Test tổng thể G: layers of the 2D views the 3D tools draw from the model (section_view / projection_view, the views of
+        /// create_drawing_set): A-SECT, A-SECT-PAT, A-SECT-BACK, A-ELEV. area_schedule without layers / handles leaves them out.
+        /// </summary>
+        public static bool IsDerivedViewLayer(string layer) =>
+            layer != null && new[] { SectionLogic.OutlineLayer, SectionLogic.HatchLayer, SectionLogic.BehindLayer, SectionLogic.ElevationLayer }
+                .Contains(layer.Trim(), StringComparer.OrdinalIgnoreCase);
+
         private const double Eps = 1e-9;
 
         // ================================================================== hatch by a picked point

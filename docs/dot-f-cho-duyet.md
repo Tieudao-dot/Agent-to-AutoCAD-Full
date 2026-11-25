@@ -76,7 +76,7 @@ Người rà đã soát bảng trên: không đổi số nào, bảng đủ sau 
 | Bản vẽ đã có style trùng tên nhưng khác số | Giữ nguyên, không đặt làm hiện hành; chỉ ghi đè sau khi khách bấm Đồng ý trên thẻ (gõ chữ "đồng ý" không tính) |
 | Khách đã tự đặt tỉ lệ nét | Giữ nguyên, chỉ báo số nên dùng |
 | Bản vẽ đơn vị mét / cm | Có kiểu kích thước riêng (`VN-100-M`, `VN-100-CM`) |
-| Ghi chú có mũi tên chỉ dẫn (multileader) | Chưa làm |
+| Ghi chú có mũi tên chỉ dẫn (multileader) | Chưa làm ở F2. *(Đợt F5 đã làm: bộ chuẩn có thêm kiểu ghi chú mũi tên, xem mục Đợt F5)* |
 | Khung tên | Là block có ô điền, sửa được bằng lệnh sửa thuộc tính của AutoCAD. Khung nhìn nằm phía trên khung tên, không chồng lên |
 | Hệ tọa độ đang xoay khi tạo trang in | Khung nhìn xoay theo |
 | Máy in không có giấy đúng chiều | Xoay giấy 90°. Tạo trang lỗi giữa chừng thì xóa layout vừa tạo |
@@ -156,6 +156,9 @@ Người rà nêu, giữ nguyên như F3 đã chọn:
 - **Xóa hoặc ghi đè góc nhìn đã lưu không hiện thẻ xác nhận.** Claude hỏi trước trong chat, hoàn tác được.
 
 Muốn chặt hơn thì thêm thẻ xác nhận cho hai trường hợp này (việc nhỏ).
+
+**Đợt F5 đã làm cả hai:** gán vật liệu cho cả layer, ghi đè và xóa góc nhìn đã lưu nay đều qua thẻ Đồng ý / Hủy (xem mục
+Đợt F5).
 
 ### Lỗi người rà đã sửa (2)
 

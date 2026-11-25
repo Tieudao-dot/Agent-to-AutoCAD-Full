@@ -281,6 +281,7 @@ namespace ClaudeCAD.Plugin.Drawing
             var skipped = new List<string>();
             var texts = new List<Util2DLogic.TextItem>();
             var textLayers = p.StringsOpt("text_layers");
+            var derived = new SortedSet<string>(StringComparer.OrdinalIgnoreCase);
             foreach (var e in SpaceEntities(ctx, p))
             {
                 if (groupBy == "room" && (e is DBText || e is MText) && (textLayers == null || textLayers.Any(l => WildcardMatch(e.Layer, l))))
@@ -292,6 +293,9 @@ namespace ClaudeCAD.Plugin.Drawing
                     texts.Add(new Util2DLogic.TextItem { Text = e is DBText t1 ? t1.TextString : ((MText)e).Text, Position = pos });
                 }
                 if (handles != null ? !handles.Contains(e.Handle.ToString()) : layers != null && !layers.Any(l => WildcardMatch(e.Layer, l))) continue;
+                // test tổng thể G: without layers / handles, the 2D views drawn from the 3D model (section_view, projection_view,
+                // create_drawing_set: A-SECT…, A-ELEV) are not areas of the plan
+                if (handles == null && layers == null && Util2DLogic.IsDerivedViewLayer(e.Layer)) { derived.Add(e.Layer); continue; }
                 Util2DLogic.AreaItem it = null;
                 string h = e.Handle.ToString();
                 switch (e)
@@ -336,6 +340,7 @@ namespace ClaudeCAD.Plugin.Drawing
                 }).ToList(),
             };
             if (skipped.Count > 0) res["skipped"] = skipped.Take(50).Cast<object>().ToList();
+            if (derived.Count > 0) res["left_out_layers"] = $"{string.Join(", ", derived)}: 2D views drawn from the 3D model (sections / elevations), not areas of the plan. Name them in layers to count them.";
             var outer = Util2DLogic.Containers(areas);
             if (outer.Count > 0 && p.Has("table_position") && !p.Bool("allow_nested", false))
                 throw ToolException.Invalid($"area_schedule: {outer.Count} area(s) contain other areas of the list ({string.Join(", ", outer.Take(20))}), e.g. a building " +
