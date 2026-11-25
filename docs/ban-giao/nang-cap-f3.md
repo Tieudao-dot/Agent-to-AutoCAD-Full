@@ -147,7 +147,9 @@ Chế độ 2D / 3D của F1 trên máy Full: như gói 2D / 3D (+ đoạn "Work
 
 ## CI
 
-*(điền sau khi chạy)*
+- Run **#44** (`45590903520`, `release=false`) trên `4a26989` (commit code cuối): **xanh** (job `windows`: build 3
+  target, lõi, trợ lý, UI test WPF). Trước đó trên Linux: build 3 target 0 cảnh báo (xóa obj / bin giữa các lần), lõi 1001,
+  trợ lý 317, dự án UI test build được. Commit sau CI chỉ thêm mục này.
 
 ## Chưa kiểm được
 
