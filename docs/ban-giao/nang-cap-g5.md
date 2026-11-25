@@ -121,7 +121,9 @@ Số kỹ thuật (khách không thấy): tối đa 400 đường lưới / ản
 
 ## 10. CI
 
-- Bước gộp: xem mục cập nhật cuối file.
+- Bước gộp: run **#65** (`45662682522`) trên `1c2a1c1`: **xanh**.
+- G5: run **#66** (`45665170098`, `release=false`) trên `8a2515c` (code G5 `755445f` + gộp tài liệu G4-test `29a2e6c`): **xanh** (job
+  `windows`: build 3 target, lõi, trợ lý, UI test WPF). Dùng 1 / 2 lượt của G5. Commit sau đó chỉ thêm mục này.
 
 ## 11. Chưa kiểm được
 
