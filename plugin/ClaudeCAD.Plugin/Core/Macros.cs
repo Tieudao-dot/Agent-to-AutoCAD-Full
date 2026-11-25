@@ -92,6 +92,13 @@ namespace ClaudeCAD.Plugin.Core
         public static List<string> BlockedCalls(Macro m, string plan) =>
             PlanLogic.BlockedCalls(plan, (m?.Calls ?? new List<MacroCall>()).Select(c => (c.Tool, (IDictionary<string, object>)c.Params)));
 
+        /// <summary>
+        /// Test & sửa đợt F4 (NF4-2): the schedules that also write an Excel file. A replayed macro only redraws (the table in
+        /// the drawing); it never writes the file again: the second run would stop at "the file already exists" and lose the
+        /// table, or (with overwrite) silently replace a file the user may have edited.
+        /// </summary>
+        public static readonly HashSet<string> ExcelTools = new HashSet<string>(StringComparer.Ordinal) { "block_schedule", "area_schedule", "volume_schedule", "check_interference" };
+
         public static bool ShouldRecord(string tool, bool writes) => writes && !string.IsNullOrEmpty(tool) && !NotRecorded.Contains(tool);
 
         /// <summary>The "handles" array of a tool result (strings only).</summary>
@@ -364,6 +371,7 @@ namespace ClaudeCAD.Plugin.Core
                 var copy = (MacroLogic.DeepCopy(p ?? new Dictionary<string, object>()) as Dictionary<string, object>) ?? new Dictionary<string, object>();
                 copy.Remove(SolidLogic.UserConfirmedParam); // KT-10: the card's yes belongs to that turn, never to a replay
                 copy.Remove(Edit2DLogic.WindowLimitParam); // NB-1: the turn's 20-object budget belongs to that turn too
+                if (MacroLogic.ExcelTools.Contains(tool ?? "")) { copy.Remove("excel"); copy.Remove("overwrite"); } // NF4-2: no Excel file on replay
                 _calls.Add(new MacroCall
                 {
                     Tool = tool,

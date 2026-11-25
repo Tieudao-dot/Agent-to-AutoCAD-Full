@@ -102,7 +102,7 @@ Excel: tất cả ở `F4Numbers` (`plugin/ClaudeCAD.Plugin/Core/Xlsx.cs`). Mở
 
 | Tình huống | Đã chọn (rẻ, an toàn, đổi lại được) | Muốn đổi thì |
 | --- | --- | --- |
-| Cách giảm mô tả lệnh | dùng tính năng tìm lệnh có sẵn của Claude Code (`ToolSearch`, cờ `anthropic/alwaysLoad`) thay vì tự viết "lệnh gọi lệnh": Claude vẫn gọi đúng tên lệnh, plugin không đổi | bỏ dòng `ENABLE_TOOL_SEARCH` + `ToolSearch` trong `session.ts` là về như cũ |
+| Cách giảm mô tả lệnh | dùng tính năng tìm lệnh có sẵn của Claude Code (`ToolSearch`, cờ `anthropic/alwaysLoad`) thay vì tự viết "lệnh gọi lệnh": Claude vẫn gọi đúng tên lệnh, plugin không đổi | không cần build lại (Test & sửa đợt F4): đặt biến môi trường `CLAUDECAD_DEFER_TOOLS=0`, hoặc tạo file trống `%LocalAppData%\ClaudeCAD\tool-search-off`, rồi khởi động lại AutoCAD → mọi lệnh nạp đủ như trước F4 |
 | Bộ lệnh nạp đủ | 25 lệnh chung cho mọi gói (phần ngoài gói tự bỏ) | sửa `ALWAYS_LOADED_TOOLS` |
 | Test cũ `session.test.ts` kiểm tập công cụ có sẵn = `['Read', 'Skill']` | sửa đúng dòng đó thành `['Read', 'Skill', 'ToolSearch']` (ToolSearch chỉ nạp mô tả lệnh CAD, không mở file / lệnh hệ thống / web); các kiểm tra cô lập khác giữ nguyên | — |
 | Khởi động sẵn khi nào | khi trợ lý báo sẵn sàng (mở AutoCAD / trợ lý tự chạy lại), đổi chế độ, đổi gói, chat mới, chuyển bản vẽ | — |

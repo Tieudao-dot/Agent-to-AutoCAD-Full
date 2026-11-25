@@ -46,3 +46,19 @@ vài block (vd chèn 3 cửa đi thư viện), và vài khối 3D trên 2 layer 
    là số. Không có va chạm: Claude nói không có va chạm, không tạo file.
 7. Máy **gói 2D**: "xuất bảng khối lượng 3D ra Excel". Đạt: Claude nói máy không có phần 3D (không tạo file).
 8. Bản vẽ **chưa lưu** (Drawing1): xuất Excel. Đạt: file vào thư mục Documents, tên `Drawing1-...xlsx`.
+
+## C. Sau Test & sửa đợt F4 (~8 phút)
+
+*Nhánh `full/nang-cap-f4-test`. Chi tiết: `docs/ban-giao/nang-cap-f4-test.md`.*
+
+1. Lưu macro cho lượt "lập bảng thống kê block (có bảng trên bản vẽ) và xuất Excel", rồi chạy macro đó. Đạt: bảng mới
+   được vẽ lại trên bản vẽ; **không** có lỗi "file đã có"; file Excel cũ **không** bị ghi đè (giờ sửa đổi cuối của file
+   giữ nguyên).
+2. Đặt tên một block có ký tự lạ (vd `CỬA & SỔ <1>`), "thống kê block ra Excel". Đạt: Excel mở file không báo hỏng, tên
+   hiện đúng.
+3. **Công tắc tắt nạp gọn:** đóng AutoCAD, tạo file trống `tool-search-off` trong `%LocalAppData%\ClaudeCAD` (gõ
+   `%LocalAppData%\ClaudeCAD` vào thanh địa chỉ của File Explorer, chuột phải → New → Text Document, đổi tên thành
+   `tool-search-off`, bỏ đuôi `.txt`). Mở AutoCAD, nhờ một việc dùng lệnh ít gặp (vd "kéo giãn hình chữ nhật"). Đạt:
+   Claude làm được như trước F4; trong `%LocalAppData%\ClaudeCAD\logs` (file log của trợ lý) có dòng
+   `tools: all in full (deferring switched off)`. Xóa file `tool-search-off`, mở lại AutoCAD: dòng log thành
+   `tools: most used in full, the rest behind ToolSearch`.

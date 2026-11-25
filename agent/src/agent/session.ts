@@ -31,6 +31,22 @@ export interface SessionConfig {
   onCancel?: () => void;
   /** Injection point for tests. */
   queryFn?: QueryFn;
+  /**
+   * Nâng cấp đợt F4: only ALWAYS_LOADED_TOOLS in full, the rest behind ToolSearch (default true). false = the way back
+   * (Test & sửa đợt F4): every tool in full, no ToolSearch, exactly the tool set of before F4 (deferToolsEnabled).
+   */
+  deferTools?: boolean;
+}
+
+/**
+ * Test & sửa đợt F4: the switch-off of the deferred tools, without a new build: the environment variable
+ * CLAUDECAD_DEFER_TOOLS=0 (or false / off), or an empty file "tool-search-off" in %LocalAppData%\ClaudeCAD.
+ */
+export const DEFER_OFF_FILE = 'tool-search-off';
+export function deferToolsEnabled(env: Record<string, string | undefined>, offFileExists: boolean): boolean {
+  const v = (env.CLAUDECAD_DEFER_TOOLS ?? '').trim().toLowerCase();
+  if (v === '0' || v === 'false' || v === 'off' || v === 'no') return false;
+  return !offFileExists;
 }
 
 /**
@@ -141,6 +157,11 @@ export class AgentSession {
   private prewarmRestarts = 0;
   private prewarmTimer?: ReturnType<typeof setTimeout>;
 
+  /** Test & sửa đợt F4: false = the switch-off (every tool in full, as before F4). */
+  get deferTools(): boolean {
+    return this.cfg.deferTools !== false;
+  }
+
   constructor(private readonly cfg: SessionConfig) {
     this.defaultModel = cfg.model;
   }
@@ -241,7 +262,7 @@ export class AgentSession {
       if (req.type === 'confirm_request') this.cardShown(req.id, req.handles, req.text);
       if (req.type === 'plan_request') this.askShown([req.summary, ...req.steps].join('\n'));
       this.cfg.emit(req);
-    }, this.planTools, this.servicePlan, this.workMode ? '2d3d' : undefined);
+    }, this.planTools, this.servicePlan, this.workMode ? '2d3d' : undefined, !this.deferTools);
     this.loadedPlanKey = planKey(this.servicePlan, this.planTools, this.workMode);
     if (this.servicePlan) this.cfg.log(`service plan: ${this.servicePlan}${this.workMode ? ` (work mode ${this.workMode} of Full)` : ''}${this.planTools ? ` (${this.planTools.length} tools)` : ''}`);
     const plugin = prepareSkillsPlugin(this.cfg.skillsDir, this.cfg.workDir, this.chatSkills, this.servicePlan);
@@ -250,7 +271,7 @@ export class AgentSession {
 
     const options: Options = {
       cwd: this.cfg.workDir,
-      systemPrompt: systemPromptFor(this.servicePlan, this.workMode),
+      systemPrompt: systemPromptFor(this.servicePlan, this.workMode, this.deferTools),
       model: this.cfg.model,
       fallbackModel: this.cfg.fallbackModel,
       ...(this.cfg.effort ? { effort: this.cfg.effort as Options['effort'] } : {}),
@@ -258,12 +279,12 @@ export class AgentSession {
       strictMcpConfig: true,
       // Base tool set: only Read (to read skill files), Skill and ToolSearch (F4: loads the schema of a deferred CAD tool).
       // Everything CAD comes from our MCP server.
-      tools: ['Read', 'Skill', 'ToolSearch'],
+      tools: this.deferTools ? ['Read', 'Skill', 'ToolSearch'] : ['Read', 'Skill'],
       disallowedTools: DISALLOWED_BUILTINS,
       // Auto-allow our tools; Read ONLY inside the generated skills plugin (relative to cwd = workDir).
       // Anything else is denied without prompting (dontAsk): text inside a received drawing cannot make
       // Claude read credentials or other files of this PC.
-      allowedTools: [`mcp__${MCP_SERVER_NAME}`, `mcp__${MCP_SERVER_NAME}__*`, `Read(./${SKILLS_PLUGIN_NAME}/**)`, 'Skill', 'ToolSearch'],
+      allowedTools: [`mcp__${MCP_SERVER_NAME}`, `mcp__${MCP_SERVER_NAME}__*`, `Read(./${SKILLS_PLUGIN_NAME}/**)`, 'Skill', ...(this.deferTools ? ['ToolSearch'] : [])],
       permissionMode: 'dontAsk',
       permissionPrompts: 'none',
       // Isolation: ignore ~/.claude settings, CLAUDE.md, project MCP configs.
@@ -277,7 +298,7 @@ export class AgentSession {
       persistSession: true,
       stderr: (data) => this.cfg.log(`[claude] ${data.trimEnd()}`),
       // F4: tool search on: only ALWAYS_LOADED_TOOLS (+ the card tools) are sent in full, the rest by name
-      env: { ...process.env, CLAUDE_AGENT_SDK_CLIENT_APP: `claudecad/${this.cfg.version}`, ENABLE_TOOL_SEARCH: TOOL_SEARCH },
+      env: { ...process.env, CLAUDE_AGENT_SDK_CLIENT_APP: `claudecad/${this.cfg.version}`, ENABLE_TOOL_SEARCH: this.deferTools ? TOOL_SEARCH : 'false' },
     };
     if (resume) options.resume = resume;
     return options;

@@ -112,10 +112,12 @@ function trimForPlan(t: AnyTool, plan: string): AnyTool {
 
 /** emit: palette messages of the local tools (confirmation / plan / suggestion / skill draft cards). */
 /** skillPlan: the machine's own plan for drafted skills (a Full machine in the 2D work mode still drafts Full skills). */
-export function createCadServer(bridge: ToolBridge, version: string, emit?: (msg: SidecarToPlugin) => void, allowed?: readonly string[], plan?: string, skillPlan?: string) {
+/** allLoaded (Test & sửa đợt F4, the switch-off): every tool in full, nothing deferred, as before F4. */
+export function createCadServer(bridge: ToolBridge, version: string, emit?: (msg: SidecarToPlugin) => void, allowed?: readonly string[], plan?: string, skillPlan?: string, allLoaded = false) {
   return createSdkMcpServer({
     name: MCP_SERVER_NAME,
     version,
+    ...(allLoaded ? { alwaysLoad: true } : {}),
     tools: [...buildTools(bridge, allowed, plan), ...(emit ? interactionTools(emit, skillPlan ?? plan).map((t) => withLoading(t, true)) : [])],
   });
 }

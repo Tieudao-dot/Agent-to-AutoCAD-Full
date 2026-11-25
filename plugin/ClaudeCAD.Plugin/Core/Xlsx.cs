@@ -104,11 +104,20 @@ namespace ClaudeCAD.Plugin.Core
             return w;
         }
 
-        private static string Esc(string s)
+        internal static string Esc(string s)
         {
             var sb = new StringBuilder(s.Length + 8);
-            foreach (char ch in s)
+            for (int i = 0; i < s.Length; i++)
             {
+                char ch = s[i];
+                // Test & sửa đợt F4 (NF4-3): XML 1.0 refuses U+FFFE / U+FFFF and a half surrogate pair (Excel would say the file is damaged)
+                if (ch == '\uFFFE' || ch == '\uFFFF') continue;
+                if (char.IsHighSurrogate(ch))
+                {
+                    if (i + 1 < s.Length && char.IsLowSurrogate(s[i + 1])) { sb.Append(ch).Append(s[i + 1]); i++; }
+                    continue;
+                }
+                if (char.IsLowSurrogate(ch)) continue;
                 switch (ch)
                 {
                     case '&': sb.Append("&amp;"); break;

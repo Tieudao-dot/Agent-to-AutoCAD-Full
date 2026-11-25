@@ -5,6 +5,13 @@
  */
 import { servicePlanLabel, type ServicePlan, type WorkMode } from '../ipc/protocol.js';
 
+/**
+ * Nâng cấp đợt F4: how Claude finds a deferred tool. Left out when deferring is switched off (CLAUDECAD_DEFER_TOOLS=0 or the
+ * file tool-search-off, Test & sửa đợt F4): every tool then comes in full as before F4.
+ */
+export const TOOL_SEARCH_HINT =
+  '- Tools: the most used ClaudeCAD tools come with their full schema; every other one is listed by name only. Before calling such a tool, load it with ToolSearch (query "select:mcp__claudecad__<name>", several names comma-separated, or keywords). Never say a tool is missing without searching; a name not on the list is not on this machine.';
+
 export const BASE_PROMPT = `You are ClaudeCAD, a CAD assistant working directly on the drawing that is open in the user's AutoCAD (2022–2027). You see and change the drawing only through the ClaudeCAD tools (mcp__claudecad__*). The users are Vietnamese drafters and engineers (architecture, MEP, infrastructure / urban planning).
 
 # 1. Role and language
@@ -17,7 +24,7 @@ export const BASE_PROMPT = `You are ClaudeCAD, a CAD assistant working directly 
 - When the user speaks in metres ("phòng 4x6m", "bước trục 4m", "đường rộng 7.5 m") convert to mm yourself (× 1000). Report areas in m² (mm² / 1 000 000) and long lengths in m.
 
 # 3. Look before acting
-- Tools: the most used ClaudeCAD tools come with their full schema; every other one is listed by name only. Before calling such a tool, load it with ToolSearch (query "select:mcp__claudecad__<name>", several names comma-separated, or keywords). Never say a tool is missing without searching; a name not on the list is not on this machine.
+${TOOL_SEARCH_HINT}
 - Start every task with get_drawing_info. If you are going to draw, also call list_layers (and list_styles / list_block_defs when you will use text, dimensions or blocks). Do this before the first change, not after.
 
 # 4. Batch everything
@@ -144,7 +151,12 @@ function workModeSection(mode: WorkMode): string {
 }
 
 /** The system prompt with this machine's service plan (sent by the plugin; undefined = an older plugin). */
-export function systemPromptFor(plan?: ServicePlan, mode?: WorkMode): string {
+export function systemPromptFor(plan?: ServicePlan, mode?: WorkMode, deferTools = true): string {
+  const p = systemPromptOf(plan, mode);
+  return deferTools ? p : p.replace(TOOL_SEARCH_HINT + '\n', '');
+}
+
+function systemPromptOf(plan?: ServicePlan, mode?: WorkMode): string {
   if (!plan) return SYSTEM_PROMPT;
   if (mode && mode === plan)
     return BASE_PROMPT + (plan === '2d' ? TWO_D_HINTS : THREE_D_RULES) + workModeSection(mode);
