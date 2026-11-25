@@ -77,6 +77,7 @@ quy tắc làm việc và danh bạ thread: [`../CLAUDE.md`](../CLAUDE.md).
 | 25/11 | Đợt F làm ngay | Chủ dự án thử thật bản 3 ổn, chốt nâng cấp tiếp cả 4 nhóm trước khi phát hành: F1 UCS + nút chế độ, F2 2D dùng hằng ngày, F3 3D đẹp và đúng hơn, F4 mở chat nhanh + xuất Excel; ước $125–200 |
 | 25/11 | Kiểm tra trước khi báo hoàn thành | Mỗi đợt có Test & sửa + CI; cuối chuỗi test tổng thể + kiểm tra độc lập; luồng chính tự kiểm CI và file bộ cài rồi mới báo "hoàn thành" |
 | 25/11 | File quyền cho thread | Luồng chính thêm hộ `.claude/settings.json` trên `full/nang-cap-f-goc` (ngoại lệ một lần) để thread mới tự commit / push nhánh `full/…` và chạy CI; không cho đẩy `main` |
+| 25/11 | Con số phải xác nhận trước | Mọi con số khách sẽ gặp hoặc làm đổi kết quả (số mặc định, kích thước, ngưỡng…) phải hỏi chủ dự án xác nhận trước khi làm; thread gom danh sách số gửi luồng chính, luồng chính hỏi. Số kỹ thuật bên trong thì không hỏi, ghi trong bàn giao |
 | 12/11 | Cách làm việc | Luồng chính điều phối; mỗi đợt một thread, thread đợt tự mở thread con "Test & sửa" |
 
 ## 4. Đã làm

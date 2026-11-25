@@ -40,6 +40,18 @@ dự án gốc), `bo-cai/README.md`.
   - đọc lại một lượt như người không biết code trước khi gửi. Cậu còn hỏi lại "là sao" nghĩa là câu hỏi chưa đạt:
     giải thích lại đơn giản hơn rồi mới hỏi tiếp;
   - sub-thread nêu điểm cần chốt cũng theo quy tắc này; luồng chính viết lại cho dễ hiểu trước khi hỏi cậu.
+- **Con số phải được cậu xác nhận trước khi làm (chủ dự án yêu cầu 25/11/2026):**
+  - mọi con số do thread chọn mà khách sẽ gặp hoặc làm đổi kết quả khách nhận được (kích thước và độ dày mặc định,
+    chiều cao, khoảng cách, góc, cỡ chữ, tỉ lệ, ngưỡng, giới hạn, giá…) phải hỏi cậu xác nhận **trước** khi đưa vào
+    code hay tài liệu cho khách; không tự chốt rồi báo sau;
+  - sub-thread gom các số định dùng thành một danh sách (số nào, dùng ở đâu, khách sẽ thấy gì, vì sao đề xuất số đó) và
+    gửi luồng chính càng sớm càng tốt; trong lúc chờ thì làm tiếp phần không phụ thuộc số đó;
+  - luồng chính hỏi cậu bằng AskUserQuestion, mỗi nhóm số một câu, có số đề xuất kèm lý do; chuyển câu trả lời xuống
+    thread; số đã xác nhận ghi vào kế hoạch / bàn giao kèm ngày;
+  - còn số chưa được xác nhận thì thread chưa báo "xong" phần đó;
+  - không phải hỏi: số kỹ thuật bên trong mà khách không thấy và không làm đổi kết quả (dung sai tính toán, thời gian
+    chờ, số trong test). Các số này ghi trong bàn giao;
+  - tin giao việc và prompt mở thread mới ghi sẵn quy tắc này.
 - **Tác vụ đang chạy hiện ở thanh bên phải (task list) (chủ dự án yêu cầu 13/11/2026):**
   - luồng chính giữ trên thanh bên phải của thread chính mỗi việc đang chạy là 1 task: tên thread / đợt + việc
     (vd "Đợt A › Test & sửa"), dòng trạng thái là bước hiện tại (vd "CI đang chạy, run …");

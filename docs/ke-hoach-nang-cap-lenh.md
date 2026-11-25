@@ -113,6 +113,8 @@ tiếp; đợt sau xuất phát từ commit cuối của bước Test & sửa đ
   - cuối chuỗi: test tổng thể + kiểm tra độc lập, lỗi sửa xong và được soát lại;
   - luồng chính tự kiểm CI và file bộ cài rồi mới báo chủ dự án.
 - F4 (mở chat nhanh, xuất Excel) là ý của luồng chính, chủ dự án chọn 25/11. Còn để sau: vẽ lại từ ảnh / PDF scan.
+- **Con số phải được chủ dự án xác nhận trước khi làm** (yêu cầu 25/11): thread đợt F gom các số khách sẽ gặp (cỡ chữ,
+  kích thước khung tên, độ dày, góc…) gửi luồng chính trước khi đưa vào code; luồng chính hỏi rồi chuyển xuống.
 
 ### Tiến độ đợt F
 
