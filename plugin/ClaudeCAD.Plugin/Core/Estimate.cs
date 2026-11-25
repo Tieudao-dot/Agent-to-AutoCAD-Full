@@ -32,7 +32,10 @@ namespace ClaudeCAD.Plugin.Core
         public const int MaxPercentLines = 5, MaxPrices = 500;
     }
 
-    /// <summary>One cell of the .xlsx with a formula (and the value it gives, for readers that do not recalculate) or a style.</summary>
+    /// <summary>
+    /// One cell of the .xlsx with a formula (and the value it gives, for readers that do not recalculate) or a style. A string
+    /// Value without a formula is always written as text (never turned into a number, unlike a plain string cell).
+    /// </summary>
     public sealed class XlsxCell
     {
         public object Value;
@@ -110,6 +113,13 @@ namespace ClaudeCAD.Plugin.Core
             return Regex.Replace(sb.ToString(), @"\s+", " ").Trim();
         }
 
+        /// <summary>
+        /// Test & sửa G3: a unit as the "check" note compares it: "m3", "m³", "M^3" and "m 3" are the same unit (the
+        /// superscripts of the schedules and the plain digits the user types).
+        /// </summary>
+        public static string UnitKey(string unit) =>
+            Regex.Replace(Key((unit ?? "").Normalize(NormalizationForm.FormKD)).Replace("^", ""), @"\s+", "");
+
         private static bool Wild(string key, string pattern)
         {
             var rx = "^" + string.Join(".*", pattern.Split('*').Select(Regex.Escape)) + "$";
@@ -120,17 +130,23 @@ namespace ClaudeCAD.Plugin.Core
         /// The price of a row: the entry with the same name (Key: accents, case, '-' / spaces do not matter), else the one
         /// pattern with '*' that fits ("A-WALL*"). Two patterns with different prices: no price (ambiguous), never a guess.
         /// </summary>
-        public static Price Match(string item, IList<Price> prices, out string note)
+        public static Price Match(string item, IList<Price> prices, out string note) => Match(item, prices, out note, out _);
+
+        /// <summary>Test & sửa G3: also the entries that fit the row (when they disagree, none is used but none is "unused").</summary>
+        public static Price Match(string item, IList<Price> prices, out string note, out List<Price> fitting)
         {
             note = null;
+            fitting = new List<Price>();
             var k = Key(item);
             var exact = prices.Where(p => !p.Item.Contains("*") && Key(p.Item) == k).ToList();
             if (exact.Count > 0)
             {
+                fitting = exact;
                 if (exact.Select(p => p.UnitPrice).Distinct().Count() > 1) { note = "several unit prices given for this item"; return null; }
                 return exact[0];
             }
             var wild = prices.Where(p => p.Item.Contains("*") && Wild(k, Key(p.Item))).ToList();
+            fitting = wild;
             if (wild.Count == 0) return null;
             if (wild.Select(p => p.UnitPrice).Distinct().Count() > 1) { note = "several price patterns fit (" + string.Join(", ", wild.Select(p => p.Item)) + ")"; return null; }
             return wild[0];
@@ -153,17 +169,17 @@ namespace ClaudeCAD.Plugin.Core
             var used = new HashSet<Price>();
             foreach (var row in rows)
             {
-                var pr = Match(row.Item, prices, out var note);
+                var pr = Match(row.Item, prices, out var note, out var fitting);
+                foreach (var fp in fitting) used.Add(fp); // Test & sửa G3: an ambiguous price fitted a row, it is not "unused"
                 // the quantity as shown (and as the Excel formula multiplies it)
                 double q = Math.Round(row.Quantity, G3Numbers.QuantityDecimals, MidpointRounding.AwayFromZero);
                 var line = new Line { Item = row.Item, Unit = row.Unit, Quantity = q, Note = note };
                 if (pr != null)
                 {
-                    used.Add(pr);
                     line.UnitPrice = pr.UnitPrice;
                     line.Amount = RoundMoney(q * pr.UnitPrice);
                     line.PricedBy = pr.Item;
-                    if (!string.IsNullOrWhiteSpace(pr.Unit) && Key(pr.Unit) != Key(row.Unit))
+                    if (!string.IsNullOrWhiteSpace(pr.Unit) && UnitKey(pr.Unit) != UnitKey(row.Unit))
                         line.Note = $"the price is per {pr.Unit.Trim()}, the quantity is in {row.Unit}: check";
                 }
                 else r.Missing.Add(row.Item);
@@ -223,7 +239,8 @@ namespace ClaudeCAD.Plugin.Core
                 int n = rows.Count + 1;
                 rows.Add(new List<object>
                 {
-                    (double)(n - 1), l.Item, l.Unit, Math.Round(l.Quantity, G3Numbers.QuantityDecimals),
+                    // Test & sửa G3: names stay text in Excel (a room "101" or a layer "2024" is not a number)
+                    (double)(n - 1), new XlsxCell { Value = l.Item }, new XlsxCell { Value = l.Unit }, Math.Round(l.Quantity, G3Numbers.QuantityDecimals),
                     new XlsxCell { Value = l.UnitPrice.HasValue ? (object)l.UnitPrice.Value : null, Style = 2 },
                     new XlsxCell { Formula = $"IF(E{n}=\"\",\"\",ROUND(D{n}*E{n},{d}))", Value = l.Amount.HasValue ? (object)l.Amount.Value : null, Style = 2 },
                 });
@@ -237,7 +254,7 @@ namespace ClaudeCAD.Plugin.Core
             {
                 int n = rows.Count + 1;
                 pRows.Add(n);
-                rows.Add(new List<object> { "", p.Name, "%", p.Rate, "", new XlsxCell { Formula = $"ROUND(F{sub}*D{n}/100,{d})", Value = p.Amount, Style = 2 } });
+                rows.Add(new List<object> { "", new XlsxCell { Value = p.Name }, "%", p.Rate, "", new XlsxCell { Formula = $"ROUND(F{sub}*D{n}/100,{d})", Value = p.Amount, Style = 2 } });
             }
             if (r.Percents.Count > 0)
                 rows.Add(new List<object> { "", G3Numbers.TotalLabel, "", "", "",

@@ -29,6 +29,7 @@ LibreOffice / Google Sheets để mở file. "Đạt" là thấy đúng như c�
 | C1 | "Dự toán lát sàn theo diện tích phòng: phòng khách 450.000, phòng ngủ 400.000 đồng/m²" | Giá ghép đúng phòng dù gõ không dấu / khác hoa thường ("phong khach"); phòng khác báo thiếu giá |
 | C2 | "Dự toán cửa: CUA-DI-* 3.500.000 đồng/cái" | Mọi block CUA-DI-… có giá theo mẫu `*` |
 | C3 | Cho hai mẫu cùng khớp một dòng với hai giá khác nhau (vd "CUA*" 1.000.000 và "CUA-DI*" 2.000.000) | Dòng đó không có giá, ghi "several price patterns fit"; Claude hỏi lại, không chọn hộ |
+| C4 | *(Test & sửa G3)* "Dự toán tường 1.200.000 đồng/m3" (gõ m3, không phải m³), xuất Excel; bản vẽ có phòng tên số (vd "101") | Không có ghi chú "check" đơn vị; trong Excel tên phòng "101" vẫn là chữ (canh trái), khối lượng / tiền là số |
 
 ## D. Gói, chế độ, Chỉ xem, macro (~5 phút)
 

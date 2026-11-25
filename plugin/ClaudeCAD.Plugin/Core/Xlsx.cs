@@ -165,10 +165,12 @@ namespace ClaudeCAD.Plugin.Core
                     if (row[c] is XlsxCell xc)
                     {
                         string st = xc.Style > 0 ? " s=\"" + xc.Style.ToString(CultureInfo.InvariantCulture) + "\"" : style;
-                        var cv = CellValue(xc.Value);
+                        var cv = xc.Value is string xs ? xs : CellValue(xc.Value); // Test & sửa G3: a text stays text
                         if (string.IsNullOrEmpty(xc.Formula))
                         {
                             if (cv is double xd) sb.Append("<c r=\"").Append(refName).Append('"').Append(st).Append("><v>").Append(xd.ToString("R", CultureInfo.InvariantCulture)).Append("</v></c>");
+                            else if (cv is string ts && ts.Length > 0)
+                                sb.Append("<c r=\"").Append(refName).Append('"').Append(st).Append(" t=\"inlineStr\"><is><t xml:space=\"preserve\">").Append(Esc(ts)).Append("</t></is></c>");
                             else if (st.Length > 0) sb.Append("<c r=\"").Append(refName).Append('"').Append(st).Append("/>");
                             continue;
                         }
