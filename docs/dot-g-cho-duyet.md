@@ -237,7 +237,26 @@ Mọi số ở `G4Numbers` (`Core/Render.cs`).
 | AutoCAD bị tắt giữa lúc render | nền tạm có thể còn lại trong bản vẽ; khách đổi lại bằng tay | rủi ro đã biết, hiếm |
 | Đang có lệnh AutoCAD chạy dở | từ chối, nhờ khách bấm Esc | |
 
+### Sau khi rà (26/11 00h21)
+
+Thread rà sửa 6 lỗi, không đổi số nào trong bảng trên:
+
+- **Nặng:** máy có tên người dùng chứa dấu cách hoặc dấu tiếng Việt (vd `C:\Users\Nguyen Van A`) thì phần sau dấu cách của
+  đường dẫn file tạm bị AutoCAD hiểu thành một lệnh khác. Nay file tạm chỉ đặt ở thư mục không dấu, không dấu cách; không có
+  thư mục như vậy thì đi thẳng đường lui (ảnh chụp).
+- **Đường lui tới sớm hơn:** lệnh render hỏi khác thứ tự thì câu trả lời của plugin bị AutoCAD báo "lệnh lạ"; plugin thấy vậy
+  là dừng ngay và lưu ảnh chụp. Lệnh render kết thúc mà 20 giây sau chưa có file cũng chuyển sang ảnh chụp. Chỉ còn một
+  trường hợp phải chờ tới thời gian tối đa: lệnh đứng im chờ nhập (khách bấm Dừng / Esc để thôi sớm).
+- AutoCAD bận render làm trợ lý tưởng lỗi và bỏ cuộc, nền tạm không được trả lại: nay trợ lý hỏi tiếp trong giới hạn.
+- File tạm được dọn ở mọi nhánh; góc nhìn luôn được trả lại; câu báo về vật liệu thư viện nói rõ là khớp theo tên.
+
+Quyết định thêm: thứ tự câu hỏi khác đi thì bỏ render, không thử đoán thứ tự khác. Checklist thử tay có thêm mục F (chép lại
+các câu hỏi thật của lệnh render, thử máy có tên người dùng chứa dấu cách).
+
+Nhánh `full/nang-cap-g4-test` @ `29a2e6c` (code `fdeb306`), CI 45661671404 xanh, lõi 1299, trợ lý 387.
+
 ### Chưa kiểm được
 
-- Chưa chạy trên AutoCAD thật: thứ tự câu hỏi của lệnh render trên AutoCAD 2022–2027; Dừng / Esc có ngắt được render đang
-  chạy không; nền trắng / trời có vào ảnh không; thời gian render thật (để chỉnh số ước lượng).
+- Chưa chạy trên AutoCAD thật: thứ tự câu hỏi thật của lệnh render trên AutoCAD 2022–2027 và tên các mức chất lượng; AutoCAD
+  có trả lời plugin trong lúc đang render không; Dừng / Esc có ngắt được render đang chạy không; nền trắng / trời có vào ảnh
+  không; lệnh render có ghi cài đặt vào bản vẽ không (kể cả khi "Chỉ xem"); thời gian render thật (để chỉnh số ước lượng).
