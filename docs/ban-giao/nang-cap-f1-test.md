@@ -56,7 +56,8 @@ Không đổi thứ chủ dự án nhìn thấy ngoài việc sửa đúng các 
 
 ## CI
 
-*(điền sau khi chạy)*
+- Run **#40** (`45578496260`, `release=false`) trên `e660c5a` (commit code cuối): **xanh** (job `windows`: build 3
+  target, lõi, trợ lý, UI test WPF). Commit sau đó chỉ đổi tài liệu bàn giao.
 
 ## Chưa kiểm được
 
