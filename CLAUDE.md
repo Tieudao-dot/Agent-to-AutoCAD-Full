@@ -98,6 +98,10 @@ dự án gốc), `bo-cai/README.md`.
     từ chính thread đợt, nhánh tách từ nhánh của đợt), chuyển đủ context theo mẫu giao việc ở trên;
   - sub-thread con báo về thread đợt (thread cha); thread đợt tổng hợp rồi báo về luồng chính;
   - đợt sau chỉ bắt đầu khi test & sửa của đợt trước báo xong, và xuất phát từ commit cuối của bước test đó;
+  - **ngoại lệ (chủ dự án chốt 25/11/2026):** hai đợt đụng hai mảng khác nhau được chạy cùng lúc khi chủ dự án đồng ý
+    cho đúng cặp đó (đợt F: F2 và F3 cùng xuất phát từ commit cuối của Test & sửa F1). Mỗi đợt vẫn có thread con Test &
+    sửa riêng; xong cả hai thì thread của đợt kế tiếp gộp hai nhánh, gỡ chỗ chồng nhau, CI xanh rồi mới làm việc của
+    mình. Thread chạy song song sửa file dùng chung càng ít càng tốt và viết phần thử tay vào file riêng của đợt;
   - tin giao việc **đầu tiên** của thread đợt (prompt lúc mở thread) ghi sẵn yêu cầu "viết xong thì tự mở thread con
     Test & sửa" kèm nguyên prompt cho thread con. Yêu cầu gửi sau qua tin nhắn giữa các thread có thể bị chế độ Auto
     chặn; khi đó chủ dự án gõ 1 dòng trong thread đợt;

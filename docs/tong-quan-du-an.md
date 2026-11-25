@@ -80,6 +80,7 @@ quy tắc làm việc và danh bạ thread: [`../CLAUDE.md`](../CLAUDE.md).
 | 25/11 | Con số phải xác nhận trước | Mọi con số khách sẽ gặp hoặc làm đổi kết quả (số mặc định, kích thước, ngưỡng…) phải hỏi chủ dự án xác nhận trước khi làm; thread gom danh sách số gửi luồng chính, luồng chính hỏi. Số kỹ thuật bên trong thì không hỏi, ghi trong bàn giao |
 | 25/11 | Số mặc định cầu thang / mái dốc | Đổi: bản thang + chiếu nghỉ dày **120** mm (trước 150), bản mái dốc dày **120** mm (trước 150); giữ khe giữa 2 vế thang chữ U **100** mm. Mái bằng dày 150 giữ như đã chốt 13/11. Sửa trong đợt F3 |
 | 25/11 | Số mặc định lan can | Xác nhận giữ: cao 1100; khe giữa các song ≤ 100; trụ cách nhau ≤ 1500; tay vịn và trụ 50 × 50; song 20 × 20; thanh dưới cách sàn 100; tấm kín dày 20 (mm) |
+| 25/11 | Cách chạy đợt F | Sau F1: F2 và F3 chạy cùng lúc, mỗi đợt có Test & sửa riêng; thread F4 gộp hai nhánh, CI xanh rồi mới làm F4. Nhanh hơn ~1,5 giờ, thêm ~$5–10 |
 | 12/11 | Cách làm việc | Luồng chính điều phối; mỗi đợt một thread, thread đợt tự mở thread con "Test & sửa" |
 
 ## 4. Đã làm

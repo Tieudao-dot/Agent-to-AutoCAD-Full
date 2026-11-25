@@ -107,6 +107,10 @@ tiếp; đợt sau xuất phát từ commit cuối của bước Test & sửa đ
 
 - Tổng ước $125–200, khoảng 12–14 giờ. Ước theo số thật của chuỗi A → E; các thread đợt F chạy cùng cấu hình với chuỗi đó.
 - F1 trước vì đụng nhiều lệnh nhất: lệnh mới ở các đợt sau theo UCS ngay từ đầu. F4 sau cùng để đo token trên đủ bộ lệnh.
+- **Cách chạy (chốt 25/11 15h50):** sau F1, **F2 và F3 chạy cùng lúc** (2D và 3D là hai mảng khác nhau), mỗi đợt có
+  thread con Test & sửa riêng. Xong cả hai, thread F4 gộp hai nhánh, gỡ chỗ chồng nhau, CI xanh rồi mới làm F4. Nhanh hơn
+  khoảng 1,5 giờ, thêm khoảng $5–10 cho bước gộp. Phần thử tay của F2 / F3 viết vào `docs/checklist-dot-f2.md` /
+  `docs/checklist-dot-f3.md`; test tổng thể cuối chuỗi gộp vào checklist tổng.
 - Nhánh gốc: `full/nang-cap-f-goc` @ `2dbeee2` (nhánh tích hợp `012ed29` + file quyền `.claude/settings.json`).
 - **Kiểm tra trước khi báo hoàn thành** (chủ dự án yêu cầu 25/11):
   - mỗi đợt có thread viết + thread con Test & sửa, mỗi thread CI xanh;
