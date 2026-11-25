@@ -67,7 +67,9 @@ nhận, bước tự kiểm mái 120).
 
 ## CI
 
-*(điền sau khi chạy)*
+- Run **#48** (`45610810220`, `release=false`) trên `9278808` (commit code cuối): **xanh** (job `windows`: build 3
+  target, lõi, trợ lý, UI test WPF). Trước đó trên Linux, sau lần sửa cuối: build 3 target 0 cảnh báo, lõi 1126, trợ lý 355.
+  Commit sau CI chỉ thêm mục này.
 
 ## Chưa kiểm được
 
