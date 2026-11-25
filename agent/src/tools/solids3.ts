@@ -165,7 +165,7 @@ export function solid3Tools(b: ToolBridge): AnyTool[] {
 
     cadTool(b, 'build_roof',
       `ROOF (mái) as one solid on ${E.RoofLayer}: type flat (mái bằng, slab thickness default ${E.DefaultFlatRoofThickness}), gable (2 dốc; ridge along the long side, or ridge short) ` +
-        `or hip (4 dốc). Gable / hip: a rectangle, a convex outline (hip) or a right-angled L / T / U house (one solid with valleys, gable: one main ridge, the wings end in it). Sloped: slope default ${E.DefaultSlopeDeg}°, slab ${E.DefaultSlopedRoofThickness} mm, overhang (eave past the walls) default ${E.DefaultOverhang} mm (flat: 0); ` +
+        `or hip (4 dốc). Gable / hip: a rectangle, a convex outline (hip) or a right-angled L / T / U house (one solid with valleys, gable: the widest part has the main ridge, narrower wings end in the ridges they run into). Sloped: slope default ${E.DefaultSlopeDeg}°, slab ${E.DefaultSlopedRoofThickness} mm, overhang (eave past the walls) default ${E.DefaultOverhang} mm (flat: 0); ` +
         "use the user's numbers when given. Outline = outer face of the walls: outline_handle (closed polyline), outline_points, or from_walls: true (box around the wall solids). " +
         'It sits on the wall top: wall_top_z (mm) or, by default, the top of the wall solids under it (wall_layers, default A-WALL-3D: the top storey; a roof slab on A-SLAB-3D lying on them: its top). Other concave outlines (slanted walls) are refused: tell the user the options in the error. ' +
         'Gable ends are left open. Returns handle, eave_z_mm, top_z_mm, ridge_length_m, plan_area_m2, roof_area_m2, volume_m3, wall_top_from.',

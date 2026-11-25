@@ -22,6 +22,7 @@ Gõ trong khung chat như khách. "Đạt" là thấy đúng như cột phải; 
 | B5 | Vẽ nhà chữ T (thanh ngang 14 × 5 m, chân 5 m rộng × 6 m dài), dựng mái 4 dốc | Một khối, hai khe mái ở hai góc trong |
 | B6 | Vẽ nhà có một bức tường xiên lõm vào (góc không vuông), nhờ dựng mái 4 dốc | Claude báo chưa dựng được loại này, gợi ý mái bằng hoặc vẽ lại góc vuông. Bản vẽ không có gì mới |
 | B7 | Nhà hình chữ nhật 10 × 6 m, mái 4 dốc | Như trước đợt F3 (chỉ bản mái mỏng hơn: 120 mm) |
+| B8 | *(Test & sửa F3)* Nhà chữ U: hai cánh 5 m rộng × 9 m sâu, thanh nối 3 m sâu ở dưới; dựng mái **2 dốc**, nhìn từ ngoài vào **mặt tường ngoài của mỗi cánh** | Mái mỗi cánh dốc đều xuống tường ngoài; **không có tam giác đầu hồi** của thanh nối nhô ra trên sườn mái cánh. Nóc thanh nối chạy giữa hai cánh và dừng ở nóc hai cánh |
 
 ## C. Số mặc định mới (~5 phút)
 
@@ -41,6 +42,7 @@ Gõ trong khung chat như khách. "Đạt" là thấy đúng như cột phải; 
 | D3 | "Xuất ảnh phối cảnh có vật liệu" | Claude báo đường dẫn file **.png** cạnh bản vẽ. Mở file: thấy nhà có màu vật liệu. **Màn hình AutoCAD không đổi** góc nhìn |
 | D4 | Khóa layer tường (`LAYER` → khóa), nhờ "gán vật liệu gạch cho tường" | Claude báo bỏ qua các khối trên layer khóa, không tự mở khóa |
 | D5 | Máy gói **2D** (hoặc máy Full chọn chế độ **2D**): "gán vật liệu bê tông" | Claude nói không làm được ở gói / chế độ này (chế độ: bảo đổi sang 3D hoặc Cả hai, không mời mua gói) |
+| D6 | *(Test & sửa F3)* "Đổi màu vật liệu Global thành đỏ" | Claude báo không đổi vật liệu Global (là vật liệu mặc định của mọi layer), gợi ý đặt tên vật liệu mới. Bản vẽ không đổi màu |
 
 ## E. Góc nhìn đã lưu (~3 phút)
 

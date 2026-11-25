@@ -152,6 +152,65 @@ namespace ClaudeCAD.Plugin.Core
                     res.Add((r, along));
                 }
             }
+            return EndInHigherRidges(res);
+        }
+
+        /// <summary>Half the width across the ridge of a gable piece: its ridge height / tan.</summary>
+        private static double Inset((LRect r, bool alongX) q) => (q.alongX ? q.r.H : q.r.W) / 2;
+
+        private static bool Overlaps(LRect a, LRect b, double tol = 1e-6) =>
+            Math.Min(a.X1, b.X1) - Math.Max(a.X0, b.X0) > tol && Math.Min(a.Y1, b.Y1) - Math.Max(a.Y0, b.Y0) > tol;
+
+        /// <summary>
+        /// Test & sửa đợt F3: a gable wing that runs into ANY higher roof across its ridge (not only the main one: the bar
+        /// of a U house runs into both arms) is cut at that roof's ridge line and the part inside it is dropped, so its
+        /// gable end is hidden under the higher roof instead of sticking out of that roof's far slope. Higher = a wider
+        /// piece (higher ridge); equal widths: the earlier piece (the main roof first).
+        /// </summary>
+        internal static List<(LRect r, bool ridgeAlongX)> EndInHigherRidges(List<(LRect r, bool ridgeAlongX)> pieces)
+        {
+            var res = pieces.ToList();
+            for (int guard = 0; guard < 200; guard++)
+            {
+                bool changed = false;
+                for (int i = 0; i < res.Count && !changed; i++)
+                {
+                    var q = res[i];
+                    for (int j = 0; j < res.Count && !changed; j++)
+                    {
+                        if (i == j) continue;
+                        var p = res[j];
+                        if (p.ridgeAlongX == q.ridgeAlongX || !Overlaps(p.r, q.r)) continue;
+                        double ip = Inset(p), iq = Inset(q);
+                        bool higher = ip > iq + 1e-6 || (Math.Abs(ip - iq) <= 1e-6 && j < i);
+                        if (!higher) continue;
+                        // p's ridge line runs along p (x = const when p's ridge is along y); q runs across it
+                        double line = p.ridgeAlongX ? (p.r.Y0 + p.r.Y1) / 2 : (p.r.X0 + p.r.X1) / 2;
+                        double lo = p.ridgeAlongX ? q.r.Y0 : q.r.X0, hi = p.ridgeAlongX ? q.r.Y1 : q.r.X1;
+                        var parts = new List<LRect>();
+                        if (lo < line - 1e-6 && hi > line + 1e-6)
+                        {
+                            if (p.ridgeAlongX)
+                            {
+                                parts.Add(new LRect { X0 = q.r.X0, Y0 = q.r.Y0, X1 = q.r.X1, Y1 = line });
+                                parts.Add(new LRect { X0 = q.r.X0, Y0 = line, X1 = q.r.X1, Y1 = q.r.Y1 });
+                            }
+                            else
+                            {
+                                parts.Add(new LRect { X0 = q.r.X0, Y0 = q.r.Y0, X1 = line, Y1 = q.r.Y1 });
+                                parts.Add(new LRect { X0 = line, Y0 = q.r.Y0, X1 = q.r.X1, Y1 = q.r.Y1 });
+                            }
+                        }
+                        else parts.Add(q.r);
+                        var kept = parts.Where(x => !x.Inside(p.r)).ToList();
+                        if (kept.Count == 1 && kept[0].Equals(q.r)) continue; // nothing to cut
+                        res.RemoveAt(i);
+                        res.InsertRange(i, kept.Select(x => (x, q.ridgeAlongX)));
+                        changed = true;
+                    }
+                }
+                if (!changed) break;
+            }
             return res;
         }
 

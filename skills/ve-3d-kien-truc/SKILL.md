@@ -150,7 +150,7 @@ các khối tường). Mái đặt trên đỉnh tường: mặc định đỉnh
 cùng; có sàn mái `roof_slab` nằm trên đỉnh tường thì mái đặt trên mặt sàn mái), hoặc `wall_top_z`. Đã có sàn
 mái thì không dựng thêm mái bằng (thành hai lớp sàn). Nhà chữ L / T / U (mọi góc vuông): 4 dốc và 2 dốc dựng thành **một
 khối liền**, có khe mái ở chỗ hai cánh gặp nhau, không chồng thể tích (bảng khối lượng tính đúng); 2 dốc: cánh rộng
-nhất là mái chính, các cánh kia có nóc chạy vào mái chính. Đường bao có góc lõm không vuông (tường xiên) thì 4 dốc / 2 dốc
+nhất là mái chính, các cánh hẹp hơn có nóc chạy vào nóc mái cao hơn mà nó gặp (nhà chữ U: thanh ngang dừng ở nóc hai cánh). Đường bao có góc lõm không vuông (tường xiên) thì 4 dốc / 2 dốc
 báo lỗi → mái bằng, hoặc vẽ lại đường bao góc vuông. Đầu hồi mái 2 dốc để hở (tường hồi: `extrude` / `presspull`). Báo `top_z_mm`,
 `roof_area_m2` (diện tích mặt mái nghiêng, để tính tôn / ngói).
 

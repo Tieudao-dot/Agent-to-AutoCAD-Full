@@ -43,6 +43,12 @@ namespace ClaudeCAD.Plugin.Core
         /// <summary>Material names AutoCAD keeps in every drawing; "ByLayer" / "ByBlock" reset an object.</summary>
         public static readonly string[] Builtin = { "ByLayer", "ByBlock", "Global" };
 
+        /// <summary>
+        /// Test & sửa đợt F3: Global is the default material of every layer, so its colour / opacity is never changed
+        /// (that would recolour the whole drawing in the Realistic style). It can still be given to objects / layers.
+        /// </summary>
+        public static bool IsProtected(string name) => string.Equals((name ?? "").Trim(), "Global", StringComparison.OrdinalIgnoreCase);
+
         /// <summary>The preset of a key, Vietnamese name or alias (case / spacing free), or null.</summary>
         public static Preset Find(string name)
         {

@@ -63,6 +63,8 @@ namespace ClaudeCAD.Plugin.Drawing
             {
                 var bad = MaterialLogic.BadName(name);
                 if (bad != null) throw ToolException.Invalid($"{tool}: '{requested}': {bad}.");
+                if ((rgb != null || opacity.HasValue) && MaterialLogic.IsProtected(name))
+                    throw ToolException.Invalid($"{tool}: the Global material is the default of every layer; its color / opacity is not changed (it would recolour the whole drawing). Nothing was changed. Give a new material name with color instead.");
                 if (dict.Contains(name)) matId = dict.GetAt(name);
                 if (matId.IsNull || rgb != null || opacity.HasValue)
                 {
