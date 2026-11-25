@@ -169,8 +169,8 @@ Chủ dự án chọn làm tiếp cả 5 tính năng mới luồng chính đề 
 
 | Đợt | Thread viết | Thread rà | Nhánh | Trạng thái |
 | --- | --- | --- | --- | --- |
-| G1 | Thread đợt F2 `session_01D56HmFcYrzsme7GoBm8tNC` (giao 25/11 21h25) | Giao sau khi viết xong | `full/nang-cap-g1` (từ `a6da118`) | Đang viết |
-| G2 | Thread đợt F1 `session_01D56HmFAo4dZ7c8sbeNB9eh` (giao 25/11 21h27) | Giao sau khi viết xong | `full/nang-cap-g2` (từ `a6da118`) | Đang viết |
+| G1 | Thread đợt F2 `session_01D56HmFcYrzsme7GoBm8tNC` (giao 25/11 21h25) | Giao sau khi viết xong | `full/nang-cap-g1` (từ `a6da118`) | Viết xong 21h48 ở `28ca6c2`, CI 45638049687 đang chạy |
+| G2 | Thread đợt F1 `session_01D56HmFAo4dZ7c8sbeNB9eh` (giao 25/11 21h27) | Thread Test & sửa F1 `session_01D56HmFrL65iF9oJokvqXw5` (giao 25/11 21h50), nhánh `full/nang-cap-g2-test` | `full/nang-cap-g2` (từ `a6da118`) | Viết xong 21h48: `8bbc27c` (code `aa91157`), CI 45636296067 xanh, lõi 1240, trợ lý 369, ≈ $7. Đang rà |
 | G3 | — | — | — | Chờ G1 + G2 |
 | G4 | — | — | — | Chờ G1 + G2 |
 | G5 | — | — | — | Chờ G3 + G4 |
