@@ -22,7 +22,7 @@ namespace ClaudeCAD.Core.Tests
         [Fact]
         public void Label_and_messages_read_as_decided()
         {
-            Assert.Equal("Agent to AutoCAD Full: BẢN THỬ NỘI BỘ (hết hạn 10/12/2026)", InternalBuild.Label);
+            Assert.Equal("Agent to AutoCAD Full: BẢN THỬ NỘI BỘ nâng cấp 5 (hết hạn 10/12/2026)", InternalBuild.Label);
             Assert.Equal("Bản thử nội bộ đã hết hạn ngày 10/12/2026. Cài bản chính thức để dùng tiếp.", InternalBuild.ExpiredMessage);
             Assert.StartsWith("Agent to AutoCAD Full", InternalBuild.Label);
         }
