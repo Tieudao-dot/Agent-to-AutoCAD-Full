@@ -124,7 +124,7 @@ namespace ClaudeCAD.Plugin.Drawing
             DrawingCheckLogic.DupItem I(string kind, IEnumerable<double> nums, string exact = "") => new DrawingCheckLogic.DupItem { Group = g + kind + "|" + exact, Nums = nums.ToArray() };
             switch (e)
             {
-                case Line l: return I("line", DrawingCheckLogic.LineNumbers(P(l.StartPoint), P(l.EndPoint)));
+                case Line l: return DrawingCheckLogic.LineItem(g, P(l.StartPoint), P(l.EndPoint)); // lượt 3: both ways
                 case Arc a: return I("arc", new[] { a.Center.X, a.Center.Y, a.Center.Z, a.Radius }, DrawingCheckLogic.Exact(a.StartAngle, a.EndAngle));
                 case Circle c: return I("circle", new[] { c.Center.X, c.Center.Y, c.Center.Z, c.Radius });
                 case DBPoint pt: return I("point", P(pt.Position));
@@ -133,10 +133,7 @@ namespace ClaudeCAD.Plugin.Drawing
                     var verts = new List<double[]>();
                     var bulges = new List<double>();
                     for (int i = 0; i < pl.NumberOfVertices; i++) { var v = pl.GetPoint2dAt(i); verts.Add(new[] { v.X, v.Y }); bulges.Add(pl.GetBulgeAt(i)); }
-                    var nums = DrawingCheckLogic.PolylineNumbers(verts, bulges, pl.Closed); // x, y, bulge, x, y, bulge…
-                    var xy = nums.Where((_, i) => i % 3 != 2).Concat(new[] { pl.Elevation });
-                    var bs = nums.Where((_, i) => i % 3 == 2).ToArray();
-                    return I("pline", xy, (pl.Closed ? "c" : "o") + DrawingCheckLogic.Exact(bs));
+                    return DrawingCheckLogic.PolylineItem(g, verts, bulges, pl.Closed, pl.Elevation); // lượt 3: an open one both ways
                 }
                 case DBText t: return I("text", P(t.Position).Concat(new[] { t.Height }), DrawingCheckLogic.Exact(t.Rotation) + "|" + t.TextString);
                 case MText m: return I("mtext", P(m.Location).Concat(new[] { m.TextHeight }), DrawingCheckLogic.Exact(m.Rotation) + "|" + m.Contents);
