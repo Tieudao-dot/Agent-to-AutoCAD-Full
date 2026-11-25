@@ -1,4 +1,4 @@
-# Checklist tổng: thử bản Full trên AutoCAD (gói dịch vụ + 3D đợt 1, 2, 3 + chuỗi nâng cấp A → E + đợt F)
+# Checklist tổng: thử bản Full trên AutoCAD (gói dịch vụ + 3D đợt 1, 2, 3 + chuỗi nâng cấp A → E + đợt F + đợt G)
 
 *12/11/2026 · thread "Test tổng thể", nhánh `full/test-tong-the`; 13/11/2026 thêm khối **chuỗi nâng cấp A → E** (thread
 "Test tổng thể nâng cấp", nhánh `full/nang-cap-tong-the`, cuối file). Hai khối:*
@@ -407,3 +407,321 @@ Bản vẽ đã lưu (có tên file). Mã trong ngoặc là mục của `checkli
 | F10-1 | Máy khác | Máy **chưa kích hoạt** / bị khóa: mở khung chat (F4-A7) | Không có `claude.exe` chạy |
 | F10-2 | Máy khác, Claude | Máy gói **2D**: F3, F4, F5-1 dùng được; "xuất bảng khối lượng 3D ra Excel" (F2-E1, F4-B7) | 2D làm được; 3D: Claude nói máy không có phần 3D |
 | F10-3 | Máy khác, Claude | Máy gói **3D**: "thiết lập style chuẩn", "tạo trang in" → Claude nói máy không có phần 2D; F4, F5-5, F6 dùng được; không có nút chế độ (F2-E2, F2-C8) | Đúng như cột trái |
+
+# Đợt G (G1 → G5): thử với bộ cài thử bản 5 (gộp 25/11/2026)
+
+*Test tổng thể đợt G, nhánh `full/nang-cap-g-tong-the`. Chi tiết: `docs/ban-giao/nang-cap-g1.md` … `-g5-test.md`,
+`docs/ban-giao/test-tong-the-dot-g.md`. Gộp từ `checklist-dot-g1.md` … `-g5.md` (các file đó giờ trỏ về đây). Cần máy
+**gói Full**, một bản vẽ đã lưu đơn vị mm, có nhà đã dựng 3D (cho G1, G3, G4) và vài ảnh / PDF scan (cho G5). Tổng
+khoảng **3 giờ**: làm phần **G0** trước (rủi ro nhất, chưa ai kiểm được), rồi G1 → G5, dừng ở đâu cũng được. Mã trong
+ngoặc (vd G4-F1) là mục trong file riêng của đợt.*
+
+## G0. Làm trước: rủi ro nhất, chưa kiểm được ở đâu (~35 phút)
+
+| # | Cần | Làm gì | Thấy gì là đạt |
+| --- | --- | --- | --- |
+| G0-1 | — | Gõ `CLAUDECHATSELFTEST` | Các dòng "Nâng cấp đợt G1 …" → "G5 …" đều ✓. Dòng **G4** (nền / đèn đặt tạm rồi trả lại, đường lui ảnh chụp) và **G5** (gắn ảnh nền, ghi một trong hai câu "AutoCAD có / KHÔNG vẽ ảnh nền khi chụp"): **chép lại câu G5 gửi tớ** |
+| G0-2 | — | **Thứ tự câu hỏi của `-RENDER`** (G4-F1): tự gõ `-RENDER` ở dòng lệnh, chép từng câu AutoCAD hỏi và lựa chọn trong ngoặc vuông tới khi xong | Gửi tớ chữ / ảnh dòng lệnh. Plugin đang trả lời: mức đẹp → `_R` (cửa sổ Render) → rộng → cao → `_Y` → tên file |
+| G0-3 | Claude | "Render góc hiện tại chất lượng nhanh", xem dòng lệnh (F2) (G4-F2) | Ra **ảnh render** và Claude nói "ảnh render"; hoặc Claude nói rõ **ảnh chụp** kèm lý do (thứ tự câu hỏi khác / lệnh xong không có file), không phải chờ hết 2 phút; dòng lệnh không còn lệnh dở; nền / góc nhìn như cũ |
+| G0-4 | Claude | "Vẽ lại bản này" với một bản scan ảnh (G5-A, F) rồi với một PDF scan 1 trang (G5-G3) | Ảnh: Claude thấy bản scan, vẽ được. PDF: thấy thì vẽ; trắng trơn thì Claude **nói không thấy**, nhờ xuất PNG / JPG, không vẽ mò |
+| G0-5 | Claude | "Ra bộ hồ sơ" hai lần liền (G1-C1) | Lần 2 hiện **thẻ Đồng ý / Hủy** thay bộ cũ; Hủy không đổi gì; Đồng ý: vẫn KT-01 → KT-09, không nhân đôi tờ hay hình |
+| G0-6 | Claude, Excel | "Lập dự toán theo khối lượng: tường 1.200.000 đồng/m³" + "xuất Excel", mở file bằng **Excel thật** (G3-B3, B4) | Cột tiền có dấu tách hàng nghìn; dòng thiếu giá để trống; gõ giá vào ô trống thì Thành tiền và Cộng tự tính lại |
+
+## G1. Ra bộ hồ sơ một lệnh (~35 phút; mục của `checklist-dot-g1.md`)
+
+*Nhánh `full/nang-cap-g1`. Chi tiết: `docs/ban-giao/nang-cap-g1.md`. Máy gói Full (bộ cài thử nội bộ), bản vẽ đã lưu (có
+tên file), đơn vị mm. Khoảng 35 phút. "Đạt" là thấy đúng như cột phải; khác thì chụp màn hình và ghi số thứ tự.*
+
+Chuẩn bị: một mặt bằng nhà 2 tầng đã dựng 3D (`build_3d_from_plan` với `storeys 2`, có cửa đi / cửa sổ), hoặc bản vẽ mẫu
+nhà đã dựng ở các đợt trước.
+
+### A. Tự kiểm (~3 phút)
+
+| # | Làm gì | Thấy gì là đạt |
+| --- | --- | --- |
+| A1 | Gõ `CLAUDECHATSELFTEST` | Dòng "Nâng cấp đợt G1: ra bộ hồ sơ (mặt đứng + phối cảnh), chạy lại cần thẻ" **đạt** |
+
+### B. Bộ hồ sơ đủ (~15 phút)
+
+| # | Làm gì | Thấy gì là đạt |
+| --- | --- | --- |
+| B1 | "Ra bộ hồ sơ cho nhà này, công trình Nhà phố anh Nam, người vẽ Hùng" | Một thẻ lệnh "Ra bộ hồ sơ"; Claude báo 9 tờ KT-01 → KT-09: mặt bằng tầng 1, tầng 2, 4 mặt đứng, mặt cắt A-A, B-B, phối cảnh |
+| B2 | Mở từng tab KT-01 … KT-09 | Mỗi tờ có khung, khung tên điền đúng tên bản vẽ, số bản vẽ (KT-01…), tỉ lệ 1:100 (phối cảnh "—"), khổ A3, ngày hôm nay, công trình và người vẽ như đã nói |
+| B3 | Xem mặt bằng tầng 1 và tầng 2 | Hình cắt ngang tường (có hatch) ở đúng tầng, cửa thành khoảng hở; hình nằm giữa khung nhìn, không lẫn hình khác |
+| B4 | Xem 4 mặt đứng và 2 mặt cắt | Nét đúng hướng (mặt đứng trước nhìn từ phía dưới mặt bằng lên); mặt cắt có hatch phần bị cắt và nét nhìn thấy phía sau |
+| B5 | Xem phối cảnh | Nhà nhìn chéo từ góc tây nam, tô bóng (Realistic khi in), không thấy nét 2D hay hình mặt cắt nào trong khung |
+| B6 | Về Model | Các hình mặt bằng / mặt đứng / mặt cắt nằm thành một hàng bên phải mô hình, không đè lên gì |
+| B7 | Ctrl+Z một lần (hoặc nút hoàn tác lượt) | Mất hết các tờ và các hình vừa tạo |
+
+### C. Chạy lại, PDF, lựa chọn (~12 phút)
+
+| # | Làm gì | Thấy gì là đạt |
+| --- | --- | --- |
+| C1 | Sau B1, nói lại "ra bộ hồ sơ" | Hiện **thẻ Đồng ý / Hủy** nói sẽ thay bộ hồ sơ cũ. Hủy: không đổi gì. Đồng ý: tờ và hình cũ được thay, không nhân đôi (vẫn KT-01 → KT-09, chỉ một hàng hình trong Model) |
+| C2 | Tạo tay một layout tên `KT-10`, rồi "ra bộ hồ sơ thêm 2 mặt cắt nữa" (11 tờ) | Claude báo layout KT-10 là của cậu, không đụng tới, đề nghị tiền tố khác (vd KT2) |
+| C3 | "Ra bộ hồ sơ và in ra PDF" | File `<tên bản vẽ>-bo-ho-so.pdf` cạnh bản vẽ, đủ các trang theo thứ tự KT-01… |
+| C4 | Làm lại C3 | Thẻ hỏi thay bộ cũ **và** ghi đè file PDF (một thẻ). Đồng ý: file mới thay file cũ |
+| C5 | "Ra bộ hồ sơ chỉ mặt đứng trước và sau, khổ A1, tỉ lệ 1:50" | 2 tờ A1, tỉ lệ 1:50 |
+| C6 | "Ra bộ hồ sơ, cắt dọc qua cầu thang" (chỉ vị trí cắt) | Mặt cắt theo đường Claude đặt qua cầu thang |
+| C7 | Xoay UCS 30° (`UCS` → `Z` → 30), ra bộ hồ sơ | Mặt bằng xoay theo UCS (trục x của UCS nằm ngang trên tờ); mặt đứng trước nhìn theo trục y của UCS |
+| C8 | Bản vẽ đơn vị m (INSUNITS = 6) có nhà dựng 3D, ra bộ hồ sơ | Tỉ lệ vẫn 1:100, hình vừa khung |
+| C9 | *(Test & sửa G1)* "Ra bộ hồ sơ khổ A4, tỉ lệ 1:20" (nhà ~10 m) | Bộ vẫn ra, Claude nói các hình lớn hơn tờ ở tỉ lệ đó nên tờ chỉ thấy phần giữa, gợi ý tỉ lệ / khổ lớn hơn |
+
+### D. Gói, chế độ, trường hợp thiếu (~8 phút)
+
+| # | Làm gì | Thấy gì là đạt |
+| --- | --- | --- |
+| D1 | Bật **Chỉ xem**, "ra bộ hồ sơ" | Claude nói Chỉ xem đang bật, không tạo gì |
+| D2 | Chế độ **2D** (nút Cả hai / 2D / 3D), "ra bộ hồ sơ" | Chỉ tờ mặt bằng (hình 2D có sẵn); Claude nói mặt đứng / mặt cắt / phối cảnh cần chế độ Cả hai hoặc 3D |
+| D3 | Chế độ **3D**, "ra bộ hồ sơ" | Các hình mặt bằng / mặt đứng / mặt cắt vẽ trong Model, không có tờ in; Claude nói xếp lên tờ có khung tên và in PDF cần chế độ Cả hai hoặc 2D |
+| D4 | Bản vẽ chỉ có mặt bằng 2D (chưa dựng 3D), "ra bộ hồ sơ" | Một tờ mặt bằng; Claude nói chưa có khối 3D nên không có mặt đứng / mặt cắt / phối cảnh, gợi ý dựng 3D |
+| D5 | Ghi macro một lượt "ra bộ hồ sơ" trên bản vẽ A, mở bản vẽ B (nhà khác, chưa có bộ hồ sơ), chạy macro | Bộ hồ sơ ra trên B. Chạy macro lần nữa trên B: báo đã có bộ hồ sơ, macro không thay (chạy trong chat để có thẻ) |
+| D6 | *(máy khác)* Máy gói **2D** / **3D**: như D2 / D3 | Giống D2 / D3 nhưng câu báo nói về gói (không nói đổi chế độ) |
+
+## G2. Soát bản vẽ trước khi in (~30 phút; mục của `checklist-dot-g2.md`)
+
+*Nhánh `full/nang-cap-g2`. Chi tiết: `docs/ban-giao/nang-cap-g2.md`. Máy gói 2D hoặc Full, bản vẽ đơn vị mm. Khoảng 25
+phút. "Đạt" là thấy đúng như cột phải; khác thì chụp màn hình và ghi số thứ tự.*
+
+### A. Tự kiểm (~3 phút)
+
+| # | Làm gì | Thấy gì là đạt |
+| --- | --- | --- |
+| A1 | Gõ `CLAUDECHATSELFTEST` | Dòng "Nâng cấp đợt G2: soát bản vẽ (hình trùng, đường dài 0, chữ rỗng), sửa chỉ sau thẻ Đồng ý" **đạt** |
+
+### B. Bản vẽ dùng bộ chuẩn (~12 phút)
+
+Chuẩn bị: bản vẽ mới, nhờ Claude "thiết lập style chuẩn 1:100 theo skill kiến trúc" và "vẽ phòng 4×6 m tường 220". Rồi tự
+tay thêm (lệnh AutoCAD): một đường trên layer `0`; chép một đoạn tường đè lên chính nó (COPY, điểm gốc = điểm đích); một
+đường có màu đỏ chọn tay (không ByLayer); một chữ TEXT cao 120 kiểu `KT-ARIAL`; một chữ kiểu `Standard`; một kích thước rồi
+gõ đè số "9999" (Properties → Text override); một đường rất xa (vd tới điểm 5000000,5000000).
+
+| # | Làm gì | Thấy gì là đạt |
+| --- | --- | --- |
+| B1 | "Soát bản vẽ" | Claude báo theo mức, "nên sửa" trước: layer 0, hình trùng, kích thước gõ đè, hình lạc xa; "cân nhắc": màu không theo layer, kiểu chữ ngoài bộ, chữ lệch cỡ. Có câu đã quét N trên M đối tượng. **Bản vẽ không đổi gì** |
+| B2 | "Sửa hình trùng" | Hiện **thẻ Đồng ý / Hủy** nói xóa mấy hình. Hủy: không đổi. Đồng ý: còn một đoạn tường (bấm vào chỉ còn một) |
+| B3 | "Chuyển hình trên layer 0 sang A-WALL" | Thẻ nói chuyển sang A-WALL; Đồng ý thì đường đó sang layer A-WALL |
+| B4 | "Đưa màu về theo layer" rồi "hiện lại số đo kích thước" | Mỗi việc một thẻ; sau Đồng ý đường đỏ theo màu layer, kích thước hiện lại số đo thật |
+| B5 | Gõ `U` một lần | Lần sửa vừa rồi trở lại như cũ |
+| B6 | Khóa layer A-WALL, "xóa hình trùng" (sau khi chép đè lần nữa) | Claude nói hình nằm trên layer khóa nên không sửa, hỏi có mở khóa không |
+| B7 | "Soát bản vẽ và xuất ra Excel" | Có file `<tên bản vẽ>-soat-ban-ve.xlsx` cạnh bản vẽ, mỗi nhóm một dòng. Làm lại lần nữa: hiện thẻ ghi đè file |
+
+### C. Bản vẽ không dùng bộ chuẩn (~5 phút)
+
+| # | Làm gì | Thấy gì là đạt |
+| --- | --- | --- |
+| C1 | Mở một bản vẽ cũ của cậu (layer tên riêng, kiểu chữ riêng), "soát bản vẽ" | Claude **không** coi layer / kiểu chữ của cậu là lỗi, nói rõ phần tên layer / kiểu / cỡ chữ đã bỏ qua vì bản vẽ không dùng bộ chuẩn; vẫn báo lỗi chung (layer 0, trùng, dài 0…) |
+| C2 | Bản vẽ lớn (vài chục nghìn đối tượng), "soát bản vẽ" | AutoCAD không treo; Claude nói chỉ quét 20 000 trên M đối tượng nếu bản vẽ lớn hơn |
+
+### D. Tờ in và chế độ (~5 phút)
+
+| # | Làm gì | Thấy gì là đạt |
+| --- | --- | --- |
+| D1 | Tạo một layout trống có một khung nhìn (MVIEW), không khung tên, không khóa; "soát bản vẽ" | Báo "Tờ in không có khung tên" (tên layout) và "Khung nhìn chưa khóa"; "khóa khung nhìn" → thẻ → khóa được |
+| D2 | Bật "Chỉ xem", "soát bản vẽ" rồi "sửa hình trùng" | Soát vẫn chạy; sửa bị chặn (Chỉ xem) |
+| D3 | Máy gói 3D (nếu có) | Không có lệnh soát bản vẽ (thuộc gói 2D / Full) |
+
+### E. Sau Test & sửa đợt G2 (~5 phút)
+
+*Nhánh `full/nang-cap-g2-test`. Chi tiết: `docs/ban-giao/nang-cap-g2-test.md`.*
+
+| # | Làm gì | Thấy gì là đạt |
+| --- | --- | --- |
+| E1 | Bản vẽ nhỏ (khoảng 10–15 hình), kéo một đường ra rất xa (vd cách 50 km), "soát bản vẽ" | Báo "Hình lạc rất xa phần còn lại" đúng đường đó |
+| E2 | Đặt một định nghĩa thuộc tính (lệnh `ATTDEF`, để trống giá trị mặc định) trong mô hình, "soát bản vẽ" rồi "sửa chữ rỗng" | Định nghĩa thuộc tính **không** nằm trong "Chữ rỗng", không bị xóa |
+| E3 | Gắn một xref rồi tạm gỡ nó (`XREF` → Unload), "soát bản vẽ" | **Không** báo "Xref / ảnh mất file" cho xref đó. Đổi tên file xref trên ổ rồi Reload: lúc đó mới báo |
+
+## G3. Bảng dự toán (~25 phút; mục của `checklist-dot-g3.md`)
+
+*Nhánh `full/nang-cap-g3`. Chi tiết: `docs/ban-giao/nang-cap-g3.md`. Máy gói Full (bộ cài thử nội bộ), bản vẽ đã lưu, đơn vị
+mm, có nhà đã dựng 3D (tường A-WALL-3D, sàn A-SLAB-3D…), mặt bằng có block cửa và chữ tên phòng. Khoảng 25 phút. Cần Excel /
+LibreOffice / Google Sheets để mở file. "Đạt" là thấy đúng như cột phải; khác thì chụp màn hình và ghi số thứ tự.*
+
+### A. Tự kiểm (~3 phút)
+
+| # | Làm gì | Thấy gì là đạt |
+| --- | --- | --- |
+| A1 | Gõ `CLAUDECHATSELFTEST` | Dòng "Nâng cấp đợt G3: lập dự toán (dòng thiếu đơn giá để trống, Excel có công thức)" **đạt** |
+
+### B. Dự toán theo khối lượng 3D (~10 phút)
+
+| # | Làm gì | Thấy gì là đạt |
+| --- | --- | --- |
+| B1 | "Lập dự toán theo khối lượng: tường 1.200.000 đồng/m³, sàn 2.500.000 đồng/m³" (không nói giá cột) | Thẻ lệnh "Lập dự toán"; Claude báo thành tiền tường, sàn, tổng; nói rõ **dòng cột chưa có đơn giá, không tính vào tổng**, hỏi giá cột. Claude **không** tự nêu giá cột |
+| B2 | "Lập dự toán, đơn giá cậu tự lấy giá thị trường" | Claude từ chối đặt giá, xin đơn giá |
+| B3 | Như B1, thêm "xuất Excel" | File `<tên bản vẽ>-du-toan.xlsx` cạnh bản vẽ; cột Thành tiền và tổng có dấu tách hàng nghìn; ô đơn giá của cột để trống |
+| B4 | Mở file B3, gõ đơn giá cột vào ô trống | Thành tiền dòng cột và **Cộng** tự tính lại |
+| B5 | Làm lại B3 | Hiện **thẻ Đồng ý / Hủy** ghi đè file. Hủy: file giữ nguyên. Đồng ý: file mới |
+| B6 | "Thêm thuế VAT 10%" | Dòng Thuế VAT = 10 % của Cộng, dòng Tổng cộng; Excel: dòng VAT là công thức |
+| B7 | "Vẽ bảng dự toán vào bản vẽ ở góc phải" | Bảng BẢNG DỰ TOÁN trong bản vẽ, số kiểu 1.234.567; dòng thiếu giá để trống |
+
+### C. Dự toán theo diện tích / block, ghép tên (~7 phút)
+
+| # | Làm gì | Thấy gì là đạt |
+| --- | --- | --- |
+| C1 | "Dự toán lát sàn theo diện tích phòng: phòng khách 450.000, phòng ngủ 400.000 đồng/m²" | Giá ghép đúng phòng dù gõ không dấu / khác hoa thường ("phong khach"); phòng khác báo thiếu giá |
+| C2 | "Dự toán cửa: CUA-DI-* 3.500.000 đồng/cái" | Mọi block CUA-DI-… có giá theo mẫu `*` |
+| C3 | Cho hai mẫu cùng khớp một dòng với hai giá khác nhau (vd "CUA*" 1.000.000 và "CUA-DI*" 2.000.000) | Dòng đó không có giá, ghi "several price patterns fit"; Claude hỏi lại, không chọn hộ |
+| C4 | *(Test & sửa G3)* "Dự toán tường 1.200.000 đồng/m3" (gõ m3, không phải m³), xuất Excel; bản vẽ có phòng tên số (vd "101") | Không có ghi chú "check" đơn vị; trong Excel tên phòng "101" vẫn là chữ (canh trái), khối lượng / tiền là số |
+
+### D. Gói, chế độ, Chỉ xem, macro (~5 phút)
+
+| # | Làm gì | Thấy gì là đạt |
+| --- | --- | --- |
+| D1 | Bật **Chỉ xem**, làm B3 | Tính và xuất Excel được; "vẽ bảng vào bản vẽ" bị chặn (Chỉ xem) |
+| D2 | Chế độ **3D**: B1 + "vẽ bảng vào bản vẽ" | Có số và Excel; Claude nói không vẽ bảng ở chế độ này. "Dự toán theo diện tích phòng": bảo đổi chế độ 2D / Cả hai |
+| D3 | Chế độ **2D**: "dự toán theo khối lượng 3D" | Claude bảo đổi chế độ 3D / Cả hai; dự toán theo diện tích / block làm được |
+| D4 | Ghi macro một lượt B3 + B7, chạy lại | Bảng vẽ lại; **không** ghi lại file Excel |
+| D5 | *(máy khác)* Máy gói 2D / 3D: như D2 / D3 | Câu báo nói về gói (không nói đổi chế độ) |
+
+## G4. Render thật (~25 phút; mục của `checklist-dot-g4.md`)
+
+Máy gói 3D hoặc Full (chế độ "3D" hoặc "Cả hai"), AutoCAD 2022 – 2027. Dùng một bản vẽ có vài khối 3D (vd nhà dựng bằng
+`build_3d_from_plan`) đã lưu thành file. Khoảng 20 phút.
+
+### A. Render thường (~6 phút)
+
+1. Gõ: "gán vật liệu gạch cho tường, kính cho cửa sổ, ngói cho mái". Kết quả mỗi lần có câu nói vật liệu lấy từ đâu (màu
+   đơn giản hay thư viện Autodesk).
+2. Xoay tới góc đẹp, gõ "lưu góc nhìn này tên Phối cảnh 1".
+3. Gõ "render góc Phối cảnh 1". Cần thấy:
+   - khung chat hiện "đang render … s / khoảng … s" và số giây tăng dần;
+   - AutoCAD không treo (vẫn kéo, cuộn được);
+   - xong: file `<tên bản vẽ>-Phối cảnh 1-render.png` cạnh bản vẽ, Claude nói đó là **ảnh render**, kèm đường dẫn;
+   - nền trắng trong ảnh; sau khi xong, nền khung nhìn và góc nhìn của cậu trở lại như trước.
+4. Gõ "render lại góc đó nền trời, chất lượng đẹp". File cũ đã có nên hiện thẻ **Đồng ý / Hủy**. Bấm Hủy thì không có gì
+   thay đổi; gõ lại rồi bấm Đồng ý thì render chạy lâu hơn, ảnh có nền xanh nhạt.
+5. Bấm U một lần sau khi render: không có thay đổi nào của render cần hoàn tác (nền / ánh sáng đã tự trả lại).
+
+### B. Máy không có thư viện vật liệu (~4 phút)
+
+Trên máy cài AutoCAD **không** kèm thư viện vật liệu Autodesk (hoặc thư mục `Common Files\Autodesk Shared\Materials` trống):
+
+1. "Gán vật liệu bê tông cho sàn": Claude nói dùng vật liệu đơn giản vì máy chưa có thư viện; sàn vẫn có màu bê tông.
+2. Trên máy **có** thư viện: mở Materials Browser (`MATBROWSEROPEN`), kéo một vật liệu gạch (vd "Masonry - Brick …") vào bản
+   vẽ, rồi gõ "gán vật liệu gạch cho tường": lần này Claude nói dùng vật liệu thư viện, tên vật liệu là tên vừa kéo vào.
+3. Vật liệu của cậu đặt tên riêng (vd "Gach-cua-toi") không bị đổi màu hay thay.
+
+### C. Hủy giữa chừng (~4 phút)
+
+1. "Render góc hiện tại chất lượng đẹp cỡ 3840 × 2160" (lâu).
+2. Trong lúc khung chat báo "đang render", bấm **Dừng** trong khung chat. Render dừng, không có file mới, nền / góc nhìn trở
+   lại như trước.
+3. Làm lại, lần này bấm **Esc** trong AutoCAD: cũng dừng, Claude báo cậu đã dừng render.
+4. Đang render mà gõ một lệnh khác của AutoCAD: ghi lại AutoCAD làm gì (bước này để biết, không phải lỗi).
+
+### D. Đường lui (~4 phút)
+
+1. Bật "Chỉ xem" (🔒), gõ "render góc hiện tại": vẫn render được, Claude nói dùng nền / ánh sáng của bản vẽ (không đổi gì).
+2. Đang chạy một lệnh (vd đang ở giữa lệnh LINE), gõ "render": Claude báo AutoCAD đang chạy lệnh, nhờ bấm Esc rồi thử lại.
+3. Đường lui khi render quá lâu: (chỉ thử nếu dễ) render chất lượng "nhanh" cỡ 4096 × 4096 trên máy yếu. Quá thời gian chờ
+   tối đa thì render dừng, Claude lưu **ảnh chụp** vào đúng file đó và nói rõ "đây là ảnh chụp, không phải render".
+4. Ghi lại nếu AutoCAD hỏi thêm câu nào ở dòng lệnh khi render (lệnh `-RENDER` có thể hỏi theo thứ tự khác ở bản AutoCAD
+   này): chụp dòng lệnh gửi tớ.
+
+### F. Thứ tự câu hỏi của `-RENDER` (Test & sửa G4, ~5 phút, quan trọng nhất)
+
+Plugin trả lời `-RENDER` theo thứ tự **viết theo trí nhớ, chưa ai kiểm trên AutoCAD thật**: mức đẹp (`_Low` / `_Medium` /
+`_High`) → nơi hiện (`_R` = cửa sổ Render) → rộng → cao → lưu file (`_Y`) → tên file. Cần biết bản AutoCAD của cậu hỏi
+đúng thứ tự đó không.
+
+1. Tự gõ `-RENDER` ở dòng lệnh (không qua Claude). Chụp từng câu AutoCAD hỏi và các lựa chọn trong ngoặc vuông, tới khi
+   lệnh xong (Esc nếu nó render). Gửi tớ ảnh / chữ của dòng lệnh. **Đây là bước để sửa `RenderLogic.CommandScript` nếu khác.**
+2. Gõ "render góc hiện tại chất lượng nhanh". Mở dòng lệnh (F2) xem lại:
+   - đúng thứ tự: có ảnh render, Claude nói "ảnh render";
+   - sai thứ tự mà một câu trả lời lọt ra dòng lệnh ("Unknown command 1920", "Unknown command Y"…): Claude phải báo **ảnh
+     chụp** với lý do "-RENDER asked its questions in another order…", **ngay**, không chờ hết thời gian tối đa;
+   - lệnh RENDER xong mà không ra file: sau khoảng 20 giây Claude báo ảnh chụp, lý do "the RENDER command ended without
+     writing the picture";
+   - lệnh còn đứng chờ nhập (dòng lệnh vẫn đang hỏi): đây là trường hợp duy nhất phải chờ tới thời gian tối đa (nhanh 2 phút,
+     vừa 5 phút, đẹp 15 phút); bấm **Dừng** hoặc Esc để thôi sớm. Sau đó dòng lệnh phải trống (không còn lệnh dở).
+   Ghi lại trường hợp nào xảy ra.
+3. Sau mỗi lần ở bước 2: nền khung nhìn, góc nhìn như trước; không còn file `claudecad-render-*.png` trong thư mục Temp
+   (`%TEMP%`) hay `C:\ProgramData\ClaudeCAD\render`.
+4. Máy có tên người dùng có dấu cách / dấu tiếng Việt (vd `C:\Users\Nguyen Van A`): render vẫn chạy (file tạm đặt ở
+   `C:\ProgramData\ClaudeCAD\render`), không có chữ lạ bị gõ vào dòng lệnh. Không có thư mục nào hợp lệ: Claude lưu ảnh chụp
+   ngay và nói rõ.
+5. Render góc nhìn có tên chứa dấu tiếng Việt / dấu cách ("Phối cảnh 1"), lưu vào thư mục có dấu cách: file ra đúng tên.
+
+### E. Tự kiểm
+
+Bấm "Tự kiểm" trong khung chat: bước "Nâng cấp đợt G4" phải đạt (nền trắng + đèn đặt tạm rồi trả lại, đường lui ảnh chụp,
+vật liệu thư viện có sẵn được dùng).
+
+## G5. Vẽ lại từ ảnh / PDF scan (~50 phút; mục của `checklist-dot-g5.md`)
+
+Máy gói 2D hoặc Full (chế độ "2D" hoặc "Cả hai"), AutoCAD 2022 – 2027. Mở một bản vẽ mới, lưu thành file (để ảnh nền được
+chép cạnh bản vẽ). Chuẩn bị 5 file: (1) ảnh chụp điện thoại một mặt bằng vẽ tay, (2) bản scan mặt bằng có ghi kích thước,
+(3) PDF scan 1 trang, (4) PDF nhiều trang, (5) ảnh chụp nghiêng. Khoảng 40 phút. Mỗi bước ghi lại số lần xem ảnh Claude
+báo, và chi phí lượt (nếu khung chat hiện).
+
+### A. Ảnh scan có kích thước (~10 phút, quan trọng nhất)
+
+1. Kéo file (2) vào khung chat (hoặc bấm nút đính kèm ảnh), gõ "vẽ lại bản này".
+2. Cần thấy:
+   - Claude gắn ảnh làm nền: layer `X-ANH-GOC` màu xám, **khóa**, **không in**; ảnh nằm bên phải bản vẽ đang có (bản vẽ
+     trống: ở gốc 0,0); file ảnh được chép cạnh bản vẽ (`<tên bản vẽ>-anh-goc-….png`) nếu cậu dán ảnh, còn kéo file thì
+     dùng chính file đó;
+   - Claude nói ảnh **chưa đúng tỉ lệ**, rồi tìm một kích thước ghi trên bản scan để đặt tỉ lệ (nói rõ đã dùng số nào);
+   - Claude vẽ tường, cửa đi, cửa sổ, tên phòng, vài kích thước chính đè lên ảnh, đúng layer A-WALL / A-DOOR / A-WIND…;
+   - cuối cùng Claude nói đây là **bản nháp cần kiểm kích thước**, kể các chỗ đọc không chắc, và số lần đã xem ảnh (≤ 8).
+3. Đo bằng `DIST` một kích thước ghi trên bản scan (khác số Claude dùng để đặt tỉ lệ): lệch bao nhiêu? Ghi lại.
+4. Bấm U một lần: mọi thứ của lượt (ảnh nền + nét vẽ) mất. Bấm Redo (hoặc gửi lại) để tiếp.
+5. In thử (plot_pdf hoặc lệnh PLOT): ảnh nền **không** ra giấy.
+
+### B. Ảnh chụp điện thoại, vẽ tay (~8 phút)
+
+1. Dán ảnh (1) bằng Ctrl+V vào khung chat, gõ "vẽ lại bản này, phòng khách dài 4,5 m".
+2. Claude dùng 4,5 m cậu cho để đặt tỉ lệ (không đoán). Không cho số nào: Claude phải **hỏi** cậu một kích thước thật.
+3. Nét vẽ tay xiêu vẹo: tường Claude vẽ thẳng, vuông góc; chỗ không chắc được liệt kê.
+
+### C. Ảnh nghiêng (~5 phút)
+
+1. Gửi ảnh (5), "vẽ lại bản này". Claude nên gọi `straighten` (xoay ảnh theo một bức tường) trước khi đặt tỉ lệ.
+2. Sau khi xoay, tường trên ảnh nền gần như ngang / dọc. Ảnh chụp xiên mạnh (méo phối cảnh): Claude nói không chỉnh được méo,
+   chỉ xoay; ghi lại kết quả.
+
+### D. PDF scan (~7 phút)
+
+1. "Vẽ lại bản này: <đường dẫn file (3)>": PDF 1 trang gắn được, các bước như A.
+2. File (4) nhiều trang, không nói trang: Claude **hỏi** trang nào. Trả lời "trang 2": gắn đúng trang 2.
+3. (Nếu có) một PDF xuất từ phần mềm CAD (nét vector, không phải scan): Claude gợi ý lệnh `PDFIMPORT` của AutoCAD.
+
+### E. Ảnh mờ và các lỗi (~5 phút)
+
+1. Ảnh mờ / chữ nhỏ: Claude xem phóng to từng phần (mỗi lần tính một lượt xem); chữ không đọc được phải được kể ra, không bịa.
+2. Đường dẫn sai: Claude báo không có file, hỏi lại. File `.webp` / `.heic` (ảnh iPhone): Claude nhờ lưu lại thành JPG.
+   File trên 50 MB: Claude nhờ scan nhỏ hơn.
+3. Bật "Chỉ xem" (🔒): "mô tả bản scan này" được; "vẽ lại" thì Claude nói không gắn / không vẽ khi đang Chỉ xem.
+4. Đổi UCS xoay (`UCS` → Z → 30°), "vẽ lại bản này": lưới trên ảnh xem nghiêng theo UCS, nét Claude vẽ vẫn khớp ảnh.
+5. Bản vẽ đơn vị mét (`INSUNITS` = 6): tỉ lệ vẫn đúng (cạnh 5 m dài 5 đơn vị).
+
+### F. Tự kiểm
+
+Bấm "Tự kiểm": bước "Nâng cấp đợt G5" phải đạt. *(Test & sửa G5)* Ảnh xem nay dựng thẳng từ file ảnh gốc, nét Claude vẽ phủ
+lên trên, nên Claude thấy bản scan dù AutoCAD có vẽ ảnh nền trong ảnh chụp ngoài màn hình hay không. Dòng kết quả của bước
+này ghi một trong hai câu: "AutoCAD có vẽ ảnh nền khi chụp", hoặc "AutoCAD KHÔNG vẽ ảnh nền khi chụp (ảnh xem lấy từ file)".
+**Ghi lại câu đó gửi tớ.** Nếu là "KHÔNG" thì ảnh vẫn xem được, nhưng **PDF scan** sẽ không thấy (xem G3 dưới).
+
+### G. Sau Test & sửa đợt G5 (~10 phút)
+
+*Nhánh `full/nang-cap-g5-test`. Chi tiết: `docs/ban-giao/nang-cap-g5-test.md`.*
+
+| # | Làm gì | Thấy gì là đạt |
+| --- | --- | --- |
+| G1 | Xoay UCS 30° (`UCS` → `Z` → 30), "vẽ lại bản này" với bản scan (2), rồi "xem kỹ góc trên bên trái" | Ảnh nền nằm đúng chỗ Claude nói; vùng xem phóng to đúng góc đó (không lệch sang chỗ khác); sau khi đặt tỉ lệ, ảnh không bị trôi đi |
+| G2 | Đổi tên một ảnh HEIC / WebP thành `.png`, gửi "vẽ lại bản này: <đường dẫn>" | Claude nói file thật ra là HEIC / WebP, nhờ lưu lại JPG (không báo lỗi khó hiểu của AutoCAD) |
+| G3 | PDF scan (3): sau khi gắn, Claude xem ảnh | Nếu ảnh xem trắng trơn: Claude **nói không thấy ảnh** và nhờ xuất trang PDF ra PNG / JPG để gửi lại, **không vẽ mò**. Ghi lại Claude thấy hay không thấy trang PDF |
+| G4 | Sau khi vẽ lại, "soát bản vẽ" | **Không** báo layer `X-ANH-GOC` là "layer không in còn chứa hình" hay "layer không thuộc bảng chuẩn" |
+| G5 | Sau khi vẽ lại, "ra bộ hồ sơ" (bản vẽ chỉ có mặt bằng 2D) | Tờ mặt bằng chỉ có phần đã vẽ, không thu nhỏ để chứa cả ảnh nền |
+| G6 | Đường dẫn có dấu tiếng Việt và dấu cách (vd `D:\Bản vẽ\nhà phố.jpg`) | Gắn được, không có lệnh lạ chạy ở dòng lệnh |
+
+## G6. Chéo giữa các đợt (test tổng thể đợt G, ~10 phút)
+
+| # | Cần | Làm gì | Thấy gì là đạt |
+| --- | --- | --- | --- |
+| G6-1 | Claude | Sau "ra bộ hồ sơ" (có tờ phối cảnh), "soát bản vẽ" | **Không** báo khung nhìn tờ PHỐI CẢNH là "tỉ lệ không chuẩn"; không báo layer A-SECT / A-ELEV / KHUNG là ngoài bảng chuẩn |
+| G6-2 | Claude | Sau "ra bộ hồ sơ", "bảng diện tích theo layer" rồi "dự toán theo diện tích phòng" | Không có dòng A-SECT / A-SECT-PAT / A-ELEV (hình mặt cắt / mặt đứng của bộ hồ sơ); kết quả nói đã bỏ các layer đó |
+| G6-3 | Claude | Gán vật liệu gạch cho tường, "ra bộ hồ sơ" rồi "render góc hiện tại" | Tờ phối cảnh hiện màu vật liệu (Realistic khi in); render ra ảnh có vật liệu; hai việc không đổi gì của nhau |
+| G6-4 | — | Mở thư mục bản vẽ sau G1 → G5 | Các file `-bo-ho-so.pdf`, `-du-toan.xlsx`, `-soat-ban-ve.xlsx`, `-hien-tai-render.png`, `-anh-goc-….png` cùng nằm cạnh bản vẽ, không file nào đè file nào |
+| G6-5 | Claude | Xoay UCS 30°, làm lần lượt "ra bộ hồ sơ", "soát bản vẽ", "dự toán", "render", "vẽ lại bản này" | Không lệnh nào báo lỗi vì UCS; mặt bằng của bộ hồ sơ và lưới ảnh xem xoay theo UCS |

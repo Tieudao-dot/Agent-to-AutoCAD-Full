@@ -255,6 +255,13 @@ namespace ClaudeCAD.Plugin.Core
         public static bool StandardViewportScale(double denominator) =>
             denominator > 0 && F2Numbers.StandardScales.Any(s => Math.Abs(denominator - s) <= G2Numbers.ViewportScaleTolerance * s);
 
+        /// <summary>Test tổng thể G: a viewport looking straight down (plan); a 3D / perspective viewport has no print scale.</summary>
+        public static bool IsPlanView(double x, double y, double z)
+        {
+            double l = Math.Sqrt(x * x + y * y + z * z);
+            return l < 1e-12 || Math.Abs(z) / l > 1 - 1e-6;
+        }
+
         /// <summary>The name AutoCAD gives a new layout ("Layout1", "Layout 2", "Bố cục1").</summary>
         public static bool IsDefaultLayoutName(string name) =>
             !string.IsNullOrEmpty(name) && Regex.IsMatch(name.Trim(), @"^(Layout|Bố cục|Bo cuc)\s*[0-9]+$", RegexOptions.IgnoreCase);

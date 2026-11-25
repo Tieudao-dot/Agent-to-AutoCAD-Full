@@ -1,5 +1,7 @@
 # Thử tay đợt G3: bảng dự toán
 
+*Đã gộp vào khối "Đợt G" của [`docs/checklist-tong-the.md`](checklist-tong-the.md) (test tổng thể đợt G), thử tay theo file đó.*
+
 *Nhánh `full/nang-cap-g3`. Chi tiết: `docs/ban-giao/nang-cap-g3.md`. Máy gói Full (bộ cài thử nội bộ), bản vẽ đã lưu, đơn vị
 mm, có nhà đã dựng 3D (tường A-WALL-3D, sàn A-SLAB-3D…), mặt bằng có block cửa và chữ tên phòng. Khoảng 25 phút. Cần Excel /
 LibreOffice / Google Sheets để mở file. "Đạt" là thấy đúng như cột phải; khác thì chụp màn hình và ghi số thứ tự.*

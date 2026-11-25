@@ -202,7 +202,9 @@ namespace ClaudeCAD.Plugin.Drawing
                         if (model) continue;
                         if (firstViewport) { firstViewport = false; continue; } // the sheet's own viewport
                         if (Wanted(only, "viewport_unlocked") && !vp.Locked) vpUnlocked.Add(id);
-                        if (Wanted(only, "viewport_scale") && !DrawingCheckLogic.StandardViewportScale(DrawingCheckLogic.ViewportDenominator(vp.CustomScale, s.MmPerUnit)))
+                        // test tổng thể G: a 3D viewport (the perspective sheet of create_drawing_set) has no print scale to check
+                        if (Wanted(only, "viewport_scale") && DrawingCheckLogic.IsPlanView(vp.ViewDirection.X, vp.ViewDirection.Y, vp.ViewDirection.Z)
+                            && !DrawingCheckLogic.StandardViewportScale(DrawingCheckLogic.ViewportDenominator(vp.CustomScale, s.MmPerUnit)))
                             vpScale.Add(id);
                         continue;
                     }

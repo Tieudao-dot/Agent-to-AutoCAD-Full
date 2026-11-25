@@ -1,5 +1,7 @@
 # Checklist thử tay đợt G4: render thật
 
+*Đã gộp vào khối "Đợt G" của [`docs/checklist-tong-the.md`](checklist-tong-the.md) (test tổng thể đợt G), thử tay theo file đó.*
+
 Máy gói 3D hoặc Full (chế độ "3D" hoặc "Cả hai"), AutoCAD 2022 – 2027. Dùng một bản vẽ có vài khối 3D (vd nhà dựng bằng
 `build_3d_from_plan`) đã lưu thành file. Khoảng 20 phút.
 

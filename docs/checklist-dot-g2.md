@@ -1,5 +1,7 @@
 # Thử tay đợt G2: soát bản vẽ trước khi in / gửi
 
+*Đã gộp vào khối "Đợt G" của [`docs/checklist-tong-the.md`](checklist-tong-the.md) (test tổng thể đợt G), thử tay theo file đó.*
+
 *Nhánh `full/nang-cap-g2`. Chi tiết: `docs/ban-giao/nang-cap-g2.md`. Máy gói 2D hoặc Full, bản vẽ đơn vị mm. Khoảng 25
 phút. "Đạt" là thấy đúng như cột phải; khác thì chụp màn hình và ghi số thứ tự.*
 

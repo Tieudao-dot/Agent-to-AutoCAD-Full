@@ -4,7 +4,8 @@ Chủ dự án chọn "chạy liền như đợt F" cho đợt G (25/11/2026 ~20
 gom các số và các điểm tự chọn để cậu duyệt **một lần** ở báo cáo cuối chuỗi. Số nào cậu muốn đổi thì chỉ sửa một chỗ
 (cột "Ở đâu").
 
-Luồng chính ghi file này theo báo cáo của từng đợt; thread test tổng thể đợt G sẽ soát lại từng dòng so với code.
+Luồng chính ghi file này theo báo cáo của từng đợt. **Thread test tổng thể đợt G đã soát từng dòng so với code (26/11)**: các
+số khớp code; đã sửa mô tả G4 / G5 cho đúng sau các lần rà và thêm mục "Test tổng thể đợt G" ở cuối.
 
 ## G2: soát bản vẽ trước khi in / gửi
 
@@ -200,8 +201,9 @@ vào đúng file đó, và Claude nói rõ đây là ảnh chụp chứ không p
 khi bản vẽ đã có sẵn (khách kéo vào từ Materials Browser); không có thì dùng vật liệu màu đơn giản của đợt F3 và nói rõ.
 
 **Điểm rủi ro nhất của cả đợt G:** cách plugin trả lời các câu hỏi của lệnh render được viết theo trí nhớ, chưa đối chiếu
-được với tài liệu Autodesk và chưa chạy trên AutoCAD thật. Nếu thứ tự câu hỏi khác đi thì khách phải chờ hết thời gian tối
-đa rồi mới nhận ảnh chụp. Mục này cần cậu thử tay trước tiên (`docs/checklist-dot-g4.md`).
+được với tài liệu Autodesk và chưa chạy trên AutoCAD thật. Sau lần rà, nếu thứ tự câu hỏi khác đi thì phần lớn trường hợp
+plugin nhận ra ngay và lưu ảnh chụp (kèm lý do); chỉ khi lệnh đứng chờ nhập thì khách mới phải chờ tới thời gian tối đa (hoặc
+bấm Dừng / Esc). Mục này cần cậu thử tay trước tiên (`docs/checklist-tong-the.md`, mục G0-2, G0-3).
 
 Bàn giao đầy đủ: `docs/ban-giao/nang-cap-g4.md` trên nhánh `full/nang-cap-g4`.
 
@@ -222,7 +224,7 @@ Mọi số ở `G4Numbers` (`Core/Render.cs`).
 | Giờ nắng: **chưa đặt** | — | đặt giờ cần vị trí địa lý; làm sau nếu cậu muốn |
 | Ảnh chụp khi đi đường lui: cạnh dài tối đa **1568** điểm | cỡ ảnh chụp | như ảnh của đợt F3 |
 | Bảng từ khóa vật liệu (bê tông, gạch, vữa / sơn, kính, gỗ, ngói, thép / kim loại, đá) khớp với tên vật liệu thư viện tiếng Anh | vật liệu nào được chọn | khớp nguyên từ trong tên; nhiều cái khớp thì lấy cái đầu theo tên |
-| Tên file `<bản vẽ>-<góc nhìn>-render.png` | tên file | theo cách đặt tên ảnh của đợt F3 |
+| Tên file `<bản vẽ>-<góc nhìn>-render.png`; không nói góc nhìn: `<bản vẽ>-hien-tai-render.png` | tên file | theo cách đặt tên ảnh của đợt F3 |
 
 ### Quyết định tự chọn
 
@@ -276,8 +278,9 @@ Kết quả luôn ghi rõ là **bản nháp cần khách kiểm kích thước**
 
 **Hai điểm rủi ro, chỉ biết được khi thử thật:**
 
-- Claude xem bản scan qua ảnh chụp của AutoCAD. Nếu AutoCAD không đưa ảnh nền vào ảnh chụp thì Claude không thấy bản scan.
-  Bước tự kiểm G5 trong plugin kiểm đúng điều này; cần chạy nó trước tiên.
+- Sau lần rà, ảnh Claude xem **dựng thẳng từ file ảnh gốc** (nét đã vẽ phủ lên), nên Claude thấy bản scan dù AutoCAD có đưa
+  ảnh nền vào ảnh chụp hay không. Riêng **PDF scan** vẫn xem qua ảnh chụp của AutoCAD: nếu trắng trơn thì Claude nói không
+  thấy và nhờ khách xuất trang PDF ra PNG / JPG, không vẽ mò. Bước tự kiểm G5 ghi AutoCAD có vẽ ảnh nền khi chụp không.
 - Chưa biết Claude đọc tường, chữ, kích thước trên ảnh chính xác tới đâu.
 
 Mỗi lần "vẽ lại" tốn thêm của khách khoảng 6–8 nghìn token cho phần xem ảnh (ước lượng), chưa kể các lệnh vẽ.
@@ -315,9 +318,57 @@ Mọi số ở `G5Numbers` (`Core/Trace.cs`), trừ số lần xem ở `agent/sr
 | Macro | không ghi lại | như lệnh sửa lỗi bản vẽ của G2 |
 | UCS nghiêng khỏi mặt bằng | từ chối, nhờ khách đưa UCS về mặt bằng | |
 | Chữ viết trong ảnh | coi là nội dung bản vẽ, không phải lệnh cho Claude | ghi rõ trong mô tả lệnh |
+| Ảnh xem lấy từ đâu | luôn dựng từ file ảnh gốc, nét đã vẽ phủ lên | thread rà thêm 25/11 |
+| Ảnh xem của PDF | giữ ảnh chụp của AutoCAD; trắng thì báo khách và dừng | dựng trang PDF cần thư viện đọc PDF, chưa có sẵn |
+| Ảnh / PDF nào được gắn | mọi ảnh / PDF Claude biết đường dẫn (khách nói, hoặc ảnh đính kèm) | muốn chỉ cho file khách đưa trong cuộc chat thì cần thêm việc |
+| Bản vẽ chưa lưu | ảnh dán chép vào thư mục Documents | muốn thì đổi thành hỏi khách lưu bản vẽ trước |
+
+### Sau khi rà (26/11)
+
+Thread rà sửa 5 lỗi, không đổi số nào khách thấy: điểm Claude đọc trên lưới (theo UCS) bị hiểu theo tọa độ thế giới khi UCS
+xoay / dời (ảnh co / xoay / xem sai chỗ); ảnh xem phụ thuộc AutoCAD có vẽ ảnh nền hay không (nay dựng từ file gốc); loại file
+chỉ xét theo đuôi tên (ảnh HEIC / WebP đổi đuôi `.png` lọt qua; nay đọc nội dung file); `check_drawing` (G2) báo nhầm layer
+ảnh nền; `create_drawing_set` (G1) thu nhỏ tờ mặt bằng để chứa cả ảnh nền. Số kỹ thuật mới (khách không thấy): giải nén ảnh
+tối đa 6 000 px chiều ngang; ảnh xem coi là trắng khi dưới 0,5 % điểm khác nền. Nhánh `full/nang-cap-g5-test` @ `464b6e5`.
 
 ### Chưa kiểm được
 
 - Chưa chạy trên AutoCAD thật: gắn ảnh / PDF, ảnh nền có hiện trong ảnh Claude xem không, U hoàn tác ảnh nền, đường dẫn có dấu
   tiếng Việt.
 - Chưa thử với Claude thật: đọc ảnh tốt tới đâu, số lần xem thực tế, kích thước lệch bao nhiêu.
+
+## Test tổng thể đợt G (26/11)
+
+*Nhánh `full/nang-cap-g-tong-the`. Chi tiết: `docs/ban-giao/test-tong-the-dot-g.md`. Thử tay cả đợt G: khối "Đợt G" cuối
+`docs/checklist-tong-the.md` (~3 giờ; mục G0 làm trước: các điểm rủi ro nhất).*
+
+Soát file này so với code: các số của G1 → G5 khớp code. Sửa mô tả G4 (đường lui tới sớm sau lần rà, tên file khi không nói
+góc nhìn) và G5 (ảnh xem dựng từ file gốc, các quyết định và lỗi của lần rà). Không đổi số nào trong code.
+
+### Lỗi chéo giữa các đợt đã sửa
+
+- `check_drawing` (G2) báo khung nhìn của tờ **PHỐI CẢNH** (G1) là "tỉ lệ không chuẩn": khung nhìn 3D không có tỉ lệ in, nay
+  không kiểm tỉ lệ cho khung nhìn không nhìn thẳng xuống.
+- `area_schedule` (đợt C) và `cost_estimate` theo diện tích (G3), khi không chỉ layer, đếm cả **hình mặt cắt / mặt đứng** do
+  bộ hồ sơ (G1) hoặc `section_view` vẽ ra (layer A-SECT, A-SECT-PAT, A-SECT-BACK, A-ELEV) thành diện tích phòng / layer: nay
+  bỏ các layer đó (kết quả nói rõ đã bỏ; khách chỉ layer thì vẫn đếm).
+
+### Quyết định tự chọn thêm
+
+| Tình huống | Đã chọn | Muốn đổi thì |
+| --- | --- | --- |
+| Bảng diện tích không chỉ layer, bản vẽ có hình mặt cắt / mặt đứng vẽ từ mô hình 3D | bỏ các layer A-SECT* / A-ELEV, ghi rõ trong kết quả | khách nêu các layer đó trong `layers` |
+| Khung nhìn 3D (phối cảnh) khi soát bản vẽ | không kiểm tỉ lệ | — |
+
+### Token lúc mở chat (ước tính, cùng cách đo test tổng thể đợt F)
+
+| Gói / chế độ | Cuối đợt F, nạp gọn | Cuối đợt G, nạp gọn | Cuối đợt F, tắt nạp gọn | Cuối đợt G, tắt nạp gọn |
+| --- | --- | --- | --- | --- |
+| Gói 2D | 13,4k | 13,7k | 41,1k | 45,2k |
+| Gói 3D | 18,8k | 19,0k | 42,6k | 45,0k |
+| Full · Cả hai | 20,7k | 21,0k | 62,0k | 66,5k |
+| Full · chế độ 2D | 13,5k | 13,7k | 41,2k | 45,2k |
+| Full · chế độ 3D | 18,8k | 19,0k | 42,7k | 45,1k |
+
+Nạp gọn (mặc định): 5 lệnh mới chỉ thêm tên và vài dòng system prompt, khoảng 0,2–0,3k mỗi gói. Mô tả đủ của lệnh mới chỉ nạp
+khi Claude cần (hoặc khi tắt "Nạp gọn lệnh").

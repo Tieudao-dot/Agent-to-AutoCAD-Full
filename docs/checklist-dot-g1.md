@@ -1,5 +1,7 @@
 # Thử tay đợt G1: ra bộ hồ sơ một lệnh
 
+*Đã gộp vào khối "Đợt G" của [`docs/checklist-tong-the.md`](checklist-tong-the.md) (test tổng thể đợt G), thử tay theo file đó.*
+
 *Nhánh `full/nang-cap-g1`. Chi tiết: `docs/ban-giao/nang-cap-g1.md`. Máy gói Full (bộ cài thử nội bộ), bản vẽ đã lưu (có
 tên file), đơn vị mm. Khoảng 35 phút. "Đạt" là thấy đúng như cột phải; khác thì chụp màn hình và ghi số thứ tự.*
 

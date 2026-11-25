@@ -1,5 +1,7 @@
 # Checklist thử tay đợt G5: vẽ lại từ ảnh / PDF scan
 
+*Đã gộp vào khối "Đợt G" của [`docs/checklist-tong-the.md`](checklist-tong-the.md) (test tổng thể đợt G), thử tay theo file đó.*
+
 Máy gói 2D hoặc Full (chế độ "2D" hoặc "Cả hai"), AutoCAD 2022 – 2027. Mở một bản vẽ mới, lưu thành file (để ảnh nền được
 chép cạnh bản vẽ). Chuẩn bị 5 file: (1) ảnh chụp điện thoại một mặt bằng vẽ tay, (2) bản scan mặt bằng có ghi kích thước,
 (3) PDF scan 1 trang, (4) PDF nhiều trang, (5) ảnh chụp nghiêng. Khoảng 40 phút. Mỗi bước ghi lại số lần xem ảnh Claude
