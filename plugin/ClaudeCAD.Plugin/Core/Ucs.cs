@@ -295,6 +295,8 @@ namespace ClaudeCAD.Plugin.Core
             "add_mleader", "add_table", "insert_block", "attach_xref",
             "draw_solid", "draw_box", "draw_cylinder", "draw_sphere", "draw_wedge", "draw_torus", "draw_pyramid",
             "build_railing", "build_beam", "build_stair", "build_roof",
+            // nâng cấp đợt F2
+            "insert_library_block",
         };
 
         /// <summary>Keep WCS on purpose: the UCS itself, views, layouts / paper space, files, settings.</summary>
@@ -308,6 +310,8 @@ namespace ClaudeCAD.Plugin.Core
             "create_layer", "list_layers", "set_current_layer", "set_layer_props",
             "create_text_style", "create_dim_style", "set_current_styles", "list_styles",
             "list_xrefs", "reload_xref", "detach_xref", "bind_xref", "export_stl",
+            // nâng cấp đợt F2 (create_sheet is Ref: its view_center is a UCS point, the viewport turns with a turned UCS)
+            "setup_standards", "layer_state",
         };
 
         /// <summary>Params that are directions / displacements (turned, not moved) in Ref mode, any tool.</summary>

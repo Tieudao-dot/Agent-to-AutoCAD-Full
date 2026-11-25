@@ -14,7 +14,8 @@ Quy ước: mm, WCS, tỷ lệ in mặc định 1:100. Bản vẽ MEP thường 
 
 1. Gọi `get_drawing_info`, `list_layers`, `list_block_defs` để biết nền kiến trúc, layer và block ký hiệu đã có.
 2. Tạo trong **một `batch_execute`** các layer còn thiếu theo bảng mục 2.
-3. Nếu thiếu block ký hiệu cần dùng (mục 4), vẽ và `define_block` một lần rồi mới chèn.
+3. Nếu thiếu block ký hiệu cần dùng (mục 4), vẽ và `define_block` một lần rồi mới chèn. Thiết bị vệ sinh (bồn cầu, lavabo, bồn tắm, khay tắm) có sẵn trong `insert_library_block`.
+4. Chữ / kích thước theo tỷ lệ in: `setup_standards` (tỷ lệ của bản vẽ); trang in có khung tên: `create_sheet`.
 4. Đọc vị trí tường cần bám tuyến bằng `list_entities` (`layers: ["A-WALL"]`) trước khi tính tọa độ tuyến.
 
 ## 2. Bảng layer chuẩn

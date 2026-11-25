@@ -80,6 +80,8 @@ namespace ClaudeCAD.Plugin.Core
                 "define_block insert_block set_dynamic_props reset_dynamic_block attach_xref detach_xref bind_xref reload_xref " +
                 // nâng cấp đợt B (Drawing/Edit2DTools.cs): every plan; match_properties copies text / dimension properties only with 2D (TextValues)
                 "group_entities match_properties " +
+                // nâng cấp đợt F2 (Drawing/Standards2DTools.cs): library blocks and layer states, like the block / layer tools
+                "insert_library_block layer_state " +
                 // basic curves: 3D uses them as profiles and paths
                 "draw_line draw_polyline draw_circle draw_arc draw_spline draw_ellipse draw_rectangle draw_polygon draw_point draw_ray draw_xline");
             Add(ToolGroup.TwoD,
@@ -92,7 +94,9 @@ namespace ClaudeCAD.Plugin.Core
                 // nâng cấp đợt B (Drawing/Edit2DTools.cs): STRETCH, BREAK, LENGTHEN, DIVIDE / MEASURE
                 "stretch_entities break_entity lengthen_entity divide_entity " +
                 // nâng cấp đợt C (Drawing/Util2DTools.cs): plan dimensions, block / area schedules, find & replace of text
-                "dim_floor_plan block_schedule area_schedule find_replace_text");
+                "dim_floor_plan block_schedule area_schedule find_replace_text " +
+                // nâng cấp đợt F2 (Drawing/Standards2DTools.cs): text / dimension styles of a standard, sheets with a title block
+                "setup_standards create_sheet");
             // 3D phases 1, 2 and 3 (Drawing/SolidTools.cs, Solid2Tools.cs, PlanTo3dTools.cs, SectionTools.cs): only the 3D and Full plans
             Add(ToolGroup.ThreeD,
                 // draw_solid (nâng cấp đợt A) replaces the six primitives for Claude; their old names stay for recorded macros

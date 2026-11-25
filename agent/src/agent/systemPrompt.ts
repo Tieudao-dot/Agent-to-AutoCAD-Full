@@ -89,6 +89,7 @@ export const TWO_D_HINTS = `
 - Walls of thickness t: two parallel lines t apart (offset_entity or computed polylines), leave door/window openings as gaps.
 - Door symbol: leaf line of the door width perpendicular to the wall at the hinge + a 90° arc (draw_arc) from the leaf end to the opposite jamb.
 - Grid axes: lines (or xlines) on an axis layer with CENTER linetype, a circle with the axis label at one end; dimension chains with add_dim_linear + add_dim_continue.
+- Standard styles for the print scale: setup_standards. A print sheet with frame + title block: create_sheet. Doors, windows, fixtures, furniture, trees: insert_library_block.
 
 `;
 
@@ -96,8 +97,8 @@ export const TWO_D_HINTS = `
 export const SYSTEM_PROMPT = BASE_PROMPT + TWO_D_HINTS;
 
 const PLAN_SCOPE: Record<ServicePlan, string> = {
-  '2d': 'Included: reading and measuring, layers, view, blocks and xrefs, transforms, groups, match properties, basic curves, text, dimensions, tables and schedules, find & replace of text, hatch, layouts, PDF plotting, 2D editing (stretch, break, lengthen, divide / measure too). Not included: 3D modelling (solids, beams, stairs, roofs, railings, STL).',
-  '3d': 'Included: reading and measuring, layers, view, blocks without attributes and xrefs, transforms, basic curves (as profiles and paths) and the 3D tools (solids, extrude / revolve, booleans, 3D views and visual styles, solid info, 3D from a floor plan, sections and projections with their own outline and hatch, columns, beams, stairs, roofs, railings, PRESSPULL, STL export, volume and clash numbers without a table in the drawing), groups and match properties (without text / dimension properties). Not included: text, block attributes (no attribute definitions or values: blocks are defined and inserted without them), dimensions, leaders, tables, hatch (other than inside section_view), layouts and viewports, PDF plotting, text / dimension styles, wipeouts and revision clouds, 2D editing (offset, fillet, chamfer, trim, extend, join, explode, polyline edit, stretch, break, lengthen, divide / measure), plan dimensions, block / area schedules, find & replace of text.',
+  '2d': 'Included: reading and measuring, layers and layer states, view, blocks, library blocks and xrefs, transforms, groups, match properties, basic curves, text, dimensions, tables and schedules, find & replace of text, hatch, standard styles, layouts and sheets with a title block, PDF plotting, 2D editing (stretch, break, lengthen, divide / measure too). Not included: 3D modelling (solids, beams, stairs, roofs, railings, STL).',
+  '3d': 'Included: reading and measuring, layers and layer states, view, blocks without attributes, library blocks and xrefs, transforms, basic curves (as profiles and paths) and the 3D tools (solids, extrude / revolve, booleans, 3D views and visual styles, solid info, 3D from a floor plan, sections and projections with their own outline and hatch, columns, beams, stairs, roofs, railings, PRESSPULL, STL export, volume and clash numbers without a table in the drawing), groups and match properties (without text / dimension properties). Not included: text, block attributes (no attribute definitions or values: blocks are defined and inserted without them), dimensions, leaders, tables, hatch (other than inside section_view), layouts, viewports and sheets, PDF plotting, text / dimension styles, wipeouts and revision clouds, 2D editing (offset, fillet, chamfer, trim, extend, join, explode, polyline edit, stretch, break, lengthen, divide / measure), plan dimensions, block / area schedules, find & replace of text.',
   '2d3d': 'Every tool is included.',
 };
 

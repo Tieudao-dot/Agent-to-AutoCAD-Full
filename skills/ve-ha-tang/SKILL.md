@@ -13,7 +13,7 @@ Quy ước hệ thống vẫn là **mm**; tọa độ thực tính bằng **mét
 ## 1. Quy trình chuẩn bị (luôn làm trước khi vẽ)
 
 1. Gọi `get_drawing_info` và `list_layers`. Xem `extents` để biết bản vẽ đang dùng tọa độ thực (số rất lớn) hay tọa độ cục bộ.
-2. Tạo trong **một `batch_execute`** các layer còn thiếu theo bảng mục 2.
+2. Tạo trong **một `batch_execute`** các layer còn thiếu theo bảng mục 2. Chữ / kích thước theo tỷ lệ in (vd 1:500): `setup_standards`; trang in có khung tên: `create_sheet`.
 3. **Gốc tọa độ**: tọa độ VN-2000 cỡ hàng trăm nghìn – hàng triệu mét (×1000 thành 10⁸–10⁹ mm). Nếu bản vẽ trắng, hỏi người dùng một câu: vẽ theo tọa độ thực hay trừ một điểm gốc (ví dụ gốc = điểm đầu tuyến)? Nếu dùng gốc cục bộ, ghi một dòng `add_text` ở góc bản vẽ: "Gốc tọa độ: X = …, Y = … (VN-2000)".
 4. **Đổi trục**: trong VN-2000, X là hướng Bắc, Y là hướng Đông. Trong AutoCAD: x_cad = Y × 1000, y_cad = X × 1000 (trừ gốc nếu có). Luôn nhắc lại quy ước này trong câu trả lời đầu tiên khi nhận bảng tọa độ.
 

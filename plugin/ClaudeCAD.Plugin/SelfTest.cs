@@ -728,6 +728,89 @@ namespace ClaudeCAD.Plugin
                     : new SelfTestRules.Verdict(false, string.Join("; ", errs));
             });
 
+            // Nâng cấp đợt F2: the same code paths as setup_standards, insert_library_block, layer_state and create_sheet
+            Check("Nâng cấp đợt F2: style chuẩn 1:100 (chạy lại không trùng), cửa đi thư viện, trạng thái layer, trang in A3 có khung tên", () =>
+            {
+                var errs = new List<string>();
+                T Run<T>(Func<ToolContext, T> f)
+                {
+                    using (doc.LockDocument())
+                    using (var tr = doc.TransactionManager.StartTransaction())
+                    {
+                        var r = f(new ToolContext(doc, tr, true, null));
+                        tr.Commit();
+                        return r;
+                    }
+                }
+                Dictionary<string, object> P(params (string k, object v)[] kv) => kv.ToDictionary(x => x.k, x => x.v);
+
+                // styles: created on the first run, unchanged on the second (no duplicate), dimension style sized for 1:100
+                var s1 = Run(ctx => (Dictionary<string, object>)DrawingService.SetupStandards(ctx, new Params("setup_standards", P(("scale", "1:100")))));
+                var s2 = Run(ctx => (Dictionary<string, object>)DrawingService.SetupStandards(ctx, new Params("setup_standards", P(("scale", "1:100")))));
+                string St(Dictionary<string, object> r, string k) => (string)((Dictionary<string, object>)r[k])["status"];
+                if (St(s1, "dim_style") != "created" && St(s1, "dim_style") != "unchanged") errs.Add($"dim style lần 1: {St(s1, "dim_style")}");
+                if (St(s2, "text_style") != "unchanged" || St(s2, "dim_style") != "unchanged") errs.Add($"chạy lại: {St(s2, "text_style")} / {St(s2, "dim_style")} (cần unchanged)");
+                Run(ctx =>
+                {
+                    var dst = (DimStyleTable)ctx.Tr.GetObject(ctx.Db.DimStyleTableId, OpenMode.ForRead);
+                    string dn = (string)((Dictionary<string, object>)s1["dim_style"])["name"];
+                    if (!dst.Has(dn)) errs.Add("thiếu dim style " + dn);
+                    else if (Math.Abs(((DimStyleTableRecord)ctx.Tr.GetObject(dst[dn], OpenMode.ForRead)).Dimscale - 100.0 / FloorPlanLogic.MmPerUnit(Convert.ToInt32(ctx.Db.Insunits), out _)) > 1e-6) errs.Add("DIMSCALE sai");
+                    return 0;
+                });
+
+                // library door 900: one block CUA-DI-900, 900 wide
+                var door = Run(ctx => (Dictionary<string, object>)DrawingService.InsertLibraryBlock(ctx, new Params("insert_library_block", P(("name", "cửa đi"), ("position", new List<object> { 120000.0, 0.0 })))));
+                if ((string)door["block"] != "CUA-DI-900") errs.Add("tên block cửa: " + door["block"]);
+                Run(ctx =>
+                {
+                    var e = Acad.GetEntity(ctx, (string)((List<object>)door["handles"])[0], false);
+                    var x = e.GeometricExtents;
+                    double f = FloorPlanLogic.MmPerUnit(Convert.ToInt32(ctx.Db.Insunits), out _);
+                    if (Math.Abs((x.MaxPoint.X - x.MinPoint.X) * f - 900) > 1) errs.Add($"cửa rộng {(x.MaxPoint.X - x.MinPoint.X) * f:0.#} mm (cần 900)");
+                    return 0;
+                });
+
+                // layer state: save, change a layer, restore → back; deleting without the card is refused
+                Run(ctx => DrawingService.LayerState(ctx, new Params("layer_state", P(("action", "save"), ("name", "selftest-f2")))));
+                Run(ctx =>
+                {
+                    var lt = (LayerTable)ctx.Tr.GetObject(ctx.Db.LayerTableId, OpenMode.ForRead);
+                    var l0 = (LayerTableRecord)ctx.Tr.GetObject(lt["0"], OpenMode.ForWrite);
+                    l0.Color = Autodesk.AutoCAD.Colors.Color.FromColorIndex(Autodesk.AutoCAD.Colors.ColorMethod.ByAci, 1);
+                    return 0;
+                });
+                var rs = Run(ctx => (Dictionary<string, object>)DrawingService.LayerState(ctx, new Params("layer_state", P(("action", "restore"), ("name", "selftest-f2")))));
+                Run(ctx =>
+                {
+                    var lt = (LayerTable)ctx.Tr.GetObject(ctx.Db.LayerTableId, OpenMode.ForRead);
+                    var l0 = (LayerTableRecord)ctx.Tr.GetObject(lt["0"], OpenMode.ForRead);
+                    if (l0.Color.ColorIndex == 1) errs.Add("gọi lại trạng thái layer: layer 0 vẫn màu đỏ");
+                    return 0;
+                });
+                bool refused = false;
+                try { Run(ctx => DrawingService.LayerState(ctx, new Params("layer_state", P(("action", "delete"), ("name", "selftest-f2"))))); }
+                catch (ToolException ex) { refused = ex.Message.StartsWith("Confirmation required", StringComparison.Ordinal); }
+                if (!refused) errs.Add("xóa trạng thái layer không qua thẻ mà không bị chặn");
+
+                // A3 sheet: layout with frame, title block (fields) and a 1:100 viewport
+                var sh = (Dictionary<string, object>)DrawingService.CreateSheet(new ToolContext(doc, null, true, null), new Params("create_sheet", P(
+                    ("name", "SELFTEST-F2"), ("paper", "A3"), ("scale", "1:100"), ("fields", P(("project", "THỬ"), ("title", "MẶT BẰNG"))))));
+                Run(ctx =>
+                {
+                    var br = Acad.GetEntity(ctx, (string)sh["title_block_handle"], false) as BlockReference;
+                    int atts = br == null ? 0 : br.AttributeCollection.Count;
+                    if (atts != SheetLogic.Fields.Length) errs.Add($"khung tên có {atts} ô (cần {SheetLogic.Fields.Length})");
+                    var vp = Acad.GetEntity(ctx, (string)sh["viewport_handle"], false) as Viewport;
+                    double f = FloorPlanLogic.MmPerUnit(Convert.ToInt32(ctx.Db.Insunits), out _);
+                    if (vp == null || Math.Abs(vp.CustomScale - f / 100) > 1e-9) errs.Add("khung nhìn không đúng 1:100");
+                    return 0;
+                });
+                return errs.Count == 0
+                    ? new SelfTestRules.Verdict(true, $"style {((Dictionary<string, object>)s1["dim_style"])["name"]} (chạy lại: unchanged), CUA-DI-900, trạng thái layer gọi lại {rs["changed_layers"]} layer, trang SELFTEST-F2 {sh["media"]}")
+                    : new SelfTestRules.Verdict(false, string.Join("; ", errs));
+            });
+
             string versionFile = Path.Combine(dir, "version-copy.dwg");
             Do("Bản sao phiên bản (Wblock + SaveAs)", () =>
             {

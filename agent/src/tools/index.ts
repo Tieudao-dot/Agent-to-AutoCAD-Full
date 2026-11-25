@@ -15,6 +15,7 @@ import { layoutTools } from './layouts.js';
 import { MATCH_PROPS_GENERAL, MATCH_PROPS_TEXT_DESC, modifyTools } from './modify.js';
 import { queryTools } from './query.js';
 import { solidTools } from './solids.js';
+import { standards2dTools } from './standards2d.js';
 import { styleTools } from './styles.js';
 import { systemTools } from './system.js';
 import { viewTools } from './view.js';
@@ -41,6 +42,7 @@ export function buildTools(bridge: ToolBridge, allowed?: readonly string[], plan
     ...solidTools(bridge),
     ...layoutTools(bridge),
     ...advancedTools(bridge),
+    ...standards2dTools(bridge),
     ...systemTools(bridge),
   ];
   const kept = allowed ? all.filter((t) => new Set(allowed).has(t.name)) : all;

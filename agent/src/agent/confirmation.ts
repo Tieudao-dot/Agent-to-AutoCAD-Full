@@ -343,9 +343,22 @@ export const PLUGIN_CONFIRMED = new Set(['explode_entities', 'erase_entities']);
  * always needs the Đồng ý button of a confirmation card that listed those handles, whatever the count; a typed yes or the
  * plan card's "Làm" does not. The plugin checks it too (user_confirmed, added by applyUserConfirmation).
  */
-export const REPLACE_TOOLS = new Set(['find_replace_text']);
+export const REPLACE_TOOLS = new Set(['find_replace_text',
+  // nâng cấp đợt F2: overwriting an existing style that differs (setup_standards) or a layer state (save over / delete)
+  'setup_standards', 'layer_state']);
 /** Tools that get user_confirmed (the handles on the approved card): the 3D ones above and find_replace_text. */
 const CARD_PARAM_TOOLS = new Set([...PLUGIN_CONFIRMED, ...REPLACE_TOOLS]);
+
+/** Nâng cấp đợt F2: the REPLACE_TOOLS that overwrite styles / layer states (their refusal names them, not text). */
+const F2_OVERWRITE = new Set(['setup_standards', 'layer_state']);
+
+/** A batch call of this tool with handles that are not on the approved card. */
+function batchHas(params: Record<string, unknown>, tool: string, g: GateState): boolean {
+  if (!Array.isArray(params.calls)) return false;
+  return (params.calls as Array<{ tool?: unknown; params?: unknown }>).some(
+    (c) => c && c.tool === tool && replaceNotApproved(tool, (c.params as Record<string, unknown>) ?? {}, g).length > 0,
+  );
+}
 
 /** The handles of a replace call (or of the replace calls in a batch) that are not on the card the user approved. */
 export function replaceNotApproved(tool: string, params: Record<string, unknown>, g: GateState): string[] {
@@ -498,6 +511,15 @@ export function confirmationError(tool: string, params: Record<string, unknown>,
     );
   }
   const texts = replaceNotApproved(tool, params, g);
+  const f2 = F2_OVERWRITE.has(tool) ? tool : tool === 'batch_execute' ? [...F2_OVERWRITE].find((t) => batchHas(params, t, g)) : undefined;
+  if (texts.length > 0 && f2) {
+    return (
+      `Confirmation required: ${f2} would overwrite or delete ${texts.length} existing item(s) (${texts.slice(0, 20).join(', ')}) that are not on a confirmation card the user approved. ` +
+      'Only the Đồng ý button of a card listing these handles allows it; a typed "ok" / "đồng ý" does not count. Do not retry now. ' +
+      'Call request_confirmation with exactly these handles and one Vietnamese sentence saying what will be overwritten or deleted, and end your turn. ' +
+      'After Đồng ý, call it again with the same parameters and these handles.'
+    );
+  }
   if (texts.length > 0) {
     return (
       `Confirmation required: find_replace_text would change ${texts.length} existing text object(s) that are not on a confirmation card the user approved. ` +

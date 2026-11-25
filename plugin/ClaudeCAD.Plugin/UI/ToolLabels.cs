@@ -145,6 +145,10 @@ namespace ClaudeCAD.Plugin.UI
             ["presspull"] = "Kéo / ấn mặt khối",
             ["export_stl"] = "Xuất STL",
             ["volume_schedule"] = "Bảng khối lượng",
+            ["setup_standards"] = "Thiết lập style chuẩn",
+            ["create_sheet"] = "Tạo trang in có khung tên",
+            ["insert_library_block"] = "Chèn block thư viện",
+            ["layer_state"] = "Trạng thái layer",
         };
 
         public static string Describe(string tool)
