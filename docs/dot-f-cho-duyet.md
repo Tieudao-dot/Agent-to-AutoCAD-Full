@@ -52,14 +52,19 @@ Mọi số nằm ở một chỗ: `F2Numbers` trong `plugin/ClaudeCAD.Plugin/Cor
 | Cỡ block mặc định (mm) | Cửa đi 900; cửa 2 cánh 1400; cửa trượt 1800; cửa sổ 1200 (cửa trượt và cửa sổ tính tường dày 220); bồn cầu 400 × 700; lavabo 500 × 420; bồn tắm 1700 × 750; khay tắm 900 × 900; giường 1600 × 2000; sofa 2000 × 850; bàn 1200 × 800; ghế 450 × 450; tủ 1200 × 600; bếp 700 × 450; cây đường kính 3000. Mỗi loại có giới hạn nhỏ nhất / lớn nhất | Theo thông lệ |
 | Layer mới | `KHUNG` (khung và khung tên), `KHUNG-VP` (viền khung nhìn, không in); block chèn vào `A-DOOR`, `A-WIND`, `A-FIXT`, `A-FURN`, `L-PLNT`; tên block dạng `CUA-DI-900`, `CUA-SO-1200` | — |
 
-### Ghi chú của người rà về nguồn các con số (25/11, chờ thread rà F2 xác nhận lại)
+### Ghi chú của người rà về nguồn các con số (thread rà F2, 25/11)
 
-- **Lề khung bản vẽ:** số đề xuất là trái 25 mm, ba cạnh còn lại 5 mm (thông lệ quen dùng). Người rà ghi chú: ISO 5457 /
-  TCVN 7285 dùng trái 20 mm, ba cạnh còn lại 10 mm. **Chủ dự án chọn một trong hai.**
+Người rà đã soát bảng trên: không đổi số nào, bảng đủ sau khi thêm 4 dòng dưới đây.
+
+- **Lề khung bản vẽ (chủ dự án chọn):** số đề xuất là trái 25 mm, ba cạnh còn lại 5 mm, theo thông lệ quen dùng ở Việt
+  Nam; không nên ghi là số của TCVN. Người rà nhớ ISO 5457 / TCVN 7285 dùng trái 20 mm, ba cạnh còn lại 10 mm nhưng chưa
+  tra lại văn bản. Cần tra trước khi ghi tên tiêu chuẩn vào tài liệu cho khách.
 - Chiều cao chữ 5 / 3,5 / 2,5 / 1,8 mm nằm trong dãy cỡ chữ của ISO 3098.
 - Khung tên rộng 180 mm trùng với ISO 7200.
-- Số nên thêm vào bảng: cách ghi chữ kích thước (chữ nằm trên đường kích thước, số thập phân, bỏ số 0 thừa), 5 kiểu nét
-  nạp sẵn, tên trang in mặc định `BV-01`, layer do khách tự đặt thì màu 7 (trắng / đen).
+- Bốn dòng thêm vào bảng: tên trang in mặc định `BV-01`; chữ kích thước nằm trên đường kích thước và bỏ số 0 thừa; 5 kiểu
+  nét nạp sẵn; layer do khách đặt tên mới thì màu 7 (trắng / đen).
+- Cỡ block mặc định nằm ở mục của từng block trong `LibraryBlocks.Items`, không nằm ở `F2Numbers`. Các số khác ở
+  `F2Numbers`. Bảng đã soát: `docs/ban-giao/nang-cap-f2-test.md` trên nhánh `full/nang-cap-f2-test`.
 
 ### Quyết định tự chọn
 
@@ -77,6 +82,9 @@ Mọi số nằm ở một chỗ: `F2Numbers` trong `plugin/ClaudeCAD.Plugin/Cor
 | Block thư viện trùng tên block khách đã có | Dùng block của khách, không vẽ lại |
 | Gọi lại trạng thái layer | Không cần thẻ (như sửa layer thường), hoàn tác được. Lưu đè hoặc xóa trạng thái phải qua thẻ |
 | Macro chạy lại một lệnh ghi đè | Hỏi thẻ lại |
+| Hình mới do F2 tạo (block thư viện, khung, khung tên, khung nhìn) | Màu, kiểu nét, độ dày nét theo layer, không ăn theo màu / nét đang chọn (người rà sửa) |
+| Liệt kê block thư viện khi hệ tọa độ đang xoay | Sửa ở bộ điều phối chung: mọi lệnh vẽ được gọi chỉ để đọc thì không đòi quyền ghi (người rà chọn) |
+| Tên kiểu kích thước theo đơn vị | mm / cm / m giữ nguyên tên cũ; dm, inch, feet có hậu tố riêng (`-DM`, `-IN`, `-FT`) |
 
 ### Chưa kiểm được (cần AutoCAD thật)
 
@@ -89,7 +97,11 @@ Mọi số nằm ở một chỗ: `F2Numbers` trong `plugin/ClaudeCAD.Plugin/Cor
 - Block thư viện khi hệ tọa độ đang xoay.
 
 Bước tự kiểm `CLAUDECHATSELFTEST` của F2 kiểm phần lớn các điểm này. Danh sách thử tay: `docs/checklist-dot-f2.md` trên
-nhánh `full/nang-cap-f2`.
+nhánh `full/nang-cap-f2-test` (mục A–F; mục F do người rà thêm, khoảng 10 phút).
+
+Lỗi người rà đã sửa (7): liệt kê block thư viện báo lỗi khi hệ tọa độ xoay; kiểu chữ Arial bị coi là khác font nên hỏi
+ghi đè thừa (2 lỗi); trang in tự chọn sai tỉ lệ khi hệ tọa độ xoay; block / khung ăn theo màu đang chọn; bản vẽ dm / inch /
+feet bị gắn tên kiểu kích thước của cm; "liệt kê trạng thái layer" bị coi là lệnh ghi.
 
 ## Đợt F3 (3D đẹp và đúng hơn)
 
