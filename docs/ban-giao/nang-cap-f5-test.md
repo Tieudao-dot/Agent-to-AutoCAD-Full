@@ -69,7 +69,8 @@ handle, xóa góc nhìn = mã riêng.
 
 ## 7. CI
 
-Xem báo cáo gửi luồng chính (số run). Lượt này cũng kiểm KTF-01 lần 2 (test giao diện chạy trên Windows CI).
+Run 45627464838 (#53) trên `fc92cd6` (code cuối): **xanh** (job windows: build 3 target, test lõi, trợ lý, test giao diện).
+Lượt này cũng kiểm KTF-01 lần 2. Dùng 1 / 2 lượt CI. Commit sau đó chỉ sửa tài liệu này.
 
 ## 8. Chưa kiểm được
 
