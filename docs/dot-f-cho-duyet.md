@@ -37,7 +37,7 @@ Mọi số nằm ở một chỗ: `F2Numbers` trong `plugin/ClaudeCAD.Plugin/Cor
 | Chữ kích thước | Cao 2,5 mm khi in (tỉ lệ 1:100 → cao 250 trong bản vẽ) | Skill kiến trúc sẵn có |
 | Đầu kích thước | Gạch chéo 1,2 mm | Skill kiến trúc |
 | Đường gióng, đường kích thước | Đường gióng cách vật 2 mm, thò qua đường kích thước 1,5 mm; đường kích thước thò qua đường gióng 1 mm; chữ cách đường 0,8 mm | Skill kiến trúc |
-| Số lẻ của kích thước | Bản vẽ mm: không có số lẻ; cm: 1 số lẻ; mét: 2 số lẻ (vd 4.00) | Theo thông lệ |
+| Số lẻ của kích thước | Bản vẽ mm: không có số lẻ; cm: tối đa 1 số lẻ; mét: tối đa 2 số lẻ, số 0 thừa bị bỏ (vd đoạn 4 m hiện "4", 4,5 m hiện "4.5", 4,25 m hiện "4.25") — sửa sau kiểm tra độc lập (KTF-07): trước ghi nhầm "4.00" | Theo thông lệ |
 | Font chữ | Arial, bề rộng chữ 0,85 | Skill kiến trúc |
 | Chiều cao chữ khi in | Tiêu đề 5 mm; tên phòng 3,5; ghi chú 2,5; chữ nhỏ 1,8 | 3,5 và 2,5 từ skill; còn lại theo thông lệ |
 | Tỉ lệ nét đứt (LTSCALE) | Mẫu số tỉ lệ × 0,5 (1:100 → 50); chỉ đặt khi bản vẽ còn để mặc định 1 | Theo thông lệ |
@@ -76,7 +76,7 @@ Người rà đã soát bảng trên: không đổi số nào, bảng đủ sau 
 | Bản vẽ đã có style trùng tên nhưng khác số | Giữ nguyên, không đặt làm hiện hành; chỉ ghi đè sau khi khách bấm Đồng ý trên thẻ (gõ chữ "đồng ý" không tính) |
 | Khách đã tự đặt tỉ lệ nét | Giữ nguyên, chỉ báo số nên dùng |
 | Bản vẽ đơn vị mét / cm | Có kiểu kích thước riêng (`VN-100-M`, `VN-100-CM`) |
-| Ghi chú có mũi tên chỉ dẫn (multileader) | Chưa làm |
+| Ghi chú có mũi tên chỉ dẫn (multileader) | Chưa làm ở F2. *(Đợt F5 đã làm: bộ chuẩn có thêm kiểu ghi chú mũi tên, xem mục Đợt F5)* |
 | Khung tên | Là block có ô điền, sửa được bằng lệnh sửa thuộc tính của AutoCAD. Khung nhìn nằm phía trên khung tên, không chồng lên |
 | Hệ tọa độ đang xoay khi tạo trang in | Khung nhìn xoay theo |
 | Máy in không có giấy đúng chiều | Xoay giấy 90°. Tạo trang lỗi giữa chừng thì xóa layout vừa tạo |
@@ -157,6 +157,9 @@ Người rà nêu, giữ nguyên như F3 đã chọn:
 
 Muốn chặt hơn thì thêm thẻ xác nhận cho hai trường hợp này (việc nhỏ).
 
+**Đợt F5 đã làm cả hai:** gán vật liệu cho cả layer, ghi đè và xóa góc nhìn đã lưu nay đều qua thẻ Đồng ý / Hủy (xem mục
+Đợt F5).
+
 ### Lỗi người rà đã sửa (2)
 
 - Mái 2 dốc nhà chữ U: tam giác đầu hồi của phần nối nhô ra trên sườn mái cánh bên kia (đỉnh 4004 mm thay vì 3139 mm ở ví
@@ -213,7 +216,7 @@ Token mở chat theo ước tính của thread viết (số thật phải đo tr
 | Bộ lệnh nạp sẵn | Một bộ 25 lệnh chung cho mọi gói (lệnh ngoài gói tự bỏ) |
 | Khởi động sẵn khi nào | Khi mở AutoCAD, đổi chế độ, đổi gói, bấm "Chat mới", chuyển bản vẽ. Chỉ trên máy đã kích hoạt. Không gửi gì cho Claude nên không tốn token trước tin đầu |
 | Xuất Excel | Là tùy chọn thêm của 4 bảng có sẵn (thống kê block, diện tích, khối lượng 3D, va chạm), không thêm lệnh mới |
-| File Excel đã có | Không ghi đè ngay: Claude hỏi khách trong chat rồi mới ghi đè (như xuất STL), không hiện thẻ xác nhận |
+| File Excel đã có | Không ghi đè ngay: Claude hỏi khách trong chat rồi mới ghi đè (như xuất STL), không hiện thẻ xác nhận. *(Đợt F5 đổi: nay hiện thẻ Đồng ý / Hủy, xem mục Đợt F5)* |
 | Số viết dạng chữ trong bảng | Thành số khi là số thường ("12", "12.50"); giữ là chữ khi có số 0 đầu ("007"), dấu phẩy hay đơn vị |
 | Bản vẽ chưa lưu | File Excel vào thư mục Documents (như STL) |
 | Máy gói 3D | Không vẽ bảng trong bản vẽ được (như cũ) nhưng xuất Excel bảng 3D được |
@@ -222,7 +225,7 @@ Người rà chọn thêm:
 
 | Tình huống | Đã chọn |
 | --- | --- |
-| Công tắc tắt nạp gọn (luồng chính dặn thêm, làm đường lui nếu thử thật thấy Claude tìm sót lệnh) | Đặt biến môi trường `CLAUDECAD_DEFER_TOOLS=0`, hoặc tạo file trống `%LocalAppData%\ClaudeCAD\tool-search-off`, rồi mở lại AutoCAD: Claude nhận đủ mô tả mọi lệnh như trước F4. Mặc định vẫn nạp gọn. Chưa làm thành ô trong phần cài đặt ⚙ |
+| Công tắc tắt nạp gọn (luồng chính dặn thêm, làm đường lui nếu thử thật thấy Claude tìm sót lệnh) | Đặt biến môi trường `CLAUDECAD_DEFER_TOOLS=0`, hoặc tạo file trống `%LocalAppData%\ClaudeCAD\tool-search-off`, rồi mở lại AutoCAD: Claude nhận đủ mô tả mọi lệnh như trước F4. Mặc định vẫn nạp gọn. *(Đợt F5 thêm ô "Nạp gọn lệnh" trong ⚙; biến / file vẫn thắng ô)* |
 | Macro có bảng kèm xuất Excel | Chạy lại macro chỉ vẽ lại bảng, không ghi file Excel (tránh ghi đè file khách đã sửa) |
 | Máy bị khóa giữa chừng | Có thể còn một tiến trình Claude chờ sẵn tới khi đóng AutoCAD; tiến trình này không gửi gì, không tốn token |
 
@@ -246,6 +249,76 @@ Người rà cũng đã đối chiếu: cách hoãn lệnh khớp với bộ th�
 
 Danh sách thử tay: `docs/checklist-dot-f4.md` trên nhánh `full/nang-cap-f4-test` (người rà thêm mục C).
 
+## Đợt F5 (ô "Nạp gọn lệnh", thẻ xác nhận ghi đè, ghi chú có mũi tên)
+
+*Theo bàn giao của thread viết và thread rà (25/11). Chi tiết: `docs/ban-giao/nang-cap-f5.md`, `docs/ban-giao/nang-cap-f5-test.md`.
+Thử tay: mục F11 của khối "Đợt F" trong `docs/checklist-tong-the.md`.*
+
+### Con số chờ duyệt
+
+Ghi chú có mũi tên của bộ style chuẩn (kiểu `KT-ML-<tỷ lệ>` / `VN-ML-<tỷ lệ>`, vd `KT-ML-100`; bản vẽ mét thêm `-M`), đặt làm
+kiểu hiện hành. Các số là số **trên giấy**, nhân tỷ lệ như kiểu kích thước (1:100 → chữ cao 250 trong bản vẽ mm):
+
+| Nhóm | Số đề xuất | Khách thấy gì | Vì sao |
+| --- | --- | --- | --- |
+| Chữ ghi chú mũi tên | cao **2,5 mm**, kiểu chữ của bộ (`KT-ARIAL`) | cỡ chữ ghi chú | bằng chữ ghi chú và chữ kích thước của bộ (F2) |
+| Đầu mũi tên | **mũi tên đặc 2,5 mm** | cỡ đầu mũi tên | theo thông lệ (mặc định của AutoCAD cho kiểu mét); gạch chéo 1,2 của kích thước không hợp với ghi chú |
+| Khoảng hở chữ – đường dẫn | **1 mm** | khoảng trống giữa chữ và đường gãy | theo thông lệ |
+| Đoạn gãy ngang | **2,5 mm** | đoạn nằm ngang trước chữ | theo thông lệ |
+| Tên kiểu | `KT-ML-<tỷ lệ>` / `VN-ML-<tỷ lệ>` | tên trong `MLEADERSTYLE` | đặt cạnh kiểu kích thước `KT-<tỷ lệ>` của bộ |
+
+Chữ trên ô ⚙ (không phải số, cũng để cậu xem): ô **"Nạp gọn lệnh"**, dòng giải thích "Bật: mở chat nhanh và nhẹ hơn, Claude
+tự tìm lệnh ít dùng khi cần. Tắt: nạp đủ mô tả mọi lệnh như trước (tốn token hơn). Áp dụng từ cuộc chat mới (bấm Chat mới);
+cuộc chat đã có tin nhắn giữ cách nạp lúc bắt đầu."
+
+### Quyết định tự chọn
+
+| Tình huống | Đã chọn |
+| --- | --- |
+| Ô "Nạp gọn lệnh" | Trong ⚙ (phần Cách Claude làm việc), mặc định bật, nhớ theo máy; có ở mọi gói. Biến môi trường / file `tool-search-off` của F4 vẫn thắng ô |
+| Khi nào ô có hiệu lực | **Đổi ở bản chốt đợt F:** từ **cuộc chat mới** (bấm "Chat mới"); cuộc chat đã có tin giữ cách nạp lúc bắt đầu; cuộc chat chưa có tin thì áp dụng ngay. Lý do: đổi giữa cuộc chat có thể làm lượt sau bị Claude từ chối (lịch sử còn lệnh đã tìm bằng cách nạp cũ) — chưa thử được với Claude thật nên chọn cách an toàn |
+| Thẻ Đồng ý / Hủy | Thêm cho: ghi đè file PDF (trước không hỏi), STL, ảnh PNG, Excel; ghi đè / xóa góc nhìn đã lưu; gán vật liệu cho cả layer; đổi màu / độ trong của vật liệu đã có. File chưa có, tạo vật liệu mới, gán cho ≤ 20 khối chọn sẵn: không hỏi |
+| Macro chạy lại | Không hiện thẻ (không ai bấm được), giữ luật cũ; Excel không ghi lại khi chạy macro |
+| Tham số `overwrite` / `replace` cũ | Vẫn nhận (skill / macro cũ không lỗi), nhưng ngoài macro không thay được thẻ |
+| Mã trên thẻ cho file | 16 chữ số hex tạo từ đường dẫn đầy đủ (không phân biệt hoa thường, `/` = `\\`); nút "Xem trước" không chỉ được gì cho file (không sao) |
+| Ghi chú mũi tên | Thêm kiểu vào bộ chuẩn và tham số cho lệnh `add_mleader` có sẵn, không thêm lệnh. Không ghi kiểu thì theo kiểu hiện hành; cỡ chữ theo kiểu chỉ với kiểu của bộ chuẩn, bản vẽ khác giữ như trước F5 |
+
+Người rà chọn thêm:
+
+| Tình huống | Đã chọn |
+| --- | --- |
+| Mã thẻ xóa góc nhìn | Mã riêng, khác mã ghi đè: đồng ý ghi đè một góc nhìn không dùng được để xóa nó |
+| Đường dẫn file | Chuẩn hóa trước khi tạo mã (một file một mã). Tên ngắn kiểu `BAOCAO~1.XLS` chỉ làm hỏi thêm một thẻ, không vượt được thẻ (không đổi về tên dài) |
+
+## Sau kiểm tra độc lập (25/11/2026)
+
+*Kiểm tra độc lập đợt F ghi 9 lỗi (KTF-01 → 09) và vài nghi vấn; đã sửa và soát lại. Chi tiết:
+`docs/ban-giao/test-tong-the-dot-f.md` (mục "Sau kiểm tra độc lập", "KTF-01 lần 2", "Chốt nhánh trước bộ cài thử bản 4") và
+`docs/ban-giao/nang-cap-f-sua-ktf.md`. Không thêm số nào khách gặp.*
+
+### Quyết định khi sửa
+
+| Tình huống | Đã chọn |
+| --- | --- |
+| Block thư viện trùng tên block có sẵn nhưng khác cỡ (lệch > 2 %) | Không dùng lại block cũ (sai cỡ), tạo block thư viện tên thêm đuôi **`-TV`** (vd `CUA-DI-900-TV`; dựng 3D vẫn nhận là cửa). Cùng cỡ thì dùng block có sẵn. Block `-TV` đã có thì dùng lại, không kiểm cỡ lần nữa |
+| Vật liệu của khách trùng tên vật liệu mẫu ("Glass", "Metal"…) | Dùng nguyên vật liệu của khách, không thay bằng vật liệu mẫu |
+| Ảnh PNG từ góc nhìn đã lưu | Giữ hướng nhìn, **không giữ độ phóng to** (khung cả công trình hoặc các đối tượng chỉ định). Mô tả lệnh nói rõ; muốn giữ zoom cần viết lại bộ chụp |
+| Kích thước bản vẽ mét | Hiện **"4"**, "4.5" (bỏ số 0 thừa), không phải "4.00". Muốn luôn 2 số lẻ thì đổi cài đặt kiểu kích thước (việc nhỏ) |
+| Đường bao mái vẽ tay lệch vài mm (KTF-01, KTF-09) | Tự nắn góc vuông trước khi dựng mái; hai đường tường song song cách nhau rất ít coi là một; cạnh ngắn lệch ngang vài mm vẫn nhận là góc vuông; tường xiên thật vẫn bị từ chối |
+| Ô "Nạp gọn lệnh" đổi giữa cuộc chat | Giữ cách nạp của cuộc chat tới "Chat mới" (xem mục Đợt F5) |
+| Công tắc khẩn cấp (`CLAUDECAD_DEFER_TOOLS=0` / file `tool-search-off`) | Vẫn thắng cả cách nạp của cuộc chat đang dở (không đổi code). Hướng dẫn dặn: bật / tắt công tắc rồi bấm **Chat mới** |
+
+### Hai điểm không sửa (để cậu quyết)
+
+- **Chữ trông như số trong file Excel** (vd chuỗi số dài, "1.10") được đổi thành số khi xuất Excel, nên Excel có thể bỏ số 0
+  cuối / hiện dạng số mũ. Muốn giữ nguyên là chữ cho các ô kiểu mã thì nói.
+- **Chưa kiểm được (cần Claude thật): công tắc khẩn cấp với cuộc chat đang dở.** Cuộc chat bắt đầu ở kiểu nạp gọn (Claude đã
+  tìm lệnh ít gặp), rồi bật công tắc và mở lại AutoCAD: lượt sau nối tiếp cuộc chat cũ mà không còn cách tìm lệnh, có thể
+  bị báo lỗi. Đã dặn bấm Chat mới trong hướng dẫn; thử tay F9-2 sẽ cho biết có lỗi thật không. Có lỗi thì sửa nhỏ: công
+  tắc đổi thì tự bắt đầu cuộc chat mới.
+- **Bảng thống kê / diện tích không xoay theo UCS:** đặt đúng điểm theo UCS nhưng bảng luôn nằm ngang theo màn hình (giới
+  hạn đã ghi ở F1).
+
 ## Test tổng thể đợt F (25/11/2026)
 
 *Nhánh `full/nang-cap-f-tong-the`. Chi tiết: `docs/ban-giao/test-tong-the-dot-f.md`.*
@@ -262,10 +335,15 @@ cỡ ảnh 384–1568 và luật ghi đè ảnh). Không đổi số nào trong 
 
 ### Điểm để cậu xem lại (giữ nguyên, chưa đổi)
 
-- **Ghi đè có hai kiểu**: style / trạng thái layer (F2) phải bấm Đồng ý trên thẻ; góc nhìn trùng tên, file STL / Excel /
-  PNG trùng tên (F3, F4, đợt D) thì Claude hỏi trong chat rồi mới ghi đè. Muốn một kiểu cho tất cả thì nói (việc nhỏ).
-- **In PDF ghi đè file PDF trùng tên không hỏi** (cách làm có từ trước chuỗi nâng cấp), khác STL / Excel / PNG. Muốn hỏi
-  trước thì nói.
+- ~~**Ghi đè có hai kiểu**~~ — **đợt F5 đã làm một kiểu:** ghi đè style / trạng thái layer, góc nhìn, file PDF / STL /
+  Excel / PNG đều qua thẻ Đồng ý / Hủy.
+- **Kích thước bản vẽ mét hiện "4", không phải "4.00"** (KTF-07): kiểu kích thước bỏ số 0 thừa (4 m hiện "4", 4,5 m hiện
+  "4.5"). Muốn luôn hiện đủ 2 số lẻ ("4.00") thì phải đổi cài đặt bỏ số 0 thừa của kiểu kích thước (việc nhỏ, đổi trong
+  code tạo kiểu kích thước).
+- **Block thư viện trùng tên block có sẵn nhưng khác cỡ** (sau kiểm tra độc lập): không dùng lại block cũ (sai cỡ) mà tạo
+  block thư viện tên thêm đuôi `-TV` (vd `CUA-DI-900-TV`; dựng 3D từ mặt bằng vẫn nhận là cửa). Cùng cỡ (lệch ≤ 2 %) thì
+  dùng block có sẵn như trước.
+- ~~**In PDF ghi đè file PDF trùng tên không hỏi**~~ — **đợt F5 đã sửa:** file PDF đã có thì hiện thẻ trước khi ghi đè.
 
 ### Token mở chat (ước tính, cùng cách đo các đợt trước)
 

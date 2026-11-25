@@ -166,3 +166,8 @@ trong 5 phút chỉ tốn ~10%.
     ghi chú có mũi tên) giao 20h05 cho thread Test & sửa F1 trên `full/nang-cap-f5`, kịp bộ cài thử bản 4. **Đợt G** (ra
     bộ hồ sơ, soát lỗi bản vẽ, bảng dự toán, render thật, vẽ lại từ ảnh / PDF scan; ước $150–200) chạy liền như đợt F,
     bắt đầu sau khi đợt F xong hẳn. Kế hoạch: [`ke-hoach-nang-cap-lenh.md`](ke-hoach-nang-cap-lenh.md) mục "Đợt G".
+  - 19h57: kiểm tra độc lập ghi 8 lỗi (1 nặng: mái nhà L / T / U vẽ lệch ~1 mm dựng sai); thread F1 và F2 sửa, agent độc
+    lập soát lại 3 lượt, thêm 1 lỗi nhẹ. Kết quả: 9 lỗi, 9 đã sửa đúng, 0 lỗi mở
+    ([`ban-giao/kiem-tra-doc-lap-dot-f.md`](ban-giao/kiem-tra-doc-lap-dot-f.md)).
+  - 21h00: đợt F5 xong (viết + rà, 2 lỗi thẻ sửa, ~$21). 21h15: nhánh tích hợp đợt F chốt ở `full/nang-cap-f-tong-the` @
+    `a6da118` (code `7fe215c`, CI 45630097088 xanh, lõi 1217, trợ lý 364); giao build bộ cài thử bản 4.
