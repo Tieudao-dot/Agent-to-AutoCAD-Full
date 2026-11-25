@@ -48,6 +48,20 @@ báo, và chi phí lượt (nếu khung chat hiện).
 
 ## F. Tự kiểm
 
-Bấm "Tự kiểm": bước "Nâng cấp đợt G5" phải đạt. Bước này cũng cho biết AutoCAD có vẽ ảnh nền trong ảnh xem (ảnh chụp ngoài
-màn hình) hay không. **Nếu bước này báo "ảnh xem không thấy ảnh nền", gửi tớ ngay**: khi đó Claude không nhìn thấy bản scan
-khi xem và cần đổi cách làm.
+Bấm "Tự kiểm": bước "Nâng cấp đợt G5" phải đạt. *(Test & sửa G5)* Ảnh xem nay dựng thẳng từ file ảnh gốc, nét Claude vẽ phủ
+lên trên, nên Claude thấy bản scan dù AutoCAD có vẽ ảnh nền trong ảnh chụp ngoài màn hình hay không. Dòng kết quả của bước
+này ghi một trong hai câu: "AutoCAD có vẽ ảnh nền khi chụp", hoặc "AutoCAD KHÔNG vẽ ảnh nền khi chụp (ảnh xem lấy từ file)".
+**Ghi lại câu đó gửi tớ.** Nếu là "KHÔNG" thì ảnh vẫn xem được, nhưng **PDF scan** sẽ không thấy (xem G3 dưới).
+
+## G. Sau Test & sửa đợt G5 (~10 phút)
+
+*Nhánh `full/nang-cap-g5-test`. Chi tiết: `docs/ban-giao/nang-cap-g5-test.md`.*
+
+| # | Làm gì | Thấy gì là đạt |
+| --- | --- | --- |
+| G1 | Xoay UCS 30° (`UCS` → `Z` → 30), "vẽ lại bản này" với bản scan (2), rồi "xem kỹ góc trên bên trái" | Ảnh nền nằm đúng chỗ Claude nói; vùng xem phóng to đúng góc đó (không lệch sang chỗ khác); sau khi đặt tỉ lệ, ảnh không bị trôi đi |
+| G2 | Đổi tên một ảnh HEIC / WebP thành `.png`, gửi "vẽ lại bản này: <đường dẫn>" | Claude nói file thật ra là HEIC / WebP, nhờ lưu lại JPG (không báo lỗi khó hiểu của AutoCAD) |
+| G3 | PDF scan (3): sau khi gắn, Claude xem ảnh | Nếu ảnh xem trắng trơn: Claude **nói không thấy ảnh** và nhờ xuất trang PDF ra PNG / JPG để gửi lại, **không vẽ mò**. Ghi lại Claude thấy hay không thấy trang PDF |
+| G4 | Sau khi vẽ lại, "soát bản vẽ" | **Không** báo layer `X-ANH-GOC` là "layer không in còn chứa hình" hay "layer không thuộc bảng chuẩn" |
+| G5 | Sau khi vẽ lại, "ra bộ hồ sơ" (bản vẽ chỉ có mặt bằng 2D) | Tờ mặt bằng chỉ có phần đã vẽ, không thu nhỏ để chứa cả ảnh nền |
+| G6 | Đường dẫn có dấu tiếng Việt và dấu cách (vd `D:\Bản vẽ\nhà phố.jpg`) | Gắn được, không có lệnh lạ chạy ở dòng lệnh |

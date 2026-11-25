@@ -54,7 +54,7 @@ export function traceTools(b: ToolBridge): AnyTool[] {
         'attach: path of the file (the user\'s path, or the path given for a picture attached to the message; png / jpg / tif / bmp / gif / pdf, page for a PDF of several pages) → ' +
         'a background on the locked, non-plotted layer X-ANH-GOC, NOT to scale yet. scale: p1, p2 = two points on the picture whose real distance you know (mm / cm / m): ' +
         'a dimension written on the scan first, else ask the user; never guess a scale. straighten: p1, p2 along a wall that should be straight (axis auto / horizontal / vertical) for a skewed photo (it only turns: a photo taken at a slant stays distorted, say so). ' +
-        `view: a picture of it (and of what you drew on it) with a grid of drawing coordinates; p1 / p2 to look closer at a part; at most ${TRACE_MAX_VIEWS} looks per request. info: the pictures. ` +
+        `view: a picture of it (and of what you drew on it) with a grid of drawing coordinates; p1 / p2 to look closer at a part; at most ${TRACE_MAX_VIEWS} looks per request; a look with picture_visible false shows no picture: stop and tell the user. info: the pictures. ` +
         'Steps: 1 attach; 2 view the whole picture; 3 find a written dimension (or ask the user) and scale; straighten first if the walls lean; ' +
         '4 view parts closer (p1 / p2) to read walls, openings, room names, dimensions; 5 draw on top with the usual tools on the usual layers (walls, doors, windows, room names, ' +
         'main dimensions): the written numbers win over the picture, wall thickness unread = 200 mm (say so); 6 one view to compare and fix; ' +

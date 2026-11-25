@@ -103,7 +103,8 @@ namespace ClaudeCAD.Plugin.Drawing
             var layoutNames = new List<string>();
             var solidLayers = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
             DrawingSetLogic.Record last;
-            var generated = new HashSet<string>(new[] { SectionLogic.OutlineLayer, SectionLogic.HatchLayer, SectionLogic.BehindLayer, SectionLogic.ElevationLayer }, StringComparer.OrdinalIgnoreCase);
+            var generated = new HashSet<string>(new[] { SectionLogic.OutlineLayer, SectionLogic.HatchLayer, SectionLogic.BehindLayer, SectionLogic.ElevationLayer,
+                G5Numbers.Layer }, StringComparer.OrdinalIgnoreCase); // Test & sửa G5: the traced picture is not part of the 2D plan
             using (var tr = doc.TransactionManager.StartTransaction())
             {
                 var c = new ToolContext(doc, tr, false, ctx.Dispatcher);

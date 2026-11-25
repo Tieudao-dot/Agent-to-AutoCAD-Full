@@ -61,6 +61,12 @@ namespace ClaudeCAD.Plugin.Drawing
             long bytes = 0;
             try { path = Path.GetFullPath(path); exists = File.Exists(path); if (exists) bytes = new FileInfo(path).Length; } catch (Exception) { }
             string kind = TraceLogic.KindOf(path, exists, bytes, tool);
+            // Test & sửa G5: the content must be what the name says (a phone photo saved as .png may be WebP / HEIC)
+            var head = new byte[1024];
+            int got = 0;
+            try { using (var fs = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite)) got = fs.Read(head, 0, head.Length); }
+            catch (Exception ex) { throw ToolException.Invalid($"{tool}: could not read '{Path.GetFileName(path)}' ({ex.Message})."); }
+            TraceLogic.CheckContent(path, kind, head.Take(got).ToArray(), tool);
             int page = 1, pages = 0;
             if (kind == "pdf")
             {
@@ -78,7 +84,7 @@ namespace ClaudeCAD.Plugin.Drawing
             }
             double mpu = MmPerUnitOf(db);
             Point3d at;
-            if (p.Has("insert")) { var q = p.Numbers("insert"); at = new Point3d(q[0], q[1], 0); }
+            if (p.Has("insert")) { var q = p.Point("insert"); at = new Point3d(q[0], q[1], 0); } // Test & sửa G5: a UCS point
             else
             {
                 var ext = Capture.ModelExtents(doc);
@@ -162,8 +168,9 @@ namespace ClaudeCAD.Plugin.Drawing
                 ["kind"] = kind,
                 ["file"] = source,
                 ["layer"] = G5Numbers.Layer,
-                ["min"] = new List<object> { Acad.R(at.X), Acad.R(at.Y) },
-                ["max"] = new List<object> { Acad.R(at.X + w), Acad.R(at.Y + h) },
+                // Test & sửa G5: points out in the user's UCS (the dispatcher boxes min / max in it), like the grid labels
+                ["min"] = Acad.J(new Point3d(at.X, at.Y, 0)),
+                ["max"] = Acad.J(new Point3d(at.X + w, at.Y + h, 0)),
                 ["scaled"] = false,
                 ["note"] = "Attached (locked, not plotted). It is NOT to scale yet: its width was set to " + G5Numbers.DefaultWidthMm.ToString("0", CultureInfo.InvariantCulture) +
                            " mm only to show it. Look at it with action view, find a length you know (a dimension written on the scan, or ask the user), then action scale. " + TraceLogic.DraftNote,
@@ -243,8 +250,8 @@ namespace ClaudeCAD.Plugin.Drawing
         {
             var doc = ctx.Doc;
             var db = ctx.Db;
-            var q1 = p.Numbers("p1");
-            var q2 = p.Numbers("p2");
+            var q1 = p.Point("p1"); // Test & sửa G5: UCS points (the grid labels) → WCS
+            var q2 = p.Point("p2");
             var p1 = new Point3d(q1[0], q1[1], 0);
             var p2 = new Point3d(q2[0], q2[1], 0);
             double mpu = MmPerUnitOf(db);
@@ -278,8 +285,8 @@ namespace ClaudeCAD.Plugin.Drawing
             var r = new Dictionary<string, object>
             {
                 ["handle"] = handle,
-                ["min"] = new List<object> { Acad.R(ext.MinPoint.X), Acad.R(ext.MinPoint.Y) },
-                ["max"] = new List<object> { Acad.R(ext.MaxPoint.X), Acad.R(ext.MaxPoint.Y) },
+                ["min"] = Acad.J(new Point3d(ext.MinPoint.X, ext.MinPoint.Y, 0)),
+                ["max"] = Acad.J(new Point3d(ext.MaxPoint.X, ext.MaxPoint.Y, 0)),
             };
             if (scale)
             {
@@ -304,11 +311,26 @@ namespace ClaudeCAD.Plugin.Drawing
             Point3d min, max;
             string handle;
             bool scaled;
+            // Test & sửa G5: the picture file and where it lies, to draw the look from the file itself
+            string picFile = null;
+            double[] po = null, pu = null, pv = null;
+            double picW = 0, picH = 0;
             using (var tr = db.TransactionManager.StartOpenCloseTransaction())
             {
                 var id = TraceTarget(tr, db, p, tool);
                 var e = (Entity)tr.GetObject(id, OpenMode.ForRead);
                 scaled = ReadMark(tr, e)?.Scaled == true;
+                if (e is RasterImage img && tr.GetObject(img.ImageDefId, OpenMode.ForRead) is RasterImageDef rdef)
+                {
+                    var cs = img.Orientation;
+                    po = new[] { cs.Origin.X, cs.Origin.Y };
+                    pu = new[] { cs.Xaxis.X, cs.Xaxis.Y };
+                    pv = new[] { cs.Yaxis.X, cs.Yaxis.Y };
+                    picW = rdef.Size.X;
+                    picH = rdef.Size.Y;
+                    picFile = SafeString(() => rdef.ActiveFileName);
+                    if (string.IsNullOrEmpty(picFile) || !File.Exists(picFile)) picFile = SafeString(() => rdef.SourceFileName);
+                }
                 var ext = e.GeometricExtents;
                 handle = Acad.H(id);
                 min = ext.MinPoint;
@@ -317,11 +339,14 @@ namespace ClaudeCAD.Plugin.Drawing
             }
             if (p.Has("p1") && p.Has("p2"))
             {
+                // Test & sửa G5: p1 / p2 are opposite corners in the UCS: the WCS box of the four corners
                 var a = p.Numbers("p1");
                 var b = p.Numbers("p2");
-                min = new Point3d(Math.Min(a[0], b[0]), Math.Min(a[1], b[1]), 0);
-                max = new Point3d(Math.Max(a[0], b[0]), Math.Max(a[1], b[1]), 0);
-                if (max.X - min.X < 1e-9 || max.Y - min.Y < 1e-9) throw ToolException.Invalid($"{tool}: p1 and p2 must be two opposite corners of the part to look at.");
+                var cs4 = new[] { new[] { a[0], a[1] }, new[] { b[0], a[1] }, new[] { b[0], b[1] }, new[] { a[0], b[1] } }
+                    .Select(c => UcsScope.ConvertInput("p1", new[] { c[0], c[1], 0.0 })).ToList();
+                min = new Point3d(cs4.Min(c => c[0]), cs4.Min(c => c[1]), 0);
+                max = new Point3d(cs4.Max(c => c[0]), cs4.Max(c => c[1]), 0);
+                if (Math.Abs(a[0] - b[0]) < 1e-9 || Math.Abs(a[1] - b[1]) < 1e-9) throw ToolException.Invalid($"{tool}: p1 and p2 must be two opposite corners of the part to look at.");
             }
             int size = p.Has("size") ? (int)p.Num("size") : G5Numbers.ViewSize;
             size = Math.Max(Capture.MinSize, Math.Min(G5Numbers.MaxViewSize, size));
@@ -330,15 +355,18 @@ namespace ClaudeCAD.Plugin.Drawing
             double step = p.Has("grid_step") ? p.Num("grid_step") : TraceLogic.GridStep(span, MmPerUnitOf(db));
             bool grid = p.Bool("grid", true);
             byte[] png = cap.Png;
+            // Test & sửa G5: the picture comes from its file (AutoCAD's off-screen look may leave images out), what was drawn on top
+            var look = ComposeLook(cap, picFile, po, pu, pv, picW, picH, min, max);
+            png = look.Png;
             int lines = 0;
             if (grid)
             {
                 var g = TraceLogic.Grid(new[] { cap.Min.X, cap.Min.Y }, new[] { cap.Max.X, cap.Max.Y }, cap.Width, cap.Height, step,
                     frame.IsWorld ? new double[] { 0, 0 } : new[] { frame.O[0], frame.O[1] }, frame.IsWorld ? 0 : frame.PlanAngleDeg);
                 lines = g.Count;
-                png = DrawGrid(cap.Png, g);
+                png = DrawGrid(png, g);
             }
-            return new Dictionary<string, object>
+            var res = new Dictionary<string, object>
             {
                 ["image_png_base64"] = Convert.ToBase64String(png),
                 ["handle"] = handle,
@@ -347,8 +375,8 @@ namespace ClaudeCAD.Plugin.Drawing
                 // the part shown (corners; points of results come back in the user's UCS like the grid labels)
                 ["window"] = new Dictionary<string, object>
                 {
-                    ["min"] = new List<object> { Acad.R(cap.Min.X), Acad.R(cap.Min.Y) },
-                    ["max"] = new List<object> { Acad.R(cap.Max.X), Acad.R(cap.Max.Y) },
+                    ["min"] = Acad.J(new Point3d(cap.Min.X, cap.Min.Y, 0)),
+                    ["max"] = Acad.J(new Point3d(cap.Max.X, cap.Max.Y, 0)),
                 },
                 ["grid_step"] = Acad.R(step),
                 ["grid_lines"] = lines,
@@ -357,7 +385,91 @@ namespace ClaudeCAD.Plugin.Drawing
                 ["note"] = (grid ? "Grid labels are the coordinates the drawing tools take (current UCS, drawing units). " : "") +
                            (scaled ? "" : "The picture is NOT to scale yet (action scale). ") +
                            "Look closer at a part with p1 / p2 instead of a bigger size. " + TraceLogic.DraftNote,
+                ["picture_from"] = look.From,
+                ["autocad_drew_picture"] = look.AutocadDrew,
             };
+            if (look.Blank)
+            {
+                res["picture_visible"] = false;
+                res["warning"] = "This look shows NO picture (AutoCAD did not draw it in the off-screen view, and a PDF page cannot be drawn from its file). " +
+                                 "Do not trace from it and do not guess: tell the user, and ask them to export the page as PNG / JPG and attach that instead.";
+            }
+            return res;
+        }
+
+        private sealed class LookResult { public byte[] Png; public string From; public bool Blank, AutocadDrew; }
+
+        /// <summary>
+        /// Test & sửa G5: the look of a traced picture. A raster picture is drawn from its file (where it lies in the window),
+        /// with AutoCAD's look on top where something is drawn (its background made transparent), so the scan shows whether
+        /// or not AutoCAD draws images off screen. A PDF (or a file that cannot be read): AutoCAD's look alone, and Blank when
+        /// it shows nothing over the picture.
+        /// </summary>
+        private static LookResult ComposeLook(CaptureResult cap, string picFile, double[] po, double[] pu, double[] pv, double picW, double picH, Point3d pmin, Point3d pmax)
+        {
+            var conv = new FormatConvertedBitmap(Decode(cap.Png), PixelFormats.Bgra32, null, 0);
+            int w = conv.PixelWidth, h = conv.PixelHeight, stride = w * 4;
+            var px = new byte[stride * h];
+            conv.CopyPixels(px, stride, 0);
+            var bg = TraceLogic.Background(px, w, h);
+            double[] wmin = { cap.Min.X, cap.Min.Y }, wmax = { cap.Max.X, cap.Max.Y };
+            // is there anything drawn by AutoCAD over the picture? (≈ 0: it left the image out of its off-screen look)
+            double sx = (wmax[0] - wmin[0]) / w, sy = (wmax[1] - wmin[1]) / h;
+            double share = TraceLogic.DrawnShare(px, w, h, bg, (pmin.X - wmin[0]) / sx, (wmax[1] - pmax.Y) / sy, (pmax.X - wmin[0]) / sx, (wmax[1] - pmin.Y) / sy);
+            bool drew = share >= TraceLogic.BlankShare;
+            if (picFile != null && po != null && picW > 0 && picH > 0 && File.Exists(picFile))
+            {
+                try
+                {
+                    double uLen = Math.Sqrt(pu[0] * pu[0] + pu[1] * pu[1]);
+                    int dw = TraceLogic.DecodeWidth(picW, (wmax[0] - wmin[0]) / Math.Max(1e-9, uLen), w);
+                    var bi = new BitmapImage();
+                    using (var fs = new FileStream(picFile, FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
+                    {
+                        bi.BeginInit();
+                        bi.CacheOption = BitmapCacheOption.OnLoad;
+                        bi.CreateOptions = BitmapCreateOptions.IgnoreColorProfile;
+                        bi.DecodePixelWidth = dw;
+                        bi.StreamSource = fs;
+                        bi.EndInit();
+                    }
+                    bi.Freeze();
+                    var m = TraceLogic.PictureToLook(po, pu, pv, bi.PixelWidth, bi.PixelHeight, wmin, wmax, w, h);
+                    TraceLogic.ClearBackground(px, bg);
+                    var top = BitmapSource.Create(w, h, 96, 96, PixelFormats.Bgra32, null, px, stride);
+                    var dv = new DrawingVisual();
+                    using (var dc = dv.RenderOpen())
+                    {
+                        dc.DrawRectangle(new SolidColorBrush(Color.FromRgb((byte)bg[2], (byte)bg[1], (byte)bg[0])), null, new Rect(0, 0, w, h));
+                        dc.PushTransform(new MatrixTransform(m[0], m[1], m[2], m[3], m[4], m[5]));
+                        dc.DrawImage(bi, new Rect(0, 0, bi.PixelWidth, bi.PixelHeight));
+                        dc.Pop();
+                        dc.DrawImage(top, new Rect(0, 0, w, h));
+                    }
+                    return new LookResult { Png = EncodePng(dv, w, h), From = "file", AutocadDrew = drew };
+                }
+                catch (Exception ex) { Logger.Warn("trace_image: look from the file failed: " + ex.Message); }
+            }
+            return new LookResult { Png = cap.Png, From = "autocad", Blank = !drew, AutocadDrew = drew };
+        }
+
+        private static BitmapSource Decode(byte[] png)
+        {
+            using (var ms = new MemoryStream(png))
+                return new PngBitmapDecoder(ms, BitmapCreateOptions.PreservePixelFormat, BitmapCacheOption.OnLoad).Frames[0];
+        }
+
+        private static byte[] EncodePng(DrawingVisual dv, int w, int h)
+        {
+            var rtb = new RenderTargetBitmap(w, h, 96, 96, PixelFormats.Pbgra32);
+            rtb.Render(dv);
+            var enc = new PngBitmapEncoder();
+            enc.Frames.Add(BitmapFrame.Create(rtb));
+            using (var o = new MemoryStream())
+            {
+                enc.Save(o);
+                return o.ToArray();
+            }
         }
 
         /// <summary>The grid drawn over the look: thin cyan lines, their value at the top / left edge.</summary>
@@ -447,7 +559,7 @@ namespace ClaudeCAD.Plugin.Drawing
                 conv.CopyPixels(px, stride, 0);
                 for (int i = 0; i < px.Length; i += 4 * 7) { total++; if (px[i] > 200 && px[i + 1] > 200 && px[i + 2] > 200) bright++; }
             }
-            if (bright < total / 10) errs.Add("ảnh xem không thấy ảnh nền (AutoCAD không vẽ ảnh trong ảnh chụp ngoài màn hình)");
+            if (bright < total / 10) errs.Add("ảnh xem không thấy ảnh nền (cả từ file lẫn từ AutoCAD)");
             var inf = Call(new Dictionary<string, object> { ["action"] = "info" });
             if (Convert.ToInt32(inf["count"]) < 1) errs.Add("info: không thấy ảnh đã gắn");
             using (doc.LockDocument())
@@ -464,7 +576,10 @@ namespace ClaudeCAD.Plugin.Drawing
                 ltr.IsLocked = was;
                 tr.Commit();
             }
-            info = $"ảnh {string.Join("×", (List<object>)a["pixels"])} px, rộng 8 m sau khi đặt tỉ lệ, lưới {v["grid_lines"]} đường, {bright * 100 / Math.Max(1, total)}% điểm sáng";
+            // Test & sửa G5: the look comes from the file; say whether AutoCAD itself drew the picture off screen (checklist G5)
+            if (!Equals(v["picture_from"], "file")) errs.Add($"ảnh xem không dựng từ file ảnh gốc ({v["picture_from"]})");
+            info = $"ảnh {string.Join("×", (List<object>)a["pixels"])} px, rộng 8 m sau khi đặt tỉ lệ, lưới {v["grid_lines"]} đường, {bright * 100 / Math.Max(1, total)}% điểm sáng, " +
+                   (Equals(v["autocad_drew_picture"], true) ? "AutoCAD có vẽ ảnh nền khi chụp" : "AutoCAD KHÔNG vẽ ảnh nền khi chụp (ảnh xem lấy từ file)");
             return errs;
         }
 
@@ -488,8 +603,8 @@ namespace ClaudeCAD.Plugin.Drawing
                         ["file"] = m?.File,
                         ["page"] = m?.Page ?? 1,
                         ["scaled"] = m?.Scaled == true,
-                        ["min"] = new List<object> { Acad.R(ext.MinPoint.X), Acad.R(ext.MinPoint.Y) },
-                        ["max"] = new List<object> { Acad.R(ext.MaxPoint.X), Acad.R(ext.MaxPoint.Y) },
+                        ["min"] = Acad.J(new Point3d(ext.MinPoint.X, ext.MinPoint.Y, 0)),
+                        ["max"] = Acad.J(new Point3d(ext.MaxPoint.X, ext.MaxPoint.Y, 0)),
                     });
                 }
                 tr.Commit();

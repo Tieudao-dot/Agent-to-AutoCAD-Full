@@ -95,6 +95,7 @@ namespace ClaudeCAD.Plugin.Core
             "0", "Defpoints", "A-AXIS", "A-AXIS-TAG", "A-COL", "A-COLS", "A-WALL", "A-WALL-PAT", "A-DOOR", "A-WIND", "A-STAIR",
             "A-FURN", "A-DIM", "A-TEXT", "A-HIDDEN", "A-SLAB", "A-FLOR", "A-FIXT", "A-ELEV", "A-SECT", "A-SECT-BACK", "A-SECT-PAT",
             F2Numbers.FrameLayer, F2Numbers.ViewportLayer, F2Numbers.PlantLayer,
+            G5Numbers.Layer, // Test & sửa G5: the background picture of trace_image
         };
 
         /// <summary>

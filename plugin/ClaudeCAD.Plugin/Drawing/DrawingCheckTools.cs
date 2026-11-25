@@ -215,7 +215,9 @@ namespace ClaudeCAD.Plugin.Drawing
                     // layers
                     if (layer == "0") { if (Wanted(only, "layer_zero")) s.Hit("layer_zero", id, null, sp.layout); }
                     else if (string.Equals(layer, "Defpoints", StringComparison.OrdinalIgnoreCase)) { if (Wanted(only, "defpoints")) s.Hit("defpoints", id, null, sp.layout); }
-                    if ((ltr.IsOff || ltr.IsFrozen || !ltr.IsPlottable) && !string.Equals(layer, "Defpoints", StringComparison.OrdinalIgnoreCase) && Wanted(only, "hidden_layers"))
+                    // Test & sửa G5: the background picture of trace_image is not plotted on purpose
+                    if ((ltr.IsOff || ltr.IsFrozen || !ltr.IsPlottable) && !string.Equals(layer, "Defpoints", StringComparison.OrdinalIgnoreCase)
+                        && !string.Equals(layer, G5Numbers.Layer, StringComparison.OrdinalIgnoreCase) && Wanted(only, "hidden_layers"))
                         s.Hit("hidden_layers", id, layer);
                     if (s.Prefix != null && !DrawingCheckLogic.IsStandardLayer(layer) && Wanted(only, "nonstandard_layers")) s.Hit("nonstandard_layers", id, layer);
 
