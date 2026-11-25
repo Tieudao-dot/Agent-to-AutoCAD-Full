@@ -52,8 +52,8 @@ cầu "chạy liền, không hỏi lại, dừng trước phát hành" và "test
    [`checklist-tong-the.md`](https://github.com/Tieudao-dot/Agent-to-AutoCAD-Full/blob/full/nang-cap-g-tong-the/docs/checklist-tong-the.md)
    (trên nhánh chốt), theo thứ tự:
    - mục **G0** trước (~35 phút): 6 việc rủi ro nhất, xem mục 4;
-   - khối **"Đợt F"** (~2 giờ);
-   - phần còn lại của khối **"Đợt G"** (~3 giờ).
+   - phần còn lại của khối **"Đợt G"** (cả G0 khoảng 3 giờ);
+   - khối **"Đợt F"** (~2 giờ). Các mục ghi "Máy khác" bỏ qua được (cần máy gói 2D / 3D).
 
    Mục nào hỏng: gửi tớ mã mục (vd G0-3) kèm ảnh hoặc chữ ở dòng lệnh.
 3. **Duyệt con số** (mục 5).
