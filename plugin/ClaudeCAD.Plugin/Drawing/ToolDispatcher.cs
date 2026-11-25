@@ -113,6 +113,9 @@ namespace ClaudeCAD.Plugin.Drawing
         /// <summary>Nâng cấp đợt F5: a macro is being replayed (ITurnHost.MacroRunning).</summary>
         public bool MacroRunning => _host?.MacroRunning == true;
 
+        /// <summary>Nâng cấp đợt G4: "Chỉ xem" is on for the drawing of the turn (a render then changes no setting of the drawing).</summary>
+        public bool ReadOnlyTurn => _host?.ReadOnly == true;
+
         // -------------------------------------------------------------- entry point
 
         /// <summary>Handles one tool_call message and returns the response envelope. Never throws.</summary>

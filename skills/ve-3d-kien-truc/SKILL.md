@@ -164,6 +164,13 @@ Gán theo layer cho nhanh (vd `A-ROOF-3D` → ngói). Xem: `capture_view` với 
 `named_view` `action` `image` (file PNG cạnh bản vẽ, báo khách đường dẫn file). Góc nhìn đẹp thì lưu tên bằng `named_view`
 `save` (vd "Phối cảnh 1"), gọi lại bằng `restore`.
 
+Render thật (nâng cấp đợt G4): khách nói "render", "ra ảnh đẹp" → `named_view` `action` `render` (góc nhìn đã lưu `name`,
+không có thì góc nhìn hiện tại; `quality` low / medium / high, mặc định medium; `width` × `height`, mặc định 1920 × 1080;
+nền `white` mặc định / `sky` / `drawing`; ánh sáng `auto` mặc định). Lệnh tự chờ và hiện tiến độ; nền / ánh sáng / góc
+nhìn chỉ đổi trong lúc render rồi trả lại. Kết quả `method` `capture` nghĩa là không render được (quá lâu, lỗi): nói rõ
+với khách file là **ảnh chụp**, không phải ảnh render. Vật liệu mẫu tự dùng vật liệu thư viện Autodesk khi bản vẽ đã có
+(kết quả `source` `library`); không có thì dùng màu đơn giản và chuyển lời `library_note` cho khách.
+
 ## 4. Tự kiểm tra trước khi báo xong
 
 - Mỗi lệnh dựng khối (`draw_solid`, `extrude`, `revolve`, `sweep`, `loft`…) trả `volume_m3`, `min`, `max`: so ngay với

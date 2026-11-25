@@ -27,7 +27,7 @@ namespace ClaudeCAD.Plugin.Drawing
             d.Register(new ToolDef("set_material", true, SetMaterial, readsWhen: p => p.Bool("list", false)));
             // its own transactions: an image renders off-screen like capture_view (no open transaction)
             d.Register(new ToolDef("named_view", true, NamedView, noTransaction: true,
-                readsWhen: p => { var a = (p.Str("action", "") ?? "").Trim().ToLowerInvariant(); return a == "list" || a == "image"; }));
+                readsWhen: p => { var a = (p.Str("action", "") ?? "").Trim().ToLowerInvariant(); return a == "list" || a == "image" || RenderLogic.IsRenderAction(a); }));
         }
 
         // ================================================================= materials
@@ -59,6 +59,17 @@ namespace ClaudeCAD.Plugin.Drawing
             // used as it is, never swapped for the preset of the same meaning
             if (preset != null && dict.Contains(requested.Trim()) && !string.Equals(requested.Trim(), preset.Name, StringComparison.OrdinalIgnoreCase))
                 preset = null;
+            // nâng cấp đợt G4: a preset with no colour of its own takes the Autodesk library material already in the drawing
+            string source = null, libraryNote = null;
+            if (preset != null && rgb == null && !opacity.HasValue)
+            {
+                var names0 = new List<string>();
+                foreach (DBDictionaryEntry e0 in dict) names0.Add(e0.Key);
+                var lib = p.Bool("library", true) ? MaterialLibraryLogic.Match(preset.Key, names0) : null;
+                source = lib != null ? "library" : "simple";
+                libraryNote = MaterialLibraryLogic.Note(source, LibraryInstalled(), preset.Name);
+                if (lib != null) { requested = lib; preset = null; }
+            }
             string name = preset?.Name ?? requested.Trim();
             bool reset = MaterialLogic.Builtin.Take(2).Any(b => b.Equals(name, StringComparison.OrdinalIgnoreCase));
             ObjectId matId = ObjectId.Null;
@@ -112,10 +123,23 @@ namespace ClaudeCAD.Plugin.Drawing
                 }
             var r = new Dictionary<string, object> { ["material"] = name, ["handles"] = changed };
             if (created) r["created"] = true;
+            if (source != null) { r["source"] = source; r["library_note"] = libraryNote; }
             if (layersDone.Count > 0) r["layers"] = layersDone;
             if (skipped.Count > 0) r["skipped"] = skipped;
             r["note"] = "Materials show in the Realistic visual style: look with capture_view visual_style realistic, or save a picture with named_view action image. Objects whose material is ByLayer take the layer's.";
             return r;
+        }
+
+        /// <summary>Nâng cấp đợt G4: the Autodesk material library is on this computer (its folder holds files).</summary>
+        private static bool LibraryInstalled()
+        {
+            try
+            {
+                foreach (var f in MaterialLibraryLogic.Folders(Environment.GetFolderPath(Environment.SpecialFolder.CommonProgramFiles), Environment.GetFolderPath(Environment.SpecialFolder.CommonProgramFilesX86)))
+                    if (Directory.Exists(f) && Directory.EnumerateFileSystemEntries(f).Any()) return true;
+            }
+            catch (Exception) { }
+            return false;
         }
 
         /// <summary>Makes (or updates) a plain material: diffuse / ambient colour and opacity; maps taken from Global.</summary>
@@ -179,6 +203,9 @@ namespace ClaudeCAD.Plugin.Drawing
             }
 
             if (action == "image") return ViewImage(ctx, p, name, tool);
+            // nâng cấp đợt G4: a real render (the assistant waits with render_status; render_stop = the user's Dừng)
+            if (action == "render") return StartRender(ctx, p, name, tool);
+            if (action == "render_status" || action == "render_stop") return RenderStatus(ctx, p, tool, action == "render_stop");
 
             if (!InModelSpace()) throw ToolException.Invalid($"{tool}: the Model tab is not active. Switch to Model with set_current_layout {{\"name\": \"Model\"}} first.");
             using (doc.LockDocument())
