@@ -129,3 +129,14 @@ Excel: tất cả ở `F4Numbers` (`plugin/ClaudeCAD.Plugin/Core/Xlsx.cs`). Mở
   câu trả lời đầu; tiến trình `claude.exe` khởi động sẵn không gọi API trước tin đầu (theo thiết kế SDK: chỉ gửi khi có tin);
   AutoCAD mở không chậm hơn; file Excel mở bằng Excel thật (test đọc lại cấu trúc file, chưa mở bằng Excel). Xem
   `docs/checklist-dot-f4.md`.
+
+## CI
+
+- Gộp: run **#46** (`45597564054`, `release=false`) trên `c67bc79`: **xanh**.
+- F4: run **#47** (`45601966332`, `release=false`) trên `587f7ce`: **xanh** (build 3 target, lõi 1113, trợ lý 347, UI test
+  WPF). Đây là bản code cuối; commit sau chỉ thêm mục này. Dùng 2 / 3 lượt CI cho phép.
+
+## Đã kiểm trước khi báo
+
+- Đọc lại diff F4; sau lần sửa code cuối (dời dòng dặn Excel về phần 2D / 3D của system prompt): build lại 3 target (xóa
+  obj / bin), lõi 1113 xanh, trợ lý 347 xanh, UI test build được, rồi CI #47.
