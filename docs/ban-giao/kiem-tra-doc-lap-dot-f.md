@@ -203,4 +203,30 @@ nhưng nhỏ 50–500 mm.
 Ghi chú nhẹ: block đuôi `-TV` có sẵn được dùng lại mà không kiểm cỡ (hiếm); `list_entities` theo khung trong UCS xoay có
 thể chậm hơn trên bản vẽ rất nhiều khối 3D (chưa đo); checklist F6-12 đứng trước F6-11.
 
-Kết quả soát lại lượt 2 (KTF-01 và phần F5) ghi tiếp ở dưới khi có.
+## Soát lượt cuối (25/11 20h54, trên `fc92cd6`, nhánh `full/nang-cap-f5-test`)
+
+`fc92cd6` = nhánh tích hợp @ `03bf163` (KTF-01 lần 2) + đợt F5 + bản sửa của người rà F5. Người soát chạy lại: lõi
+1212 / 1212, trợ lý 364 / 364, build `net8.0-windows` 0 lỗi.
+
+**KTF-01: đã sửa đúng.** 7 hình (T, L, L cánh hẹp 1,5 m, U, L cánh mảnh, Z, chữ thập) × mái 2 dốc và 4 dốc, mỗi hình 120
+lần (nhiễu ±1 / ±2 / ±3 mm mỗi góc, hạt ngẫu nhiên mới, xoay 8 góc kèm làm tròn 1 mm, gốc tọa độ lớn): **sai 0 / 1680**
+(cùng các ca này trên `f037b79`: T 2 dốc sai 103 / 120). Hình đúng góc vuông cho kết quả giống hệt bản trước khi sửa. Bậc
+thật trên nhà L 12 × 12 ở 3 vị trí: bậc 2 / 10 mm được gộp; bậc 50–1000 mm thì nóc 2 dốc = nóc 4 dốc của cùng nhà.
+
+**KTF-09 — Nhẹ — F3 (có từ F3)** — `Core/RoofRightAngled.cs` `IsRightAngled` (dung sai góc 2e-3 tính theo từng cạnh). Nhà
+vẽ tay lệch vài mm bị từ chối "không phải góc vuông" khi có cạnh ngắn: L cánh hẹp 1,5 m nhiễu ±2–3 mm bị từ chối 22 / 120
+lần (2 dốc), 14 / 120 (4 dốc); T, chữ thập 6–8 / 120. Kết quả không sai (báo rõ, gợi ý mái bằng), chỉ khó dùng. Gợi ý: cho
+phép tối thiểu theo khoảng cách tuyệt đối (lệch ngang ≤ max(5 mm, 2e-3 × cạnh)).
+
+**Đợt F5: không thấy lỗi chứng minh được.** Đã kiểm: ô ⚙ "Nạp gọn lệnh" (mặc định, lưu theo máy, biến môi trường / file
+thắng ô); thẻ xác nhận không lách được bằng tham số cũ, `user_confirmed` tự ghi, batch, mã của file / việc khác; Hủy thì
+không đổi gì; "Chỉ xem"; ghép với các bản sửa KTF; kiểu ghi chú mũi tên theo đơn vị / tỷ lệ; checklist F5 khớp code.
+
+**Nghi vấn chưa chứng minh (cần Claude thật):** tắt ô "Nạp gọn lệnh" giữa cuộc chat sau khi Claude đã dùng ToolSearch;
+cuộc chat nối tiếp với ToolSearch đã tắt trong khi lịch sử còn các khối tham chiếu lệnh, có thể bị từ chối.
+
+**Xử lý (luồng chính, 20h56):** giao thread giữ nhánh tích hợp sửa KTF-09 và đổi ô ⚙ sang "cuộc chat đã có lượt nào thì giữ
+nguyên kiểu nạp tới Chat mới" (cách an toàn, tránh hẳn tình huống trên), rồi chạy lượt CI cuối; người soát kiểm nhanh hai
+điểm này.
+
+Tổng chi phí thread kiểm tra độc lập tới lượt này: ~$13,3.
