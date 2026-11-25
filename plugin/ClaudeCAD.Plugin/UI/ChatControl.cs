@@ -122,6 +122,7 @@ namespace ClaudeCAD.Plugin.UI
         private HashSet<string> _chatSkills = new HashSet<string>(StringComparer.Ordinal);
         private ComboBox _model, _effort, _theme;
         private CheckBox _notify, _visualCheck, _planFirst, _suggestCheck, _hotkey, _versionsCheck, _sideSnapshot;
+        private CheckBox _deferTools; // nâng cấp đợt F5
         private Button _versionsBtn;
         private Popup _versionsPopup;
         private readonly StackPanel _versionRows = new StackPanel();
@@ -885,6 +886,7 @@ namespace ClaudeCAD.Plugin.UI
             _visualCheck = CheckRow(work, "Tự kiểm tra bằng ảnh", "Claude chụp vùng vừa vẽ (capture_view) để tự soát lỗi; tốn thêm ít token cho mỗi ảnh");
             _planFirst = CheckRow(work, "Kế hoạch trước việc lớn", "Thẻ kế hoạch có nút Làm / Sửa kế hoạch trước khi Claude vẽ việc nhiều bước");
             _suggestCheck = CheckRow(work, "Gợi ý bước tiếp theo", "2–3 nút gợi ý dưới câu trả lời; bấm là gửi");
+            _deferTools = CheckRow(work, F5Numbers.DeferToolsLabel, F5Numbers.DeferToolsTip); // nâng cấp đợt F5
             p.Children.Add(new Category("CÁCH CLAUDE LÀM VIỆC", work).Root);
 
             // ---- An toàn bản vẽ
@@ -1070,6 +1072,7 @@ namespace ClaudeCAD.Plugin.UI
                 _theme.SelectedIndex = s.Theme == "dark" ? 1 : s.Theme == "light" ? 2 : 0;
                 _notify.IsChecked = s.Notify;
                 _visualCheck.IsChecked = s.VisualCheck;
+                _deferTools.IsChecked = s.DeferTools;
                 _planFirst.IsChecked = s.PlanFirst;
                 _suggestCheck.IsChecked = s.Suggestions;
                 _hotkey.IsChecked = s.Hotkey;
@@ -1093,6 +1096,7 @@ namespace ClaudeCAD.Plugin.UI
             _settings.Theme = _theme.SelectedIndex == 1 ? "dark" : _theme.SelectedIndex == 2 ? "light" : "auto";
             _settings.Notify = _notify.IsChecked == true;
             _settings.VisualCheck = _visualCheck.IsChecked == true;
+            _settings.DeferTools = _deferTools.IsChecked == true;
             _settings.PlanFirst = _planFirst.IsChecked == true;
             _settings.Suggestions = _suggestCheck.IsChecked == true;
             _settings.Hotkey = _hotkey.IsChecked == true;

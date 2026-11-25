@@ -281,7 +281,7 @@ namespace ClaudeCAD.Plugin.Drawing
 
         // ------------------------------------------------------------------ multileader / table
 
-        private static object AddMLeader(ToolContext ctx, Params p)
+        internal static object AddMLeader(ToolContext ctx, Params p)
         {
             var arrow = Acad.P3(p.Point("arrow_point"));
             var textPt = Acad.P3(p.Point("text_point"));
@@ -300,10 +300,23 @@ namespace ClaudeCAD.Plugin.Drawing
             mt.Contents = p.Str("text").Replace("\r\n", "\\P").Replace("\n", "\\P");
             mt.Location = textPt;
             var textStyle = p.Str("text_style", null);
+            // nâng cấp đợt F5: without text_style / height the text follows the multileader style (setup_standards makes
+            // its own current: the standard's text style, note height × drawing scale), not the drawing's TEXTSIZE
+            MLeaderStyle mls = null;
+            try { if (!ml.MLeaderStyle.IsNull) mls = ctx.Tr.GetObject(ml.MLeaderStyle, OpenMode.ForRead) as MLeaderStyle; }
+            catch (Autodesk.AutoCAD.Runtime.Exception) { mls = null; }
+            // only a style of the standard (KT-ML-100…): other drawings keep the text of before F5
+            if (mls != null && !MLeaderStyleLogic.IsStandardName(mls.Name)) mls = null;
             if (!string.IsNullOrEmpty(textStyle)) mt.TextStyleId = TextStyleId(ctx, textStyle);
+            else if (mls != null && !mls.TextStyleId.IsNull) mt.TextStyleId = mls.TextStyleId;
             if (p.Has("height"))
             {
                 mt.TextHeight = p.Positive("height");
+                ml.TextHeight = mt.TextHeight;
+            }
+            else if (mls != null && mls.TextHeight > 0)
+            {
+                mt.TextHeight = MLeaderStyleLogic.DrawingHeight(mls.TextHeight, mls.Scale);
                 ml.TextHeight = mt.TextHeight;
             }
             ml.MText = mt;

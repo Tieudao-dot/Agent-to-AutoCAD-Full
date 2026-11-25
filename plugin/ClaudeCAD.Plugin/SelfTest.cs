@@ -915,6 +915,68 @@ namespace ClaudeCAD.Plugin
                           : new SelfTestRules.Verdict(false, "file Excel thiếu tiêu đề cột hoặc block " + blockName);
             });
 
+            // Nâng cấp đợt F5: multileader style of the standard + add_mleader on it; the overwrite card of a saved view (not run on CI)
+            Check("Nâng cấp đợt F5: kiểu ghi chú mũi tên của bộ chuẩn, thẻ xác nhận ghi đè góc nhìn", () =>
+            {
+                var errs = new List<string>();
+                T Run<T>(Func<ToolContext, Transaction, T> f)
+                {
+                    using (doc.LockDocument())
+                    using (var tr = doc.TransactionManager.StartTransaction())
+                    {
+                        var r = f(new ToolContext(doc, tr, true, null), tr);
+                        tr.Commit();
+                        return r;
+                    }
+                }
+                var st = Run((ctx, tr) => (Dictionary<string, object>)DrawingService.SetupStandards(ctx, new Params("setup_standards", new Dictionary<string, object> { ["standard"] = "ve-kien-truc", ["scale"] = "1:100" })));
+                var mls = st.TryGetValue("mleader_style", out var o) ? o as Dictionary<string, object> : null;
+                if (mls == null) errs.Add("setup_standards: thiếu mleader_style");
+                double f = FloorPlanLogic.MmPerUnit(Convert.ToInt32(doc.Database.Insunits), out _);
+                double want = MLeaderStyleLogic.DrawingHeight(F5Numbers.MLeaderTextHeight, 100 / f);
+                var ml = Run((ctx, tr) => (Dictionary<string, object>)DrawingService.AddMLeader(ctx, new Params("add_mleader", new Dictionary<string, object>
+                {
+                    ["arrow_point"] = new List<object> { 160000.0, 0.0 }, ["text_point"] = new List<object> { 161000.0, 1000.0 }, ["text"] = "D110", ["layer"] = "0",
+                })));
+                Run((ctx, tr) =>
+                {
+                    var e = (MLeader)tr.GetObject(Acad.IdFromHandle(ctx.Db, ((List<object>)ml["handles"])[0].ToString()), OpenMode.ForRead);
+                    var name = ((MLeaderStyle)tr.GetObject(e.MLeaderStyle, OpenMode.ForRead)).Name;
+                    if (!MLeaderStyleLogic.IsStandardName(name)) errs.Add($"add_mleader: kiểu {name} (cần KT-ML-…)");
+                    if (Math.Abs(e.MText.TextHeight - want) > 1e-6 * Math.Max(1, want)) errs.Add($"add_mleader: chữ cao {e.MText.TextHeight:0.###} (cần {want:0.###})");
+                    return 0;
+                });
+                // a saved view saved again: refused until the card's Đồng ý (its handle), then replaced
+                string vname = "CCAD-F5-" + DateTime.Now.ToString("HHmmss");
+                var p0 = new Dictionary<string, object> { ["action"] = "save", ["name"] = vname };
+                var sv = (Dictionary<string, object>)DrawingService.NamedView(new ToolContext(doc, null, true, null), new Params("named_view", p0));
+                string vh = null;
+                try { DrawingService.NamedView(new ToolContext(doc, null, true, null), new Params("named_view", p0)); errs.Add("góc nhìn: ghi đè không cần thẻ"); }
+                catch (ToolException ex)
+                {
+                    if (!ex.Message.StartsWith("Confirmation required")) errs.Add("góc nhìn: lỗi khác thẻ: " + ex.Message);
+                    var m = System.Text.RegularExpressions.Regex.Match(ex.Message, "\\[\"([0-9A-F]+)\"");
+                    vh = m.Success ? m.Groups[1].Value : null;
+                }
+                if (vh != null)
+                    DrawingService.NamedView(new ToolContext(doc, null, true, null), new Params("named_view", new Dictionary<string, object>
+                    {
+                        ["action"] = "save", ["name"] = vname, [SolidLogic.UserConfirmedParam] = new List<object> { vh },
+                    }));
+                else errs.Add("góc nhìn: thẻ không ghi handle");
+                try
+                {
+                    DrawingService.NamedView(new ToolContext(doc, null, true, null), new Params("named_view", new Dictionary<string, object>
+                    {
+                        ["action"] = "delete", ["name"] = vname, [SolidLogic.UserConfirmedParam] = new List<object> { vh ?? "0" },
+                    }));
+                }
+                catch (ToolException ex) { errs.Add("góc nhìn: xóa sau Đồng ý lỗi: " + ex.Message); }
+                return errs.Count == 0
+                    ? new SelfTestRules.Verdict(true, $"kiểu {mls?["name"]}, ghi chú chữ cao {want:0.###}, ghi đè / xóa góc nhìn qua thẻ")
+                    : new SelfTestRules.Verdict(false, string.Join("; ", errs));
+            });
+
             string versionFile = Path.Combine(dir, "version-copy.dwg");
             Do("Bản sao phiên bản (Wblock + SaveAs)", () =>
             {

@@ -90,6 +90,12 @@ namespace ClaudeCAD.Plugin.Drawing
                 }
             var layersDone = new List<object>();
             if (hasLayers)
+            {
+                // nâng cấp đợt F5: a whole layer (all its objects, now and later) only after the card's Đồng ý (the layers' handles)
+                var lids = p.Strings("layers", 1).Select(ln => Acad.LayerId(ctx, ln)).ToList();
+                RequireCard(ctx, p, tool, $"give the material to every object of the layer(s) {string.Join(", ", p.Strings("layers", 1))}", lids.Select(Acad.H));
+            }
+            if (hasLayers)
                 foreach (var ln in p.Strings("layers", 1))
                 {
                     var lid = Acad.LayerId(ctx, ln);
@@ -179,8 +185,10 @@ namespace ClaudeCAD.Plugin.Drawing
                 {
                     case "save":
                     {
-                        if (exists && !p.Bool("replace", false))
+                        // nâng cấp đợt F5: overwriting a saved view needs the card's Đồng ý (its handle); a macro replay: replace as before
+                        if (exists && ctx.Dispatcher?.MacroRunning == true && !p.Bool("replace", false))
                             throw ToolException.Invalid($"{tool}: a view named '{name}' already exists. Pass replace: true to overwrite it (ask the user first), or another name.");
+                        if (exists) RequireCard(ctx, p, tool, $"overwrite the saved view '{name}'", new[] { Acad.H(vt[name]) });
                         ViewTableRecord rec;
                         if (exists) rec = (ViewTableRecord)tr.GetObject(vt[name], OpenMode.ForWrite);
                         else rec = new ViewTableRecord { Name = name };
@@ -221,6 +229,7 @@ namespace ClaudeCAD.Plugin.Drawing
                     default: // delete
                     {
                         if (!exists) throw ToolException.Invalid($"{tool}: no view named '{name}'. Call named_view action list.");
+                        RequireCard(ctx, p, tool, $"delete the saved view '{name}'", new[] { Acad.H(vt[name]) }); // nâng cấp đợt F5
                         tr.GetObject(vt[name], OpenMode.ForWrite).Erase();
                         result = new Dictionary<string, object> { ["name"] = name, ["deleted"] = true };
                         break;
@@ -265,8 +274,8 @@ namespace ClaudeCAD.Plugin.Drawing
             var file = MaterialLogic.ImagePath(p.Str("output", null), drawingDir, stem, name ?? v.Name);
             if (!Directory.Exists(Path.GetDirectoryName(file))) throw ToolException.Invalid($"{tool}: folder '{Path.GetDirectoryName(file)}' does not exist.");
             // test tổng thể đợt F: overwrite (the word of export_stl / the Excel export) works here too
-            if (File.Exists(file) && !p.Bool("replace", false) && !p.Bool("overwrite", false))
-                throw ToolException.Invalid($"{tool}: '{file}' already exists. Pass replace: true to overwrite it (ask the user first), or another output.");
+            // nâng cấp đợt F5: an existing PNG needs the card's Đồng ý (a macro replay: replace / overwrite as before)
+            RequireOverwriteCard(ctx, p, tool, file, File.Exists(file), $"{tool}: '{file}' already exists. Pass replace: true to overwrite it (ask the user first), or another output.", "replace", "overwrite");
             var r = Capture.Render(ctx.Doc, min, max, size, min.HasValue ? "handles" : "extents", v, style);
             try { File.WriteAllBytes(file, r.Png); }
             catch (Exception ex) { throw ToolException.Invalid($"{tool}: could not write '{file}' ({ex.Message})."); }

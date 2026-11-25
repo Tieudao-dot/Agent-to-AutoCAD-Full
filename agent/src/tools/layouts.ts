@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { cadTool, entityProps, handle, paperPoint, wcsPoint, type AnyTool, type ToolBridge } from './common.js';
+import { cadTool, confirmDesc, entityProps, handle, handles, paperPoint, wcsPoint, type AnyTool, type ToolBridge } from './common.js';
 
 const scale = z
   .union([z.string(), z.number().positive()])
@@ -63,7 +63,7 @@ export function layoutTools(b: ToolBridge): AnyTool[] {
       'Plot a layout (or "Model") to a PDF file with DWG To PDF.pc3 (foreground plot). Only when the user asks for a PDF / print. ' +
         'Defaults: current layout, the paper set on the layout (A3 full bleed if the device lacks it), monochrome.ctb, scale "fit", area "layout" (Model: "extents"), output next to the drawing as ' +
         '<drawing>-<layout>.pdf. area "window" needs window_p1/window_p2. layouts: several layouts (or ["all"] = every paper layout in tab order) ' +
-        'into ONE multi-page PDF (default <drawing>-<n>-layouts.pdf). Returns the output path.',
+        'into ONE multi-page PDF (default <drawing>-<n>-layouts.pdf). An existing PDF needs the card (the error lists the handles, then confirm_handles). Returns the output path.',
       {
         layout: z.string().optional(),
         layouts: z.array(z.string().min(1)).min(1).max(255).optional(),
@@ -77,6 +77,7 @@ export function layoutTools(b: ToolBridge): AnyTool[] {
         window_p2: wcsPoint.optional().describe('Opposite window corner, same system as window_p1.'),
         center: z.boolean().optional(),
         landscape: z.boolean().optional(),
+        confirm_handles: handles.max(50).optional().describe(confirmDesc), // nâng cấp đợt F5: an existing PDF is replaced only after the card
       }),
 
     cadTool(b, 'list_plot_media',

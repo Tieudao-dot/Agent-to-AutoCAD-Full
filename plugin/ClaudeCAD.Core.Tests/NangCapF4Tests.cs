@@ -193,7 +193,8 @@ namespace ClaudeCAD.Core.Tests
             Assert.Contains("ExportExcel(ctx, p, \"volume_schedule\", () => Solid3Logic.VolumeTable(res, decimals, f, withArea), r);", Src("plugin", "ClaudeCAD.Plugin", "Drawing", "Solid3Tools.cs"));
             Assert.Contains("ExportExcel(ctx, p, \"check_interference\", () => Solid3Logic.ClashTable(", Src("plugin", "ClaudeCAD.Plugin", "Drawing", "Solid2Tools.cs"));
             var x = Src("plugin", "ClaudeCAD.Plugin", "Drawing", "ExcelExport.cs");
-            Assert.Contains("File.Exists(full) && !p.Bool(\"overwrite\", false)", x);
+            // nâng cấp đợt F5: an existing file needs the card; a macro replay keeps the old overwrite parameter
+            Assert.Contains("RequireOverwriteCard(ctx, p, tool, full, File.Exists(full), XlsxLogic.ExistsMessage(tool, full), \"overwrite\");", x);
             Assert.Contains("XlsxLogic.Resolve(requested, drawingDir", x);
             // the schedules stay read tools: the Excel file is not a change of the drawing (like export_stl)
             Assert.Contains("readsWhen: p => !p.Has(\"table_position\")", u);

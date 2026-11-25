@@ -178,6 +178,8 @@ namespace ClaudeCAD.Plugin.Drawing
             var ts = ApplyStyle(ctx, tsWanted, ReadTextStyle(ctx, (string)tsWanted["name"], out var tsId), tsId, overwrite, CreateTextStyle, "create_text_style");
             var dsWanted = StandardsLogic.DimStyleParams(prefix, n, f);
             var ds = ApplyStyle(ctx, dsWanted, ReadDimStyle(ctx, (string)dsWanted["name"], out var dsId), dsId, overwrite, CreateDimStyle, "create_dim_style");
+            // nâng cấp đợt F5: the multileader style of the standard (its text style, scaled like the dimension style)
+            var ml = ApplyMLeaderStyle(ctx, MLeaderStyleLogic.For(prefix, n, f), overwrite);
 
             // linetypes: load the missing ones (an existing linetype is never redefined)
             var ltt = (LinetypeTable)ctx.Tr.GetObject(ctx.Db.LinetypeTableId, OpenMode.ForRead);
@@ -217,6 +219,7 @@ namespace ClaudeCAD.Plugin.Drawing
                     ctx.Db.Dimstyle = id;
                     ctx.Db.SetDimstyleData((DimStyleTableRecord)ctx.Tr.GetObject(id, OpenMode.ForRead));
                 }
+                if ((string)ml["status"] != "kept") ctx.Db.MLeaderstyle = MLeaderStyleIdOf(ctx, (string)ml["name"]); // nâng cấp đợt F5
             }
 
             var result = new Dictionary<string, object>
@@ -226,12 +229,13 @@ namespace ClaudeCAD.Plugin.Drawing
                 ["units"] = unitName,
                 ["text_style"] = ts,
                 ["dim_style"] = ds,
+                ["mleader_style"] = ml, // nâng cấp đợt F5: add_mleader without a style uses it (current)
                 ["linetypes"] = new Dictionary<string, object> { ["loaded"] = loaded, ["already_in_drawing"] = had, ["not_found"] = missing },
                 ["ltscale"] = ltRes,
                 ["text_heights"] = StandardsLogic.TextHeights(n, f),
                 ["note"] = $"text_heights are in drawing units for 1:{n} ({F2Numbers.TextTitle} / {F2Numbers.TextRoom} / {F2Numbers.TextNote} / {F2Numbers.TextSmall} mm on paper): use them for add_text / add_mtext with style {ts["name"]}.",
             };
-            var kept = new[] { ts, ds }.Where(x => (string)x["status"] == "kept").Select(x => (object)x["handle"]).ToList();
+            var kept = new[] { ts, ds, ml }.Where(x => (string)x["status"] == "kept").Select(x => (object)x["handle"]).ToList();
             if (kept.Count > 0)
             {
                 result["kept_handles"] = kept;
@@ -239,6 +243,61 @@ namespace ClaudeCAD.Plugin.Drawing
                     "and one Vietnamese sentence naming the styles and the differences, end the turn; after Đồng ý call setup_standards again with handles = kept_handles.";
             }
             return result;
+        }
+
+        // ------------------------------------------------------------------ nâng cấp đợt F5: multileader style
+
+        private static ObjectId MLeaderStyleIdOf(ToolContext ctx, string name)
+        {
+            var dict = (DBDictionary)ctx.Tr.GetObject(ctx.Db.MLeaderStyleDictionaryId, OpenMode.ForRead);
+            return dict.Contains(name) ? dict.GetAt(name) : ObjectId.Null;
+        }
+
+        private static void SetMLeaderStyle(ToolContext ctx, MLeaderStyle st, MLeaderStyleLogic.Wanted w)
+        {
+            st.ContentType = ContentType.MTextContent;
+            st.TextStyleId = TextStyleId(ctx, w.TextStyle);
+            st.TextHeight = w.TextHeight;
+            st.ArrowSize = w.ArrowSize;
+            st.ArrowSymbolId = ObjectId.Null; // closed filled arrow
+            st.EnableLanding = true;
+            st.EnableDogleg = true;
+            st.LandingGap = w.LandingGap;
+            st.DoglegLength = w.DoglegLength;
+            st.Scale = w.Scale;
+        }
+
+        /// <summary>created / unchanged / updated (the card approved its handle) / kept (differs, not approved), like ApplyStyle.</summary>
+        private static Dictionary<string, object> ApplyMLeaderStyle(ToolContext ctx, MLeaderStyleLogic.Wanted w, HashSet<string> overwrite)
+        {
+            var r = new Dictionary<string, object> { ["name"] = w.Name };
+            var id = MLeaderStyleIdOf(ctx, w.Name);
+            if (id.IsNull)
+            {
+                var st = new MLeaderStyle();
+                SetMLeaderStyle(ctx, st, w);
+                id = st.PostMLeaderStyleToDb(ctx.Db, w.Name);
+                ctx.Tr.AddNewlyCreatedDBObject(st, true);
+                r["status"] = "created";
+                r["handle"] = Acad.H(id);
+                return r;
+            }
+            string h = Acad.H(id);
+            r["handle"] = h;
+            var ex = (MLeaderStyle)ctx.Tr.GetObject(id, OpenMode.ForRead);
+            var diffs = MLeaderStyleLogic.Differences(w, EntityInfo.StyleName(ctx, ex.TextStyleId), ex.Scale, ex.TextHeight, ex.ArrowSize, ex.LandingGap, ex.DoglegLength);
+            if (diffs.Count == 0) { r["status"] = "unchanged"; return r; }
+            if (overwrite.Contains(h))
+            {
+                ex.UpgradeOpen();
+                SetMLeaderStyle(ctx, ex, w);
+                r["status"] = "updated";
+                r["changed"] = diffs;
+                return r;
+            }
+            r["status"] = "kept";
+            r["differences"] = diffs;
+            return r;
         }
 
         // ------------------------------------------------------------------ create_sheet

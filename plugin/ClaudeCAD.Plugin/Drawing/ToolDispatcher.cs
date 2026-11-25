@@ -64,6 +64,8 @@ namespace ClaudeCAD.Plugin.Drawing
         /// Plan is then that mode's plan, and a refused tool says "switch the mode", never "buy a plan".
         /// </summary>
         string WorkMode { get; }
+        /// <summary>Nâng cấp đợt F5: a macro is being replayed (no card can be answered: the old overwrite rules apply).</summary>
+        bool MacroRunning { get; }
         /// <summary>The entity was added during the running turn or macro (explode_entities: such a 3D solid needs no yes).</summary>
         bool CreatedThisTurn(string handle);
     }
@@ -108,6 +110,8 @@ namespace ClaudeCAD.Plugin.Drawing
         public string Plan => _host?.Plan;
         /// <summary>F1 (Test & sửa): "2d" / "3d" while a Full machine's chat is limited to that work mode, else null.</summary>
         public string WorkMode => _host?.WorkMode;
+        /// <summary>Nâng cấp đợt F5: a macro is being replayed (ITurnHost.MacroRunning).</summary>
+        public bool MacroRunning => _host?.MacroRunning == true;
 
         // -------------------------------------------------------------- entry point
 

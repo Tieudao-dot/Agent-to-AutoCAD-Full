@@ -159,7 +159,18 @@ export class AgentSession {
 
   /** Test & sửa đợt F4: false = the switch-off (every tool in full, as before F4). */
   get deferTools(): boolean {
-    return this.cfg.deferTools !== false;
+    return this.cfg.deferTools !== false && this.paletteDefer;
+  }
+
+  // nâng cấp đợt F5: ⚙ "Nạp gọn lệnh" of the palette (sent with every message / prewarm); the switch-off of F4 wins
+  private paletteDefer = true;
+
+  /** A message / prewarm with another ⚙ "Nạp gọn lệnh": the running process restarts (resumed) at the next message. */
+  private applyPaletteDefer(context: { defer_tools?: false } | undefined): void {
+    const want = context?.defer_tools !== false;
+    if (want === this.paletteDefer) return;
+    if (this.q && this.cfg.deferTools !== false) this.closeQuery();
+    this.paletteDefer = want;
   }
 
   constructor(private readonly cfg: SessionConfig) {
@@ -328,7 +339,12 @@ export class AgentSession {
    */
   prewarm(msg: PrewarmMessage): void {
     this.prewarmWanted = true;
-    if (this.turnActive || this.q) return;
+    if (this.turnActive) return;
+    if (this.q) {
+      // nâng cấp đợt F5: only ⚙ "Nạp gọn lệnh" changed while a process waits: start it again with the new tool set
+      if (!this.prewarmOnly || (msg.context?.defer_tools !== false) === this.paletteDefer) return;
+      this.applyPaletteDefer(msg.context);
+    } else this.applyPaletteDefer(msg.context);
     const plan = msg.context?.service_plan;
     if (plan) {
       this.servicePlan = plan;
@@ -389,6 +405,7 @@ export class AgentSession {
     // the palette, or another drawing's chat) restarts it — resuming the SAME conversation, context kept.
     // Service plan: the tools and the system prompt are fixed when a Claude process starts → a changed plan
     // restarts it, resuming the same conversation. A message without a plan (older plugin) keeps the last one.
+    this.applyPaletteDefer(msg.context); // nâng cấp đợt F5
     const plan = msg.context?.service_plan;
     if (plan) {
       const tools = msg.context?.plan_tools;

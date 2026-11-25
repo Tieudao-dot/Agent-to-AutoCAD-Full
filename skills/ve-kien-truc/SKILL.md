@@ -14,7 +14,7 @@ Quy ước chung: đơn vị mm, WCS. Tỷ lệ in mặc định **1:100** (nế
 
 1. Gọi `get_drawing_info` và `list_layers` (thêm `list_styles` nếu sẽ ghi chữ/kích thước) để biết bản vẽ đang có gì.
 2. So với bảng layer ở mục 2: tạo **trong một `batch_execute`** mọi layer còn thiếu bằng `create_layer` đúng tên, màu, linetype, lineweight. Không đổi thuộc tính của layer đã có trừ khi người dùng yêu cầu.
-3. Chữ / kích thước: gọi `setup_standards` với `standard` "ve-kien-truc" và tỷ lệ in (vd "1:100"): tạo text style `KT-ARIAL` và dim style `KT-100` đúng mục 4 (chạy lại không tạo trùng), đặt làm hiện hành và trả `text_heights`. Máy không có lệnh đó: tạo bằng `create_text_style` (font "Arial", width_factor 0.85) và `create_dim_style` theo mục 4, rồi `set_current_styles`.
+3. Chữ / kích thước: gọi `setup_standards` với `standard` "ve-kien-truc" và tỷ lệ in (vd "1:100"): tạo text style `KT-ARIAL`, dim style `KT-100` và kiểu ghi chú mũi tên `KT-ML-100` (cho `add_mleader`: mũi tên ở `arrow_point`, chữ ở `text_point`) đúng mục 4 (chạy lại không tạo trùng), đặt làm hiện hành và trả `text_heights`. Máy không có lệnh đó: tạo bằng `create_text_style` (font "Arial", width_factor 0.85) và `create_dim_style` theo mục 4, rồi `set_current_styles`.
 4. Xác định gốc vẽ: bản vẽ trắng → góc dưới-trái trục đầu tiên tại [0, 0]; bản vẽ đã có đối tượng → đặt bên phải extents hiện có, cách 5000, trừ khi người dùng chỉ vị trí.
 5. Sau đó mới vẽ, mỗi nhóm đối tượng một `batch_execute`.
 

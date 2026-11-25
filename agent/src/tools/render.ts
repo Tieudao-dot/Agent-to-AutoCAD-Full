@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { cadTool, handles, type AnyTool, type ToolBridge } from './common.js';
+import { cadTool, confirmDesc, handles, type AnyTool, type ToolBridge } from './common.js';
 import { viewPreset, visualStyle } from './solids.js';
 
 /**
@@ -16,7 +16,7 @@ export function renderTools(b: ToolBridge): AnyTool[] {
     cadTool(b, 'set_material',
       `Give a material to solids (handles) and / or layers: preset ${MATERIAL_PRESETS.join(' / ')} (bê tông, gạch, vữa trắng, kính, gỗ, ngói, thép, đá; made once in the drawing), ` +
         'an existing material name, ByLayer / ByBlock (reset), or a new name with color [r, g, b] (+ opacity %). list: true = the drawing\'s materials (read-only). ' +
-        'Changing existing objects follows the usual rule (more than 20: ask first). Materials show in the realistic visual style (capture_view, named_view image).',
+        'Changing existing objects follows the usual rule (more than 20: ask first); whole layers need the card (the error lists the handles). Materials show in the realistic visual style (capture_view, named_view image).',
       {
         material: z.string().min(1).max(255).optional().describe('Preset key, existing material, ByLayer / ByBlock, or a new name with color.'),
         handles: handles.max(5000).optional(),
@@ -24,16 +24,18 @@ export function renderTools(b: ToolBridge): AnyTool[] {
         color: z.array(z.number().int().min(0).max(255)).length(3).optional().describe('[r, g, b] of a new / changed material.'),
         opacity: z.number().min(0).max(100).optional().describe('% (100 = opaque).'),
         list: z.boolean().optional(),
+        confirm_handles: handles.max(50).optional().describe(confirmDesc),
       }),
 
     cadTool(b, 'named_view',
-      'Named views of model space: save (the current view under name; replace: true to overwrite, ask first), restore, list, delete; ' +
+      'Named views of model space: save (the current view under name), restore, list, delete; overwriting / deleting a saved view or an existing PNG needs the card (the error lists the handles, then confirm_handles); ' +
         'image = save a PNG file of the model (off-screen, the user\'s view unchanged) from the saved view name or view (default sw_iso), ' +
         'visual_style default realistic (shows the materials), handles to frame, output .png (relative = next to the drawing). Tell the user the file path.',
       {
         action: z.enum(['save', 'restore', 'list', 'delete', 'image']),
         name: z.string().min(1).max(255).optional(),
         replace: z.boolean().optional(),
+        confirm_handles: handles.max(50).optional().describe(confirmDesc),
         view: viewPreset.optional(),
         visual_style: visualStyle.optional(),
         handles: handles.max(5000).optional(),

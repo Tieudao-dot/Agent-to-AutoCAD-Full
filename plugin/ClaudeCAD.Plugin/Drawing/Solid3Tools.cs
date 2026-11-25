@@ -343,8 +343,8 @@ namespace ClaudeCAD.Plugin.Drawing
             if (!Directory.Exists(outDir)) throw ToolException.Invalid($"{tool}: folder '{outDir}' does not exist.");
             bool ascii = p.Bool("ascii", false);
             bool exists = File.Exists(full);
-            if (exists && !p.Bool("overwrite", false))
-                throw ToolException.Invalid($"{tool}: '{full}' already exists. Ask the user, then call again with overwrite: true, or give another file name.");
+            // nâng cấp đợt F5: an existing file needs the card's Đồng ý (a macro replay: overwrite as before)
+            RequireOverwriteCard(ctx, p, tool, full, exists, $"{tool}: '{full}' already exists. Ask the user, then call again with overwrite: true, or give another file name.", "overwrite");
 
             var tris = new List<float[]>();
             var temp = Path.Combine(Path.GetTempPath(), "claudecad-stl-" + Guid.NewGuid().ToString("N"));

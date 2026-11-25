@@ -309,6 +309,7 @@ namespace ClaudeCAD.Plugin
         private void OnSettingsChanged(PaletteSettings s)
         {
             string oldModel = _settings.Model, oldEffort = _settings.Effort, oldTheme = _settings.Theme;
+            bool oldDefer = _settings.DeferTools;
             _settings.Scale = s.Scale;
             _settings.Model = s.Model;
             _settings.Effort = s.Effort;
@@ -316,6 +317,7 @@ namespace ClaudeCAD.Plugin
             _settings.Notify = s.Notify;
             _settings.FontSize = s.FontSize;
             _settings.VisualCheck = s.VisualCheck;
+            _settings.DeferTools = s.DeferTools;
             _settings.PlanFirst = s.PlanFirst;
             _settings.Suggestions = s.Suggestions;
             _settings.Hotkey = s.Hotkey;
@@ -326,6 +328,8 @@ namespace ClaudeCAD.Plugin
             _settings.Save();
             if (oldModel != s.Model || oldEffort != s.Effort) SendOptions();
             if (oldTheme != s.Theme) ApplyTheme();
+            // nâng cấp đợt F5: "Nạp gọn lệnh" applies from the next message (same chat, resumed); Claude waits ready with it
+            if (oldDefer != s.DeferTools && !_busy) SchedulePrewarm();
         }
 
         /// <summary>F1: the user picked "Cả hai" / "2D" / "3D" (Full machines): kept in the settings, used from the next message.</summary>
@@ -642,9 +646,10 @@ namespace ClaudeCAD.Plugin
         }
 
         /// <summary>service_plan / plan_tools / work_mode as a message carries them (F1); shared by Send and the prewarm.</summary>
-        private static Dictionary<string, object> PlanContext(string servicePlan, string limitingMode)
+        private Dictionary<string, object> PlanContext(string servicePlan, string limitingMode)
         {
             var ctx = new Dictionary<string, object>();
+            if (!_settings.DeferTools) ctx["defer_tools"] = false; // nâng cấp đợt F5: ⚙ Nạp gọn lệnh off
             if (limitingMode != null) ctx["work_mode"] = limitingMode;
             ctx["service_plan"] = servicePlan;
             if (servicePlan != PlanLogic.PlanFull) ctx["plan_tools"] = PlanLogic.AllowedTools(servicePlan).Cast<object>().ToList();
@@ -2320,6 +2325,9 @@ namespace ClaudeCAD.Plugin
         public string Plan => _macroRunning ? Activation.Plan : WorkModeLogic.EffectivePlan(Activation.Plan, _turnWorkMode ?? _settings.WorkMode);
 
         /// <summary>F1: "2d" / "3d" while a Full machine's chat is limited to that mode, else null (ITurnHost.WorkMode).</summary>
+        /// <summary>Nâng cấp đợt F5 (ITurnHost): a macro replay runs (the overwrite cards are not shown there).</summary>
+        public bool MacroRunning => _macroRunning;
+
         public string WorkMode => _macroRunning ? null : WorkModeLogic.Limiting(Activation.Plan, _turnWorkMode ?? _settings.WorkMode);
 
         public string PlanContact => Activation.Contact;

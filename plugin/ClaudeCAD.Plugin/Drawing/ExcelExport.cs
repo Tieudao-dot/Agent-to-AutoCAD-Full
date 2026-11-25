@@ -27,7 +27,8 @@ namespace ClaudeCAD.Plugin.Drawing
             string drawingDir = SafeString(() => Path.GetDirectoryName(ctx.Doc.Name));
             if (string.IsNullOrEmpty(drawingDir) || !Directory.Exists(drawingDir)) drawingDir = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
             var full = XlsxLogic.Resolve(requested, drawingDir, docName, tool, Directory.Exists, Directory.Exists);
-            if (File.Exists(full) && !p.Bool("overwrite", false)) throw ToolException.Invalid(XlsxLogic.ExistsMessage(tool, full));
+            // nâng cấp đợt F5: an existing file needs the card's Đồng ý (a macro replay: overwrite as before)
+            RequireOverwriteCard(ctx, p, tool, full, File.Exists(full), XlsxLogic.ExistsMessage(tool, full), "overwrite");
             var rows = data.Select(r => (IList<object>)r).ToList();
             try { XlsxWriter.Write(full, rows, F4Numbers.SheetName.TryGetValue(tool, out var sheet) ? sheet : tool); }
             catch (IOException ex) { throw ToolException.Invalid($"{tool}: could not write '{full}' ({ex.Message}). If it is open in Excel, ask the user to close it, then call again."); }

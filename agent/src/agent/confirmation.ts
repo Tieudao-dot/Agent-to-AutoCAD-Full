@@ -352,6 +352,20 @@ export const REPLACE_TOOLS = new Set(['find_replace_text',
 /** Tools that get user_confirmed (the handles on the approved card): the 3D ones above and find_replace_text. */
 const CARD_PARAM_TOOLS = new Set([...PLUGIN_CONFIRMED, ...REPLACE_TOOLS]);
 
+/**
+ * Nâng cấp đợt F5: overwriting a file (PDF, STL, PNG, Excel) or a saved view, a material for whole layers. The plugin
+ * refuses with the handles for the card; Claude repeats them in confirm_handles after Đồng ý, and only those on the card
+ * the user approved reach the plugin as user_confirmed (a typed yes never does).
+ */
+export const F5_CARD_TOOLS = new Set(['plot_pdf', 'export_stl', 'named_view', 'set_material', 'block_schedule', 'area_schedule', 'volume_schedule', 'check_interference']);
+
+function flaggedF5(params: Record<string, unknown>, g: GateState): Record<string, unknown> {
+  const { [USER_CONFIRMED_PARAM]: _ignored, confirm_handles: asked, ...rest } = params;
+  const hs = Array.isArray(asked) ? (asked as unknown[]).filter((h): h is string => typeof h === 'string') : [];
+  const ok = [...new Set(hs.map((h) => h.toUpperCase()))].filter((h) => g.cardConfirmed?.has(h));
+  return ok.length > 0 ? { ...rest, [USER_CONFIRMED_PARAM]: ok } : rest;
+}
+
 /** Nâng cấp đợt F2: the REPLACE_TOOLS that overwrite styles / layer states (their refusal names them, not text). */
 const F2_OVERWRITE = new Set(['setup_standards', 'layer_state']);
 
@@ -390,6 +404,7 @@ function flagged(params: Record<string, unknown>, g: GateState): Record<string, 
  * user_confirmed = their handles that the user approved on the confirmation card of this turn, and nothing otherwise.
  */
 export function applyUserConfirmation(tool: string, params: Record<string, unknown>, g: GateState): Record<string, unknown> {
+  if (F5_CARD_TOOLS.has(tool)) return flaggedF5(params, g); // nâng cấp đợt F5
   if (CARD_PARAM_TOOLS.has(tool)) return flagged(params, g);
   if (WINDOW_TOOLS.has(tool)) return windowLimited(params, isWindowCall(tool, params) ? windowLimit(g, 1) : undefined);
   if (tool === 'batch_execute' && Array.isArray(params.calls)) {
@@ -406,6 +421,12 @@ export function applyUserConfirmation(tool: string, params: Record<string, unkno
       if (WINDOW_TOOLS.has(call.tool)) {
         const next = windowLimited(p, isWindowCall(call.tool, p) ? windowLimit(g, windows) : undefined);
         if (!(WINDOW_LIMIT_PARAM in p) && !(WINDOW_LIMIT_PARAM in next)) return c;
+        changed = true;
+        return { ...call, params: next };
+      }
+      if (F5_CARD_TOOLS.has(call.tool)) {
+        const next = flaggedF5(p, g);
+        if (!(USER_CONFIRMED_PARAM in p) && !(USER_CONFIRMED_PARAM in next) && !('confirm_handles' in p)) return c;
         changed = true;
         return { ...call, params: next };
       }

@@ -217,6 +217,8 @@ export interface UserContext {
   notes?: string;
   /** false = the user turned off visual self-checks (capture_view). */
   visual_check?: boolean;
+  /** Nâng cấp đợt F5: ⚙ "Nạp gọn lệnh" off (every tool in full). Absent = on. CLAUDECAD_DEFER_TOOLS=0 / tool-search-off win. */
+  defer_tools?: false;
   /** false = the user turned off plan cards before big tasks. */
   plan_first?: boolean;
   /** false = the user turned off next-step buttons. */
@@ -413,6 +415,7 @@ function parseContext(v: unknown): UserContext | undefined {
   if (c.read_only === true) out.read_only = true;
   if (typeof c.notes === 'string' && c.notes.trim()) out.notes = c.notes.trim().slice(0, 9000);
   if (c.visual_check === false) out.visual_check = false;
+  if (c.defer_tools === false) out.defer_tools = false;
   if (c.plan_first === false) out.plan_first = false;
   if (c.suggestions === false) out.suggestions = false;
   const manual = parseManualChanges(c.manual_changes);

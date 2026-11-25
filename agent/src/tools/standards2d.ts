@@ -15,7 +15,7 @@ export function standards2dTools(b: ToolBridge): AnyTool[] {
   return [
     cadTool(b, 'setup_standards',
       'Set up the standard styles for a print scale: text style VN-ARIAL (KT-ARIAL with standard "ve-kien-truc"), dimension style VN-<scale> ' +
-        '(arch ticks, 2.5 mm text, sized for the drawing units), linetypes CENTER/DASHED/HIDDEN/PHANTOM/DASHDOT, LTSCALE; makes them current and returns ' +
+        '(arch ticks, 2.5 mm text, sized for the drawing units), multileader style VN-ML-<scale> (arrow notes for add_mleader), linetypes CENTER/DASHED/HIDDEN/PHANTOM/DASHDOT, LTSCALE; makes them current and returns ' +
         'text_heights for that scale. Safe to run again (creates only what is missing). An existing style that differs is kept: ask with request_confirmation ' +
         '(kept_handles), then call again with handles. scale default: the palette scale, else 1:100.',
       {

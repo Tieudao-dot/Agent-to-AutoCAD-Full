@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { cadTool, excelParams, handle, handles, point, points, type AnyTool, type ToolBridge } from './common.js';
+import { cadTool, confirmDesc, excelParams, handle, handles, point, points, type AnyTool, type ToolBridge } from './common.js';
 
 /**
  * Nâng cấp đợt D (13/11/2026, docs/ban-giao/nang-cap-d.md): beams, PRESSPULL, STL export, volume schedule by layer.
@@ -110,14 +110,15 @@ export function solid3Tools(b: ToolBridge): AnyTool[] {
 
     cadTool(b, 'export_stl',
       'EXPORT 3D solids to an STL file (3D printing / other software): handles, or every solid (on layers). One file, in mm, moved to start at 0 when it has negative or survey-size coordinates ' +
-        '(moved_by_mm). output: file path ending in .stl (default <drawing>-3d.stl next to the drawing; a relative name goes there too). An existing file needs overwrite: true ' +
-        '(ask the user first). Binary by default (ascii: true for text). The drawing is not changed.',
+        '(moved_by_mm). output: file path ending in .stl (default <drawing>-3d.stl next to the drawing; a relative name goes there too). An existing file needs the user\'s Đồng ý on a card ' +
+        '(the error lists the handles; then confirm_handles). Binary by default (ascii: true for text). The drawing is not changed.',
       {
         handles: handles.max(S.MaxStlSolids).optional(),
         layers: z.array(z.string()).optional(),
         output: z.string().min(1).max(260).optional(),
         ascii: z.boolean().optional(),
         overwrite: z.boolean().optional(),
+        confirm_handles: handles.max(50).optional().describe(confirmDesc),
       }),
 
     cadTool(b, 'volume_schedule',

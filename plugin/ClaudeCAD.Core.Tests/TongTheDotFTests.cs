@@ -67,10 +67,13 @@ namespace ClaudeCAD.Core.Tests
         public void Every_file_export_asks_before_replacing_a_file_and_takes_overwrite()
         {
             // export_stl, the Excel export and the PNG of named_view: an existing file is kept unless the call says so
-            Assert.Contains("!p.Bool(\"overwrite\", false)", Src("plugin", "ClaudeCAD.Plugin", "Drawing", "Solid3Tools.cs"));
-            Assert.Contains("!p.Bool(\"overwrite\", false)", Src("plugin", "ClaudeCAD.Plugin", "Drawing", "ExcelExport.cs"));
+            // (nâng cấp đợt F5: the card's Đồng ý; a macro replay still takes overwrite / replace as before)
+            Assert.Contains("RequireOverwriteCard(ctx, p, tool, full, exists,", Src("plugin", "ClaudeCAD.Plugin", "Drawing", "Solid3Tools.cs"));
+            Assert.Contains("\"overwrite\");", Src("plugin", "ClaudeCAD.Plugin", "Drawing", "Solid3Tools.cs"));
+            Assert.Contains("RequireOverwriteCard(ctx, p, tool, full, File.Exists(full),", Src("plugin", "ClaudeCAD.Plugin", "Drawing", "ExcelExport.cs"));
             var render = Src("plugin", "ClaudeCAD.Plugin", "Drawing", "RenderTools.cs");
-            Assert.Contains("!p.Bool(\"replace\", false) && !p.Bool(\"overwrite\", false)", render);
+            Assert.Contains("\"replace\", \"overwrite\");", render);
+            Assert.Contains("if (!oldFlags.Any(f => p.Bool(f, false))) throw ToolException.Invalid(oldRefusal);", Src("plugin", "ClaudeCAD.Plugin", "Drawing", "ConfirmF5.cs"));
         }
 
         [Fact]
