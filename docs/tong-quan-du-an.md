@@ -13,10 +13,9 @@ quy tắc làm việc và danh bạ thread: [`../CLAUDE.md`](../CLAUDE.md).
 - **Đợt F đang chạy (từ 25/11):** chủ dự án đã thử thật bộ cài thử bản 3, chạy ổn, và chốt nâng cấp tiếp 4 đợt nối tiếp
   F1 → F4 (UCS + nút chế độ; 2D dùng hằng ngày; 3D đẹp và đúng hơn; mở chat nhanh + xuất Excel), rồi test tổng thể, kiểm
   tra độc lập và bộ cài thử bản 4. Chi tiết và tiến độ: [`ke-hoach-nang-cap-lenh.md`](ke-hoach-nang-cap-lenh.md) mục
-  "Đợt F". Nhánh gốc của đợt F: `full/nang-cap-f-goc` @ `2dbeee2` (nhánh tích hợp + file quyền). **Tới 25/11 19h20:**
-  F1 → F4 xong (viết + rà, CI xanh; bản mới nhất `full/nang-cap-f4-test` @ `1cdf8d4`); đang test tổng thể đợt F trên
-  `full/nang-cap-f-tong-the`, sau đó kiểm tra độc lập và bộ cài thử bản 4. Chưa phần nào của đợt F chạy trên AutoCAD
-  thật.
+  "Đợt F". Nhánh gốc của đợt F: `full/nang-cap-f-goc` @ `2dbeee2` (nhánh tích hợp + file quyền). **Tới 25/11 19h45:**
+  F1 → F4 và test tổng thể đợt F xong (CI xanh; nhánh tích hợp đợt F `full/nang-cap-f-tong-the` @ `afdaa68`); đang kiểm
+  tra độc lập bằng agent mới, sau đó bộ cài thử bản 4. Chưa phần nào của đợt F chạy trên AutoCAD thật.
 
 - **Nhánh tích hợp mới nhất:** `full/nang-cap-tong-the` @ `012ed29` (có sửa lỗi bộ cài TT-01 và bản sửa khung chat 15/11; CI 43669231795 xanh trên mã khung chat). Chứa toàn bộ: gói dịch vụ,
   3D đợt 1–3, test tổng thể + 4 lượt kiểm tra độc lập lần 1 (43 lỗi), bộ cài thay bản gốc + cảnh báo, và **chuỗi nâng
@@ -85,6 +84,8 @@ quy tắc làm việc và danh bạ thread: [`../CLAUDE.md`](../CLAUDE.md).
 | 25/11 | Số mặc định lan can | Xác nhận giữ: cao 1100; khe giữa các song ≤ 100; trụ cách nhau ≤ 1500; tay vịn và trụ 50 × 50; song 20 × 20; thanh dưới cách sàn 100; tấm kín dày 20 (mm) |
 | 25/11 | Cách chạy đợt F | Sau F1: F2 và F3 chạy cùng lúc, mỗi đợt có Test & sửa riêng; thread F4 gộp hai nhánh, CI xanh rồi mới làm F4. Nhanh hơn ~1,5 giờ, thêm ~$5–10 |
 | 25/11 | Chạy liền, không hỏi lại | Chủ dự án dặn cứ triển khai đợt F theo kế hoạch, không hỏi lại. Con số: thread dùng số đề xuất, gom bảng "Con số chờ chủ dự án duyệt"; quyết định khác ghi "Quyết định tự chọn"; chủ dự án duyệt một lần ở báo cáo cuối. Vẫn dừng trước phát hành |
+| 25/11 | Làm tiếp đợt F5 và đợt G | Chủ dự án chọn làm cả hai nhóm luồng chính đề xuất: F5 (ô nạp gọn trong ⚙, thẻ xác nhận đồng bộ, ghi chú có mũi tên) và đợt G (ra bộ hồ sơ, soát lỗi bản vẽ, bảng dự toán, render thật, vẽ lại từ ảnh / PDF scan; ước $150–200). Chạy liền như đợt F; G1 cùng lúc G2, G3 cùng lúc G4 |
+| 25/11 | Giao bộ cài | Chỉ gửi một lần khi xong hết (bản 5, sau đợt G). Trước khi gửi: một agent khác test lại toàn bộ tính năng một lượt. Gửi bằng cách tạo thread "Lưu trữ bộ cài" và đưa link / file bộ cài vào đó. Bản 4 chỉ là mốc kiểm nội bộ, không gửi |
 | 12/11 | Cách làm việc | Luồng chính điều phối; mỗi đợt một thread, thread đợt tự mở thread con "Test & sửa" |
 
 ## 4. Đã làm
@@ -161,3 +162,14 @@ trong 5 phút chỉ tốn ~10%.
   - 18h21–18h50: các thread dừng vì chạm giới hạn sử dụng 5 giờ; chủ dự án cho chạy tiếp sau khi giới hạn đặt lại.
   - 19h17: đợt F4 xong (3 lỗi sửa, ~$25, `full/nang-cap-f4-test` @ `1cdf8d4`, CI 45610810220 xanh). 19h20 giao thread F2
     làm test tổng thể đợt F trên `full/nang-cap-f-tong-the`.
+  - 19h44: test tổng thể đợt F xong (3 lỗi nhẹ sửa, ~$10, `full/nang-cap-f-tong-the` @ `afdaa68`, CI 45614706040 xanh).
+    19h45 mở thread Kiểm tra độc lập đợt F (`session_01D56HmHz4EXXJceBgkmjcap`).
+  - ~20h: chủ dự án chọn làm tiếp hai nhóm. **Đợt F5** (ba việc nhỏ còn sót: ô nạp gọn trong ⚙, thẻ xác nhận đồng bộ,
+    ghi chú có mũi tên) giao 20h05 cho thread Test & sửa F1 trên `full/nang-cap-f5`, kịp bộ cài thử bản 4. **Đợt G** (ra
+    bộ hồ sơ, soát lỗi bản vẽ, bảng dự toán, render thật, vẽ lại từ ảnh / PDF scan; ước $150–200) chạy liền như đợt F,
+    bắt đầu sau khi đợt F xong hẳn. Kế hoạch: [`ke-hoach-nang-cap-lenh.md`](ke-hoach-nang-cap-lenh.md) mục "Đợt G".
+  - 19h57: kiểm tra độc lập ghi 8 lỗi (1 nặng: mái nhà L / T / U vẽ lệch ~1 mm dựng sai); thread F1 và F2 sửa, agent độc
+    lập soát lại 3 lượt, thêm 1 lỗi nhẹ. Kết quả: 9 lỗi, 9 đã sửa đúng, 0 lỗi mở
+    ([`ban-giao/kiem-tra-doc-lap-dot-f.md`](ban-giao/kiem-tra-doc-lap-dot-f.md)).
+  - 21h00: đợt F5 xong (viết + rà, 2 lỗi thẻ sửa, ~$21). 21h15: nhánh tích hợp đợt F chốt ở `full/nang-cap-f-tong-the` @
+    `a6da118` (code `7fe215c`, CI 45630097088 xanh, lõi 1217, trợ lý 364); giao build bộ cài thử bản 4.

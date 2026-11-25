@@ -131,7 +131,51 @@ tiếp; đợt sau xuất phát từ commit cuối của bước Test & sửa đ
 | F2 | `session_01D56HmFcYrzsme7GoBm8tNC` (25/11 15h53 → 16h36, $11,3) | Thread đợt F1 `session_01D56HmFAo4dZ7c8sbeNB9eh` (16h39 → 17h08, ~$7,3; 7 lỗi sửa). Thread con `session_01D56HmJDwuCnKRDvTAFHFXr` bị chặn lưu, đã dừng (~$4), 7 phát hiện của nó đã được đối chiếu | `full/nang-cap-f2` @ `bae8262`, CI 45584939266 xanh → `full/nang-cap-f2-test` @ `c9fdc08` (code `6e9f622`), CI 45590233177 xanh (lõi 1048, trợ lý 322) | **Xong**, ~$23, 1 giờ 15 phút. 4 lệnh mới (`setup_standards`, `create_sheet`, `insert_library_block`, `layer_state`); token mở chat 2D +1,5k, 3D +0,7k, Full +1,5k. Con số chờ duyệt: `docs/dot-f-cho-duyet.md` |
 | F3 | `session_01D56HmFrL65iF9oJokvqXw5` (thread Test & sửa F1 nhận viết, 25/11 16h26 → 17h12, ~$10; hai thread mở riêng cho F3 bị chặn lưu, đã dừng) | Thread đợt F2 `session_01D56HmFcYrzsme7GoBm8tNC` (17h14 → 17h35, ~$4; 2 lỗi sửa) | `full/nang-cap-f3` @ `09ae953` (code `4a26989`, lõi 1001, trợ lý 317), CI 45590903520 xanh → `full/nang-cap-f3-test` @ `53e18b5` (code `d3484f6`), CI 45595009744 xanh (lõi 1012, trợ lý 317) | **Xong**, ~$14, 1 giờ 9 phút. Mái liền khối chữ L / T / U, `set_material`, `named_view` (kèm xuất ảnh PNG), bản thang và bản mái dốc 120 mm; token mở chat 3D và Full +1,0k. Con số chờ duyệt: `docs/dot-f-cho-duyet.md` |
 | F4 | Thread đợt F1 `session_01D56HmFAo4dZ7c8sbeNB9eh` (25/11 17h40 → 18h20, $14,6) | Thread Test & sửa F1 `session_01D56HmFrL65iF9oJokvqXw5` (18h22 → 19h17, có 30 phút dừng vì chạm giới hạn sử dụng; ~$10; 3 lỗi sửa) | `full/nang-cap-f4` @ `d6c15d6`: gộp F2 + F3 ở `c67bc79` (CI 45597564054 xanh, lõi 1087, trợ lý 328), code F4 `587f7ce` (CI 45601966332 xanh, lõi 1113, trợ lý 347) → `full/nang-cap-f4-test` @ `1cdf8d4` (code `9278808`), CI 45610810220 xanh (lõi 1126, trợ lý 355) | **Xong**, ~$25, 1 giờ 37 phút. Trợ lý khởi động sẵn, 25 lệnh nạp sẵn + lệnh khác tìm khi cần (token mở chat ước tính Full 60,5k → 20,6k, 2D 40,5k → 13,4k, 3D 41,8k → 18,8k), có công tắc tắt nạp gọn, 4 bảng xuất `.xlsx`. Con số chờ duyệt: `docs/dot-f-cho-duyet.md` |
-| Cuối | Test tổng thể đợt F: thread đợt F2 `session_01D56HmFcYrzsme7GoBm8tNC` (giao 25/11 19h20) | Kiểm tra độc lập: mở sau test tổng thể | `full/nang-cap-f-tong-the` (từ `full/nang-cap-f4-test` @ `1cdf8d4`) | Đang chạy test tổng thể; sau đó kiểm tra độc lập và bộ cài thử bản 4 |
+| Cuối | Test tổng thể đợt F: thread đợt F2 `session_01D56HmFcYrzsme7GoBm8tNC` (25/11 19h20 → 19h44, ~$10; 3 lỗi nhẹ sửa) | Kiểm tra độc lập: thread mới `session_01D56HmHz4EXXJceBgkmjcap` (mở 19h45; chỉ ghi lỗi, gửi báo cáo về luồng chính) | `full/nang-cap-f-tong-the` @ `afdaa68` (code `7aa74c0`), CI 45614706040 xanh (lõi 1132, trợ lý 355) | Test tổng thể **xong**: checklist khối "Đợt F" (~2 giờ thử tay) ở cuối `docs/checklist-tong-the.md`; token mở chat ước tính trước → sau: 2D 38,8k → 13,4k, 3D 39,8k → 18,8k, Full 57,7k → 20,6k (tắt nạp gọn: 40,8k / 42,0k / 61,0k). Kiểm tra độc lập 19h45 → 19h57 (~$10): 8 lỗi (1 nặng, 3 vừa, 4 nhẹ), báo cáo `docs/ban-giao/kiem-tra-doc-lap-dot-f.md`; sửa ở `f037b79` (CI 45620825504 xanh), soát lại 7/8 đúng; lỗi mái KTF-01 sửa lần 2 ở `03bf163`, soát lượt cuối đúng (0 / 1680 ca sai); thêm KTF-09 (nhẹ) sửa ở bản chốt. **Nhánh tích hợp đợt F chốt 21h15: `full/nang-cap-f-tong-the` @ `a6da118` (code `7fe215c`, CI 45630097088 xanh, lõi 1217, trợ lý 364), có đủ F1 → F5; kiểm tra độc lập: 9 lỗi, 9 đã sửa và soát lại đúng, 0 lỗi mở.** Bộ cài thử bản 4 build xong 21h28: `full/ban-thu-noi-bo` @ `2a68813` (code `5c75b77`), CI 45632787564 xanh, artifact `AgentToAutoCADFull-ThuNoiBo-nang-cap-4-0.9.4` (id 15031114800, 134 MB, tải được tới 23/02/2027); là mốc kiểm nội bộ, không gửi chủ dự án (cậu ấy chọn nhận một lần ở bản 5) |
+| F5 | Thread Test & sửa F1 `session_01D56HmFrL65iF9oJokvqXw5` (25/11 20h05 → 20h32, $11,6) | Thread đợt F1 `session_01D56HmFAo4dZ7c8sbeNB9eh` (20h35 → 21h00, ~$9; 2 lỗi thẻ sửa; gộp luôn nhánh tích hợp @ `03bf163`) | `full/nang-cap-f5` @ `1dc03b9` (code `99f1bf6`), CI 45622402883 xanh (lõi 1148, trợ lý 364) → `full/nang-cap-f5-test` @ `c14c8d7` (code `fc92cd6`), CI 45627464838 xanh (lõi 1212, trợ lý 364) | **Xong**, ~$21, 55 phút; đã gộp vào nhánh tích hợp đợt F. Ba việc nhỏ còn sót của đợt F, chủ dự án chọn 25/11 ~20h: ô bật / tắt nạp gọn lệnh trong ⚙; thẻ xác nhận đồng bộ (ghi đè file PDF / STL / PNG / Excel, ghi đè / xóa góc nhìn, gán vật liệu cả layer); ghi chú có mũi tên (multileader). Rà xong thì gộp vào nhánh tích hợp đợt F, kịp bộ cài thử bản 4 |
+
+## Đợt G (chốt 25/11/2026 ~20h)
+
+Chủ dự án chọn làm tiếp cả 5 tính năng mới luồng chính đề xuất, **chạy liền như đợt F**: không dừng để hỏi, thread dùng số
+đề xuất, luồng chính gom con số và quyết định tự chọn cho chủ dự án duyệt một lần ở cuối; dừng trước phát hành.
+
+| Đợt | Nội dung | Gói | Ước |
+| --- | --- | --- | --- |
+| G1 | Ra bộ hồ sơ một lệnh: từ mô hình 3D tự xếp mặt bằng, mặt đứng, mặt cắt, phối cảnh lên các tờ có khung tên, in một PDF | Theo gói của từng phần (đủ bộ: Full) | $25–40 |
+| G2 | Soát lỗi bản vẽ trước khi xuất: layer sai tên, chữ sai cỡ, thiếu kích thước, đối tượng lệch layer; báo cáo kèm đề xuất sửa | 2D / Full | $20–30 |
+| G3 | Bảng dự toán: từ bảng khối lượng, thêm đơn giá do khách nhập, tính thành tiền, xuất Excel | Theo gói của bảng nguồn | $20–30 |
+| G4 | Render thật: lệnh RENDER và thư viện vật liệu của Autodesk, có đường lui về ảnh chụp hiện tại | 3D / Full | $20–30 |
+| G5 | Vẽ lại từ ảnh / PDF scan (phần lớn và khó chính xác nhất; tốn token của khách mỗi lần dùng) | 2D / Full | $35–45 |
+| Cuối | Test tổng thể đợt G; kiểm tra độc lập (agent mới); bộ cài thử bản 5 | — | $30–40 |
+
+- Tổng ước $150–200, khoảng 8–12 giờ chạy; có thể ngắt quãng khi chạm giới hạn sử dụng 5 giờ (luồng chính đặt lịch tự
+  cho chạy lại sau khi giới hạn đặt lại).
+- **Chạy cùng lúc (chủ dự án đồng ý 25/11 ~20h):** G1 với G2; G3 với G4. Mỗi đợt vẫn có thread viết và thread khác rà.
+  G5 chạy riêng sau cùng. Sau mỗi cặp, thread kế tiếp gộp hai nhánh, CI xanh rồi mới làm tiếp.
+- **Bắt đầu sau khi đợt F xong hẳn** (kiểm tra độc lập + sửa + F5 + bộ cài thử bản 4), xuất phát từ commit cuối của nhánh
+  tích hợp đợt F. Lý do: ưu tiên bộ cài thử bản 4 trước, và giới hạn sử dụng dùng chung cho mọi thread.
+- Thread: dùng lại ba thread đã lưu được lên GitHub (thread F1, Test & sửa F1, F2); thread mới chỉ dùng cho kiểm tra độc lập
+  (không cần lưu).
+- Con số và quyết định tự chọn của đợt G gom vào một file riêng `docs/dot-g-cho-duyet.md`.
+- **Giao bộ cài (chủ dự án chốt 25/11 ~21h35):** chỉ gửi **một lần khi xong hết**. Bộ cài thử bản 4 (đợt F + F5) vẫn build
+  làm mốc kiểm nội bộ nhưng không gửi. Cuối đợt G: **một agent khác test lại toàn bộ tính năng đợt F và đợt G một lượt**
+  (chủ dự án yêu cầu), lỗi sửa xong và được soát lại, rồi build bộ cài thử bản 5; sau đó mới tạo thread **"Lưu trữ bộ
+  cài"** và gửi link / file bộ cài vào đó, rồi báo chủ dự án. Con số đợt F (`docs/dot-f-cho-duyet.md`) và đợt G đưa duyệt
+  chung một lần ở báo cáo cuối.
+- **Đã bắt đầu 25/11 21h25** (chủ dự án dặn "triển khai cho hoàn thành"): G1 và G2 xuất phát từ nhánh tích hợp đợt F đã
+  chốt `full/nang-cap-f-tong-the` @ `a6da118`, chạy cùng lúc với bước build bộ cài thử bản 4.
+
+### Tiến độ đợt G
+
+| Đợt | Thread viết | Thread rà | Nhánh | Trạng thái |
+| --- | --- | --- | --- | --- |
+| G1 | Thread đợt F2 `session_01D56HmFcYrzsme7GoBm8tNC` (giao 25/11 21h25) | Thread đợt F1 `session_01D56HmFAo4dZ7c8sbeNB9eh` (giao 25/11 22h02), nhánh `full/nang-cap-g1-test` | `full/nang-cap-g1` (từ `a6da118`) | Viết xong 22h00: `dd29c9b` (code `28ca6c2`), CI 45638049687 xanh, lõi 1228, trợ lý 367, ≈ $10–15. **Rà xong 22h23:** sửa 4 lỗi, `full/nang-cap-g1-test` @ `99aaab7` (code `9c7c95f`), CI 45642708237 xanh, lõi 1237, trợ lý 367, ≈ $6 |
+| G2 | Thread đợt F1 `session_01D56HmFAo4dZ7c8sbeNB9eh` (giao 25/11 21h27) | Thread Test & sửa F1 `session_01D56HmFrL65iF9oJokvqXw5` (giao 25/11 21h50), nhánh `full/nang-cap-g2-test` | `full/nang-cap-g2` (từ `a6da118`) | Viết xong 21h48: `8bbc27c` (code `aa91157`), CI 45636296067 xanh, lõi 1240, trợ lý 369, ≈ $7. **Rà xong 22h13:** sửa 4 lỗi, `full/nang-cap-g2-test` @ `f49e717` (code `7b9be8f`), CI 45640452138 xanh, lõi 1255, trợ lý 373, ≈ $6–9 |
+| G3 | Thread đợt F2 `session_01D56HmFcYrzsme7GoBm8tNC` (giao 25/11 22h17): gộp G1 + G2 trước, CI xanh rồi viết | Thread đợt F1 `session_01D56HmFAo4dZ7c8sbeNB9eh` (giao 25/11 22h48), nhánh `full/nang-cap-g3-test` | `full/nang-cap-g3` (từ `full/nang-cap-g1-test`, gộp `full/nang-cap-g2-test` @ `f49e717`) | Gộp xong 22h31 ở `395c313`, CI 45643804481 xanh, lõi 1275, trợ lý 376. Viết xong 22h46: `6c7c650` (code `ec03a77`), CI 45646666421 xanh, lõi 1282, trợ lý 379, ≈ $12–18 (cả gộp). **Rà xong 23h00:** sửa 3 lỗi, `full/nang-cap-g3-test` @ `4061a6c` (code `d6b4a60`), CI 45649649749 xanh, lõi 1292, trợ lý 379, ≈ $5 |
+| G4 | Thread Test & sửa F1 `session_01D56HmFrL65iF9oJokvqXw5` (giao 25/11 22h33) | Thread đợt F2 `session_01D56HmFcYrzsme7GoBm8tNC` (giao 25/11 23h59), nhánh `full/nang-cap-g4-test` | `full/nang-cap-g4` (từ `full/nang-cap-g3` @ `395c313`) | Viết xong 23h57 (dừng 23h00–23h50 vì chạm giới hạn sử dụng): `7641203` (code `7ddbf12`), CI 45649202227 xanh, lõi 1294, trợ lý 385. **Rà xong 00h21 (26/11):** sửa 6 lỗi (1 nặng), `full/nang-cap-g4-test` @ `29a2e6c` (code `fdeb306`), CI 45661671404 xanh, lõi 1299, trợ lý 387, ≈ $8–12 |
+| G5 | Thread Test & sửa F1 `session_01D56HmFrL65iF9oJokvqXw5` (giao 26/11 00h11): gộp G3 + G4 trước, CI xanh rồi viết | Thread đợt F1 `session_01D56HmFAo4dZ7c8sbeNB9eh` (giao 26/11 00h42), nhánh `full/nang-cap-g5-test` | `full/nang-cap-g5` (từ `full/nang-cap-g3-test` @ `4061a6c`, gộp `full/nang-cap-g4-test`) | Gộp xong 00h25 (26/11) ở `1c2a1c1`, CI 45662682522 xanh, lõi 1316, trợ lý 390. Viết xong 00h40: `1cc438f` (code `8a2515c`), CI 45665170098 xanh, lõi 1356, trợ lý 398. Đang rà |
+| Test tổng thể G | Thread đợt F2 `session_01D56HmFcYrzsme7GoBm8tNC` (giao 26/11 00h58) | — | `full/nang-cap-g-tong-the` (từ `full/nang-cap-g5-test`, gộp tài liệu luồng chính) | Đang rà chiều ngang |
+| Cuối | — | — | — | Agent khác test lại toàn bộ F + G, sửa lỗi, soát lại, bộ cài thử bản 5, thread "Lưu trữ bộ cài" |
 
 ### Số mặc định chủ dự án xác nhận 25/11/2026
 
