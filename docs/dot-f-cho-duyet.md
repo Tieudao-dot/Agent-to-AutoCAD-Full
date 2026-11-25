@@ -170,8 +170,8 @@ chữ U và D6 vật liệu Global).
 
 ## Đợt F4 (mở chat nhanh, xuất Excel)
 
-*Theo báo cáo của thread viết (25/11 18h20); thread rà đang soát lại. Chi tiết: `docs/ban-giao/nang-cap-f4.md` trên nhánh
-`full/nang-cap-f4`.*
+*Theo báo cáo của thread viết (25/11 18h20) và thread rà (19h17; người rà không đổi, không thêm số nào). Chi tiết:
+`docs/ban-giao/nang-cap-f4.md` và `docs/ban-giao/nang-cap-f4-test.md` trên nhánh `full/nang-cap-f4-test`.*
 
 ### Con số chờ duyệt
 
@@ -217,8 +217,22 @@ Token mở chat theo ước tính của thread viết (số thật phải đo tr
 | Bản vẽ chưa lưu | File Excel vào thư mục Documents (như STL) |
 | Máy gói 3D | Không vẽ bảng trong bản vẽ được (như cũ) nhưng xuất Excel bảng 3D được |
 
-Luồng chính dặn người rà thêm: một công tắc tắt việc nạp gọn (nạp đủ như trước) không cần build lại, để có đường lui nếu
-thử thật thấy Claude tìm sót lệnh.
+Người rà chọn thêm:
+
+| Tình huống | Đã chọn |
+| --- | --- |
+| Công tắc tắt nạp gọn (luồng chính dặn thêm, làm đường lui nếu thử thật thấy Claude tìm sót lệnh) | Đặt biến môi trường `CLAUDECAD_DEFER_TOOLS=0`, hoặc tạo file trống `%LocalAppData%\ClaudeCAD\tool-search-off`, rồi mở lại AutoCAD: Claude nhận đủ mô tả mọi lệnh như trước F4. Mặc định vẫn nạp gọn. Chưa làm thành ô trong phần cài đặt ⚙ |
+| Macro có bảng kèm xuất Excel | Chạy lại macro chỉ vẽ lại bảng, không ghi file Excel (tránh ghi đè file khách đã sửa) |
+| Máy bị khóa giữa chừng | Có thể còn một tiến trình Claude chờ sẵn tới khi đóng AutoCAD; tiến trình này không gửi gì, không tốn token |
+
+### Lỗi người rà đã sửa (3)
+
+- Chưa có cách tắt nạp gọn mà không build lại: đã thêm công tắc ở trên.
+- Chạy lại macro có bảng + xuất Excel thì báo "file đã có", cả lệnh thất bại và mất luôn bảng trên bản vẽ.
+- Vài ký tự hiếm trong tên block / layer làm Excel báo file hỏng: đã lọc bỏ (tiếng Việt và emoji giữ nguyên).
+
+Người rà cũng đã đối chiếu: cách hoãn lệnh khớp với bộ thư viện đang dùng; lệnh bị hoãn vẫn qua đủ lớp chặn (gói, chế độ,
+"Chỉ xem", thẻ xác nhận); việc tìm lệnh không mở thêm công cụ nào khác; ô bắt đầu bằng `=` `+` `-` `@` vẫn là chữ.
 
 ### Chưa kiểm được (cần AutoCAD / Claude thật)
 
@@ -227,4 +241,6 @@ thử thật thấy Claude tìm sót lệnh.
 - Trợ lý khởi động sẵn có thật sự không gọi Claude trước tin đầu (mới theo thiết kế của bộ thư viện).
 - File `.xlsx` mở bằng Excel thật (test mới đọc lại cấu trúc file).
 
-Danh sách thử tay: `docs/checklist-dot-f4.md` trên nhánh `full/nang-cap-f4`.
+- Công tắc tắt nạp gọn; báo lỗi khi file Excel đang mở (khóa file chỉ có trên Windows).
+
+Danh sách thử tay: `docs/checklist-dot-f4.md` trên nhánh `full/nang-cap-f4-test` (người rà thêm mục C).
