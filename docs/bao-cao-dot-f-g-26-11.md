@@ -98,6 +98,9 @@ Các số cậu dễ gặp nhất:
 Nhiều số (thời gian chờ render, số lần xem ảnh, cỡ chữ khi in) chỉ đánh giá được khi thử thật. Muốn đổi số nào cậu nói
 tên số và giá trị mới.
 
+**Cậu chọn 26/11: "thử thật rồi duyệt".** Bản thử dùng số đề xuất; cậu thử bộ cài bản 5, số nào chưa hợp thì báo tớ;
+thử xong tớ mới ghi "đã duyệt".
+
 ## 6. Quyết định tớ tự chọn lúc sửa lỗi kiểm tra độc lập
 
 Các thread tự chọn nhiều điểm nhỏ, đã ghi ở các bảng "Quyết định tự chọn" trong hai file trên. Riêng sáu điểm dưới đây

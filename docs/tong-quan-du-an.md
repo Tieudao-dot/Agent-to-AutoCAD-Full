@@ -63,7 +63,7 @@ quy tắc làm việc và danh bạ thread: [`../CLAUDE.md`](../CLAUDE.md).
 5. Trước khi phát hành: số phiên bản (plugin / trợ lý vẫn ghi 0.9.4), secret CI của repo Full, đồng ý merge `main`,
    các chỗ còn trỏ về dự án gốc ([`cho-tro-ve-repo-goc.md`](cho-tro-ve-repo-goc.md)); cách cập nhật skill cho máy nâng
    cấp từ bản cũ (bộ cài hiện chỉ chép skill khi máy chưa có).
-6. **Duyệt con số và quyết định tự chọn của đợt F + G** (chạy liền, chưa hỏi): [`dot-f-cho-duyet.md`](dot-f-cho-duyet.md),
+6. **Duyệt con số và quyết định tự chọn của đợt F + G** (chủ dự án chọn 26/11: thử thật rồi duyệt): [`dot-f-cho-duyet.md`](dot-f-cho-duyet.md),
    [`dot-g-cho-duyet.md`](dot-g-cho-duyet.md); 6 quyết định của luồng chính ở mục 6 của
    [`bao-cao-dot-f-g-26-11.md`](bao-cao-dot-f-g-26-11.md).
 
@@ -97,6 +97,7 @@ quy tắc làm việc và danh bạ thread: [`../CLAUDE.md`](../CLAUDE.md).
 | 25/11 | Chạy liền, không hỏi lại | Chủ dự án dặn cứ triển khai đợt F theo kế hoạch, không hỏi lại. Con số: thread dùng số đề xuất, gom bảng "Con số chờ chủ dự án duyệt"; quyết định khác ghi "Quyết định tự chọn"; chủ dự án duyệt một lần ở báo cáo cuối. Vẫn dừng trước phát hành |
 | 25/11 | Làm tiếp đợt F5 và đợt G | Chủ dự án chọn làm cả hai nhóm luồng chính đề xuất: F5 (ô nạp gọn trong ⚙, thẻ xác nhận đồng bộ, ghi chú có mũi tên) và đợt G (ra bộ hồ sơ, soát lỗi bản vẽ, bảng dự toán, render thật, vẽ lại từ ảnh / PDF scan; ước $150–200). Chạy liền như đợt F; G1 cùng lúc G2, G3 cùng lúc G4 |
 | 25/11 | Giao bộ cài | Chỉ gửi một lần khi xong hết (bản 5, sau đợt G). Trước khi gửi: một agent khác test lại toàn bộ tính năng một lượt. Gửi bằng cách tạo thread "Lưu trữ bộ cài" và đưa link / file bộ cài vào đó. Bản 4 chỉ là mốc kiểm nội bộ, không gửi |
+| 26/11 | Duyệt con số đợt F + G | Chủ dự án chọn "thử thật rồi duyệt": bản thử dùng số đề xuất; chủ dự án thử bộ cài thử bản 5, số nào chưa hợp thì báo; thử xong luồng chính mới ghi "đã duyệt". Tới lúc đó các số trong [`dot-f-cho-duyet.md`](dot-f-cho-duyet.md), [`dot-g-cho-duyet.md`](dot-g-cho-duyet.md) vẫn là chờ duyệt |
 | 12/11 | Cách làm việc | Luồng chính điều phối; mỗi đợt một thread, thread đợt tự mở thread con "Test & sửa" |
 
 ## 4. Đã làm
