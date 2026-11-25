@@ -97,7 +97,8 @@ describe('G5: the file of an attached picture', () => {
     assert.equal(m.attachments.images[1].path, undefined);
     const sdk = toSdkUserMessage(m) as any;
     const text = sdk.message.content.at(-1).text as string;
-    assert.match(text, /Files of the pictures: 1: C:\\Users\\a\\scan\.png; 2: \(none\)/);
+    // Sửa KFG-12: the path is quoted (JSON) like every other value of the user's computer
+    assert.match(text, /Files of the pictures: 1: "C:\\\\Users\\\\a\\\\scan\.png"; 2: \(none\)/);
   });
 
   it('no path: the message is as before', () => {

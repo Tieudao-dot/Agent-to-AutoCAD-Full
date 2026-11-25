@@ -65,7 +65,40 @@ namespace ClaudeCAD.Plugin.Drawing
             return RenderLogic.SafeTempDir(cands);
         }
 
+        /// <summary>
+        /// Sửa KFG (nghi vấn G4): a render stopped / given up may still write its temporary file after the plugin let it go;
+        /// such files older than RenderLogic.OldTempHours are removed before the next render.
+        /// </summary>
+        private static void CleanOldRenderFiles(string dir)
+        {
+            try
+            {
+                if (dir == null || !Directory.Exists(dir)) return;
+                foreach (var f in Directory.GetFiles(dir, "claudecad-render-*.png"))
+                    try { if (RenderLogic.IsOldTemp(File.GetLastWriteTimeUtc(f), DateTime.UtcNow)) File.Delete(f); } catch (Exception) { }
+            }
+            catch (Exception) { }
+        }
+
         private static string RenderToken() => Guid.NewGuid().ToString("N").Substring(0, 12);
+
+        /// <summary>
+        /// KFG-01: a copy of a saved model view, made inside the transaction (the record itself is closed once it ends and
+        /// cannot be used for SetCurrentView then). The caller disposes it.
+        /// </summary>
+        internal static ViewTableRecord NamedViewCopy(Database db, string name, string tool)
+        {
+            using (var tr = db.TransactionManager.StartOpenCloseTransaction())
+            {
+                var vt = (ViewTable)tr.GetObject(db.ViewTableId, OpenMode.ForRead);
+                if (!vt.Has(name) || vt[name].IsErased) throw ToolException.Invalid($"{tool}: no view named '{name}'. Call named_view action list.");
+                var rec = (ViewTableRecord)tr.GetObject(vt[name], OpenMode.ForRead);
+                if (rec.IsPaperspaceView) throw ToolException.Invalid($"{tool}: '{name}' is a paper-space (layout) view; render a model view.");
+                var copy = (ViewTableRecord)rec.Clone();
+                tr.Commit();
+                return copy;
+            }
+        }
 
         internal static object StartRender(ToolContext ctx, Params p, string name, string tool)
         {
@@ -95,18 +128,7 @@ namespace ClaudeCAD.Plugin.Drawing
                 notes.Add("\"Chỉ xem\" is on: the drawing's own background and lighting are used (no setting changed).");
             }
 
-            ViewTableRecord named = null;
-            using (var tr = db.TransactionManager.StartOpenCloseTransaction())
-            {
-                if (name != null)
-                {
-                    var vt = (ViewTable)tr.GetObject(db.ViewTableId, OpenMode.ForRead);
-                    if (!vt.Has(name) || vt[name].IsErased) throw ToolException.Invalid($"{tool}: no view named '{name}'. Call named_view action list.");
-                    named = (ViewTableRecord)tr.GetObject(vt[name], OpenMode.ForRead);
-                    if (named.IsPaperspaceView) throw ToolException.Invalid($"{tool}: '{name}' is a paper-space (layout) view; render a model view.");
-                }
-                tr.Commit();
-            }
+            ViewTableRecord named = name != null ? NamedViewCopy(db, name, tool) : null;
 
             var file = MaterialLogic.ImagePath(p.Str("output", null), DrawingFolder(ctx), DrawingStem(ctx), RenderLogic.Tail(name));
             if (!Directory.Exists(Path.GetDirectoryName(file))) throw ToolException.Invalid($"{tool}: folder '{Path.GetDirectoryName(file)}' does not exist.");
@@ -114,6 +136,7 @@ namespace ClaudeCAD.Plugin.Drawing
 
             _lastRenderResult = null;
             var tempDir = RenderTempDir();
+            CleanOldRenderFiles(tempDir);
             var job = new RenderJob
             {
                 Doc = doc, File = file, Temp = RenderLogic.TempFile(tempDir ?? Path.GetTempPath(), RenderToken()), ViewName = name,
@@ -124,7 +147,8 @@ namespace ClaudeCAD.Plugin.Drawing
             {
                 // Test & sửa G4: no folder whose path can be typed safely (spaces / accents): no -RENDER, the picture at once
                 using (var cur = doc.Editor.GetCurrentView()) job.Direction = (named?.ViewDirection) ?? cur.ViewDirection;
-                return RenderFallback(job, "no temporary folder without spaces or accents for the render file", 0, tool);
+                try { return RenderFallback(job, "no temporary folder without spaces or accents for the render file", 0, tool); }
+                finally { named?.Dispose(); }
             }
             try
             {
@@ -133,7 +157,10 @@ namespace ClaudeCAD.Plugin.Drawing
                     if (named != null)
                     {
                         using (var cur = doc.Editor.GetCurrentView()) job.OldView = (ViewTableRecord)cur.Clone();
-                        doc.Editor.SetCurrentView(named);
+                        // the view for the render only: not an undo step (U never jumps to it)
+                        db.DisableUndoRecording(true);
+                        try { doc.Editor.SetCurrentView(named); }
+                        finally { db.DisableUndoRecording(false); }
                         job.Changes.Add($"the view '{name}' is shown for the render, the user's view comes back after");
                     }
                     using (var cur = doc.Editor.GetCurrentView()) job.Direction = cur.ViewDirection;
@@ -142,11 +169,13 @@ namespace ClaudeCAD.Plugin.Drawing
             }
             catch (Exception ex)
             {
+                named?.Dispose();
                 FinishRender(job);
                 if (ex is ToolException) throw;
                 throw ToolException.Invalid($"{tool}: could not prepare the render ({ex.Message}). Nothing was changed; save a picture with named_view action image instead.");
             }
 
+            named?.Dispose();
             _render = job;
             doc.CommandCancelled += OnRenderCancelled;
             doc.CommandFailed += OnRenderFailed;
@@ -185,8 +214,7 @@ namespace ClaudeCAD.Plugin.Drawing
                 using (var tr = db.TransactionManager.StartTransaction())
                 {
                     var ms = (BlockTableRecord)tr.GetObject(SymbolUtilityServices.GetBlockModelSpaceId(db), OpenMode.ForRead);
-                    foreach (ObjectId id in ms)
-                        if (id.ObjectClass.Name == "AcDbLight" && tr.GetObject(id, OpenMode.ForRead) is Light lt && lt.IsOn) lights++;
+                    lights = LightsIn(tr, ms, new Dictionary<ObjectId, int>(), 0);
                     var vtr = (ViewportTableRecord)tr.GetObject(db.CurrentViewportTableRecordId, OpenMode.ForRead);
                     defaultOn = vtr.DefaultLightingOn;
                     Sun sun = null;
@@ -232,6 +260,23 @@ namespace ClaudeCAD.Plugin.Drawing
                 db.DisableUndoRecording(false);
             }
             doc.Editor.UpdateTiledViewportsFromDatabase();
+        }
+
+        /// <summary>Sửa KFG (nghi vấn G4): lights that are on, also inside blocks (nested up to 8 levels; each block counted once per insert).</summary>
+        private static int LightsIn(Transaction tr, BlockTableRecord btr, Dictionary<ObjectId, int> cache, int depth)
+        {
+            if (cache.TryGetValue(btr.ObjectId, out var known)) return known;
+            int n = 0;
+            cache[btr.ObjectId] = 0; // a block that holds itself counts nothing
+            foreach (ObjectId id in btr)
+            {
+                if (id.ObjectClass.Name == "AcDbLight") { if (tr.GetObject(id, OpenMode.ForRead) is Light lt && lt.IsOn) n++; }
+                else if (depth < 8 && id.ObjectClass.Name == "AcDbBlockReference" && tr.GetObject(id, OpenMode.ForRead) is BlockReference br && br.Visible)
+                    n += LightsIn(tr, (BlockTableRecord)tr.GetObject(br.BlockTableRecord, OpenMode.ForRead), cache, depth + 1);
+                if (n > 10000) break;
+            }
+            cache[btr.ObjectId] = n;
+            return n;
         }
 
         private static EntityColor Rgb(int[] c) => new EntityColor((byte)c[0], (byte)c[1], (byte)c[2]);
@@ -299,7 +344,12 @@ namespace ClaudeCAD.Plugin.Drawing
             try
             {
                 if (job.OldView != null)
-                    using (doc.LockDocument()) doc.Editor.SetCurrentView(job.OldView);
+                    using (doc.LockDocument())
+                    {
+                        doc.Database.DisableUndoRecording(true);
+                        try { doc.Editor.SetCurrentView(job.OldView); }
+                        finally { doc.Database.DisableUndoRecording(false); }
+                    }
             }
             catch (Exception ex) { Logger.Error("render: putting back the view failed", ex); }
             finally { if (job.OldView != null) { job.OldView.Dispose(); job.OldView = null; } }
@@ -369,7 +419,7 @@ namespace ClaudeCAD.Plugin.Drawing
             if (size != job.LastSize) { job.LastSize = size; job.LastSizeChange = DateTime.UtcNow; }
             double same = (DateTime.UtcNow - job.LastSizeChange).TotalSeconds;
             double endedFor = job.EndedAt == DateTime.MinValue ? -1 : (DateTime.UtcNow - job.EndedAt).TotalSeconds;
-            var state = RenderLogic.StateOf(elapsed, job.Quality.MaxWaitSeconds, size, job.LastSize, size > 0 ? same : 0, job.Cancelled, job.Failed, endedFor);
+            var state = RenderLogic.StateOf(elapsed, job.Quality.MaxWaitSeconds, size, job.LastSize, size > 0 ? same : 0, job.Cancelled, job.Failed, endedFor, job.Estimate);
             switch (state)
             {
                 case RenderLogic.State.Running:
@@ -461,7 +511,37 @@ namespace ClaudeCAD.Plugin.Drawing
             if (File.Exists(png)) File.Delete(png);
             var fb = (Dictionary<string, object>)RenderFallback(job, "self-test", 0, "named_view");
             if ((string)fb["method"] != "capture" || !File.Exists(png) || new FileInfo(png).Length < 1000) errs.Add("đường lui: không có ảnh chụp");
-            info = $"đổi tạm: {string.Join(", ", job.Changes)}; đường lui ảnh {fb["width"]}×{fb["height"]}";
+            // KFG-01: a saved view used after its transaction (as StartRender does): shown, then the user's view back
+            string vname = "CCAD-SELFTEST-G4-" + DateTime.Now.ToString("HHmmss");
+            try
+            {
+                NamedView(new ToolContext(doc, null, true, null), new Params("named_view", new Dictionary<string, object> { ["action"] = "save", ["name"] = vname }));
+                using (var copy = NamedViewCopy(doc.Database, vname, "named_view"))
+                using (doc.LockDocument())
+                using (var cur = doc.Editor.GetCurrentView())
+                {
+                    var old = (ViewTableRecord)cur.Clone();
+                    doc.Editor.SetCurrentView(copy);
+                    doc.Editor.SetCurrentView(old);
+                    old.Dispose();
+                }
+            }
+            catch (Exception ex) { errs.Add("góc nhìn đã lưu (KFG-01): " + ex.Message); }
+            finally
+            {
+                try
+                {
+                    using (doc.LockDocument())
+                    using (var tr = doc.Database.TransactionManager.StartTransaction())
+                    {
+                        var vt = (ViewTable)tr.GetObject(doc.Database.ViewTableId, OpenMode.ForRead);
+                        if (vt.Has(vname)) tr.GetObject(vt[vname], OpenMode.ForWrite).Erase();
+                        tr.Commit();
+                    }
+                }
+                catch (Exception) { }
+            }
+            info = $"đổi tạm: {string.Join(", ", job.Changes)}; đường lui ảnh {fb["width"]}×{fb["height"]}; góc nhìn đã lưu dùng được";
             return errs;
         }
 

@@ -57,9 +57,12 @@ namespace ClaudeCAD.Plugin.Drawing
             var doc = ctx.Doc;
             var db = ctx.Db;
             string path = (p.Str("path", null) ?? "").Trim().Trim('"');
+            string chatDir = AttachmentFolder();
+            CheckPathAllowed(ctx, path, chatDir, tool); // the raw path (before Windows touches it)
             bool exists = false;
             long bytes = 0;
             try { path = Path.GetFullPath(path); exists = File.Exists(path); if (exists) bytes = new FileInfo(path).Length; } catch (Exception) { }
+            CheckPathAllowed(ctx, path, chatDir, tool); // and the full path
             string kind = TraceLogic.KindOf(path, exists, bytes, tool);
             // Test & sửa G5: the content must be what the name says (a phone photo saved as .png may be WebP / HEIC)
             var head = new byte[1024];
@@ -75,9 +78,11 @@ namespace ClaudeCAD.Plugin.Drawing
             }
             // a picture pasted into the chat lives in the palette's own folder: a copy next to the drawing keeps it with the drawing
             string source = path;
-            string chatDir = AttachmentFolder();
-            if (chatDir != null && path.StartsWith(chatDir, StringComparison.OrdinalIgnoreCase))
+            if (chatDir != null && TraceLogic.IsInside(path, chatDir)) // Sửa KFG: the folder with its separator
             {
+                // Sửa KFG (nghi vấn G5): a drawing never saved has no folder; the copy would stay in Documents when it is saved elsewhere
+                if (!ctx.Doc.IsNamedDrawing)
+                    throw ToolException.Invalid($"{tool}: the drawing is not saved yet, so the pasted picture has no folder to be kept in. Ask the user to save the drawing (Ctrl+S) first, then attach again.");
                 var dest = Path.Combine(DrawingFolder(ctx), TraceLogic.CopyName(DrawingStem(ctx), path, F5Confirm.FileToken(path).Substring(0, 8)));
                 try { if (!File.Exists(dest)) File.Copy(path, dest); source = dest; }
                 catch (Exception ex) { throw ToolException.Invalid($"{tool}: could not copy the picture next to the drawing ({ex.Message})."); }
@@ -95,6 +100,8 @@ namespace ClaudeCAD.Plugin.Drawing
             string handle;
             double w, h;
             int pxW = 0, pxH = 0;
+            (Point3d min, Point3d max) corners;
+            var frame = ctx.Dispatcher?.CurrentFrame ?? UcsFrame.World;
             using (doc.LockDocument())
             using (var tr = db.TransactionManager.StartTransaction())
             {
@@ -120,7 +127,10 @@ namespace ClaudeCAD.Plugin.Drawing
                     h = width * pxH / pxW;
                     var img = new RasterImage { ImageDefId = defId, ShowImage = true };
                     img.SetDatabaseDefaults(db);
-                    img.Orientation = new CoordinateSystem3d(at, new Vector3d(w, 0, 0), new Vector3d(0, h, 0));
+                    // KFG-05: along the axes of the user's UCS (a UCS turned in plan: the picture turned with it)
+                    var ux = new Vector3d(frame.X[0], frame.X[1], 0).GetNormal();
+                    var uy = new Vector3d(frame.Y[0], frame.Y[1], 0).GetNormal();
+                    img.Orientation = new CoordinateSystem3d(at, ux * w, uy * h);
                     img.LayerId = layerId;
                     ms.AppendEntity(img);
                     tr.AddNewlyCreatedDBObject(img, true);
@@ -153,10 +163,19 @@ namespace ClaudeCAD.Plugin.Drawing
                     var e1 = r.GeometricExtents;
                     w = e1.MaxPoint.X - e1.MinPoint.X;
                     h = e1.MaxPoint.Y - e1.MinPoint.Y;
+                    // KFG-05: turned with a UCS turned in plan (around its lower-left corner)
+                    if (!frame.IsWorld && Math.Abs(frame.PlanAngleDeg) > 1e-9) r.TransformBy(Matrix3d.Rotation(frame.PlanAngleDeg * Math.PI / 180, Vector3d.ZAxis, at));
                     ent = r;
                 }
                 MarkTrace(tr, ent, source, page, false, 0);
                 handle = Acad.H(ent.ObjectId);
+                corners = Corners(ent);
+                if (ent is PdfReference && !frame.IsWorld && Math.Abs(frame.PlanAngleDeg) > 1e-9)
+                {
+                    var c = Math.Cos(frame.PlanAngleDeg * Math.PI / 180);
+                    var sn = Math.Sin(frame.PlanAngleDeg * Math.PI / 180);
+                    corners = (at, at + new Vector3d(w * c - h * sn, w * sn + h * c, 0));
+                }
                 // locked: Claude's lines never move it; it shows faded under the drawing
                 var ltr = (LayerTableRecord)tr.GetObject(layerId, OpenMode.ForWrite);
                 ltr.IsLocked = true;
@@ -169,20 +188,64 @@ namespace ClaudeCAD.Plugin.Drawing
                 ["file"] = source,
                 ["layer"] = G5Numbers.Layer,
                 // Test & sửa G5: points out in the user's UCS (the dispatcher boxes min / max in it), like the grid labels
-                ["min"] = Acad.J(new Point3d(at.X, at.Y, 0)),
-                ["max"] = Acad.J(new Point3d(at.X + w, at.Y + h, 0)),
+                ["min"] = Acad.J(corners.min),
+                ["max"] = Acad.J(corners.max),
                 ["scaled"] = false,
                 ["note"] = "Attached (locked, not plotted). It is NOT to scale yet: its width was set to " + G5Numbers.DefaultWidthMm.ToString("0", CultureInfo.InvariantCulture) +
                            " mm only to show it. Look at it with action view, find a length you know (a dimension written on the scan, or ask the user), then action scale. " + TraceLogic.DraftNote,
             };
+            // Sửa KFG-13: a pasted picture is the copy sent to Claude (≤ 1568 px): small text of a big scan may be lost
+            if (chatDir != null && TraceLogic.IsInside(path, chatDir))
+                res["pasted_note"] = $"This picture was pasted in the chat, so it is kept at most {G5Numbers.PastedMaxSide} px wide. For a large scan with small text, ask the user to drag the file itself into the chat (or give its path) for full detail.";
             if (kind == "raster") { res["pixels"] = new List<object> { pxW, pxH }; }
             else
             {
                 res["page"] = page;
                 if (pages > 0) res["pages"] = pages;
+                // Sửa KFG-11: a PDF whose pages could not be counted (compressed): said, so Claude checks it is the right page
+                else res["pages_note"] = $"The number of pages of this PDF could not be read; page {page} was attached. Tell the user, and ask which page if the PDF may have several.";
                 res["pdf_note"] = "If this PDF was made by a CAD program (vector lines, not a scan), the PDFIMPORT command of AutoCAD turns its lines into drawing objects directly: suggest it to the user instead of tracing.";
             }
             return res;
+        }
+
+        /// <summary>
+        /// Sửa KFG-05: the corners of a traced picture whose UCS images are its lower-left and upper-right corners in the UCS: a
+        /// raster picture by its orientation (origin, origin + width + height), a PDF by its box.
+        /// </summary>
+        private static (Point3d min, Point3d max) Corners(Entity e)
+        {
+            if (e is RasterImage img)
+            {
+                var cs = img.Orientation;
+                return (cs.Origin, cs.Origin + cs.Xaxis + cs.Yaxis);
+            }
+            var x = e.GeometricExtents;
+            return (new Point3d(x.MinPoint.X, x.MinPoint.Y, 0), new Point3d(x.MaxPoint.X, x.MaxPoint.Y, 0));
+        }
+
+        /// <summary>Sửa KFG (nghi vấn G5, bảo mật): no file of another computer of the network (Windows may send the sign-in there).</summary>
+        private static void CheckPathAllowed(ToolContext ctx, string path, string chatDir, string tool)
+        {
+            if (string.IsNullOrWhiteSpace(path) || (chatDir != null && TraceLogic.IsInside(path, chatDir))) return;
+            string drawing = null;
+            try { drawing = ctx.Doc.IsNamedDrawing ? ctx.Doc.Name : null; } catch (Exception) { }
+            bool network = false, same = false;
+            try
+            {
+                if (TraceLogic.UncShare(path) == null && Path.IsPathRooted(path))
+                {
+                    var root = Path.GetPathRoot(path);
+                    if (!string.IsNullOrEmpty(root) && root.Length >= 2 && root[1] == ':')
+                    {
+                        network = new DriveInfo(root.Substring(0, 1)).DriveType == DriveType.Network;
+                        same = drawing != null && string.Equals(Path.GetPathRoot(drawing), root, StringComparison.OrdinalIgnoreCase);
+                    }
+                }
+            }
+            catch (Exception) { }
+            var refusal = TraceLogic.PathRefusal(path, drawing, network, same, tool);
+            if (refusal != null) throw ToolException.Invalid(refusal);
         }
 
         private static string AttachmentFolder()
@@ -224,6 +287,8 @@ namespace ClaudeCAD.Plugin.Drawing
                 var id = Acad.IdFromHandle(db, p.Str("handle"));
                 var e = tr.GetObject(id, OpenMode.ForRead) as Entity;
                 if (!(e is RasterImage) && !(e is PdfReference)) throw ToolException.Invalid($"{tool}: {p.Str("handle")} is not a picture or PDF attached with trace_image.");
+                // KFG-06: a picture of the user (logo, xref image…) is never scaled / turned / looked at as a trace
+                if (ReadMark(tr, e) == null) throw ToolException.Invalid($"{tool}: {p.Str("handle")} is a picture of the drawing that trace_image did not attach; it is left as it is. Attach the scan with action attach (action info lists the traced pictures).");
                 return id;
             }
             var all = TracePictures(tr, db);
@@ -261,9 +326,13 @@ namespace ClaudeCAD.Plugin.Drawing
                 real = TraceLogic.ToUnits(p.Num("distance"), p.Str("unit", "mm"), mpu, tool);
                 factor = TraceLogic.ScaleFactor(new[] { p1.X, p1.Y }, new[] { p2.X, p2.Y }, real, tool);
             }
-            else turn = TraceLogic.StraightenAngle(new[] { p1.X, p1.Y }, new[] { p2.X, p2.Y }, p.Str("axis", "auto"), tool);
+            else
+            {
+                var fr = ctx.Dispatcher?.CurrentFrame ?? UcsFrame.World;
+                turn = TraceLogic.StraightenAngle(new[] { p1.X, p1.Y }, new[] { p2.X, p2.Y }, p.Str("axis", "auto"), fr.IsWorld ? 0 : fr.PlanAngleDeg, tool); // KFG-05: the UCS axis
+            }
             string handle;
-            Extents3d ext;
+            (Point3d min, Point3d max) corners;
             using (doc.LockDocument())
             using (var tr = db.TransactionManager.StartTransaction())
             {
@@ -278,15 +347,15 @@ namespace ClaudeCAD.Plugin.Drawing
                 e.TransformBy(scale ? Matrix3d.Scaling(factor, p1) : Matrix3d.Rotation(turn, Vector3d.ZAxis, p1));
                 if (scale && mark != null) MarkTrace(tr, e, mark.File, mark.Page, true, real);
                 ltr.IsLocked = wasLocked;
-                ext = e.GeometricExtents;
+                corners = Corners(e);
                 handle = Acad.H(id);
                 tr.Commit();
             }
             var r = new Dictionary<string, object>
             {
                 ["handle"] = handle,
-                ["min"] = Acad.J(new Point3d(ext.MinPoint.X, ext.MinPoint.Y, 0)),
-                ["max"] = Acad.J(new Point3d(ext.MaxPoint.X, ext.MaxPoint.Y, 0)),
+                ["min"] = Acad.J(corners.min),
+                ["max"] = Acad.J(corners.max),
             };
             if (scale)
             {
@@ -411,7 +480,7 @@ namespace ClaudeCAD.Plugin.Drawing
             int w = conv.PixelWidth, h = conv.PixelHeight, stride = w * 4;
             var px = new byte[stride * h];
             conv.CopyPixels(px, stride, 0);
-            var bg = TraceLogic.Background(px, w, h);
+            var bg = TraceLogic.LookBackgroundBgr; // Sửa KFG: the known background, never guessed from the border (zoomed inside a page)
             double[] wmin = { cap.Min.X, cap.Min.Y }, wmax = { cap.Max.X, cap.Max.Y };
             // is there anything drawn by AutoCAD over the picture? (≈ 0: it left the image out of its off-screen look)
             double sx = (wmax[0] - wmin[0]) / w, sy = (wmax[1] - wmin[1]) / h;

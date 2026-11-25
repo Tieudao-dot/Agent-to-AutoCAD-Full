@@ -67,3 +67,20 @@ này ghi một trong hai câu: "AutoCAD có vẽ ảnh nền khi chụp", hoặc
 | G4 | Sau khi vẽ lại, "soát bản vẽ" | **Không** báo layer `X-ANH-GOC` là "layer không in còn chứa hình" hay "layer không thuộc bảng chuẩn" |
 | G5 | Sau khi vẽ lại, "ra bộ hồ sơ" (bản vẽ chỉ có mặt bằng 2D) | Tờ mặt bằng chỉ có phần đã vẽ, không thu nhỏ để chứa cả ảnh nền |
 | G6 | Đường dẫn có dấu tiếng Việt và dấu cách (vd `D:\Bản vẽ\nhà phố.jpg`) | Gắn được, không có lệnh lạ chạy ở dòng lệnh |
+
+## H. Sau sửa lỗi kiểm tra độc lập (KFG, ~12 phút)
+
+1. **KFG-05:** đặt UCS xoay 30° (`UCS` → `Z` → 30), gửi một bản scan, "vẽ lại bản này": ảnh nền nằm **thẳng theo UCS** (cạnh ảnh song
+   song lưới UCS); `straighten` theo một tường nằm dọc trục x của UCS thì gần như không xoay.
+2. **KFG-06:** bản vẽ có một ảnh của cậu (logo trong khung tên). Nhờ Claude "co ảnh logo này" bằng trace: Claude phải báo ảnh đó
+   không do lệnh vẽ lại gắn, không co / xoay nó.
+3. **Đường dẫn mạng:** "vẽ lại `\\máy-khác\thư-mục\scan.png`" (máy khác với chỗ lưu bản vẽ): Claude từ chối, nhờ chép file về máy
+   hoặc kéo vào khung chat. File cùng thư mục mạng với bản vẽ đang mở: được.
+4. **KFG-11:** một PDF nhiều trang đã sửa / lưu lại nhiều lần (vd ký, ghi chú bằng Acrobat): Claude hỏi trang, số trang đúng.
+   PDF nén (Claude báo "không đọc được số trang"): Claude nói đã gắn trang 1 và hỏi lại nếu cần.
+5. **KFG-13:** máy gói 3D (hoặc chế độ "3D"): dán ảnh vào chat, không có file mới trong `%LOCALAPPDATA%\ClaudeCAD\anh-dinh-kem`.
+   Gói 2D: ảnh dán lưu ở đó; file cũ hơn 7 ngày bị dọn khi dán ảnh mới. Ảnh dán là bản ≤ 1568 px: Claude nói nên kéo file gốc
+   khi bản scan lớn, chữ nhỏ.
+6. Bản vẽ **chưa lưu** + ảnh dán: Claude nhờ lưu bản vẽ trước (không còn chép ảnh vào Documents).
+7. Phóng to vào giữa một trang PDF (`view` với `p1` / `p2` nằm trong trang): không còn cảnh báo nhầm "ảnh xem không có ảnh".
+

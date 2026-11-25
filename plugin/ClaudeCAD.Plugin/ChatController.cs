@@ -826,12 +826,14 @@ namespace ClaudeCAD.Plugin
                     ["total"] = m.Layers.Sum(l => m.LayerCounts.TryGetValue(l, out var n) ? n : 0),
                 };
             }
+            // Sửa KFG-13: the files of the pictures only where trace_image exists (2D / Full, work mode 2D / Cả hai)
+            bool tracePaths = m.Images.Count > 0 && PlanLogic.Allowed(WorkModeLogic.EffectivePlan(Activation.Plan, WorkModeLogic.Normalize(_settings.WorkMode)), "trace_image");
             if (m.Images.Count > 0)
                 attachments["images"] = m.Images.Select(i =>
                 {
                     var d = new Dictionary<string, object> { ["media_type"] = i.MediaType, ["data"] = i.Base64 };
                     // nâng cấp đợt G5: the file of the picture, so Claude can attach it under the drawing (trace_image)
-                    var path = i.SourcePath ?? UI.ChatAttachments.Save(i.Base64, i.MediaType);
+                    var path = tracePaths ? i.SourcePath ?? UI.ChatAttachments.Save(i.Base64, i.MediaType) : null;
                     if (path != null) d["path"] = path;
                     return (object)d;
                 }).ToList();
