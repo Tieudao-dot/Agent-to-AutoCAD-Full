@@ -371,7 +371,7 @@ namespace ClaudeCAD.Core.Tests
         {
             var s = Src("plugin", "ClaudeCAD.Plugin", "Drawing", "ToolDispatcher.cs");
             // def.Handler(ctx, p) only inside RunHandler (no-document tools excepted)
-            Assert.Equal(3, Regex.Matches(s, @"def\.Handler\(ctx, p\)").Count);
+            Assert.Equal(4, Regex.Matches(s, @"def\.Handler\(ctx, p\)").Count); // F2-test: + the read-only Create call
             Assert.Equal(3, Regex.Matches(s, @"RunHandler\(def, ctx0?, p, (_frame|callFrame)\)").Count);
             Assert.Contains("UcsLogic.ForMacro(p.Raw, _frame)", s);
             Assert.Contains("UcsLogic.ForMacro(p.Raw, callFrame)", s);

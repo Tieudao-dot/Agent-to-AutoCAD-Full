@@ -115,7 +115,20 @@ namespace ClaudeCAD.Plugin.Core
 
         /// <summary>KT-100; a drawing in metres gets its own name (KT-100-M) so a mm style of the same scale is not mixed up.</summary>
         public static string DimStyleName(string prefix, int scale, double mmPerUnit) =>
-            $"{prefix}-{scale}" + (mmPerUnit >= 1000 ? "-M" : mmPerUnit >= 10 ? "-CM" : "");
+            $"{prefix}-{scale}" + UnitSuffix(mmPerUnit);
+
+        /// <summary>F2-test: the unit of the drawing in the style name (dm / inch / foot drawings were named "-CM").</summary>
+        public static string UnitSuffix(double mmPerUnit)
+        {
+            bool Is(double v) => Math.Abs(mmPerUnit - v) < 1e-9;
+            if (Is(1)) return "";
+            if (Is(10)) return "-CM";
+            if (Is(25.4)) return "-IN";
+            if (Is(100)) return "-DM";
+            if (Is(304.8)) return "-FT";
+            if (Is(1000)) return "-M";
+            return mmPerUnit >= 1000 ? "-M" : mmPerUnit >= 10 ? "-CM" : "";
+        }
 
         /// <summary>Params of create_text_style.</summary>
         public static Dictionary<string, object> TextStyleParams(string prefix) => new Dictionary<string, object>

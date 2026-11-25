@@ -350,7 +350,9 @@ namespace ClaudeCAD.Plugin.Drawing
                 using (UcsScope.Enter(frame, UcsMode.Ref, def.Name)) r = def.Handler(ctx, p);
                 return UcsLogic.FixResult(r, frame);
             }
-            if (ctx.Tr == null || !ctx.Writable)
+            // a Create tool called only to read (insert_library_block without a name lists the library): nothing to place
+            if (!ctx.Writable) return def.Handler(ctx, p);
+            if (ctx.Tr == null)
             {
                 // a Create tool always writes in a transaction; refuse rather than draw in the wrong place
                 throw new ToolException(ErrorCodes.AcadError, def.Name + ": cannot place new objects in the UCS without a transaction (plugin bug).");

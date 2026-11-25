@@ -82,7 +82,8 @@ namespace ClaudeCAD.Plugin.Drawing
             var r = (TextStyleTableRecord)ctx.Tr.GetObject(id, OpenMode.ForRead);
             return new Dictionary<string, object>
             {
-                ["font"] = string.IsNullOrEmpty(r.FileName) ? r.Font.TypeFace : r.FileName,
+                // F2-test: a TrueType style made by STYLE keeps both "arial.ttf" and "Arial": compare the type face then
+                ["font"] = !string.IsNullOrEmpty(r.Font.TypeFace) ? r.Font.TypeFace : r.FileName,
                 ["height"] = r.TextSize,
                 ["width_factor"] = r.XScale,
             };
@@ -312,6 +313,15 @@ namespace ClaudeCAD.Plugin.Drawing
             double[] center = p.PointOpt("view_center");
             if (center == null) center = extOk ? new[] { (db.Extmin.X + db.Extmax.X) / 2, (db.Extmin.Y + db.Extmax.Y) / 2, 0 } : new[] { 0.0, 0, 0 };
             double ew = extOk ? db.Extmax.X - db.Extmin.X : 0, eh = extOk ? db.Extmax.Y - db.Extmin.Y : 0;
+            // F2-test: a UCS turned in plan turns the viewport with it: size (and centre) the drawing in that UCS
+            var ucs0 = UcsScope.Input;
+            if (extOk && ucs0 != null && ucs0.ZUp)
+            {
+                var (bmin, bmax) = ucs0.BoxFromWcs(new[] { db.Extmin.X, db.Extmin.Y, db.Extmin.Z }, new[] { db.Extmax.X, db.Extmax.Y, db.Extmax.Z });
+                ew = bmax[0] - bmin[0];
+                eh = bmax[1] - bmin[1];
+                if (!p.Has("view_center")) center = ucs0.ToWcs(new[] { (bmin[0] + bmax[0]) / 2, (bmin[1] + bmax[1]) / 2, bmin[2] });
+            }
             bool scaleGiven = p.Has("scale");
             int n = scaleGiven ? StandardsLogic.ScaleDenominator(p.Get("scale"), "create_sheet")
                 : extOk ? SheetLogic.FitScale(sheet, f, ew, eh) : F2Numbers.DefaultScale;

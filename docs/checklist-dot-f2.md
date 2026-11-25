@@ -90,3 +90,18 @@ Bản vẽ có vài layer (A-WALL, A-DOOR, A-DIM, A-TEXT…).
 3. Máy **Full**, chế độ **2D**: A–D dùng được. Chế độ **3D**: A, B → Claude nhắc đổi chế độ (không mời mua gói); C, D
    dùng được.
 4. Ghi macro trong lúc làm A + C ("Lưu thành macro"), mở bản vẽ trống, chạy macro: style và block ra đúng, không trùng.
+
+## F. Sau Test & sửa đợt F2 (thêm 25/11/2026, ~8 phút)
+
+*Các lỗi đã sửa ở `full/nang-cap-f2-test` (`docs/ban-giao/nang-cap-f2-test.md`). UCS = hệ trục khách tự đặt bằng lệnh
+`UCS` (biểu tượng trục X / Y ở góc màn hình đổi theo).*
+
+1. Gõ `UCS` → `Z` → 30 (xoay hệ trục 30°). Nhờ "liệt kê thư viện block". Đạt: Claude đọc ra danh sách 15 ký hiệu, không
+   báo lỗi. Rồi "chèn cửa đi 900 tại gốc": cửa nằm ở gốc UCS, xoay theo UCS.
+2. Vẫn UCS xoay 30°: vẽ một dải dài 40 m × 4 m dọc trục X của UCS, rồi "tạo trang in A3" (không nói tỉ lệ). Đạt: trang
+   in có khung nhìn xoay theo UCS (dải nằm ngang trên giấy), tỉ lệ chọn vừa khít dải (không chọn tỉ lệ nhỏ quá khiến dải
+   chỉ là một vệt nhỏ giữa trang). Gõ `UCS` → `W` khi xong.
+3. Trong một bản vẽ đã có kiểu chữ `KT-ARIAL` tự tạo bằng lệnh `STYLE` (font Arial, rộng 0,85): nhờ "thiết lập style
+   chuẩn kiến trúc 1:100". Đạt: kiểu chữ báo "không đổi" (không hiện thẻ hỏi ghi đè chỉ vì tên file font).
+4. Bản vẽ đơn vị **dm** (`INSUNITS` = 14) hoặc **inch** (1): "thiết lập style chuẩn 1:100". Đạt: kiểu kích thước tên
+   `VN-100-DM` (dm) / `VN-100-IN` (inch), không còn ghi nhầm `-CM`.
