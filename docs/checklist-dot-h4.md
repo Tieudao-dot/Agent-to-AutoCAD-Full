@@ -52,3 +52,16 @@ chụp màn hình và ghi số thứ tự.*
 | E2 | Full chế độ 3D | Claude bảo đổi chế độ 2D / Cả hai |
 | E3 | "Xóa chuẩn ABC" | Hiện **thẻ**; Đồng ý: hết trong danh sách, thư mục `abc` mất; file mẫu gốc không bị đụng |
 | E4 | Cài đè bộ cài (bản mới) rồi "có những bộ chuẩn nào" | Bộ chuẩn học trước vẫn còn |
+
+## F. Thêm ở Test & sửa H4 (~8 phút)
+
+| # | Làm gì | Thấy gì là đạt |
+| --- | --- | --- |
+| F1 | Mở file mẫu `ABC.dwt` trong một AutoCAD khác (hoặc trên máy đồng nghiệp qua thư mục mạng), rồi "học chuẩn công ty từ file này, tên ABC2" | Học được **kèm bản chép** (`chuan-cong-ty\abc2\mau.dwg` có), Claude không báo "could not be copied" |
+| F2 | Trong bản vẽ đang mở, đổi màu layer 0 và layer hiện hành (layer đang vẽ) khác chuẩn ABC, rồi "áp chuẩn ABC", Đồng ý thẻ | Hai layer đổi đúng màu / nét / độ dày như chuẩn; đối tượng trên đó vẫn còn và vẫn ở layer cũ; không báo lỗi |
+| F3 | Mở `chuan-cong-ty\abc\standard.json` bằng Notepad, xóa nửa sau rồi lưu; hỏi "có những bộ chuẩn nào", rồi "soát theo chuẩn ABC" | Danh sách ghi `abc` **hỏng**; lệnh soát báo bộ chuẩn hỏng, nhờ học lại hoặc xóa (không báo "plugin bug"); "xóa chuẩn ABC" vẫn làm được (qua thẻ) |
+| F4 | Đặt tên bộ chuẩn là "CON" | Học được; thư mục là `con-chuan` |
+| F5 | Đặt layer hiện hành là A-WALL rồi "tạo tờ in theo chuẩn ABC" | Khung tên công ty nằm trên layer **KHUNG**, không trên A-WALL |
+| F6 | "Tạo tờ in A1 theo chuẩn ABC" khi file mẫu là A3 | Claude nói khung tên công ty đặt theo tờ A3 của mẫu nên có thể lệch khỏi khung, gợi ý dùng A3 |
+| F7 | Sau C1 (soát theo chuẩn ABC), nói "sửa các kiểu chữ sai" | Claude không sửa bằng kiểu VN; nếu vẫn gọi sửa thì lệnh từ chối, "Nothing was changed" |
+| F8 | File mẫu đơn vị **mét**, bản vẽ đang mở mm: "áp chuẩn" | Claude báo kiểu kích thước / ghi chú của mẫu theo mét (cỡ chữ cần xem lại), cỡ chữ chuẩn đổi đúng ra mm |

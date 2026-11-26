@@ -126,14 +126,19 @@ namespace ClaudeCAD.Plugin.Core
         {
             var k = EstimateLogic.Key(name);
             var s = Regex.Replace(k, "[^a-z0-9]+", "-").Trim('-');
-            return s.Length == 0 ? "chuan" : s;
+            if (s.Length == 0) return "chuan";
+            // Test & sửa H4: a name Windows keeps for devices (CON, NUL, COM1…) cannot be a folder
+            return Regex.IsMatch(s, "^(con|prn|aux|nul|com[0-9]|lpt[0-9])$") ? s + "-chuan" : s;
         }
 
         public static string FolderOf(string root, string name) => Path.Combine(root, Slug(name));
 
         // ------------------------------------------------------------ the store
 
-        public static List<CompanyStandard> List(string root)
+        public static List<CompanyStandard> List(string root) => List(root, null);
+
+        /// <summary>The readable standards; the folders whose standard.json is damaged go to <paramref name="damaged"/>.</summary>
+        public static List<CompanyStandard> List(string root, List<string> damaged)
         {
             var list = new List<CompanyStandard>();
             if (string.IsNullOrEmpty(root) || !Directory.Exists(root)) return list;
@@ -141,22 +146,39 @@ namespace ClaudeCAD.Plugin.Core
             {
                 var f = Path.Combine(dir, DataFile);
                 if (!File.Exists(f)) continue;
-                try { list.Add(FromJson(File.ReadAllText(f, Encoding.UTF8))); } catch (Exception) { /* a damaged one is skipped */ }
+                try { list.Add(FromJson(File.ReadAllText(f, Encoding.UTF8))); }
+                catch (Exception) { damaged?.Add(Path.GetFileName(dir)); }
             }
             return list;
         }
 
-        /// <summary>The standard of that name (accents, case and spaces as written do not matter: the folder decides), or null.</summary>
-        public static CompanyStandard Load(string root, string name)
+        /// <summary>
+        /// The standard of that name (accents, case and spaces as written do not matter: the folder decides), or null. Test & sửa
+        /// H4: a damaged standard.json is a clear refusal (learn it again or delete it), not a plugin error.
+        /// </summary>
+        public static CompanyStandard Load(string root, string name, string tool = Tool)
         {
             var f = Path.Combine(FolderOf(root, name), DataFile);
             if (!File.Exists(f)) return null;
-            return FromJson(File.ReadAllText(f, Encoding.UTF8));
+            try { return FromJson(File.ReadAllText(f, Encoding.UTF8)); }
+            catch (Exception ex) when (!(ex is ToolException))
+            {
+                throw ToolException.Invalid($"{tool}: the saved company standard '{name}' is damaged ({Path.Combine(FolderOf(root, name), DataFile)}: {ex.Message}). " +
+                    "Learn it again from the template (company_standard learn with the same name) or delete it (company_standard delete).");
+            }
+        }
+
+        /// <summary>Test & sửa H4: the folder of that name holds a standard.json that cannot be read.</summary>
+        public static bool IsDamaged(string root, string name)
+        {
+            var f = Path.Combine(FolderOf(root, name), DataFile);
+            if (!File.Exists(f)) return false;
+            try { FromJson(File.ReadAllText(f, Encoding.UTF8)); return false; } catch (Exception) { return true; }
         }
 
         public static CompanyStandard Require(string root, string name, string tool)
         {
-            var s = Load(root, ValidName(name, tool));
+            var s = Load(root, ValidName(name, tool), tool);
             if (s != null) return s;
             var names = List(root).Select(x => x.Name).ToList();
             throw ToolException.Invalid($"{tool}: no company standard '{name}'. " + (names.Count == 0
@@ -188,10 +210,12 @@ namespace ClaudeCAD.Plugin.Core
         /// <summary>A new standard may be added (the limit), or one of the same folder is replaced.</summary>
         public static string RoomRefusal(string root, string name)
         {
-            var all = List(root);
-            if (all.Any(x => Slug(x.Name) == Slug(name))) return null;
-            return all.Count >= H4Numbers.MaxStandards
-                ? $"{Tool}: {all.Count} company standards are kept on this computer (at most {H4Numbers.MaxStandards}). Delete one first (company_standard action delete): {string.Join(", ", all.Select(x => x.Name))}."
+            var damaged = new List<string>();
+            var all = List(root, damaged);
+            if (all.Any(x => Slug(x.Name) == Slug(name)) || damaged.Contains(Slug(name))) return null;
+            // Test & sửa H4: a damaged standard still takes a place until it is learnt again or deleted
+            return all.Count + damaged.Count >= H4Numbers.MaxStandards
+                ? $"{Tool}: {all.Count + damaged.Count} company standards are kept on this computer (at most {H4Numbers.MaxStandards}). Delete one first (company_standard action delete): {string.Join(", ", all.Select(x => x.Name))}."
                 : null;
         }
 

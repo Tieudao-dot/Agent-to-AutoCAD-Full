@@ -31,7 +31,8 @@ describe('H4: company_standard', () => {
   it('setup_standards, check_drawing and create_sheet take company; create_sheet attributes', () => {
     for (const n of ['setup_standards', 'check_drawing', 'create_sheet']) assert.ok(tools.get(n).inputSchema.company?.safeParse('Công ty ABC').success, n);
     assert.ok(tools.get('create_sheet').inputSchema.attributes.safeParse({ TEN_DA: 'Nhà phố' }).success);
-    assert.ok(!tools.get('fix_drawing').inputSchema.company, 'fix_drawing never applies company styles');
+    // Test & sửa H4: fix_drawing takes company only so the plugin refuses its standard groups (it never applies company styles)
+    assert.match(tools.get('fix_drawing').inputSchema.company.description, /not repaired here/);
   });
 
   it('one line in the 2D and Full prompts, none on 3D', () => {

@@ -37,8 +37,9 @@ namespace ClaudeCAD.Plugin.Drawing
             {
                 case "list":
                 {
-                    var all = CompanyStandardLogic.List(root);
-                    return new Dictionary<string, object>
+                    var damaged = new List<string>();
+                    var all = CompanyStandardLogic.List(root, damaged);
+                    var res = new Dictionary<string, object>
                     {
                         ["standards"] = all.Select(s => (object)new Dictionary<string, object>
                         {
@@ -48,6 +49,9 @@ namespace ClaudeCAD.Plugin.Drawing
                         ["folder"] = root,
                         ["note"] = all.Count == 0 ? "No company standard on this computer yet: learn one from the company's template file (action learn)." : "Use one with setup_standards / check_drawing / create_sheet company: <name>.",
                     };
+                    // Test & sửa H4: a damaged one is named (learn it again or delete it), not hidden
+                    if (damaged.Count > 0) res["damaged"] = damaged.Cast<object>().ToList();
+                    return res;
                 }
                 case "show":
                 {
@@ -59,10 +63,12 @@ namespace ClaudeCAD.Plugin.Drawing
                 }
                 case "delete":
                 {
-                    var s = CompanyStandardLogic.Require(root, p.Str("name"), tool);
-                    RequireCard(ctx, p, tool, $"delete the company standard '{s.Name}' (its saved copy of the template too)", new[] { CompanyStandardLogic.Token("delete", s.Name) });
-                    CompanyStandardLogic.Delete(root, s.Name);
-                    return new Dictionary<string, object> { ["deleted"] = s.Name, ["note"] = "The template file itself was not touched." };
+                    // Test & sửa H4: a damaged standard (its standard.json unreadable) can still be deleted
+                    string dname = CompanyStandardLogic.ValidName(p.Str("name"), tool);
+                    string shown = CompanyStandardLogic.IsDamaged(root, dname) ? dname : CompanyStandardLogic.Require(root, dname, tool).Name;
+                    RequireCard(ctx, p, tool, $"delete the company standard '{shown}' (its saved copy of the template too)", new[] { CompanyStandardLogic.Token("delete", shown) });
+                    CompanyStandardLogic.Delete(root, shown);
+                    return new Dictionary<string, object> { ["deleted"] = shown, ["note"] = "The template file itself was not touched." };
                 }
                 default:
                     return LearnStandard(ctx, p, root, tool);
@@ -74,9 +80,11 @@ namespace ClaudeCAD.Plugin.Drawing
             var name = CompanyStandardLogic.ValidName(p.Str("name"), tool);
             var room = CompanyStandardLogic.RoomRefusal(root, name);
             if (room != null) throw ToolException.Invalid(room);
-            var before = CompanyStandardLogic.Load(root, name);
-            if (before != null)
-                RequireCard(ctx, p, tool, $"replace the company standard '{before.Name}' learnt before from {before.Source}", new[] { CompanyStandardLogic.Token("replace", name) });
+            bool damagedBefore = CompanyStandardLogic.IsDamaged(root, name);
+            var before = damagedBefore ? null : CompanyStandardLogic.Load(root, name);
+            if (before != null || damagedBefore)
+                RequireCard(ctx, p, tool, before != null ? $"replace the company standard '{before.Name}' learnt before from {before.Source}" : $"replace the damaged company standard '{name}'",
+                    new[] { CompanyStandardLogic.Token("replace", name) });
 
             var s = new CompanyStandard { Name = name, LearnedAt = DateTime.Now.ToString("yyyy-MM-dd HH:mm", CultureInfo.InvariantCulture) };
             Dictionary<string, object> info;
@@ -97,14 +105,18 @@ namespace ClaudeCAD.Plugin.Drawing
                 var copy = CompanyStandardLogic.TemplatePath(root, name);
                 long bytes = new FileInfo(od.Path).Length;
                 if (bytes > (long)H4Numbers.MaxTemplateMb * 1024 * 1024)
+                {
                     s.Notes.Add($"The template is {bytes / 1048576.0:0.#} MB (more than {H4Numbers.MaxTemplateMb} MB): no copy kept, so title blocks are not copied into sheets; layers and text styles still apply.");
+                    // Test & sửa H4: the copy of a template learnt before under this name is not this template
+                    try { if (File.Exists(copy)) File.Delete(copy); } catch (Exception) { }
+                }
                 else
                 {
                     try
                     {
                         var tmp = copy + ".tmp";
                         if (od.Kind == "dxf") od.Db.SaveAs(tmp, DwgVersion.Current); // the side database, never the file
-                        else File.Copy(od.Path, tmp, true);
+                        else CopyShared(od.Path, tmp); // Test & sửa H4: a template open in AutoCAD elsewhere is still copied
                         if (File.Exists(copy)) File.Delete(copy);
                         File.Move(tmp, copy);
                         s.TemplateKept = true;
@@ -112,16 +124,28 @@ namespace ClaudeCAD.Plugin.Drawing
                     catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException || ex is Autodesk.AutoCAD.Runtime.Exception)
                     {
                         s.Notes.Add("The template could not be copied (" + ex.Message + "): title blocks are not copied into sheets.");
+                        try { if (File.Exists(copy)) File.Delete(copy); } catch (Exception) { }
                     }
                 }
             }
             CompanyStandardLogic.Save(root, s);
             var r = CompanyStandardLogic.Summary(s, false);
             r["template"] = info;
-            r["replaced"] = before != null;
+            r["replaced"] = before != null || damagedBefore;
             r["folder"] = CompanyStandardLogic.FolderOf(root, name);
             r["next"] = $"Tell the user what was learnt (counts, title blocks, paper). Use it with setup_standards / check_drawing / create_sheet company: \"{name}\". The template file was not changed.";
             return r;
+        }
+
+        /// <summary>
+        /// Test & sửa H4: copies a file that another program may hold open for writing (AutoCAD keeps the drawing it edits open):
+        /// File.Copy asks to deny other writers and fails then; this reads it sharing read / write / delete, like OtherDrawing.
+        /// </summary>
+        internal static void CopyShared(string from, string to)
+        {
+            using (var src = new FileStream(from, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete))
+            using (var dst = new FileStream(to, FileMode.Create, FileAccess.Write, FileShare.None))
+                src.CopyTo(dst);
         }
 
         /// <summary>Layers, styles, layouts (paper, title block, viewport), units and the most used text heights of a template.</summary>
@@ -321,29 +345,25 @@ namespace ClaudeCAD.Plugin.Drawing
                         // text styles first (dimension / multileader styles use them), then layers, dims, multileaders
                         CloneFrom(od, ctx, missingText.Where(stst.Has).Select(n => stst[n]), ctx.Db.TextStyleTableId, false);
                         CloneFrom(od, ctx, missingLayers.Where(slt.Has).Select(n => slt[n]), ctx.Db.LayerTableId, false);
-                        CloneFrom(od, ctx, replaceLayers.Where(slt.Has).Select(n => slt[n]), ctx.Db.LayerTableId, true);
+                        // Test & sửa H4: a layer that differs gets the standard's properties set on it (not replaced by a clone:
+                        // replacing layer 0, the current layer or a layer in use is refused or loses its objects' link);
+                        // only a linetype the drawing lacks comes from the template
+                        var dlt = (LinetypeTable)ctx.Tr.GetObject(ctx.Db.LinetypeTableId, OpenMode.ForRead);
+                        var sltt = (LinetypeTable)tr.GetObject(od.Db.LinetypeTableId, OpenMode.ForRead);
+                        CloneFrom(od, ctx, replaceLayers.Select(n => s.Layers.First(x => x.Name == n).Linetype).Distinct(StringComparer.OrdinalIgnoreCase)
+                            .Where(n => !string.IsNullOrEmpty(n) && !dlt.Has(n) && sltt.Has(n)).Select(n => sltt[n]), ctx.Db.LinetypeTableId, false);
                         CloneFrom(od, ctx, missingDim.Where(sdst.Has).Select(n => sdst[n]), ctx.Db.DimStyleTableId, false);
                         CloneFrom(od, ctx, missingMl.Where(smld.Contains).Select(n => smld.GetAt(n)), ctx.Db.MLeaderStyleDictionaryId, false);
                         tr.Commit();
                     }
+                    foreach (var name in replaceLayers) ApplyLayer(ctx, s.Layers.First(x => x.Name == name), notes);
                     created = missingLayers.Count + missingText.Count + missingDim.Count + missingMl.Count;
                     updated = replaceLayers.Count;
                 }
                 else
                 {
                     // the copy of the template is gone: layers and text styles from what was learnt; the rest is said
-                    foreach (var name in missingLayers.Concat(replaceLayers))
-                    {
-                        var l = s.Layers.First(x => x.Name == name);
-                        var id = EnsureLayerF2(ctx, l.Name, 7, l.Plottable);
-                        var rec = (LayerTableRecord)ctx.Tr.GetObject(id, OpenMode.ForWrite);
-                        rec.Color = ColorOfText(l.Color);
-                        try { Acad.EnsureLinetype(ctx, l.Linetype); rec.LinetypeObjectId = ((LinetypeTable)ctx.Tr.GetObject(ctx.Db.LinetypeTableId, OpenMode.ForRead))[l.Linetype]; }
-                        catch (Exception) { notes.Add($"layer {l.Name}: linetype {l.Linetype} not found, Continuous kept."); }
-                        if (l.Lineweight >= 0) rec.LineWeight = (LineWeight)Geometry.LineWeightFrom(l.Lineweight);
-                        rec.IsPlottable = l.Plottable;
-                        if (l.Description.Length > 0) rec.Description = l.Description;
-                    }
+                    foreach (var name in missingLayers.Concat(replaceLayers)) ApplyLayer(ctx, s.Layers.First(x => x.Name == name), notes);
                     foreach (var name in missingText)
                     {
                         var t = s.TextStyles.First(x => x.Name == name);
@@ -358,6 +378,11 @@ namespace ClaudeCAD.Plugin.Drawing
                         notes.Add($"The copy of the template is missing: {missingDim.Count + missingMl.Count} dimension / multileader styles were not made ({string.Join(", ", missingDim.Concat(missingMl).Take(10))}). Learn the standard again from the template file.");
                 }
             }
+
+            // Test & sửa H4: a template in other units (metres…) has dimension / multileader styles sized for them
+            double dmm = MmPerUnitOf(ctx, out _);
+            if (Math.Abs(s.MmPerUnit - dmm) > 1e-9 && s.DimStyles.Count + s.MLeaderStyles.Count > 0)
+                notes.Add($"The template is in other units ({s.MmPerUnit} mm per unit, this drawing {dmm}): its dimension / multileader styles are sized for those units (check text and arrow sizes, or set DIMSCALE); text heights were converted.");
 
             // current styles: those current in the template, when the drawing now has them
             if (p.Bool("make_current", true))
@@ -389,6 +414,25 @@ namespace ClaudeCAD.Plugin.Drawing
             }
             ctx.NeedsRegen = true;
             return result;
+        }
+
+        /// <summary>The layer of the drawing (made when missing) gets the standard's colour, linetype, lineweight, plot and description.</summary>
+        private static void ApplyLayer(ToolContext ctx, CompanyStandard.Layer l, List<object> notes)
+        {
+            var id = EnsureLayerF2(ctx, l.Name, 7, l.Plottable);
+            var rec = (LayerTableRecord)ctx.Tr.GetObject(id, OpenMode.ForWrite);
+            rec.Color = ColorOfText(l.Color);
+            try
+            {
+                var ltt = (LinetypeTable)ctx.Tr.GetObject(ctx.Db.LinetypeTableId, OpenMode.ForRead);
+                if (!ltt.Has(l.Linetype)) Acad.EnsureLinetype(ctx, l.Linetype);
+                ltt = (LinetypeTable)ctx.Tr.GetObject(ctx.Db.LinetypeTableId, OpenMode.ForRead);
+                rec.LinetypeObjectId = ltt[l.Linetype];
+            }
+            catch (Exception) { notes.Add($"layer {l.Name}: linetype {l.Linetype} not found, its linetype was kept."); }
+            rec.LineWeight = l.Lineweight >= 0 ? (LineWeight)Geometry.LineWeightFrom(l.Lineweight) : LineWeight.ByLineWeightDefault;
+            rec.IsPlottable = l.Plottable;
+            if (l.Description.Length > 0) rec.Description = l.Description;
         }
 
         private static Autodesk.AutoCAD.Colors.Color ColorOfText(string c)

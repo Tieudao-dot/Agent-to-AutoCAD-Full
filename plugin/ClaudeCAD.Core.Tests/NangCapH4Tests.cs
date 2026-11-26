@@ -153,7 +153,7 @@ namespace ClaudeCAD.Core.Tests
             var t = Src("plugin", "ClaudeCAD.Plugin", "Drawing", "CompanyStandardTools.cs");
             Assert.Contains("d.Register(new ToolDef(\"company_standard\", false, CompanyStandardTool, noTransaction: true));", t);
             Assert.Contains("OtherDrawing.Open(ctx, p.Str(\"file\"), tool)", t); // the shared reader of H3, not its own
-            Assert.Contains("CompanyStandardLogic.Token(\"delete\", s.Name)", t);
+            Assert.Contains("CompanyStandardLogic.Token(\"delete\", shown)", t); // Test & sửa H4: the name of a damaged one too
             Assert.Contains("CompanyStandardLogic.Token(\"replace\", name)", t);
             Assert.DoesNotContain("OpenMode.ForWrite", t.Substring(t.IndexOf("private static void ReadTemplate", StringComparison.Ordinal), t.IndexOf("// ------------------------------------------------------------ the copy of the template", StringComparison.Ordinal) - t.IndexOf("private static void ReadTemplate", StringComparison.Ordinal)));
             Assert.Contains("RegisterCompanyStandard(d);", Src("plugin", "ClaudeCAD.Plugin", "Drawing", "DrawingService.cs"));

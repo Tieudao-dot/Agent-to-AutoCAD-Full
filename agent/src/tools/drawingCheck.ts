@@ -46,6 +46,7 @@ export function drawingCheckTools(b: ToolBridge): AnyTool[] {
         handles: handles.max(2000).optional().describe('Only these objects of the group (default the whole group).'),
         layouts: z.boolean().optional().describe('As in the check_drawing call the user saw (false = model only; default true).'),
         sheets: z.array(z.string().min(1)).max(50).optional().describe('As in that check_drawing call.'),
+        company: z.string().min(1).max(60).optional().describe('As in that check_drawing call (a company standard: its style groups are not repaired here).'),
         confirm_handles: handles.max(50).optional().describe(confirmDesc),
       },
       { destructive: true }),

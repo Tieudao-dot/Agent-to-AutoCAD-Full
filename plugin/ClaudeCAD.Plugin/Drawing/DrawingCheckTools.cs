@@ -445,7 +445,10 @@ namespace ClaudeCAD.Plugin.Drawing
                     ["examples"] = hs.Take(examples).Cast<object>().ToList(),
                     // a company standard: its styles are not the ones fix_drawing applies (setup_standards company, then set_entity_props)
                     ["fix"] = def.Fixable && !(company != null && def.NeedsStandard) ? def.Id : null,
-                    ["hint"] = def.Hint,
+                    // Test & sửa H4: the hint of a standard group must not send Claude to fix_drawing (it applies the Vietnamese styles)
+                    ["hint"] = company != null && def.NeedsStandard
+                        ? $"company standard '{company.Name}': setup_standards company adds its missing layers / styles; move the objects with set_entity_props / match_properties if the user wants (fix_drawing does not apply a company standard)"
+                        : def.Hint,
                 };
                 if (s.Layers.TryGetValue(def.Id, out var ls)) g["layers"] = ls.Take(30).Cast<object>().ToList();
                 if (s.Layouts.TryGetValue(def.Id, out var lo)) g["layouts"] = lo.Take(30).Cast<object>().ToList();
@@ -487,6 +490,10 @@ namespace ClaudeCAD.Plugin.Drawing
             var def = DrawingCheckLogic.Find(fix);
             if (def == null || !def.Fixable)
                 throw ToolException.Invalid($"fix_drawing: 'fix' must be one of {string.Join(", ", DrawingCheckLogic.FixableIds)}; the other groups are only reported.");
+            // Test & sửa H4: after a check against a company standard, its standard groups are not repaired with the Vietnamese styles
+            if (p.Has("company") && def.NeedsStandard)
+                throw ToolException.Invalid($"fix_drawing: '{fix}' found against the company standard '{p.Str("company")}' is not repaired here (fix_drawing applies the Vietnamese standard styles). " +
+                    "Use setup_standards with company to add the company's styles, then set_entity_props / match_properties on the objects the user chooses. Nothing was changed.");
             string layer = p.Str("layer", null)?.Trim();
             var err = DrawingCheckLogic.TargetLayerError(fix, layer);
             if (err != null) throw ToolException.Invalid(err);

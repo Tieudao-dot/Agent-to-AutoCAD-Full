@@ -496,7 +496,7 @@ namespace ClaudeCAD.Plugin.Drawing
                             : new BlockReference(new Point3d(sheet.X1, sheet.Y0, 0), tbId);
                         br.SetDatabaseDefaults(db);
                         ByLayer(br);
-                        if (cDef == null) br.LayerId = frameLayer;
+                        br.LayerId = frameLayer; // Test & sửa H4: the company title block too (not the current layer)
                         var brId = space.AppendEntity(br);
                         tr.AddNewlyCreatedDBObject(br, true);
                         var tbtr = (BlockTableRecord)tr.GetObject(tbId, OpenMode.ForRead);
@@ -545,6 +545,9 @@ namespace ClaudeCAD.Plugin.Drawing
                             if (cDef != null) result["company_title_block"] = new Dictionary<string, object> { ["block"] = cTitle.Block, ["tags"] = cTitle.Tags.Cast<object>().ToList(), ["viewport_from_template"] = cVp };
                             else result["company_note"] = "The Vietnamese frame and title block were used: " + cWhy + ".";
                             if (cPaper != null && cPaper.Name == null) result["company_paper_note"] = $"The template's paper ({cPaper.Media}, {cPaper.W} × {cPaper.H} mm) is not A0 … A4: {paper} was used.";
+                            // Test & sửa H4: the company title block sits where it was on the template's paper: on another paper it is off the sheet
+                            else if (cDef != null && cPaper != null && (cPaper.Name != paper || cPaper.Landscape != sheet.Landscape))
+                                result["company_paper_note"] = $"The company title block was placed as on the template's {cPaper.Name} {(cPaper.Landscape ? "landscape" : "portrait")} sheet, but this sheet is {paper} {(sheet.Landscape ? "landscape" : "portrait")}: it may sit off the frame. Tell the user; use the template's paper unless they want this one.";
                         }
                         result["title_block_handle"] = Acad.H(brId);
                         result["title_fields"] = values.ToDictionary(kv => kv.Key, kv => (object)kv.Value);
