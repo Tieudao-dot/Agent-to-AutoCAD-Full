@@ -195,13 +195,15 @@ namespace ClaudeCAD.Plugin.Drawing
                         // Sửa KTH-15: a closed outline is the same whatever its first vertex and direction
                         var verts = new List<double[]>(); var bul = new List<double>();
                         for (int i = 0; i < n; i++) { var v = pl.GetPoint2dAt(i); verts.Add(new[] { v.X * f, v.Y * f }); bul.Add(pl.GetBulgeAt(i)); }
-                        var (cn, cb) = DrawingCompareLogic.CanonicalLoop(verts, bul, pl.Elevation * f);
-                        it.Nums = cn;
-                        it.Exact = "c|" + string.Join(",", cb.Select(x => R(x + 0.0)));
+                        // Sửa KTH-28: compared within the tolerance from any first vertex (DrawingCompareLogic.SameLoop)
+                        DrawingCompareLogic.SetLoop(it, verts, bul, pl.Elevation * f);
                     }
-                    // Sửa KTH-16: a changed polyline is found by its first vertex (x, y, elevation), not by x0, y0, x1
-                    it.AnchorAt = new[] { it.Nums[0], it.Nums[1], it.Nums[it.Nums.Length - 1] };
-                    if (it.Alt != null) it.AltAnchorAt = new[] { it.Alt[0], it.Alt[1], it.Alt[it.Alt.Length - 1] };
+                    else
+                    {
+                        // Sửa KTH-16: a changed polyline is found by its first vertex (x, y, elevation), not by x0, y0, x1
+                        it.AnchorAt = new[] { it.Nums[0], it.Nums[1], it.Nums[it.Nums.Length - 1] };
+                        if (it.Alt != null) it.AltAnchorAt = new[] { it.Alt[0], it.Alt[1], it.Alt[it.Alt.Length - 1] };
+                    }
                     it.Sizes["width"] = pl.ConstantWidth * f; // Test & sửa H3: within the tolerance
                     break;
                 }

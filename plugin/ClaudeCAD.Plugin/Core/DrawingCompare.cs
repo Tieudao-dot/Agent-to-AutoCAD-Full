@@ -63,6 +63,11 @@ namespace ClaudeCAD.Plugin.Core
         public double Reach = 1;
         /// <summary>Sửa KTH-16: the point a changed shape is found by (its first point), when not the first three numbers.</summary>
         public double[] AnchorAt, AltAnchorAt;
+        /// <summary>
+        /// Sửa KTH-28: a closed outline: its vertices (x, y each) and bulges, compared within the tolerance from any first vertex
+        /// and either way round (SameLoop). Nums then hold its centre (mean of the vertices) and elevation, stable within it.
+        /// </summary>
+        public double[] Loop, LoopBulges;
         public double[] Min, Max;
     }
 
@@ -225,7 +230,57 @@ namespace ClaudeCAD.Plugin.Core
 
         private static bool SameShape(CmpItem a, CmpItem b, double t) =>
             a.Kind == b.Kind && a.Exact == b.Exact && (Close(a.Nums, b.Nums, t) || (a.Alt != null && Close(a.Alt, b.Nums, t))) && SameVolume(a.Volume, b.Volume) &&
-            SameAngles(a, b, t);
+            SameAngles(a, b, t) && SameLoop(a.Loop, a.LoopBulges, b.Loop, b.LoopBulges, t);
+
+        /// <summary>
+        /// Sửa KTH-28: a closed outline as a compare item: Loop / LoopBulges (canonical order), Nums = centre + elevation (the cell
+        /// it is looked up by never depends on which vertex comes first), Exact = closed + vertex count, the anchor at its first
+        /// vertex.
+        /// </summary>
+        public static void SetLoop(CmpItem it, IList<double[]> verts, IList<double> bulges, double elevation)
+        {
+            var (nums, bs) = CanonicalLoop(verts, bulges, elevation);
+            int n = verts.Count;
+            it.Loop = nums.Take(2 * n).ToArray();
+            it.LoopBulges = bs;
+            double cx = 0, cy = 0;
+            for (int i = 0; i < n; i++) { cx += it.Loop[2 * i]; cy += it.Loop[2 * i + 1]; }
+            it.Nums = new[] { cx / Math.Max(1, n), cy / Math.Max(1, n), elevation };
+            it.Exact = "c|" + n.ToString(CultureInfo.InvariantCulture);
+            it.Alt = null;
+            it.AnchorAt = new[] { it.Loop[0], it.Loop[1], elevation };
+            it.AltAnchorAt = null;
+        }
+
+        /// <summary>
+        /// Sửa KTH-28: two closed outlines are the same within t, whatever vertex each starts at and whichever way round: every
+        /// vertex within t and every bulge equal (1e-6). Only the shifts where the first vertex meets are tried.
+        /// </summary>
+        public static bool SameLoop(double[] a, double[] ab, double[] b, double[] bb, double t)
+        {
+            if (a == null || b == null) return a == null && b == null;
+            if (a.Length != b.Length || ab == null || bb == null || ab.Length != bb.Length) return false;
+            int n = a.Length / 2;
+            if (n == 0) return true;
+            bool V(int i, int j) => Math.Abs(a[2 * i] - b[2 * j]) <= t * (1 + 1e-9) && Math.Abs(a[2 * i + 1] - b[2 * j + 1]) <= t * (1 + 1e-9);
+            for (int s = 0; s < n; s++)
+            {
+                if (!V(0, s)) continue;
+                // the same way round: vertex i of a is vertex s + i of b, segment i the same segment
+                bool ok = true;
+                for (int i = 0; i < n && ok; i++) ok = V(i, (s + i) % n) && Math.Abs(ab[i] - bb[(s + i) % n]) <= 1e-6;
+                if (ok) return true;
+                // the other way round: vertex i of a is vertex s - i of b; segment i of a is segment (s - i - 1) of b read backwards
+                ok = true;
+                for (int i = 0; i < n && ok; i++)
+                {
+                    int j = ((s - i) % n + n) % n, seg = ((s - i - 1) % n + n) % n;
+                    ok = V(i, j) && Math.Abs(ab[i] + bb[seg]) <= 1e-6;
+                }
+                if (ok) return true;
+            }
+            return false;
+        }
 
         /// <summary>Sửa KTH-17: the angles of two objects agree within the tolerance at their reach.</summary>
         public static bool SameAngles(CmpItem a, CmpItem b, double t)
@@ -284,7 +339,8 @@ namespace ClaudeCAD.Plugin.Core
         public static List<string> Differences(CmpItem o, CmpItem n, double tol, bool geometry)
         {
             var what = new List<string>();
-            if (geometry && !(o.Exact == n.Exact && (Close(o.Nums, n.Nums, tol) || (o.Alt != null && Close(o.Alt, n.Nums, tol))) && SameAngles(o, n, tol)))
+            if (geometry && !(o.Exact == n.Exact && (Close(o.Nums, n.Nums, tol) || (o.Alt != null && Close(o.Alt, n.Nums, tol))) && SameAngles(o, n, tol) &&
+                              SameLoop(o.Loop, o.LoopBulges, n.Loop, n.LoopBulges, tol)))
                 what.Add("geometry" + Moved(o, n));
             if (!SameVolume(o.Volume, n.Volume))
                 what.Add($"volume {Fmt(o.Volume)} → {Fmt(n.Volume)}");

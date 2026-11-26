@@ -23,18 +23,13 @@ namespace ClaudeCAD.Core.Tests
             var verts = new List<double[]>();
             for (int i = 0; i + 1 < xy.Length; i += 2) verts.Add(new[] { xy[i], xy[i + 1] });
             var it = new CmpItem { Handle = h, Kind = "pline", Layer = "A-WALL" };
-            if (closed)
-            {
-                var (n, b) = DrawingCompareLogic.CanonicalLoop(verts, verts.Select(_ => 0.0).ToList(), 0);
-                it.Nums = n;
-                it.Exact = "c|" + string.Join(",", b.Select(x => x.ToString("0.######")));
-            }
+            if (closed) DrawingCompareLogic.SetLoop(it, verts, verts.Select(_ => 0.0).ToList(), 0);
             else
             {
                 it.Nums = xy.Concat(new[] { 0.0 }).ToArray();
                 it.Exact = "o|" + string.Join(",", verts.Select(_ => "0"));
+                it.AnchorAt = new[] { it.Nums[0], it.Nums[1], it.Nums[it.Nums.Length - 1] };
             }
-            it.AnchorAt = new[] { it.Nums[0], it.Nums[1], it.Nums[it.Nums.Length - 1] };
             it.Min = new[] { xy.Where((_, i) => i % 2 == 0).Min(), xy.Where((_, i) => i % 2 == 1).Min(), 0 };
             it.Max = new[] { xy.Where((_, i) => i % 2 == 0).Max(), xy.Where((_, i) => i % 2 == 1).Max(), 0 };
             return it;
@@ -84,6 +79,50 @@ namespace ClaudeCAD.Core.Tests
             var w1 = Pline("D", false, 0, 0, 4500, 0, 4500, 3000);
             Assert.Equal("changed", Assert.Single(DrawingCompareLogic.Compare(new List<CmpItem> { w0 }, new List<CmpItem> { w1 }, "geometry", 1)).Change);
             Assert.Contains("it.AnchorAt = new[] { it.Nums[0], it.Nums[1], it.Nums[it.Nums.Length - 1] };", Src("plugin", "ClaudeCAD.Plugin", "Drawing", "CompareTools.cs"));
+        }
+
+        // ------------------------------------------------------------ KTH-28: near-equal x of two vertices
+
+        [Fact]
+        public void Kth28_two_vertices_with_nearly_the_same_x_still_match()
+        {
+            var a = Pline("A", true, 0, 0, 4000, 0, 4000, 3000, 0.3, 3000);
+            var b = Pline("B", true, 0.3, 0, 4000, 0, 4000, 3000, 0, 3000);
+            Assert.Empty(DrawingCompareLogic.Compare(new List<CmpItem> { a }, new List<CmpItem> { b }, "geometry", 1));
+            // drawn the other way round and from another corner as well
+            var c = Pline("C", true, 4000, 3000, 4000, 0, 0.3, 0, 0, 3000);
+            Assert.Empty(DrawingCompareLogic.Compare(new List<CmpItem> { a }, new List<CmpItem> { c }, "geometry", 1));
+            // 1.5 mm off: a change of shape, found by its anchor
+            var d = Pline("D", true, 1.5, 0, 4000, 0, 4000, 3000, 0, 3000);
+            var r = DrawingCompareLogic.Compare(new List<CmpItem> { b }, new List<CmpItem> { d }, "geometry", 1);
+            Assert.NotEmpty(r);
+            Assert.DoesNotContain(r, x => x.Change == "changed" && x.What.Count == 0);
+        }
+
+        [Fact]
+        public void Kth28_a_room_read_from_metres_with_rounding_noise_matches_the_one_in_millimetres()
+        {
+            // the old file in metres (× 1000 after the unit factor, with the float noise of the conversion)
+            double f = 1000;
+            var m = new[] { 0.0, 0, 4.0000003, 0, 4.0000003, 2.9999998, 0.0000004, 2.9999998 }.Select(v => v * f).ToArray();
+            var mm = Pline("MM", true, 0, 0, 4000, 0, 4000, 3000, 0, 3000);
+            var fromM = Pline("M", true, m);
+            Assert.Empty(DrawingCompareLogic.Compare(new List<CmpItem> { fromM }, new List<CmpItem> { mm }, "geometry", 1));
+        }
+
+        [Fact]
+        public void Kth28_same_loop_handles_bulges_both_ways_and_refuses_other_shapes()
+        {
+            // a room with one arched side; the same room from another corner, the other way round
+            var a = new CmpItem(); DrawingCompareLogic.SetLoop(a, new List<double[]> { new[] { 0.0, 0 }, new[] { 4000.0, 0 }, new[] { 4000.0, 3000 }, new[] { 0.3, 3000 } }, new List<double> { 0, 0.5, 0, 0 }, 0);
+            var b = new CmpItem(); DrawingCompareLogic.SetLoop(b, new List<double[]> { new[] { 4000.0, 3000 }, new[] { 4000.0, 0 }, new[] { 0.3, 0 }, new[] { 0.0, 3000 } }, new List<double> { -0.5, 0, 0, 0 }, 0);
+            Assert.True(DrawingCompareLogic.SameLoop(a.Loop, a.LoopBulges, b.Loop, b.LoopBulges, 1));
+            var c = new CmpItem(); DrawingCompareLogic.SetLoop(c, new List<double[]> { new[] { 0.0, 0 }, new[] { 4000.0, 0 }, new[] { 4000.0, 3000 }, new[] { 0.0, 3000 } }, new List<double> { 0, 0, 0.5, 0 }, 0);
+            Assert.False(DrawingCompareLogic.SameLoop(a.Loop, a.LoopBulges, c.Loop, c.LoopBulges, 1), "the arch on another side");
+            Assert.False(DrawingCompareLogic.SameLoop(a.Loop, a.LoopBulges, null, null, 1));
+            Assert.True(DrawingCompareLogic.SameLoop(null, null, null, null, 1));
+            Assert.Equal("c|4", a.Exact);
+            Assert.Equal(3, a.Nums.Length); // centre + elevation: the cell it is found by
         }
 
         // ------------------------------------------------------------ KTH-17: angles within the tolerance

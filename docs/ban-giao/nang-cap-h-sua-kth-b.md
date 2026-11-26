@@ -28,6 +28,27 @@ Thread `session_01D56HmFrL65iF9oJokvqXw5`. Nhánh `full/nang-cap-h-sua-kth-b`, t
 
 Test cũ không phải sửa: không test nào trông vào việc skill đã xóa tự quay lại hay vào góc cung so khít.
 
+## 1b. KTH-28 (lỗi sinh từ bản sửa KTH-15, giao 26/11 sau lượt soát lại)
+
+- **Lỗi:** chọn đỉnh đầu theo x nhỏ nhất bằng phép so khít. Hai đỉnh có x chênh nhau dưới dung sai (vd 0,3 mm) làm hai bản chọn
+  hai đỉnh đầu khác nhau, nên một phòng giống hệt bị báo "bớt + thêm".
+- **Sửa** (`Core/DrawingCompare.cs`): không phụ thuộc vào đỉnh đầu nữa.
+  - `SetLoop` lưu các đỉnh và độ cong vào `CmpItem.Loop` / `LoopBulges`.
+  - `Nums` của polyline kín giờ là tâm (trung bình các đỉnh) + cao độ. Tâm không đổi khi đổi đỉnh đầu và lệch không quá dung
+    sai khi từng đỉnh lệch không quá dung sai, nên ô tra cứu luôn khớp.
+  - `SameLoop` so hai vòng theo dung sai, thử mọi đỉnh đầu mà đỉnh 0 trùng tới, cả hai chiều; độ cong đi theo cạnh, đảo dấu
+    khi đọc ngược. `SameShape` và phần báo "đổi hình" đều dùng `SameLoop`.
+  - `CompareTools.cs` gọi `SetLoop` cho polyline kín.
+- **Test** (`NangCapHSuaKthBTests.cs`, thêm 3):
+  - `Kth28_two_vertices_with_nearly_the_same_x_still_match`: đúng ca của báo cáo, thêm ca ngược chiều + đỉnh đầu khác, và ca lệch
+    1,5 mm;
+  - `Kth28_a_room_read_from_metres_with_rounding_noise…`: ca đổi đơn vị m → mm có sai số làm tròn;
+  - `Kth28_same_loop_handles_bulges…`: cung ở cạnh khác thì không trùng.
+- **Còn lại:** điểm neo của phòng **đã đổi hình** (bước 2, tìm "đổi" theo điểm đầu) vẫn là đỉnh đầu theo thứ tự chuẩn. Phòng
+  vừa đổi hình vừa có hai đỉnh chênh x dưới dung sai có thể ra "bớt + thêm" thay vì "đổi". Ca này hiếm, không làm sai việc
+  nhận ra phòng giống hệt.
+- Test sau lần sửa: lõi 1608 / 1608, trợ lý 441 / 441 (sau khi gộp `full/nang-cap-h-tong-the` @ `b7e408f`), build 3 target qua.
+
 ## 2. File
 
 - Sửa:
