@@ -164,6 +164,7 @@ Mọi số ở `H3Numbers` (`Core/DrawingCompare.cs`) và `OtherDrawingNumbers` 
 - Khớp hình học: điểm đầu cùng chỗ thì tính là "đổi". Đối tượng dời xa hơn dung sai thì báo một "bớt" + một "thêm", không đoán
   ghép.
 - Bản vẽ đang mở mà file kia cũng đang mở trong AutoCAD: đọc bản đã lưu của file kia, có ghi chú.
+- Polyline có cung vẽ ngược chiều ở file kia không được nhận là cùng một hình khi khớp theo hình học (báo một bớt + một thêm). Polyline thẳng và đường thẳng vẽ ngược chiều thì nhận đúng. Khớp theo handle không bị ảnh hưởng.
 
 ## 8. Token lúc mở chat
 
