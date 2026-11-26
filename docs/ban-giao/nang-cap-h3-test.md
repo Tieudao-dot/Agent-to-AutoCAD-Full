@@ -59,4 +59,7 @@ Không thêm số mới cho khách:
 
 ## 7. CI
 
-(điền sau khi chạy)
+- Lượt 1: run 45787556240 trên `e418b55`, **xanh**.
+  - Log trợ lý: `# pass 423`, `# fail 0`.
+  - Lõi 1536 / 1536, UI test 38 / 38, build 3 target qua.
+- Commit này chỉ ghi kết quả CI vào tài liệu, code giữ nguyên như `e418b55`.
