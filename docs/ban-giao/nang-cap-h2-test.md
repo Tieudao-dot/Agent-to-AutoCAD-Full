@@ -62,3 +62,15 @@ Không có số mới. Ba số của người viết (đời mặc định 2013,
 - SketchUp nhập DWG / DXF 2013.
 
 ## 7. CI
+
+Run 45778398891 (#78) trên `7ef0740` (commit code cuối): **xanh**, dùng 1 / 2 lượt. Commit sau đó chỉ là tài liệu (mục này).
+
+Bước "Sidecar - install, test…" của CI Windows bỏ qua mã lỗi của `npm test` (luồng chính đã báo; thread đợt F1 sửa riêng trên
+`full/nang-cap-h-sua-ci`), nên đọc log từng job:
+
+| Run | Commit | Lõi | Trợ lý trên Windows | Test hỏng |
+| --- | --- | --- | --- | --- |
+| 45774685657 (H2 người viết) | `21c6d90` | 1466 / 1466 | `# pass 408`, `# fail 3` | đúng 3 lỗi cũ từ bản chốt G: `F5: multileader of the standard`, `G5: looks at a traced picture`, `KT-42: 3D inserts blocks but sets no attribute values` |
+| 45778398891 (#78, bản rà) | `7ef0740` | 1471 / 1471 | `# pass 409`, `# fail 3` | đúng 3 lỗi cũ đó; không có lỗi mới của H2 |
+
+Trên Linux cả 412 test trợ lý đều đạt; 3 lỗi chỉ có trên Windows, không do H2.
