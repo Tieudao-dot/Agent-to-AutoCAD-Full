@@ -35,13 +35,13 @@ Quy ước hệ thống vẫn là **mm**; tọa độ thực tính bằng **mét
 ## 3. Tuyến đường
 
 - Tim tuyến: `draw_polyline` qua các điểm tọa độ (đã đổi trục, × k), layer `C-ROAD-CL`. Đoạn cong nằm ngang: dùng `bulges` (bulge = tan(góc ở tâm / 4), dấu dương khi cong phải theo chiều đi).
-- Mép đường, bó vỉa, vỉa hè: `offset_entity` từ tim tuyến về hai phía theo mặt cắt (ví dụ đường B = 7.5 m: mép đường ±3750, bó vỉa ±3750, mép vỉa hè ±(3750 + bề rộng hè)).
+- Mép đường, bó vỉa, vỉa hè: `offset_entity` từ tim tuyến về hai phía theo mặt cắt (ví dụ đường B = 7.5 m, bản vẽ mm; bản vẽ m chia 1000: mép đường ±3750, bó vỉa ±3750, mép vỉa hè ±(3750 + bề rộng hè)).
 - Vỉa hè: hatch `AR-CONC` scale 50 hoặc `ANSI37` scale 500, layer `C-SIDEWALK`.
 
 ## 4. Lý trình
 
 - Ghi dạng `Km0+125.50` (km + mét, 2 chữ số thập phân). Lý trình 0 tại điểm đầu tuyến (hoặc theo người dùng).
-- Vạch lý trình mỗi 50 m (cọc chẵn) và tại điểm đầu/cuối, đỉnh cong: đoạn ngắn 2000 vuông góc tim tuyến, layer `C-STATION`; chữ cao 1250 (2.5 mm × 500), xoay song song vạch.
+- Vạch lý trình mỗi 50 m (cọc chẵn) và tại điểm đầu/cuối, đỉnh cong: đoạn ngắn 2000 vuông góc tim tuyến, layer `C-STATION`; chữ cao 1250 (2.5 mm × 500), xoay song song vạch (số theo bản vẽ mm; bản vẽ m chia 1000).
 - Tính vị trí: dùng `get_entity` của tim tuyến (vertices) để tính chiều dài cộng dồn; với đoạn thẳng nội suy tuyến tính.
 
 ## 5. Cao độ

@@ -70,3 +70,4 @@ Khoảng cao đều và cọc 20 m: kỹ sư đối chiếu TCVN hiện hành tr
 | E11 | *(Sửa KTP-26)* Tuyến có đỉnh trùng điểm cuối (trong 1 cm) | Cọc cuối ghi `Cuối/Đ…`, không phải `C…/Đ…` |
 | E12 | *(Sửa lỗi `Alignment.At`)* Bản vẽ **mm**, tuyến dài vài trăm mét, ghi lý trình rồi vẽ trắc dọc / trắc ngang | Cọc rải đủ dọc tuyến (không dồn ở mét đầu); cọc cuối đúng điểm cuối polyline |
 | E13 | *(Sửa KTP-24)* Bản vẽ **mét**, vẽ trắc dọc | Claude báo trục "metres × 1" (bản vẽ mm: "× 1000"); khung trắc đặt đúng chỗ |
+| E14 | *(Sửa KTP-50 / 52 / 53)* File `.txt` dòng đầu "DANH SACH DIEM" rồi các dòng `P1 X Y Z`; rồi file tiêu đề `So hieu diem X Y Z`; rồi file tiêu đề `Tên điểm X Y Z Mã` mà dòng đầu không có mã | Cả ba đọc đủ điểm, có cao độ, đúng cột; dòng tên bảng được kể là bỏ qua |

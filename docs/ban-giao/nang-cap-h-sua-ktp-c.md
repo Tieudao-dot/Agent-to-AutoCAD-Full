@@ -46,6 +46,18 @@ Test: `plugin/ClaudeCAD.Core.Tests/SuaKtpCTests.cs` (10 test).
 
 Sửa luôn câu của tớ ở `dot-h-cho-duyet.md` (KTP-47a, theo quyết định luồng chính): "không sao" gõ riêng là **không** đồng ý.
 
+## 1c. Lượt 3
+
+| Mã | Lỗi | Sửa | Test |
+| --- | --- | --- | --- |
+| KTP-50 | Không tiêu đề: dòng mẫu là dòng đầu có ≥ 2 ô, kể cả dòng chữ ("DANH SACH DIEM" → mất cao độ; "Toa do", "Ten diem", "Sodiem,2" → 0 điểm) | Dòng mẫu là dòng đầu có ≥ 2 ô đọc được số | 4 ca (Theory) |
+| KTP-52 | "So hieu diem X Y Z" → 0 điểm | Thêm "so hieu diem"; ghép chữ bằng cách thử mọi cách ghép (từ khóa 2–3 chữ) và lấy cách ra đúng số ô | `KTP52_…` |
+| KTP-53 | So số ô với một dòng số liệu: "Tên điểm X Y Z Mã" mà dòng đầu thiếu mã → lệch cột | So với dòng rộng nhất trong 5 dòng số liệu đầu | `KTP53_…` |
+| KTP-54 (b) | `dot-h-cho-duyet.md` dòng KTP-12 ghi chưa đúng | Ghi rõ chỉ bỏ dòng một chữ không có dấu phẩy | |
+| Ghi chú | `SKILL.md` §3–4 số ví dụ chỉ đúng bản vẽ mm | Thêm "(bản vẽ mm; bản vẽ m chia 1000)" | |
+
+Checklist: thêm E14 vào P2-H6 và `checklist-dot-h6.md`; `dot-h-cho-duyet.md` thêm dòng KTP-50, KTP-52 / 53.
+
 ## 2. Gộp và tài liệu
 
 - Gộp `full/nang-cap-h-sua-ktp-b` @ `bca2b36` (H7 / H8) rồi `full/nang-cap-h-sua-ktp-a` @ `06c3fb6` (H9, kèm báo cáo

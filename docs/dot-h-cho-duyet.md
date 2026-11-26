@@ -375,7 +375,9 @@ Không có số mới khách thấy (H9 và Test & sửa H9).
 | *(H7)* `under_beams` | theo từng đoạn tuyến (dầm trên đoạn nào thì đoạn đó) | |
 | *(H6, KTP-08 / 09)* File không tiêu đề, cột 1 là số nguyên nhỏ trước tọa độ thật | cột 1 là tên điểm | cho cột bằng `columns` |
 | *(H6, KTP-10)* Số "1.234" (một dấu chấm) | là số thập phân 1,234; chỉ ≥ 2 nhóm hoặc nhóm + phẩy thập phân mới là dấu nghìn | |
-| *(H6, KTP-12 / 39)* File `.txt` cách bằng dấu cách, số phẩy thập phân | mọi dòng nhiều chữ có phẩy chỉ nằm trong số → tách theo khoảng trắng (tab nếu có), phẩy là dấu thập phân; dòng một chữ không tính | cho cột bằng `columns` |
+| *(H6, KTP-12 / 39)* File `.txt` cách bằng dấu cách, số phẩy thập phân | mọi dòng nhiều chữ có phẩy chỉ nằm trong số → tách theo khoảng trắng (tab nếu có), phẩy là dấu thập phân; dòng một chữ **không có dấu phẩy** (vd "SODIEM") không tính, dòng một chữ có phẩy ("Sodiem,2") thì giữ cách tách bằng phẩy | cho cột bằng `columns` |
+| *(H6, KTP-50)* File không tiêu đề, dòng đầu là tên bảng ("DANH SACH DIEM", "Sodiem,2") | cột đoán theo dòng đầu có ≥ 2 ô là số; dòng tên bảng bị bỏ qua và được kể trong số dòng bỏ qua | cho cột bằng `columns` |
+| *(H6, KTP-52 / 53)* Tiêu đề nhiều chữ trong file cách bằng dấu cách ("So hieu diem X Y Z", "Tên điểm X Y Z Mã") | ghép chữ thành từ khóa đã biết sao cho đủ số ô của dòng số liệu rộng nhất trong 5 dòng đầu | |
 | *(H6, KTP-22)* Tiêu đề có cả "STT" và "Tên điểm" | tên lấy cột "Tên"; "STT / TT / ID / No" chỉ làm tên khi không có cột tên | |
 | *(H6, KTP-26)* Đỉnh tuyến trùng cọc đầu / cuối (trong 1 cm) | tên cọc "Đầu/Đ…", "Cuối/Đ…" | |
 | *(KTP-02 → 04, H9)* Xác nhận gõ tay | **danh sách đóng**: chỉ đồng ý khi mọi chữ trong câu là chữ đồng ý, chữ của cụm đồng ý ("xóa đi", "go ahead") hoặc chữ đệm (nhé, ạ, please…). Câu có chữ khác ("ko", "nếu", "if", "thôi", "chờ", "later", "❌"…) là không chắc = không đồng ý, Claude hỏi lại. "thôi được", "được thôi", "ok thôi" là đồng ý; "thôi" đứng riêng và "không sao" là không (sửa KTP-47, 26/11) | thêm chữ đệm vào `FILLERS` (`agent/src/agent/confirmation.ts`) khi thử thật thấy thiếu |

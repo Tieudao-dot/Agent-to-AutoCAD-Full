@@ -169,5 +169,41 @@ namespace ClaudeCAD.Core.Tests
             var g = SurveyReader.Interpret(SurveyReader.ParseText("Tên điểm;X;Y;Z\nP1;1234012.5;567045.25;12.35\n"));
             Assert.Equal("P1", g.Points[0].Name);
         }
+
+        [Theory]
+        [InlineData("Toa do\n1234012.5 567045.25 12.35\n1234020 567050 12.8\n", false)]
+        [InlineData("Ten diem\nP1 1234012.5 567045.25 12.35\nP2 1234020 567050 12.8\n", true)]
+        [InlineData("Sodiem,2\nP1,1234012.5,567045.25,12.35\nP2,1234020,567050,12.8\n", true)]
+        [InlineData("DANH SACH DIEM\nP1 1234012.5 567045.25 12.35\nP2 1234020 567050 12.8\n", true)]
+        public void KTP50_a_title_line_is_not_the_sample_row(string text, bool named)
+        {
+            var f = SurveyReader.Interpret(SurveyReader.ParseText(text));
+            Assert.Equal(2, f.Points.Count);
+            Assert.True(f.HasZ);
+            Assert.Equal(12.8, f.Points[1].Z.Value, 6);
+            Assert.Equal(1234020, f.Points[1].X, 6);
+            if (named) Assert.Equal("P2", f.Points[1].Name);
+        }
+
+        [Fact]
+        public void KTP52_so_hieu_diem_header()
+        {
+            var f = SurveyReader.Interpret(SurveyReader.ParseText("So hieu diem X Y Z\nP1 1234012.5 567045.25 12.35\nP2 1234020 567050 12.8\n"));
+            Assert.StartsWith("from the header row", f.Columns);
+            Assert.Equal(2, f.Points.Count);
+            Assert.Equal("P2", f.Points[1].Name);
+            Assert.Equal(12.8, f.Points[1].Z.Value, 6);
+        }
+
+        [Fact]
+        public void KTP53_header_with_a_code_when_the_first_row_has_none()
+        {
+            var f = SurveyReader.Interpret(SurveyReader.ParseText("Tên điểm X Y Z Mã\nP1 1234012.5 567045.25 12.35\nP2 1234020 567050 12.8 TN\nP3 1234030 567060 13.1 TN\n"));
+            Assert.StartsWith("from the header row", f.Columns);
+            Assert.Equal(3, f.Points.Count);
+            Assert.Equal("P2", f.Points[1].Name);
+            Assert.Equal(567050, f.Points[1].Y, 6);
+            Assert.Equal("TN", f.Points[1].Code);
+        }
 }
 }

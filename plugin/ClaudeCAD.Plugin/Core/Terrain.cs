@@ -356,7 +356,7 @@ namespace ClaudeCAD.Plugin.Core
             return Regex.Replace(sb.ToString(), @"\s*\(.*?\)\s*", " ").Trim();
         }
 
-        private static readonly string[] NameKeys = { "ten", "ten diem", "diem", "so hieu", "ma diem", "name", "point", "pt", "ten moc", "moc" };
+        private static readonly string[] NameKeys = { "ten", "ten diem", "diem", "so hieu", "so hieu diem", "ma diem", "name", "point", "pt", "ten moc", "moc" };
         /// <summary>Sửa KTP-22: a row number column names the points only when there is no name column.</summary>
         private static readonly string[] RowNumberKeys = { "stt", "so tt", "tt", "id", "no", "no." };
         private static readonly string[] XKeys = { "x", "toa do x", "northing", "n" };
@@ -406,21 +406,28 @@ namespace ClaudeCAD.Plugin.Core
         private static List<string> HeaderKeys(IList<List<string>> rows, int r)
         {
             var plain = rows[r].Select(Plain).ToList();
-            var next = rows.Skip(r + 1).FirstOrDefault(x => x.Any(y => !string.IsNullOrWhiteSpace(y)));
-            if (next == null || plain.Count <= next.Count) return plain;
-            var joined = new List<string>();
-            for (int i = 0; i < plain.Count; i++)
+            // Sửa KTP-53: the widest of the next few data rows (a first row without its code must not decide)
+            var next = rows.Skip(r + 1).Where(x => x.Any(y => !string.IsNullOrWhiteSpace(y))).Take(5).ToList();
+            if (next.Count == 0) return plain;
+            int target = next.Max(x => x.Count);
+            if (plain.Count <= target) return plain;
+            // Sửa KTP-52: try the ways of joining neighbouring words into known keys ("so hieu diem", "ten diem", "cao do")
+            // and keep the one with exactly as many cells as the data
+            return JoinKeys(plain, 0, target) ?? plain;
+        }
+
+        private static List<string> JoinKeys(List<string> words, int i, int left)
+        {
+            if (i == words.Count) return left == 0 ? new List<string>() : null;
+            if (left <= 0 || words.Count - i < left) return null;
+            for (int w = Math.Min(3, words.Count - i); w >= 1; w--)
             {
-                string k = plain[i];
-                for (int w = 3; w >= 2; w--)
-                    if (i + w <= plain.Count)
-                    {
-                        var m = string.Join(" ", plain.Skip(i).Take(w));
-                        if (IsKey(m)) { k = m; i += w - 1; break; }
-                    }
-                joined.Add(k);
+                var k = string.Join(" ", words.Skip(i).Take(w));
+                if (w > 1 && !IsKey(k)) continue;
+                var rest = JoinKeys(words, i + w, left - 1);
+                if (rest != null) { rest.Insert(0, k); return rest; }
             }
-            return joined.Count == next.Count ? joined : plain;
+            return null;
         }
 
         /// <summary>
@@ -445,7 +452,9 @@ namespace ClaudeCAD.Plugin.Core
                 if (h >= 0) { start = h + 1; f.Columns = "from the header row"; }
                 else
                 {
-                    var first = rows.FirstOrDefault(r => r.Count >= 2) ?? new List<string>();
+                    // Sửa KTP-50: the sample row is the first with two cells that read as numbers (a title such as "DANH SACH
+                    // DIEM" or "Sodiem,2" is not a data row)
+                    var first = rows.FirstOrDefault(r => r.Count(x => TryNumber(x, out _)) >= 2) ?? new List<string>();
                     bool numberedName = FirstColumnIsName(rows, true), numberedName3 = FirstColumnIsName(rows, false);
                     int n = first.Count;
                     bool firstNumber = TryNumber(Cell(first, 0), out _);
