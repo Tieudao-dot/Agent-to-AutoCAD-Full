@@ -156,7 +156,7 @@ Không thêm lệnh, không đổi mô tả lệnh hay system prompt, nên khôn
 
 - Lõi: 1472 / 1472 qua (gồm test H1 trong `NangCapH1Tests.cs` và 14 test bản vá F2).
 - Trợ lý: 412 / 412 qua (thêm 5).
-- Build 3 target: xem mục 10.
+- Build 3 target (net48, net8.0-windows, net10.0-windows): qua.
 - UI test Windows: `NangCapH1PdfTests` dựng trang PDF mẫu (đường dẫn có dấu cách và tiếng Việt) thành PNG 1024 px. Trang
   không có thì trả lý do.
 
@@ -164,7 +164,7 @@ Không thêm lệnh, không đổi mô tả lệnh hay system prompt, nên khôn
 
 - Lượt 1: run 45775374409 trên `87d159e`, **đỏ**. Test lõi `Overwrite_refusals_never_change_anything_and_name_the_handles`
   tìm chuỗi có `\n` trong mã nguồn, nhưng bản checkout trên Windows dùng CRLF. Đã sửa: test đổi CRLF về LF trước khi tìm.
-- Lượt 2: xem dòng dưới (ghi sau khi chạy).
+- Lượt 2: run 45776040553 trên `2fb37b7`, **xanh**. Lõi 1472 / 1472; UI test `NangCapH1PdfTests` qua (Windows dựng trang PDF mẫu thành PNG 1024 px trong 3 giây). Commit này chỉ thêm kết quả CI vào tài liệu, code giữ nguyên như `2fb37b7`.
 - **Lỗi có sẵn, không thuộc H1** (báo luồng chính): trên Windows CI, 3 test trợ lý cũ hỏng từ trước
   (`nangcapf5.test.ts` "setup_standards makes it…", `nangcapg5.test.ts` "a new user message starts the count again",
   `plan-fixes.test.ts` "KT-42"). Run xanh 45710924398 của nhánh tích hợp đợt G cũng hỏng đúng 3 test này.
