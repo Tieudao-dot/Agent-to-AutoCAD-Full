@@ -1338,6 +1338,52 @@ namespace ClaudeCAD.Plugin
                     : new SelfTestRules.Verdict(false, string.Join("; ", errs));
             });
 
+            // Nâng cấp đợt H5: two copies of this drawing in a folder: plan, check both (read only), set up the standard in
+            // both (a backup first, then the file written); the card token is needed; the open drawing is unchanged
+            Check("Nâng cấp đợt H5: làm nhiều file (soát 2 file, áp chuẩn 2 file có sao lưu, cần thẻ)", () =>
+            {
+                var errs = new List<string>();
+                string before = doc.Name;
+                var ctx0 = new ToolContext(doc, null, false, null);
+                string folder = Path.Combine(dir, "h5-thu-muc");
+                Directory.CreateDirectory(folder);
+                foreach (var n in new[] { "a.dwg", "b.dwg" })
+                    DrawingService.ExportDrawing(ctx0, new Params("export_drawing", new Dictionary<string, object> { ["format"] = "dwg", ["output"] = Path.Combine(folder, n), ["overwrite"] = true }));
+                Dictionary<string, object> B(Dictionary<string, object> q) => (Dictionary<string, object>)DrawingService.BatchFiles(ctx0, new Params("batch_files", q));
+                var plan = B(new Dictionary<string, object> { ["action"] = "plan", ["task"] = "check", ["folder"] = folder });
+                if (Convert.ToInt32(plan["count"]) != 2) errs.Add($"kế hoạch có {plan["count"]} file (cần 2)");
+                string stamp = (string)plan["stamp"];
+                try { B(new Dictionary<string, object> { ["action"] = "run", ["task"] = "check", ["folder"] = folder, ["index"] = 0, ["stamp"] = stamp }); errs.Add("chạy mà không cần thẻ"); }
+                catch (ToolException) { }
+                var ok = new List<object> { plan["confirm_token"] };
+                for (int i = 0; i < 2; i++)
+                {
+                    var r = B(new Dictionary<string, object> { ["action"] = "run", ["task"] = "check", ["folder"] = folder, ["index"] = i, ["stamp"] = stamp, [SolidLogic.UserConfirmedParam] = ok });
+                    if ((string)r["status"] != "ok") errs.Add($"soát {r["file"]}: {r["status"]} {(r.TryGetValue("reason", out var why) ? why : "")}");
+                }
+                var sp = B(new Dictionary<string, object> { ["action"] = "plan", ["task"] = "standards", ["folder"] = folder, ["scale"] = "1:100" });
+                var sok = new List<object> { sp["confirm_token"] };
+                for (int i = 0; i < 2; i++)
+                {
+                    var r = B(new Dictionary<string, object> { ["action"] = "run", ["task"] = "standards", ["folder"] = folder, ["scale"] = "1:100", ["index"] = i, ["stamp"] = (string)sp["stamp"], [SolidLogic.UserConfirmedParam] = sok });
+                    if ((string)r["status"] != "ok") errs.Add($"áp chuẩn {r["file"]}: {r["status"]} {(r.TryGetValue("reason", out var why) ? why : "")}");
+                    else if (!File.Exists((string)r["backup"])) errs.Add("không có bản sao lưu");
+                }
+                using (var side = new Database(false, true))
+                {
+                    side.ReadDwgFile(Path.Combine(folder, "a.dwg"), FileOpenMode.OpenForReadAndAllShare, true, "");
+                    using (var tr = side.TransactionManager.StartTransaction())
+                    {
+                        if (!((TextStyleTable)tr.GetObject(side.TextStyleTableId, OpenMode.ForRead)).Has("VN-ARIAL")) errs.Add("file a.dwg chưa có kiểu VN-ARIAL sau khi áp chuẩn");
+                        tr.Commit();
+                    }
+                }
+                if (Directory.GetFiles(folder, ".claudecad-tam-*").Length > 0) errs.Add("còn file tạm");
+                if (doc.Name != before) errs.Add("bản vẽ đang mở bị đổi tên");
+                try { Directory.Delete(folder, true); } catch (Exception ex) { errs.Add("thư mục còn bị khóa: " + ex.Message); }
+                return errs.Count == 0 ? new SelfTestRules.Verdict(true, "soát 2 file, áp chuẩn 2 file (có sao lưu), cần thẻ") : new SelfTestRules.Verdict(false, string.Join("; ", errs));
+            });
+
             string versionFile = Path.Combine(dir, "version-copy.dwg");
             Do("Bản sao phiên bản (Wblock + SaveAs)", () =>
             {

@@ -148,6 +148,7 @@ namespace ClaudeCAD.Plugin.UI
             ["export_stl"] = "Xuất STL",
             ["export_drawing"] = "Xuất DXF / DWG / FBX",
             ["company_standard"] = "Chuẩn công ty", // nâng cấp đợt H4
+            ["batch_files"] = "Làm nhiều file", // nâng cấp đợt H5
             ["volume_schedule"] = "Bảng khối lượng",
             ["setup_standards"] = "Thiết lập style chuẩn",
             ["create_sheet"] = "Tạo trang in có khung tên",
