@@ -248,5 +248,5 @@ chính đưa. Nhóm 2 (tự cập nhật, thống kê mức dùng, bản dùng t
 
 | Đợt | Thread viết | Thread rà | Nhánh | Trạng thái |
 | --- | --- | --- | --- | --- |
-| H1 | Thread đợt F1 `session_01D56HmFAo4dZ7c8sbeNB9eh` (giao 26/11) | Chưa giao | `full/nang-cap-h1` (từ `547d6af`) | Đang viết |
-| H2 | Thread Test & sửa F1 `session_01D56HmFrL65iF9oJokvqXw5` (giao 26/11) | Chưa giao | `full/nang-cap-h2` (từ `547d6af`) | Đang viết |
+| H1 | Thread đợt F1 `session_01D56HmFAo4dZ7c8sbeNB9eh` (giao 26/11 14h05) | Chưa giao | `full/nang-cap-h1` (từ `547d6af`) | Viết xong 14h27: `87d159e`, lõi 1472, trợ lý 412; CI 45775374409 đang chạy |
+| H2 | Thread Test & sửa F1 `session_01D56HmFrL65iF9oJokvqXw5` (giao 26/11 14h05) | Thread đợt F2 `session_01D56HmFcYrzsme7GoBm8tNC` (giao 26/11 14h35), nhánh `full/nang-cap-h2-test` | `full/nang-cap-h2` (từ `547d6af`) | Viết xong 14h31: `export_drawing` (DXF, DWG 2018 → 2000, mặc định 2013; FBX 7.4 plugin tự ghi, gói 3D / Full), `21c6d90` (code `3d64e75`), CI 45774685657 xanh, lõi 1466, trợ lý 411. Số chờ duyệt: đời mặc định 2013, danh sách đời, tối đa 2 000 khối mỗi FBX. Chưa mở FBX bằng Blender / 3ds Max. Đang rà |
