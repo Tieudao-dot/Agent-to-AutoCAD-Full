@@ -4,6 +4,7 @@ import { summarizeResult } from '../agent/content.js';
 import type { ToolResponse } from '../ipc/protocol.js';
 import { cadTool, clean, confirmDesc, handles, toCallToolResult, type AnyTool, type ToolBridge } from './common.js';
 import { viewPreset, visualStyle } from './solids.js';
+import { tr } from '../i18n.js';
 
 /**
  * Nâng cấp đợt F3 (25/11/2026, docs/ban-giao/nang-cap-f3.md): materials and named views (+ a PNG with the materials).
@@ -57,7 +58,7 @@ export async function runRender(b: ToolBridge, params: Record<string, unknown>, 
   const maxWait = typeof start.max_wait_seconds === 'number' ? start.max_wait_seconds : 900;
   const estimate = typeof start.estimate_seconds === 'number' ? start.estimate_seconds : 60;
   const t0 = now();
-  b.status('named_view', 'running', { summary: `bắt đầu render, khoảng ${estimate} s (Dừng / Esc để hủy)` });
+  b.status('named_view', 'running', { summary: tr('bắt đầu render, khoảng {0} s (Dừng / Esc để hủy)', estimate) });
   const stop = async (why: string): Promise<ToolResponse> => {
     const r = await b.call('named_view', { action: 'render_stop' }).catch(() => undefined);
     return r && r.ok ? { ...r, result: { ...(r.result as object), reason: why } } : { id: first.id, ok: false, error: { code: 'ACAD_ERROR', message: `named_view: ${why}` } } as ToolResponse;
@@ -72,7 +73,7 @@ export async function runRender(b: ToolBridge, params: Record<string, unknown>, 
       // Test & sửa G4: AutoCAD busy rendering in the foreground does not answer in time; that is not the end of the
       // render: keep asking (its answer waits in the plugin), within the safety limit
       if (st.error.code === 'TIMEOUT' && (now() - t0) / 1000 <= maxWait + 60) {
-        b.status('named_view', 'running', { summary: 'AutoCAD đang bận render, chờ thêm…' });
+        b.status('named_view', 'running', { summary: tr('AutoCAD đang bận render, chờ thêm…') });
         continue;
       }
       if (st.error.code === 'TIMEOUT') return stop('AutoCAD did not answer before the maximum wait');

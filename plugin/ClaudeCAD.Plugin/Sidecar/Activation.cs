@@ -280,7 +280,7 @@ namespace ClaudeCAD.Plugin.Sidecar
                 using (var c = NewClient())
                 {
                     var r = LicenseLogic.ParseResponse(await c.GetStringAsync(url).ConfigureAwait(false));
-                    if (!r.ok) return (false, L.Tr("Không gửi được yêu cầu: ") + r.error);
+                    if (!r.ok) return (false, L.Tr("Không gửi được yêu cầu: ") + L.TrServer(r.error));
                     try { Directory.CreateDirectory(Root); File.WriteAllText(RequestStamp, DateTime.UtcNow.ToString("o", CultureInfo.InvariantCulture)); } catch { }
                     Logger.Info("activation requested for " + MachineCode);
                     return (true, L.Tr("Đã gửi yêu cầu kích hoạt cho chủ plugin. {0} để nhận key.", Contact));
@@ -392,7 +392,7 @@ namespace ClaudeCAD.Plugin.Sidecar
                 {
                     var r = LicenseLogic.ParseResponse(await c.GetStringAsync(url).ConfigureAwait(false));
                     if (!r.ok || string.IsNullOrEmpty(r.status))
-                        return (false, L.Tr("Không kiểm tra được trạng thái máy: ") + (r.error ?? L.Tr("máy chủ không trả lời đúng.")));
+                        return (false, L.Tr("Không kiểm tra được trạng thái máy: ") + (L.TrServer(r.error) ?? L.Tr("máy chủ không trả lời đúng.")));
                     var st = LicenseLogic.VerifyStatus(r.status, MachineCode, DateTime.UtcNow);
                     if (!st.Ok) return (false, L.Tr("Trả lời của máy chủ không hợp lệ: ") + st.Reason + ".");
                     // a fresh answer dated by the service: this clock is right again (a clock that was wrong-ahead recovers)
@@ -482,7 +482,7 @@ namespace ClaudeCAD.Plugin.Sidecar
                     using (var c = NewClient())
                     {
                         var r = LicenseLogic.ParseResponse(await c.GetStringAsync(url).ConfigureAwait(false));
-                        if (!r.ok || string.IsNullOrEmpty(r.license)) return (false, r.error ?? L.Tr("Key không đúng."));
+                        if (!r.ok || string.IsNullOrEmpty(r.license)) return (false, L.TrServer(r.error) ?? L.Tr("Key không đúng."));
                         license = r.license;
                         if (!string.IsNullOrEmpty(r.status))
                         {

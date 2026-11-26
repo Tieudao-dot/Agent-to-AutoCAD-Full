@@ -15,6 +15,7 @@ import { DEFAULT_TOOL_TIMEOUT_MS } from './ipc/protocol.js';
 import { ToolRpc } from './ipc/rpc.js';
 import { initLog, log, truncate } from './log.js';
 import type { ToolBridge } from './tools/common.js';
+import { tr } from './i18n.js';
 
 export const VERSION = '0.9.4';
 
@@ -128,7 +129,7 @@ async function main(): Promise<void> {
     // A user_message is only sent when the palette considers the previous turn over, so even while this side is
     // still busy with an abandoned turn, ending the palette's (new) turn is right.
     if (line.includes('"user_message"') || (line === '' && !session.busy)) {
-      conn.send({ type: 'turn_end', error: 'Trợ lý không đọc được tin nhắn (có thể do ảnh đính kèm quá lớn). Bớt ảnh hoặc dùng ảnh nhỏ hơn rồi gửi lại.' });
+      conn.send({ type: 'turn_end', error: tr('Trợ lý không đọc được tin nhắn (có thể do ảnh đính kèm quá lớn). Bớt ảnh hoặc dùng ảnh nhỏ hơn rồi gửi lại.') });
     }
   });
   conn.on('close', (reason) => {
@@ -138,7 +139,7 @@ async function main(): Promise<void> {
     setTimeout(() => process.exit(0), 200);
   });
 
-  conn.send({ type: 'ready', info: 'sidecar sẵn sàng', version: VERSION });
+  conn.send({ type: 'ready', info: 'sidecar sẵn sàng', version: VERSION }); // vi: sent before the language is known; the plugin shows it through Tr
 
   // Exit if AutoCAD disappears without closing the pipe.
   const parentPid = Number(values['parent-pid']);

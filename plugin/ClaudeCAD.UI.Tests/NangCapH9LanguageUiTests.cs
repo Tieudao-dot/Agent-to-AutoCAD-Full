@@ -65,10 +65,18 @@ namespace ClaudeCAD.UI.Tests
                 Assert.StartsWith("Cài đặt", settings.ToolTip as string);
                 Assert.Equal(new[] { "Tiếng Việt", "English" }, lang.Items.Cast<object>().Select(x => x.ToString()).ToArray());
                 input.Text = "Gửi bản vẽ này";
+                var theme = Field<ComboBox>(c, "_theme");
+                theme.SelectedIndex = 2; // "Sáng": swapping the item text must keep the choice and not report a change
+                Pump();
+                int reported = 0;
+                c.SettingsChanged += _ => reported++;
 
                 L.Lang = L.En;
                 c.Relabel(L.Vi, L.En);
                 Pump();
+                Assert.Equal(2, theme.SelectedIndex);
+                Assert.Equal("Light", theme.SelectedItem as string);
+                Assert.Equal(0, reported);
                 Assert.Equal("Send", send.Content);
                 Assert.StartsWith("Settings", settings.ToolTip as string);
                 Assert.Equal("Gửi bản vẽ này", input.Text); // the user's own words stay
@@ -79,6 +87,31 @@ namespace ClaudeCAD.UI.Tests
                 Pump();
                 Assert.Equal("Gửi", send.Content);
                 Assert.StartsWith("Cài đặt", settings.ToolTip as string);
+            }
+            finally
+            {
+                L.Lang = L.Vi;
+            }
+        });
+
+        [Fact]
+        public void Picking_english_in_the_list_reaches_the_controller() => Sta(() =>
+        {
+            // sửa KTP-A: the list had no SelectionChanged, so picking English did nothing
+            try
+            {
+                L.Lang = L.Vi;
+                var c = Open();
+                PaletteSettings got = null;
+                c.SettingsChanged += s => got = s;
+                Field<ComboBox>(c, "_language").SelectedIndex = 1;
+                Pump();
+                Assert.NotNull(got);
+                Assert.Equal(L.En, got.Language);
+                got = null;
+                Field<ComboBox>(c, "_language").SelectedIndex = 0;
+                Pump();
+                Assert.Equal(L.Vi, got?.Language);
             }
             finally
             {

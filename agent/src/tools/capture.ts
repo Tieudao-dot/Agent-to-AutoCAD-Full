@@ -3,6 +3,7 @@ import { z } from 'zod';
 import type { ToolResponse } from '../ipc/protocol.js';
 import { clean, handles, point, toCallToolResult, type AnyTool, type ToolBridge } from './common.js';
 import { viewDirection, viewPreset, visualStyle } from './solids.js';
+import { tr } from '../i18n.js';
 
 /**
  * MCP result of capture_view: the PNG as an image block Claude can look at, plus the
@@ -58,7 +59,7 @@ export function captureTools(b: ToolBridge): AnyTool[] {
         const ms = Date.now() - t0;
         if (resp.ok) {
           const r = resp.result as Record<string, unknown>;
-          b.status('capture_view', 'done', { ms, summary: `ảnh ${r?.width ?? '?'}×${r?.height ?? '?'}` });
+          b.status('capture_view', 'done', { ms, summary: tr('ảnh {0}×{1}', r?.width ?? '?', r?.height ?? '?') });
         } else {
           b.status('capture_view', 'error', { ms, error: `${resp.error.code}: ${resp.error.message}`.slice(0, 300) });
         }

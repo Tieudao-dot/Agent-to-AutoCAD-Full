@@ -79,6 +79,23 @@ describe('nâng cấp đợt H9: English', () => {
     }
   });
 
+  it('KTP-06 / 32: what the palette shows from the assistant goes through tr(); no tool text says "Vietnamese steps"', () => {
+    const vn = /[àáạảãâầấậẩẫăằắặẳẵèéẹẻẽêềếệểễìíịỉĩòóọỏõôồốộổỗơờớợởỡùúụủũưừứựửữỳýỵỷỹđ]/iu;
+    for (const f of tsFiles(srcDir)) {
+      if (f.endsWith('i18nEn.ts')) continue;
+      for (const line of fs.readFileSync(f, 'utf8').split(/\r?\n/)) {
+        if (/^\s*(\/\/|\*|\/\*)/.test(line)) continue;
+        // a summary on the activity line, a turn_end error, the ready info: Vietnamese only inside tr(...) (or a line marked "// vi")
+        if (!line.includes('// vi') && /\b(summary|info|error):\s*[`'"]/.test(line) && vn.test(line)) assert.fail(`${path.basename(f)} not through tr(): ${line.trim()}`);
+      }
+    }
+    const interaction = fs.readFileSync(path.join(srcDir, 'tools', 'interaction.ts'), 'utf8');
+    assert.doesNotMatch(interaction, /Vietnamese steps|\(Vietnamese, imperative/);
+    assert.match(ENGLISH_SECTION, /"Do you agree\?"/); // instead of "Cậu có đồng ý không?"
+    setLanguage('en');
+    assert.equal(tr('file {0} / {1} (Dừng để ngừng sau file đang làm)', 2, 5), 'file 2 / 5 (Stop ends after the current file)');
+  });
+
   it('the English section comes last, keeps the drawing texts Vietnamese, and is only there for English', () => {
     const en = systemPromptFor('2d3d', undefined, true, 'en');
     assert.ok(en.endsWith(ENGLISH_SECTION));
@@ -100,6 +117,21 @@ describe('nâng cấp đợt H9: English', () => {
     for (const no of ["yes but don't delete the walls", 'ok, but not the doors', 'go ahead, stop after the first', 'đồng ý, nhưng đừng xóa tường', 'ok xóa đi, khoan, không'])
       assert.ok(!isConfirmation(no), no);
     assert.ok(isConfirmation('ok, không sao')); // "không sao" (no problem) is not a refusal
+    // sửa KTP-A (kiểm tra độc lập phần 2): short forms of "không", "chẳng / chả", "… đâu", a condition: never a yes
+    for (const no of ['ko đồng ý', 'k đồng ý', 'kg đồng ý', 'hok đồng ý', 'chẳng đồng ý', 'chả đồng ý', 'có đồng ý đâu', 'đồng ý nếu giữ tường',
+      'yes if you keep the walls', 'ok unless doors', 'ok as long as the doors stay', 'đồng ý với điều kiện giữ cửa', 'ok xóa tường', 'thôi'])
+      assert.ok(!isConfirmation(no), no);
+    for (const yes of ['ok', 'đồng ý', 'yes', 'làm đi', 'go ahead', 'ok xóa luôn', 'Mình cũng đồng ý', 'thôi được rồi làm đi'])
+      assert.ok(isConfirmation(yes), yes);
+    // KTP-02 / 03 / 04 (kiểm tra độc lập phần 2, bảng §3): refusals, conditions, irony, "later / wait", questions without "?"
+    for (const no of ['ai đồng ý', 'đồng ý đâu mà', 'miễn là giữ tường thì ok', 'đồng ý cái gì mà đồng ý', 'đồng ý cái con khỉ', 'dạ thôi', 'ừ thôi',
+      'yes later', 'đồng ý sau', 'ok hold on', 'có, chờ đã', 'ok đợi đã', 'đồng ý hả', 'ok ko', 'ok ❌', 'không đồng ý', 'khong dong y', 'yes but no',
+      'not yes', "I don't agree", 'I don’t agree', 'disagree', 'nope', 'never mind', 'ok, nhưng giữ lại', 'ok, stop', 'yes, wait', 'đồng ý không',
+      'được không', 'có thể', 'maybe', 'chờ đã', 'k', 'ko', 'n', 'u', 'co', '👍', '✅', 'I agree', 'yeah', 'of course', 'fine', 'ok👍'])
+      assert.ok(!isConfirmation(no), no);
+    for (const yes of ['Đồng ý', 'ĐỒNG Ý', 'dong y', 'có', 'Có, xóa đi', 'OK', 'oke', 'y', 'YES!', 'yes please', 'sure', 'proceed', 'approved', 'agreed',
+      'confirm', 'delete it', 'do it', 'sounds good', 'that is fine', '“ok”', '‘yes’', 'ok không sao', 'không sao, xóa đi', 'ừ', 'vâng', 'dạ', 'tiếp tục đi'])
+      assert.ok(isConfirmation(yes), yes);
   });
 
   it('Test & sửa H9: every error line of the session table has its English (it reaches tr() through a variable)', () => {

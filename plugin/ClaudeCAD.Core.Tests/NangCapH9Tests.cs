@@ -139,6 +139,79 @@ namespace ClaudeCAD.Core.Tests
             Assert.True(L.Keys.Count() > 900);
         }
 
+        // ------------------------------------------------------------ sửa KTP (kiểm tra độc lập phần 2)
+
+        [Fact]
+        public void Every_key_of_the_english_table_is_used_and_no_two_share_an_english_text()
+        {
+            // KTP-33: a key is used when the code has it as a literal (or it is a server text / the two-part F5 tip)
+            var code = string.Join("\n", PluginFiles().Select(File.ReadAllText));
+            var used = new HashSet<string>(Literal.Matches(code).Cast<Match>().Select(m => Unescape(m.Groups["body"].Value)));
+            used.UnionWith(L.ServerTexts);
+            used.Add(F5Numbers.DeferToolsTip);
+            Assert.Empty(L.Keys.Where(k => !used.Contains(k)));
+            // KTP-34: one English text per Vietnamese text (the swap back to Vietnamese finds the right one)
+            var shared = L.Keys.GroupBy(k => L.English(k)).Where(g => g.Count() > 1).Select(g => g.Key + " ← " + string.Join(" | ", g)).ToList();
+            Assert.True(shared.Count == 0, string.Join("\n", shared));
+            Assert.Equal("Service plan: ", L.English("Gói: "));
+            Assert.Equal("Plan: ", L.English("Kế hoạch: "));
+        }
+
+        [Fact]
+        public void The_activation_server_s_fixed_errors_read_in_english()
+        {
+            // KTP-07: the server is not changed; its fixed Vietnamese texts are translated where they are shown
+            try
+            {
+                Assert.Equal("Máy chủ kích hoạt đang bận, thử lại sau ít phút.", L.TrServer("Máy chủ kích hoạt đang bận, thử lại sau ít phút."));
+                L.Lang = L.En;
+                Assert.Equal("The activation server is busy, try again in a few minutes.", L.TrServer("Máy chủ kích hoạt đang bận, thử lại sau ít phút."));
+                Assert.Equal("Activation server error: timeout", L.TrServer("Lỗi máy chủ kích hoạt: timeout"));
+                Assert.Equal("The key does not match this PC (machine code AB12-CD34). Check the key, or ask for a new one.",
+                    L.TrServer("Key không đúng với máy này (mã máy AB12-CD34). Kiểm tra lại key, hoặc xin key mới."));
+                Assert.Equal("lỗi lạ của máy chủ", L.TrServer("lỗi lạ của máy chủ")); // unknown: as it came
+                Assert.Null(L.TrServer(null));
+                foreach (var t in L.ServerTexts) Assert.True(L.HasEnglish(t), t);
+            }
+            finally
+            {
+                L.Lang = L.Vi;
+            }
+            var act = Src("plugin", "ClaudeCAD.Plugin", "Sidecar", "Activation.cs");
+            Assert.Contains("L.TrServer(r.error)", act);
+            var gs = Src("activation", "apps-script", "Code.gs.template");
+            foreach (var t in L.ServerTexts)
+                Assert.Contains(t.Contains("{0}") ? t.Substring(0, t.IndexOf("{0}", StringComparison.Ordinal)) : t, gs); // still the server's texts
+            var iss = Src("installer", "ClaudeCAD.iss").Replace("\r\n", "\n");
+            Assert.Contains("SetStatus(TrServer(JsonValue(Body, 'error'))", iss);
+            Assert.Contains("Err := TrServer(JsonValue(Body, 'error'));", iss);
+            for (int i = 1; i <= 9; i++)
+                foreach (var pre in new[] { "vietnamese.H9SrvKey", "english.H9SrvKey", "vietnamese.H9Srv", "english.H9Srv" })
+                    Assert.Contains("\n" + pre + i.ToString("00") + "=", iss);
+        }
+
+        [Fact]
+        public void The_language_is_set_when_the_plugin_loads_and_the_mode_button_is_named_as_shown()
+        {
+            // KTP-05: before the "loaded" line and the status bar icon, not only when the palette opens
+            var app = Src("plugin", "ClaudeCAD.Plugin", "PluginApp.cs");
+            int set = app.IndexOf("L.Lang = firstRun ? ChatController.InstallerLanguage() : settings.Language;", StringComparison.Ordinal);
+            Assert.True(set > 0 && set < app.IndexOf("ScheduleStatusTray();", StringComparison.Ordinal) && set < app.IndexOf(" đã nạp. Gõ CLAUDECHAT", StringComparison.Ordinal));
+            // KTP-35: the sentence Claude is told to say names the "both" choice as the palette shows it
+            try
+            {
+                Assert.Contains("hoặc Cả hai (nút chế độ", WorkModeLogic.BlockedMessage("build_box", WorkModeLogic.TwoD));
+                L.Lang = L.En;
+                var en = WorkModeLogic.BlockedMessage("build_box", WorkModeLogic.TwoD);
+                Assert.Contains("hoặc Both (nút chế độ", en);
+                Assert.DoesNotContain("Cả hai (nút", en);
+            }
+            finally
+            {
+                L.Lang = L.Vi;
+            }
+        }
+
         // ------------------------------------------------------------ the switch
 
         [Fact]
@@ -218,6 +291,7 @@ namespace ClaudeCAD.Core.Tests
             var ui = Src("plugin", "ClaudeCAD.Plugin", "UI", "ChatControl.cs");
             Assert.Contains("_language = MakeCombo(L.Languages.Select(L.Label).ToArray(), double.NaN);", ui);
             Assert.Contains("_settings.Language = L.Languages[Math.Max(0, _language.SelectedIndex)];", ui);
+            Assert.Contains("_language.SelectionChanged += (s, e) => OnSettingsUi();", ui); // sửa KTP-A: picking a language does something
             // the welcome card's ids stay Vietnamese, only their display goes through Tr
             Assert.Contains("var act = Find(\"Kích hoạt\");", ui);
             Assert.Contains("Tr(name) + (", ui);

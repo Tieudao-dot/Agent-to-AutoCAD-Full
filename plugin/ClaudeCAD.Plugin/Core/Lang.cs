@@ -89,6 +89,37 @@ namespace ClaudeCAD.Plugin.Core
             return _reverse.TryGetValue(text, out var vi) ? vi : null;
         }
 
+        /// <summary>
+        /// KTP-07: the fixed Vietnamese error texts of the activation server (activation/apps-script/Code.gs.template, not
+        /// changed). Two of them carry a value; the others are whole texts of the English table.
+        /// </summary>
+        public static readonly string[] ServerTexts =
+        {
+            "Yêu cầu không hợp lệ.", "Mã máy không hợp lệ.", "Máy chủ kích hoạt đang bận, thử lại sau ít phút.",
+            "Có quá nhiều máy mới xin kích hoạt trong giờ này, thử lại sau.", "Có quá nhiều yêu cầu kích hoạt trong giờ này, thử lại sau.",
+            "Máy chủ kích hoạt đã hết lượt gửi email hôm nay.",
+            "Lỗi máy chủ kích hoạt: {0}", "Key không đúng với máy này (mã máy {0}). Kiểm tra lại key, hoặc xin key mới.",
+        };
+
+        /// <summary>An activation server's error in the palette's language (an unknown text is shown as it came).</summary>
+        public static string TrServer(string msg)
+        {
+            if (string.IsNullOrEmpty(msg) || _lang == Vi) return msg;
+            foreach (var t in ServerTexts)
+            {
+                int hole = t.IndexOf("{0}", StringComparison.Ordinal);
+                if (hole < 0)
+                {
+                    if (msg == t) return Tr(t);
+                    continue;
+                }
+                string head = t.Substring(0, hole), tail = t.Substring(hole + 3);
+                if (msg.Length >= head.Length + tail.Length && msg.StartsWith(head, StringComparison.Ordinal) && msg.EndsWith(tail, StringComparison.Ordinal))
+                    return Tr(t, msg.Substring(head.Length, msg.Length - head.Length - tail.Length));
+            }
+            return msg;
+        }
+
         /// <summary>True when the text has an English entry (tests).</summary>
         public static bool HasEnglish(string vi) => vi != null && EnTable.ContainsKey(vi);
 
