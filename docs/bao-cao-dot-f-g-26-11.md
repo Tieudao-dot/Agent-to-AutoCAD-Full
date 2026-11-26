@@ -146,7 +146,8 @@ do luồng chính quyết để chuỗi không dừng:
 mã lỗi của lệnh cuối nên không báo đỏ; luồng chính đã không đọc log nên không thấy. Ba test: ghi chú mũi tên theo style
 chuẩn (F5), Claude xem ảnh vẽ lại (G5), block 3D không điền thuộc tính (KT-42). Đang chẩn đoán xem có phải lỗi thật trên
 Windows không và sửa cả CI (đợt H, nhánh `full/nang-cap-h-sua-ci`). Từ nay luồng chính đọc số `# fail` trong log trước khi
-báo CI xanh.
+báo CI xanh. **Kết luận cùng ngày:** cả 3 là lỗi của chính test (cách tìm đường dẫn file và dấu xuống dòng trên
+Windows), không phải lỗi plugin; bản 5 không bị ảnh hưởng. Đã sửa test và CI (`554307b`, CI 45778275884, `# fail 0`).
 
 Lỗi nhiều khả năng nặng của lượt cuối: "render góc nhìn đã lưu" có thể báo lỗi không render được. Đã sửa, cần cậu thử
 thật (G0-3).

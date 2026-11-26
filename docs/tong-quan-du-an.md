@@ -21,7 +21,9 @@ quy tắc làm việc và danh bạ thread: [`../CLAUDE.md`](../CLAUDE.md).
     [`ke-hoach-nang-cap-lenh.md`](ke-hoach-nang-cap-lenh.md) mục "Đợt F", "Đợt G".
   - **Đính chính 26/11:** log CI của commit chốt (run 45710924398) và bản 5 (45713707097) còn 3 test trợ lý hỏng trên
     Windows (`# fail 3`; Linux qua hết), CI không báo đỏ vì bước test chỉ tính lệnh cuối. Đang chẩn đoán và sửa ở
-    `full/nang-cap-h-sua-ci`. Luồng chính từ nay đọc số `# fail` trong log trước khi báo CI xanh.
+    `full/nang-cap-h-sua-ci`. Luồng chính từ nay đọc số `# fail` trong log trước khi báo CI xanh. **Kết luận 14h58:** cả
+    3 là lỗi của test (đường dẫn, xuống dòng), sản phẩm và bản 5 không bị ảnh hưởng; đã sửa test và CI (`554307b`, CI
+    45778275884, `# fail 0`).
   - **Chưa phần nào của đợt F / G chạy trên AutoCAD thật. Con số chờ chủ dự án duyệt:**
     [`dot-f-cho-duyet.md`](dot-f-cho-duyet.md), [`dot-g-cho-duyet.md`](dot-g-cho-duyet.md).
 
