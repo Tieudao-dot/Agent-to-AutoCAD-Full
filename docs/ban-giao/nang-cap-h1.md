@@ -23,6 +23,9 @@ app thì ghi đè cả skill khách đã sửa.
 
 **Cách làm:**
 
+- *(Sửa KTH-24, 26/11)* `bundle/make-bundle.mjs` đưa sẵn `Contents\skills-ban-moi` vào gói, nên bản cập nhật trong app do
+  plugin **cũ** (trước H1) chạy cũng mang skill mới tới ngay lần đầu. Skill khách đã xóa (bản đó từng được cài) không chép lại
+  (sửa KTH-25). Chi tiết: `docs/ban-giao/nang-cap-h-sua-kth-b.md`.
 - Bộ cài và bản cập nhật trong app chép skill của bản mới vào `Contents\skills-ban-moi`. Bộ cài: một dòng `[Files]` +
   `[InstallDelete]`. Bản cập nhật: một dòng robocopy `/MIR` sau phần skill trong script.
 - Lúc plugin khởi động, `SkillSync.Sync` (`Core/SkillSync.cs`) so từng file trước khi nạp skill:

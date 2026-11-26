@@ -101,9 +101,12 @@ namespace ClaudeCAD.Plugin.Drawing
 
             if (mark && rows.Count > 0)
             {
-                var clouds = rows.Count > H3Numbers.MaxClouds * 10 ? null : DrawingCompareLogic.Clouds(rows, openMm);
-                if (clouds == null || clouds.Count > H3Numbers.MaxClouds)
-                    notes.Add($"Too many differences to ring with clouds (more than {H3Numbers.MaxClouds} clouds): nothing was drawn. Use excel for the list, or compare a smaller part.");
+                // Sửa KTH-21: two different reasons, two messages
+                var clouds = rows.Count > H3Numbers.MaxRowsForClouds ? null : DrawingCompareLogic.Clouds(rows, openMm);
+                if (clouds == null)
+                    notes.Add($"Too many differences to ring with clouds ({rows.Count}, more than {H3Numbers.MaxRowsForClouds}): nothing was drawn. Use excel for the list, or compare a smaller part.");
+                else if (clouds.Count > H3Numbers.MaxClouds)
+                    notes.Add($"Too many differences to ring with clouds ({clouds.Count} clouds, more than {H3Numbers.MaxClouds}): nothing was drawn. Use excel for the list, or compare a smaller part.");
                 else
                 {
                     // Test & sửa H3: a locked / frozen layer is refused before the card is asked; earlier clouds and an off layer are said
@@ -148,6 +151,14 @@ namespace ClaudeCAD.Plugin.Drawing
             return res;
         }
 
+        /// <summary>Sửa KTH-17: the turn of a text / block, compared within the tolerance at the far side of its box.</summary>
+        private static void TurnedBy(CmpItem it, double angle)
+        {
+            it.Angles["rotation"] = angle;
+            if (it.Min != null && it.Max != null && it.Min.Length >= 2)
+                it.Reach = Math.Max(1, Math.Sqrt(Math.Pow(it.Max[0] - it.Min[0], 2) + Math.Pow(it.Max[1] - it.Min[1], 2)));
+        }
+
         /// <summary>One object as a compare item (sizes times f into the open drawing's units), or null when it is not compared.</summary>
         private static CmpItem ItemOf(Transaction tr, Entity e, double f, bool with2d, bool with3d)
         {
@@ -163,7 +174,8 @@ namespace ClaudeCAD.Plugin.Drawing
                 case Line l:
                     it.Kind = "line"; it.Nums = P(l.StartPoint).Concat(P(l.EndPoint)).ToArray(); it.Alt = P(l.EndPoint).Concat(P(l.StartPoint)).ToArray(); break;
                 case Arc a:
-                    it.Kind = "arc"; it.Nums = P(a.Center).Concat(new[] { a.Radius * f }).ToArray(); it.Exact = R(a.StartAngle) + "," + R(a.EndAngle); break;
+                    // Sửa KTH-17: the ends of the arc within the tolerance, not its angles as exact text
+                    it.Kind = "arc"; it.Nums = P(a.Center).Concat(new[] { a.Radius * f }).Concat(P(a.StartPoint)).Concat(P(a.EndPoint)).ToArray(); break;
                 case Circle c:
                     it.Kind = "circle"; it.Nums = P(c.Center).Concat(new[] { c.Radius * f }).ToArray(); break;
                 case Polyline pl:
@@ -178,19 +190,46 @@ namespace ClaudeCAD.Plugin.Drawing
                     it.Nums = xy.ToArray();
                     it.Exact = (pl.Closed ? "c|" : "o|") + string.Join(",", b);
                     if (!pl.Closed && string.Join(",", rb) == string.Join(",", b)) it.Alt = rx.ToArray(); // the same bulges read backwards
+                    if (pl.Closed && n >= 2)
+                    {
+                        // Sửa KTH-15: a closed outline is the same whatever its first vertex and direction
+                        var verts = new List<double[]>(); var bul = new List<double>();
+                        for (int i = 0; i < n; i++) { var v = pl.GetPoint2dAt(i); verts.Add(new[] { v.X * f, v.Y * f }); bul.Add(pl.GetBulgeAt(i)); }
+                        var (cn, cb) = DrawingCompareLogic.CanonicalLoop(verts, bul, pl.Elevation * f);
+                        it.Nums = cn;
+                        it.Exact = "c|" + string.Join(",", cb.Select(x => R(x + 0.0)));
+                    }
+                    // Sửa KTH-16: a changed polyline is found by its first vertex (x, y, elevation), not by x0, y0, x1
+                    it.AnchorAt = new[] { it.Nums[0], it.Nums[1], it.Nums[it.Nums.Length - 1] };
+                    if (it.Alt != null) it.AltAnchorAt = new[] { it.Alt[0], it.Alt[1], it.Alt[it.Alt.Length - 1] };
                     it.Sizes["width"] = pl.ConstantWidth * f; // Test & sửa H3: within the tolerance
                     break;
                 }
                 case DBText t:
-                    it.Kind = "text"; it.Nums = P(t.Position).Concat(new[] { t.Height * f }).ToArray(); it.Exact = R(t.Rotation);
+                    it.Kind = "text"; it.Nums = P(t.Position).Concat(new[] { t.Height * f }).ToArray(); TurnedBy(it, t.Rotation);
                     it.Props["text"] = t.TextString; it.Props["style"] = t.TextStyleName; break;
                 case MText m:
-                    it.Kind = "mtext"; it.Nums = P(m.Location).Concat(new[] { m.TextHeight * f }).ToArray(); it.Exact = R(m.Rotation);
+                    it.Kind = "mtext"; it.Nums = P(m.Location).Concat(new[] { m.TextHeight * f }).ToArray(); TurnedBy(it, m.Rotation);
                     it.Props["text"] = m.Contents; it.Props["style"] = m.TextStyleName; break;
+                // Sửa KTH-19: a table is a block reference too: read before it
+                case Table tb:
+                {
+                    it.Kind = "table"; it.Nums = P(tb.Position).Concat(new[] { tb.Width * f, tb.Height * f }).ToArray();
+                    var cells = new List<string>();
+                    try
+                    {
+                        for (int r = 0; r < tb.Rows.Count && cells.Count < 5000; r++)
+                            for (int c = 0; c < tb.Columns.Count; c++) cells.Add(tb.Cells[r, c].TextString ?? "");
+                    }
+                    catch (Exception) { }
+                    it.Props["text"] = string.Join(" | ", cells);
+                    break;
+                }
                 case BlockReference br:
                 {
                     it.Kind = "insert"; it.Nums = P(br.Position);
-                    it.Exact = R(br.Rotation) + "," + R(br.ScaleFactors.X) + "," + R(br.ScaleFactors.Y) + "," + R(br.ScaleFactors.Z);
+                    it.Exact = R(br.ScaleFactors.X) + "," + R(br.ScaleFactors.Y) + "," + R(br.ScaleFactors.Z);
+                    TurnedBy(it, br.Rotation); // Sửa KTH-17
                     string name = br.Name;
                     try { if (br.IsDynamicBlock) name = ((BlockTableRecord)tr.GetObject(br.DynamicBlockTableRecord, OpenMode.ForRead)).Name; } catch (Exception) { }
                     it.Props["block"] = name;
@@ -198,6 +237,21 @@ namespace ClaudeCAD.Plugin.Drawing
                     foreach (ObjectId aid in br.AttributeCollection)
                         if (tr.GetObject(aid, OpenMode.ForRead, false) is AttributeReference ar) attrs[ar.Tag.ToUpperInvariant()] = ar.TextString;
                     if (attrs.Count > 0) it.Props["attributes"] = string.Join("; ", attrs.Select(kv => kv.Key + "=" + kv.Value));
+                    // Sửa KTH-18: the dynamic properties (width of a door, visibility, flip…)
+                    try
+                    {
+                        if (br.IsDynamicBlock)
+                        {
+                            var dyn = new SortedDictionary<string, string>(StringComparer.Ordinal);
+                            foreach (DynamicBlockReferenceProperty dp in br.DynamicBlockReferencePropertyCollection)
+                            {
+                                if (dp.PropertyName == "Origin") continue;
+                                dyn[dp.PropertyName] = dp.Value is double dv ? R(Math.Round(dv * (dp.UnitsType == DynamicBlockReferencePropertyUnitsType.Distance ? f : 1), 3)) : Convert.ToString(dp.Value, CultureInfo.InvariantCulture);
+                            }
+                            if (dyn.Count > 0) it.Props["dynamic"] = string.Join("; ", dyn.Select(kv => kv.Key + "=" + kv.Value));
+                        }
+                    }
+                    catch (Exception) { }
                     break;
                 }
                 case Dimension d:
@@ -210,16 +264,54 @@ namespace ClaudeCAD.Plugin.Drawing
                         else it.Sizes["value"] = d.Measurement * f;
                     }
                     catch (Exception) { }
-                    it.Props["text"] = d.DimensionText; break;
+                    it.Props["text"] = d.DimensionText;
+                    it.Props["dim_style"] = d.DimensionStyleName; // Sửa KTH-20
+                    break;
                 case Hatch h:
                     it.Kind = "hatch"; it.Nums = it.Min != null ? it.Min.Concat(it.Max).ToArray() : new double[0];
                     it.Props["pattern"] = h.PatternName;
                     try { it.Areas["area"] = h.Area * f * f; } catch (Exception) { } // Test & sửa H3: like a volume, not as text
+                    // Sửa KTH-20: scale (like the area: a share) and angle of the pattern
+                    try { if (h.PatternType != HatchPatternType.UserDefined || h.PatternScale > 0) it.Areas["pattern_scale"] = h.PatternScale * f; } catch (Exception) { }
+                    try { it.Props["pattern_angle"] = R(Math.Round(h.PatternAngle * 180 / Math.PI, 3)); } catch (Exception) { }
                     break;
                 case Solid3d s:
                     it.Kind = "solid"; it.Nums = it.Min != null ? it.Min.Concat(it.Max).ToArray() : new double[0];
                     try { it.Volume = s.MassProperties.Volume * f * f * f; } catch (Exception) { }
                     break;
+                // Sửa KTH-19: what these objects say / how they are shaped, not only their box
+                case MLeader ml:
+                    it.Kind = "mleader"; it.Nums = it.Min != null ? it.Min.Concat(it.Max).ToArray() : new double[0];
+                    try { if (ml.ContentType == ContentType.MTextContent && ml.MText != null) it.Props["text"] = ml.MText.Contents; } catch (Exception) { }
+                    try { if (ml.ContentType == ContentType.BlockContent) it.Props["block"] = ((BlockTableRecord)tr.GetObject(ml.BlockContentId, OpenMode.ForRead)).Name; } catch (Exception) { }
+                    break;
+                case Spline sp:
+                {
+                    it.Kind = "spline";
+                    var pts = new List<double>(); var back = new List<double>();
+                    try
+                    {
+                        for (int i = 0; i < sp.NumControlPoints; i++) pts.AddRange(P(sp.GetControlPointAt(i)));
+                        for (int i = sp.NumControlPoints - 1; i >= 0; i--) back.AddRange(P(sp.GetControlPointAt(i)));
+                    }
+                    catch (Exception) { }
+                    it.Nums = pts.Count > 0 ? pts.ToArray() : (it.Min != null ? it.Min.Concat(it.Max).ToArray() : new double[0]);
+                    if (back.Count > 0 && !sp.Closed) it.Alt = back.ToArray();
+                    it.Exact = sp.Degree.ToString(CultureInfo.InvariantCulture) + (sp.Closed ? "|c" : "|o");
+                    break;
+                }
+                case Ellipse el:
+                    it.Kind = "ellipse";
+                    it.Nums = P(el.Center).Concat(new[] { el.MajorAxis.X * f, el.MajorAxis.Y * f, el.MajorAxis.Z * f, el.MajorRadius * el.RadiusRatio * f }).Concat(P(el.StartPoint)).Concat(P(el.EndPoint)).ToArray();
+                    break;
+                case Leader ld:
+                {
+                    it.Kind = "leader";
+                    var pts = new List<double>();
+                    try { for (int i = 0; i < ld.NumVertices; i++) pts.AddRange(P(ld.VertexAt(i))); } catch (Exception) { }
+                    it.Nums = pts.Count > 0 ? pts.ToArray() : (it.Min != null ? it.Min.Concat(it.Max).ToArray() : new double[0]);
+                    break;
+                }
                 default:
                     it.Kind = e.GetType().Name.ToLowerInvariant();
                     it.Nums = it.Min != null ? it.Min.Concat(it.Max).ToArray() : new double[0];

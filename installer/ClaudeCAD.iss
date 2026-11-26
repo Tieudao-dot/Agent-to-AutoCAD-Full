@@ -71,7 +71,7 @@ Type: filesandordirs; Name: "{app}\Contents\skills-ban-moi"
 
 [Files]
 ; program files are replaced on upgrade
-Source: "{#BundleDir}\*"; DestDir: "{app}"; Excludes: "Contents\skills\*"; Flags: recursesubdirs createallsubdirs ignoreversion
+Source: "{#BundleDir}\*"; DestDir: "{app}"; Excludes: "Contents\skills\*,Contents\skills-ban-moi\*"; Flags: recursesubdirs createallsubdirs ignoreversion
 ; skills: never overwrite files the user may have edited
 Source: "{#BundleDir}\Contents\skills\*"; DestDir: "{app}\Contents\skills"; Flags: recursesubdirs createallsubdirs onlyifdoesntexist uninsneveruninstall
 ; nâng cấp đợt H1: the new version's skills wait here; at its first start the plugin replaces the skills the user never

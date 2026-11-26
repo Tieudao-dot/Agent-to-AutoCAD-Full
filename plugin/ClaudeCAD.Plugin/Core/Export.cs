@@ -24,6 +24,18 @@ namespace ClaudeCAD.Plugin.Core
     /// <summary>Nâng cấp đợt H2, AutoCAD-free part of export_drawing: formats, versions, file names and checks.</summary>
     public static class ExportLogic
     {
+        /// <summary>
+        /// Sửa KTH-23: an STL triangle (float[12], meshed near the origin after a move by +shift) back at its real place, in
+        /// double: the normal as it is, each corner minus shift.
+        /// </summary>
+        public static double[] Unshift(float[] t, double[] shift)
+        {
+            var r = t.Select(x => (double)x).ToArray();
+            for (int k = 0; k < 3; k++)
+                for (int a = 0; a < 3; a++) r[3 + k * 3 + a] = t[3 + k * 3 + a] - shift[a];
+            return r;
+        }
+
         public static readonly string[] Formats = { "dxf", "dwg", "fbx" };
 
         /// <summary>The versions offered, newest first, with the DwgVersion name of AutoCAD's .NET API (AC1032 = 2018 format, read by 2018 – 2027).</summary>
@@ -134,7 +146,14 @@ namespace ClaudeCAD.Plugin.Core
         }
 
         /// <summary>A mesh from STL triangles (float[12]: normal, then three corners), corners merged when equal.</summary>
-        public static Mesh FromTriangles(string name, IEnumerable<float[]> tris, double scale = 1)
+        public static Mesh FromTriangles(string name, IEnumerable<float[]> tris, double scale = 1) =>
+            FromTriangles(name, tris.Select(t => t?.Select(x => (double)x).ToArray()), scale);
+
+        /// <summary>
+        /// Sửa KTH-23: the same from triangles in double (the corners moved back to their real place after the STL near the
+        /// origin): a point at 500 000 000 keeps its 0.0001 mm, float would round it to 32 mm.
+        /// </summary>
+        public static Mesh FromTriangles(string name, IEnumerable<double[]> tris, double scale = 1)
         {
             var m = new Mesh { Name = name };
             var index = new Dictionary<(long, long, long), int>();

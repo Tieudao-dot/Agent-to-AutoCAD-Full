@@ -3,7 +3,8 @@
 *Đã gộp vào khối "Đợt H phần 1" của [`docs/checklist-tong-the.md`](checklist-tong-the.md) (test tổng thể đợt H phần 1), thử tay theo file đó.*
 
 AutoCAD 2022–2027, khoảng 30 phút. Cần một máy đã cài bản cũ (bản trước H1) có thư mục skill
-`C:\Program Files\ClaudeCAD\Contents\skills` (hoặc đường dẫn cài của cậu).
+`%AppData%\Autodesk\ApplicationPlugins\ClaudeCAD.bundle\Contents\skills` (bộ cài cài riêng cho từng người dùng; dán đường dẫn này vào
+thanh địa chỉ của File Explorer).
 
 ## A. Skill khi cài đè (~12 phút, phần quan trọng nhất)
 
@@ -20,11 +21,14 @@ AutoCAD 2022–2027, khoảng 30 phút. Cần một máy đã cài bản cũ (b�
 3. Đóng, mở lại khung chat (hoặc AutoCAD): dòng báo **không** hiện lại.
 4. Thêm một file của cậu vào `skills` (vd `skills\cua-toi\SKILL.md`), cài lại bộ cài một lần nữa: file của cậu còn nguyên.
 5. Gỡ cài (Control Panel): thư mục `skills` vẫn còn, kể cả file của cậu.
-6. *(Nếu có bản cập nhật trong app)* Bấm "Kiểm tra cập nhật" để lên bản sau H1: kết quả giống bước 2–3. Skill đã sửa
-   được giữ, có file `.ban-moi`.
+6. *(Nếu có bản cập nhật trong app)* Trên máy bản cũ (trước H1), bấm "Kiểm tra cập nhật" để lên bản H1 trở về sau: kết quả
+   giống bước 2–3 ngay lần cập nhật đầu (sửa KTH-24: gói cập nhật mang sẵn `skills-ban-moi`). Skill đã sửa được giữ, có file
+   `.ban-moi`.
 7. *(Chỉ khi có hai bản sau H1 để cài liên tiếp)* Sửa cả `SKILL.ban-moi.md` (vd gộp dần vào đó), rồi cài bản kế tiếp:
    file `SKILL.ban-moi.md` cậu đã sửa **còn nguyên**; bản mới hơn nằm ở `SKILL.ban-moi-2.md`, khung chat báo một lần.
-8. Máy mới chưa từng cài: cài bản H1, mở khung chat. **Không** có dòng báo skill; skill đủ như bộ cài.
+8. *(Sửa KTH-25)* Xóa hẳn thư mục một skill (vd `skills\ve-mep`), đóng rồi mở lại khung chat hai lần: skill đó **không** tự
+   quay lại. Nó chỉ quay lại khi có bản cài mới mang bản mới của skill đó.
+9. Máy mới chưa từng cài: cài bản H1, mở khung chat. **Không** có dòng báo skill; skill đủ như bộ cài.
 
 ## B. trace_image với PDF scan (~12 phút)
 
