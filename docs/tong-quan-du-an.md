@@ -225,3 +225,10 @@ Sau đợt F + G (ước tính, đo ở thread test tổng thể đợt G; đợ
     chạy cùng lúc từ `547d6af`.
   - 14h31 H2 viết xong (`export_drawing`), 14h43 H1 viết xong; giao rà chéo (H2: thread đợt F2, H1: thread Test & sửa F1).
     Thread H1 phát hiện CI Windows bỏ qua test trợ lý hỏng (3 test, có từ bản chốt G và bản 5); giao thread đợt F1 sửa.
+  - 14h58 sửa CI xong (`554307b`, `# fail 0`). 15h00 gộp H1 + H2 + sửa CI (`98eecf1`); H3 (so hai bản vẽ, thread đợt
+    F1) và H4 (chuẩn công ty, thread đợt F2) chạy cùng lúc. 16h04 gộp H3 + H4 rà xong (`5184962`), giao H5 (làm nhiều file
+    một lúc, thread đợt F2). 17h21 rà H5 xong. Các lượt rà sửa tổng 27 lỗi (H1 4, H2 6, H3 4, H4 9, H5 4).
+  - 16h13 danh sách số tiêu chuẩn phần 2: [`dot-h-so-tieu-chuan.md`](dot-h-so-tieu-chuan.md), chờ chủ dự án duyệt.
+  - 17h33 test tổng thể phần 1 xong (thread đợt F1): 2 lỗi chéo + 1 lỗi tài liệu, `full/nang-cap-h-tong-the` @ `aa5753c`
+    (code `9612510`, CI 45802392263 xanh, `# fail 0`, lõi 1581, trợ lý 436). Token lúc mở chat tăng ~0,1–0,2k.
+  - 17h46 mở thread kiểm tra độc lập đợt H phần 1 (`session_01D56HmH63NM9pSxbHQh6Ckv`, agent mới, chỉ ghi lỗi KTH-xx).
