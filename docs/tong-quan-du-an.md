@@ -242,3 +242,4 @@ Sau đợt F + G (ước tính, đo ở thread test tổng thể đợt G; đợ
     ~$135. Báo cáo: [`bao-cao-dot-h-phan-1-26-11.md`](bao-cao-dot-h-phan-1-26-11.md). Chờ chủ dự án: duyệt số phần 1, thử bản 6.
   - 19h03 phần 2 bắt đầu: H6 hạ tầng (thread đợt F2) và H7 MEP 3D (thread Test & sửa F1) cùng lúc từ `76ecfae`, làm phần không dính
     số tiêu chuẩn; số tiêu chuẩn chờ chủ dự án duyệt.
+  - ~19h20 chủ dự án duyệt số tiêu chuẩn phần 2: "Dùng hết số đề xuất" ([`dot-h-so-tieu-chuan.md`](dot-h-so-tieu-chuan.md) mục "Kết quả duyệt"); đã chuyển xuống H6, H7.

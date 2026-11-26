@@ -242,7 +242,7 @@ chính đưa. Nhóm 2 (tự cập nhật, thống kê mức dùng, bản dùng t
   - MEP chỉ vẽ theo cỡ ống khách đưa, không tính thủy lực / lưu lượng;
   - trắc dọc, trắc ngang, móng, thép theo TCVN; kết quả là bản vẽ hỗ trợ, kỹ sư vẫn kiểm.
 - **Số tiêu chuẩn phần 2 (H6, H7, H8):** thread Test & sửa F1 gom xong 26/11 16h13 (18 nhóm, 6 chỗ cần đối chiếu bản TCVN chính thức):
-  [`dot-h-so-tieu-chuan.md`](dot-h-so-tieu-chuan.md). Chờ chủ dự án duyệt trước khi viết phần 2.
+  [`dot-h-so-tieu-chuan.md`](dot-h-so-tieu-chuan.md). **Chủ dự án duyệt 26/11 ~19h20: "Dùng hết số đề xuất"** (vạch lý trình 50 m mặt bằng / 20 m trắc; không cộng hao hụt; 6 chỗ chưa chắc ghi "kỹ sư đối chiếu TCVN"). Đã chuyển xuống H6, H7; H8 dùng khi giao.
 - **Bản 5 chưa chạy trên AutoCAD thật.** Lỗi chủ dự án báo khi thử bản 5 được sửa trước và gộp vào chuỗi đợt H.
 - Lệnh mới làm tăng token mở chat; nạp gọn lệnh (đợt F4) giữ mức tăng nhỏ, đo lại ở test tổng thể.
 

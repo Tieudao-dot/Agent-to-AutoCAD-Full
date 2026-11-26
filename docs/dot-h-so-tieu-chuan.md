@@ -64,4 +64,25 @@ cho khách.
 
 ## Kết quả duyệt
 
-*(Luồng chính ghi câu trả lời của chủ dự án kèm ngày tại đây.)*
+**26/11/2026 ~19h20, chủ dự án chọn "Dùng hết số đề xuất"** (câu hỏi qua AskUserQuestion). Nghĩa là:
+
+- **Mọi số đề xuất trong ba bảng H6, H7, H8 ở trên là số đã duyệt.** Thread dùng đúng các số đó làm mặc định khi khách không
+  nói. Khách vẫn nói được số khác trong chat.
+- **Hai điểm "cậu chọn" lấy theo đề xuất:**
+  - vạch lý trình: giữ **50 m trên mặt bằng tuyến, 20 m trên trắc dọc / trắc ngang**;
+  - thống kê ống (H7) và thống kê thép (H8): **không cộng hao hụt**. Cột hao hụt % để tắt sẵn, đổi lại được.
+- **Tọa độ VN-2000:** chỉ đổi trục, không đổi múi chiếu / kinh tuyến trục (đề xuất), m → mm.
+- **6 chỗ "chưa chắc"** (mục trên) vẫn dùng số đề xuất. Tài liệu cho khách và bàn giao ghi rõ: "số mặc định, kỹ sư đối chiếu
+  TCVN hiện hành trước khi dùng". Các chỗ đó là:
+  - lớp bảo vệ móng không lót 70 mm;
+  - mức tối thiểu neo / nối chồng;
+  - bảng độ dốc tối thiểu ống thoát;
+  - khoảng cao đều đồng mức;
+  - khoảng cọc 20 m;
+  - móc đai 135° ≥ 75 mm.
+
+  Có người đối chiếu bản TCVN chính thức thì chỉ sửa một chỗ trong `H6Numbers` / `H7Numbers` / `H8Numbers`.
+- **Giới hạn nói với khách giữ nguyên:**
+  - bản vẽ hỗ trợ, kỹ sư vẫn kiểm;
+  - không tính thủy lực / kết cấu;
+  - plugin không tự chọn số thanh / đường kính thép chủ.
