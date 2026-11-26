@@ -22,6 +22,11 @@ quy tắc làm việc và danh bạ thread: [`../CLAUDE.md`](../CLAUDE.md).
   - **Chưa phần nào của đợt F / G chạy trên AutoCAD thật. Con số chờ chủ dự án duyệt:**
     [`dot-f-cho-duyet.md`](dot-f-cho-duyet.md), [`dot-g-cho-duyet.md`](dot-g-cho-duyet.md).
 
+- **Đợt H đang chạy (từ 26/11):** nhóm 1 (việc nhỏ còn sót) và nhóm 3 (8 tính năng mới), chia hai phần. Phần 1: H1 nhóm 1,
+  H2 xuất DXF / DWG đời cũ / FBX, H3 so sánh hai bản vẽ, H4 học chuẩn công ty, H5 làm nhiều file một lúc → bộ cài thử bản 6.
+  Phần 2: H6 hạ tầng, H7 ống MEP 3D, H8 kết cấu thép, H9 tiếng Anh → bản 7. Kế hoạch, chi phí và tiến độ:
+  [`ke-hoach-nang-cap-lenh.md`](ke-hoach-nang-cap-lenh.md) mục "Đợt H".
+
 - **Nhánh tích hợp trước đợt F:** `full/nang-cap-tong-the` @ `012ed29` (có sửa lỗi bộ cài TT-01 và bản sửa khung chat 15/11; CI 43669231795 xanh trên mã khung chat). Chứa toàn bộ: gói dịch vụ,
   3D đợt 1–3, test tổng thể + 4 lượt kiểm tra độc lập lần 1 (43 lỗi), bộ cài thay bản gốc + cảnh báo, và **chuỗi nâng
   cấp A → E** (13/11) + test tổng thể nâng cấp.
@@ -61,8 +66,8 @@ quy tắc làm việc và danh bạ thread: [`../CLAUDE.md`](../CLAUDE.md).
 4. Xem 2 quyết định luồng chính chọn theo đề xuất của kiểm tra độc lập (bản vẽ mét tự quy đổi; mái nhà chữ L / T báo
    trước chỗ chồng) và 3 số đợt E tự chọn (bản thang 150, khe 2 vế chữ U 100, bản mái dốc 150 mm).
 5. Trước khi phát hành: số phiên bản (plugin / trợ lý vẫn ghi 0.9.4), secret CI của repo Full, đồng ý merge `main`,
-   các chỗ còn trỏ về dự án gốc ([`cho-tro-ve-repo-goc.md`](cho-tro-ve-repo-goc.md)); cách cập nhật skill cho máy nâng
-   cấp từ bản cũ (bộ cài hiện chỉ chép skill khi máy chưa có).
+   các chỗ còn trỏ về dự án gốc ([`cho-tro-ve-repo-goc.md`](cho-tro-ve-repo-goc.md)). Cách cập nhật skill cho máy nâng
+   cấp đã chốt 26/11 (cập nhật, giữ bản khách đã sửa), làm trong đợt H1.
 6. **Duyệt con số và quyết định tự chọn của đợt F + G** (chủ dự án chọn 26/11: thử thật rồi duyệt): [`dot-f-cho-duyet.md`](dot-f-cho-duyet.md),
    [`dot-g-cho-duyet.md`](dot-g-cho-duyet.md); 6 quyết định của luồng chính ở mục 6 của
    [`bao-cao-dot-f-g-26-11.md`](bao-cao-dot-f-g-26-11.md).
@@ -100,6 +105,7 @@ quy tắc làm việc và danh bạ thread: [`../CLAUDE.md`](../CLAUDE.md).
 | 26/11 | Duyệt con số đợt F + G | Chủ dự án chọn "thử thật rồi duyệt": bản thử dùng số đề xuất; chủ dự án thử bộ cài thử bản 5, số nào chưa hợp thì báo; thử xong luồng chính mới ghi "đã duyệt". Tới lúc đó các số trong [`dot-f-cho-duyet.md`](dot-f-cho-duyet.md), [`dot-g-cho-duyet.md`](dot-g-cho-duyet.md) vẫn là chờ duyệt |
 | 26/11 | Dọn thread | Chủ dự án cho đóng 6 thread không còn việc: F3 lần 1, F3 lần 2, Test & sửa F2 (thread con), Kiểm tra độc lập đợt F, Tối ưu khung chat, Commit & CI. Đã đóng cả 6. Thread con Test & sửa F2 còn một bản vá chưa lưu: luồng chính lấy về [`ban-giao/f2-test-thread-con-ban-va.md`](ban-giao/f2-test-thread-con-ban-va.md) trước khi đóng; đối chiếu thấy 7 điểm sửa đều đã có trên nhánh chốt, còn vài test có thể lấy thêm ở lần sửa lỗi kế tiếp |
 | 26/11 | Dọn thread (lần 2) | Chủ dự án bảo dọn các thread không dùng nữa. Đóng thêm 3: Kiểm tra độc lập đợt F + G (xong việc), Test tổng thể nâng cấp (nhánh đã được `full/nang-cap-g-tong-the` thay), QnA (không dùng từ 13/11, đọc code cũ). **Chủ dự án bảo giữ QnA để dùng sau: đã mở lại ngay, dặn thread đọc code mới nhất.** Còn mở: luồng chính, ba thread lưu được code (đợt F1, Test & sửa F1, đợt F2), Bộ cài thử nội bộ, Lưu trữ bộ cài, QnA, Bảo mật. Lỗi thuộc phần thread đã đóng chuyển cho thread đợt F2 |
+| 26/11 | Đợt H | Chủ dự án chọn làm nhóm 1 + nhóm 3. Chốt 3 điểm: **chia hai phần** (phần 1 H1 → H5 ra bản 6, phần 2 H6 → H9 ra bản 7, chạy tiếp ngay); **chạy liền, số tiêu chuẩn hỏi trước** (cặp chạy cùng lúc H1 + H2, H3 + H4, H6 + H7; số thép / trắc dọc / ống hỏi chủ dự án trước khi viết); **skill trên máy nâng cấp: cập nhật, giữ bản khách đã sửa** |
 | 12/11 | Cách làm việc | Luồng chính điều phối; mỗi đợt một thread, thread đợt tự mở thread con "Test & sửa" |
 
 ## 4. Đã làm
@@ -210,3 +216,5 @@ Sau đợt F + G (ước tính, đo ở thread test tổng thể đợt G; đợ
     (`session_01D56HmJdn7RASaJtfgMQp5x`) giữ link và hướng dẫn cài cho chủ dự án.
   - Báo cáo cuối chuỗi: [`bao-cao-dot-f-g-26-11.md`](bao-cao-dot-f-g-26-11.md). Chi phí các thread cho đợt F + G khoảng
     $312 (chưa kể luồng chính). Chờ chủ dự án: thử tay, duyệt con số.
+  - Chủ dự án chọn làm tiếp nhóm 1 + nhóm 3 (**đợt H**), chốt 3 điểm. Giao H1 (thread đợt F1) và H2 (thread Test & sửa F1)
+    chạy cùng lúc từ `547d6af`.

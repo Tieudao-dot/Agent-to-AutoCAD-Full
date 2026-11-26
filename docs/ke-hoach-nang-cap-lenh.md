@@ -191,10 +191,20 @@ Hai nhóm số thread tự chọn hôm 13/11, nay hỏi lại theo quy tắc "co
 
 Các số đợt E chốt 13/11 giữ nguyên: cao bậc 160, rộng bậc 280, vế rộng 1000, mái bằng dày 150, mái dốc 30°, đua 600.
 
-## Đợt H (đề xuất 26/11/2026, chờ chủ dự án chốt)
+## Đợt H (chốt 26/11/2026)
 
 Chủ dự án chọn 26/11 làm tiếp **nhóm 1** (việc nhỏ còn sót) và **nhóm 3** (tính năng mới cho khách) trong danh sách luồng
 chính đưa. Nhóm 2 (tự cập nhật, thống kê mức dùng, bản dùng thử cho khách) chưa làm vì cần máy chủ kích hoạt.
+
+**Chủ dự án chốt 26/11/2026 (3 câu hỏi):**
+
+1. **Chia hai phần.** Phần 1 (H1 → H5) làm ngay, xong ra bộ cài thử bản 6. Phần 2 (H6 → H9) chạy tiếp ngay sau, ra bản 7.
+2. **Chạy liền, số tiêu chuẩn hỏi trước.** Chuỗi không dừng để hỏi, như đợt G; các cặp chạy cùng lúc H1 với H2, H3 với
+   H4, H6 với H7 được đồng ý. Số thường dùng số đề xuất, duyệt một lần ở báo cáo cuối mỗi phần. Riêng số theo tiêu chuẩn
+   ở phần 2 (lớp bê tông bảo vệ thép, chiều dài neo / nối thép, tỉ lệ trắc dọc, độ dốc ống…) thread gom thành danh sách,
+   luồng chính hỏi chủ dự án **trước khi viết**; trong lúc chờ, thread làm phần không dính số.
+3. **Skill trên máy nâng cấp: cập nhật, giữ bản khách đã sửa.** Skill khách chưa sửa thì thay bằng bản mới; skill khách đã
+   sửa thì giữ nguyên, đặt bản mới cạnh nó và khung chat báo một dòng để khách tự gộp. Làm trong H1.
 
 | Đợt | Nội dung | Gói | Ước |
 | --- | --- | --- | --- |
@@ -214,17 +224,29 @@ chính đưa. Nhóm 2 (tự cập nhật, thống kê mức dùng, bản dùng t
     $190–270, khoảng 10–14 giờ. Tổng $325–475, đắt hơn làm một mạch khoảng $30–40 vì thêm một lượt kiểm cuối;
   - làm một mạch: $295–435, khoảng 17–23 giờ, một bộ cài khi xong hết;
   - chưa tính lúc dừng vì chạm giới hạn sử dụng 5 giờ (dùng chung mọi thread; đợt G dừng khoảng 3 giờ).
-- **Thứ tự và các cặp chạy cùng lúc (đề xuất, chờ chủ dự án đồng ý từng cặp):**
+- **Thứ tự và các cặp chạy cùng lúc (chủ dự án đồng ý 26/11):**
   - phần 1: H1 với H2 (bộ cài, PDF, soát lỗi / xuất file: khác mảng); rồi H3 với H4 (cả hai đọc file bản vẽ khác, thread
     gộp đưa phần đọc file về một chỗ); rồi H5 riêng (dùng chuẩn công ty của H4, soát lỗi và in PDF đã có);
   - phần 2: H6 với H7 (hạ tầng 2D, ống 3D); rồi H8 riêng; H9 sau cùng, riêng, vì đụng mọi chữ trên giao diện và phải dịch
     cả chữ của các đợt trước.
 - **Thread:** dùng lại ba thread lưu được lên GitHub (đợt F1, Test & sửa F1, đợt F2), viết và rà là hai thread khác nhau;
   kiểm tra độc lập mở thread mới (không cần lưu). Xuất phát từ nhánh chốt `full/nang-cap-g-tong-the` @ `547d6af`.
-- **Con số:** gom vào `docs/dot-h-cho-duyet.md`. Cách duyệt chờ chủ dự án chọn.
+- **Con số:** mỗi thread ghi bảng "Con số chờ chủ dự án duyệt" và "Quyết định tự chọn" trong bàn giao của đợt mình
+  (`docs/ban-giao/nang-cap-hN.md`), phần thử tay trong `docs/checklist-dot-hN.md`; test tổng thể mỗi phần gom vào
+  `docs/dot-h-cho-duyet.md` và `docs/checklist-tong-the.md`.
+- **Nhánh:** H1, H2 tách từ `547d6af` (`full/nang-cap-h1`, `full/nang-cap-h2`, rà ở `…-test`); thread viết H3 gộp hai
+  nhánh rà, CI xanh rồi báo commit gộp cho H4 tách nhánh; thread viết H5 gộp H3 + H4; test tổng thể phần 1 ở
+  `full/nang-cap-h-tong-the`.
 - **Giới hạn nêu rõ cho khách:**
   - bảng thép là thống kê từ bản vẽ, không phải tính toán kết cấu (không tính cần bao nhiêu thép);
   - MEP chỉ vẽ theo cỡ ống khách đưa, không tính thủy lực / lưu lượng;
   - trắc dọc, trắc ngang, móng, thép theo TCVN; kết quả là bản vẽ hỗ trợ, kỹ sư vẫn kiểm.
 - **Bản 5 chưa chạy trên AutoCAD thật.** Lỗi chủ dự án báo khi thử bản 5 được sửa trước và gộp vào chuỗi đợt H.
 - Lệnh mới làm tăng token mở chat; nạp gọn lệnh (đợt F4) giữ mức tăng nhỏ, đo lại ở test tổng thể.
+
+### Tiến độ đợt H
+
+| Đợt | Thread viết | Thread rà | Nhánh | Trạng thái |
+| --- | --- | --- | --- | --- |
+| H1 | Thread đợt F1 `session_01D56HmFAo4dZ7c8sbeNB9eh` (giao 26/11) | Chưa giao | `full/nang-cap-h1` (từ `547d6af`) | Đang viết |
+| H2 | Thread Test & sửa F1 `session_01D56HmFrL65iF9oJokvqXw5` (giao 26/11) | Chưa giao | `full/nang-cap-h2` (từ `547d6af`) | Đang viết |
