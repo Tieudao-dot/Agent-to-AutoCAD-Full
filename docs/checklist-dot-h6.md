@@ -1,5 +1,7 @@
 # Thử tay đợt H6: hạ tầng (điểm khảo sát, đồng mức, trắc dọc, trắc ngang)
 
+*Đã gộp vào khối "Đợt H phần 2" của [`docs/checklist-tong-the.md`](checklist-tong-the.md) (test tổng thể đợt H phần 2), thử tay theo file đó.*
+
 *Nhánh `full/nang-cap-h6`. Chi tiết: `docs/ban-giao/nang-cap-h6.md`. Máy gói Full hoặc 2D, bản vẽ mới (đơn vị mm). Chuẩn bị
 một file điểm đo thật (CSV hoặc Excel, khoảng 100 – 2 000 điểm, có cột Tên / X / Y / Cao độ theo VN-2000). Khoảng 30 phút.
 "Đạt" là thấy đúng như cột phải; khác thì chụp màn hình và ghi số thứ tự.*

@@ -1,5 +1,7 @@
 # Thử tay đợt H9 — giao diện tiếng Anh
 
+*Đã gộp vào khối "Đợt H phần 2" của [`docs/checklist-tong-the.md`](checklist-tong-the.md) (test tổng thể đợt H phần 2), thử tay theo file đó.*
+
 Nhánh `full/nang-cap-h9`. Chưa thử trên AutoCAD thật. Bàn giao: [`docs/ban-giao/nang-cap-h9.md`](ban-giao/nang-cap-h9.md).
 
 ## A. Bộ cài

@@ -1,5 +1,7 @@
 # Checklist thử tay đợt H7: ống MEP 3D (khoảng 25 phút)
 
+*Đã gộp vào khối "Đợt H phần 2" của [`docs/checklist-tong-the.md`](checklist-tong-the.md) (test tổng thể đợt H phần 2), thử tay theo file đó.*
+
 Máy gói 3D hoặc Full, AutoCAD 2022–2027. Bản vẽ có sẵn vài dầm 3D (vd dựng bằng "dựng dầm 220x400 theo trục…") hoặc tự
 vẽ một khối hộp trên layer `A-BEAM-3D`.
 

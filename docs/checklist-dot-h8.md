@@ -1,5 +1,7 @@
 # Checklist thử tay đợt H8: kết cấu (khoảng 25 phút)
 
+*Đã gộp vào khối "Đợt H phần 2" của [`docs/checklist-tong-the.md`](checklist-tong-the.md) (test tổng thể đợt H phần 2), thử tay theo file đó.*
+
 AutoCAD 2022–2027. Phần A, B cần máy gói 2D hoặc Full; phần C cần gói 3D hoặc Full.
 
 *Số mặc định (đã duyệt 26/11/2026):*
