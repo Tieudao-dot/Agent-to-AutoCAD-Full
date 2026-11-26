@@ -82,12 +82,14 @@ Số kỹ thuật (khách không thấy): DXF 16 chữ số thập phân (mặc 
 
 ## 9. Test
 
-- Lõi `dotnet test plugin/ClaudeCAD.Core.Tests`: xem mục cập nhật cuối file.
-- Trợ lý `cd agent && npm ci && npm test`: xem mục cập nhật cuối file.
+- Lõi `dotnet test plugin/ClaudeCAD.Core.Tests`: **1466** (thêm 21 `NangCapH2Tests.cs`).
+- Trợ lý `cd agent && npm ci && npm test`: **411** (thêm 4 `test/nangcaph2.test.ts`). Không sửa / bỏ test cũ.
+- Build 3 target (xóa obj / bin giữa các lần): 0 cảnh báo.
 
 ## 10. CI
 
-- Xem mục cập nhật cuối file.
+- Run **#74** (`45774685657`, `release=false`) trên `3d64e75` (commit code cuối): **xanh** (job `windows`: build 3 target, lõi, trợ lý,
+  UI test WPF). Dùng 1 / 2 lượt. Commit sau đó chỉ thêm mục này.
 
 ## 11. Chưa kiểm được
 
