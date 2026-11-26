@@ -57,4 +57,10 @@ Số bên trong, khách không thấy (không phải duyệt): ảnh PDF lưu t�
 
 ## 7. CI
 
-(điền sau khi chạy)
+- Lượt 1: run 45779651447 trên `67ac8e0`, **xanh**.
+  - Lõi 1478 / 1478.
+  - UI test 38 / 38, gồm `NangCapH1PdfTests`. Windows dựng trang mẫu trong 3 giây. PDF hỏng trả lý do "Windows could not
+    render the page (…)". Lần xem lại dùng đúng ảnh cũ. Không còn file dở.
+  - Log trợ lý: `# pass 409`, `# fail 3`. Đó đúng là 3 lỗi cũ đã biết (`F5: multileader of the standard`,
+    `G5: looks at a traced picture`, `KT-42: …`), không có lỗi mới.
+- Commit này chỉ ghi kết quả CI vào tài liệu, code giữ nguyên như `67ac8e0`.
