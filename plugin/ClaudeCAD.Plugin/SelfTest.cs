@@ -1698,14 +1698,14 @@ namespace ClaudeCAD.Plugin
         private static string Report(List<Step> steps, string dir)
         {
             var sb = new StringBuilder();
-            sb.AppendLine(ProductInfo.DisplayName + " — tự kiểm tra " + DateTime.Now.ToString("yyyy-MM-dd HH:mm", CultureInfo.InvariantCulture));
+            sb.AppendLine(ProductInfo.DisplayName + L.Tr(" — tự kiểm tra ") + DateTime.Now.ToString("yyyy-MM-dd HH:mm", CultureInfo.InvariantCulture));
             sb.AppendLine(new string('=', 60));
             foreach (var s in steps)
-                sb.AppendLine($"{(s.Ok ? "✓" : "✗")} {s.Name}{(s.Ms > 0 ? $" ({s.Ms} ms)" : "")}: {s.Detail}");
+                sb.AppendLine($"{(s.Ok ? "✓" : "✗")} {L.Tr(s.Name)}{(s.Ms > 0 ? $" ({s.Ms} ms)" : "")}: {s.Detail}");
             int bad = steps.Count(s => !s.Ok);
             var stamp = DateTime.Now.ToString("yyyyMMdd-HHmmss", CultureInfo.InvariantCulture);
             sb.AppendLine(new string('=', 60));
-            sb.AppendLine(bad == 0 ? "Tất cả đều đạt." : $"{bad} mục chưa đạt — gửi file này (và log CLAUDECHATLOG) cho người phát triển.");
+            sb.AppendLine(bad == 0 ? L.Tr("Tất cả đều đạt.") : L.Tr("{0} mục chưa đạt — gửi file này (và log CLAUDECHATLOG) cho người phát triển.", bad));
             if (bad == 0)
             {
                 // nothing to investigate: keep only the picture (next to the report), drop the test drawings
@@ -1717,13 +1717,13 @@ namespace ClaudeCAD.Plugin
                         Directory.CreateDirectory(Logger.LogDirectory);
                         var keep = Path.Combine(Logger.LogDirectory, "selftest-" + stamp + ".png");
                         File.Copy(png, keep, true);
-                        sb.AppendLine("Ảnh chụp thử: " + keep);
+                        sb.AppendLine(L.Tr("Ảnh chụp thử: ") + keep);
                     }
                     Directory.Delete(dir, true);
                 }
-                catch (Exception ex) { Logger.Warn("selftest folder not removed: " + ex.Message); sb.AppendLine("Thư mục thử: " + dir); }
+                catch (Exception ex) { Logger.Warn("selftest folder not removed: " + ex.Message); sb.AppendLine(L.Tr("Thư mục thử: ") + dir); }
             }
-            else sb.AppendLine("Thư mục thử (giữ lại để kiểm tra): " + dir);
+            else sb.AppendLine(L.Tr("Thư mục thử (giữ lại để kiểm tra): ") + dir);
             var file = Path.Combine(Logger.LogDirectory, "selftest-" + stamp + ".txt");
             try
             {
@@ -1732,7 +1732,7 @@ namespace ClaudeCAD.Plugin
                 Process.Start("notepad.exe", "\"" + file + "\"");
             }
             catch (Exception ex) { Logger.Warn("selftest report not written: " + ex.Message); }
-            return $"{steps.Count - bad}/{steps.Count} mục đạt. Báo cáo: {file}";
+            return L.Tr("{0}/{1} mục đạt. Báo cáo: {2}", steps.Count - bad, steps.Count, file);
         }
     }
 }

@@ -221,7 +221,7 @@ namespace ClaudeCAD.Plugin.UI
                         var handles = MarkdownLite.HandlesFromUrl(i.Url);
                         if (handles != null)
                         {
-                            link.ToolTip = "Bấm để zoom tới và tô sáng " + handles.Count + " đối tượng";
+                            link.ToolTip = L.Tr("Bấm để zoom tới và tô sáng ") + handles.Count + L.Tr(" đối tượng");
                             link.Click += (s, e) => HandleLinkClicked?.Invoke(handles);
                         }
                         else if (Uri.TryCreate(i.Url, UriKind.Absolute, out var uri) && (uri.Scheme == "http" || uri.Scheme == "https"))

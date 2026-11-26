@@ -162,10 +162,26 @@ function workModeSection(mode: WorkMode): string {
   );
 }
 
+/**
+ * Nâng cấp đợt H9: the user chose English in ⚙. Last in the prompt, so it overrides every "in Vietnamese" above; texts put
+ * into the drawing stay Vietnamese (chủ dự án chốt 26/11/2026: English changes the palette and the answers only).
+ */
+export const ENGLISH_SECTION =
+  '\n# Language: English\n' +
+  '- The user chose English in the palette. Answer in English, short and practical; address the user as "you" (never "tớ" / "cậu"). ' +
+  'This overrides every "in Vietnamese" rule above: card texts (request_confirmation, propose_plan), report_progress steps, ' +
+  'suggest_next_steps, error explanations and the refusal sentences are written in English (translate the quoted Vietnamese examples; ' +
+  'name the buttons as the palette shows them in English: Yes / No, Do it / Edit plan / Skip, the mode button Both / 2D / 3D).\n' +
+  '- Skills, project notes and some tool messages are in Vietnamese: read them, answer in English.\n' +
+  '- Texts you put INTO the drawing (room names, table heads, notes, dimensions text, title blocks, sheet names, layer names and ' +
+  'descriptions) stay Vietnamese as the standard / skill says, unless the user asks for English text in the drawing.\n' +
+  '- The user may confirm with "yes", "ok", "go ahead" as well as "đồng ý".\n';
+
 /** The system prompt with this machine's service plan (sent by the plugin; undefined = an older plugin). */
-export function systemPromptFor(plan?: ServicePlan, mode?: WorkMode, deferTools = true): string {
+export function systemPromptFor(plan?: ServicePlan, mode?: WorkMode, deferTools = true, language: 'vi' | 'en' = 'vi'): string {
   const p = systemPromptOf(plan, mode);
-  return deferTools ? p : p.replace(TOOL_SEARCH_HINT + '\n', '');
+  const q = deferTools ? p : p.replace(TOOL_SEARCH_HINT + '\n', '');
+  return language === 'en' ? q + ENGLISH_SECTION : q;
 }
 
 function systemPromptOf(plan?: ServicePlan, mode?: WorkMode): string {

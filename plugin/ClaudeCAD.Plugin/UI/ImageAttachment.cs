@@ -37,7 +37,7 @@ namespace ClaudeCAD.Plugin.UI
                 data = Encode(new JpegBitmapEncoder { QualityLevel = 85 }, new FormatConvertedBitmap(bmp, PixelFormats.Bgr24, null, 0));
                 mt = "image/jpeg";
             }
-            if (data.Length > MaxBytes) throw new InvalidOperationException("Ảnh quá lớn kể cả sau khi nén.");
+            if (data.Length > MaxBytes) throw new InvalidOperationException(Core.L.Tr("Ảnh quá lớn kể cả sau khi nén."));
 
             double ts = 56.0 / Math.Max(bmp.PixelWidth, bmp.PixelHeight);
             var thumb = new TransformedBitmap(bmp, new ScaleTransform(Math.Min(1, ts), Math.Min(1, ts)));

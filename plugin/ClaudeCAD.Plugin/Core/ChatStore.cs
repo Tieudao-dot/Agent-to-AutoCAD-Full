@@ -159,25 +159,25 @@ namespace ClaudeCAD.Plugin.Core
             sb.AppendLine();
             foreach (var e in Entries)
             {
-                string who = e.Role == "user" ? "Người dùng" : e.Role == "assistant" ? "Claude" : e.Role == "error" ? "Lỗi" : "Ghi chú";
+                string who = e.Role == "user" ? L.Tr("Người dùng") : e.Role == "assistant" ? "Claude" : e.Role == "error" ? L.Tr("Lỗi") : L.Tr("Ghi chú");
                 sb.Append("## ").Append(who).Append(" · ").AppendLine(e.Time.ToString("yyyy-MM-dd HH:mm", CultureInfo.InvariantCulture));
                 sb.AppendLine();
-                if (e.SelectionCount > 0) sb.AppendLine($"_Kèm {e.SelectionCount} đối tượng đang chọn_").AppendLine();
-                if (e.ImageCount > 0) sb.AppendLine($"_Kèm {e.ImageCount} ảnh_").AppendLine();
-                if (e.Layers.Count > 0) sb.AppendLine($"_Layer đã chọn: {string.Join(", ", e.Layers)}_").AppendLine();
+                if (e.SelectionCount > 0) sb.AppendLine(L.Tr("_Kèm {0} đối tượng đang chọn_", e.SelectionCount)).AppendLine();
+                if (e.ImageCount > 0) sb.AppendLine(L.Tr("_Kèm {0} ảnh_", e.ImageCount)).AppendLine();
+                if (e.Layers.Count > 0) sb.AppendLine(L.Tr("_Layer đã chọn: {0}_", string.Join(", ", e.Layers))).AppendLine();
                 sb.AppendLine(e.Text);
                 sb.AppendLine();
                 if (e.Changes != null && !e.Changes.IsEmpty)
                 {
-                    sb.AppendLine("_" + e.Changes.Headline + "_ — " + string.Join(", ", e.Changes.Rows.Select(r => $"{ChangeSummary.KindLabel(r.Kind)} {r.Count} trên {r.Layer}")));
+                    sb.AppendLine("_" + e.Changes.Headline + "_ — " + string.Join(", ", e.Changes.Rows.Select(r => L.Tr("{0} {1} trên {2}", ChangeSummary.KindLabel(r.Kind), r.Count, r.Layer))));
                     sb.AppendLine();
                 }
                 if (e.Tools.Count > 0)
                 {
-                    sb.AppendLine("<details><summary>Thao tác (" + e.Tools.Count + ")</summary>");
+                    sb.AppendLine(L.Tr("<details><summary>Thao tác (") + e.Tools.Count + ")</summary>");
                     sb.AppendLine();
                     foreach (var t in e.Tools)
-                        sb.AppendLine($"- `{t.Tool}` {(t.State == "error" ? "lỗi: " + t.Error : t.Summary ?? "")} ({t.Ms} ms)");
+                        sb.AppendLine(L.Tr("- `{0}` {1} ({2} ms)", t.Tool, (t.State == "error" ? L.Tr("lỗi: ") + t.Error : t.Summary ?? ""), t.Ms));
                     sb.AppendLine();
                     sb.AppendLine("</details>");
                     sb.AppendLine();

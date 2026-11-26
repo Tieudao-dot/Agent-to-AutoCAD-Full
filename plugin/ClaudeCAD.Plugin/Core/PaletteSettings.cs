@@ -29,6 +29,8 @@ namespace ClaudeCAD.Plugin.Core
         public List<string> LastSkills;
         public bool SnapshotNextToDrawing;  // also write the "biên bản" next to the DWG (shared project folders)
         public bool DeferTools = true;      // nâng cấp đợt F5: ⚙ "Nạp gọn lệnh" (F4 deferred tools); CLAUDECAD_DEFER_TOOLS / tool-search-off still win
+        /// <summary>Nâng cấp đợt H9: "vi" (default) | "en" — the palette and Claude's answers (drawn texts stay Vietnamese).</summary>
+        public string Language = L.Vi;
         public string WorkMode = WorkModeLogic.Both; // nâng cấp đợt F1: Full machines only — "both" | "2d" | "3d" (WorkModeLogic)
         public List<string> History = new List<string>(); // feature 10, newest last
 
@@ -41,10 +43,10 @@ namespace ClaudeCAD.Plugin.Core
         {
             switch (s)
             {
-                case "ve-kien-truc": return "Kiến trúc";
-                case "ve-mep": return "Điện nước";
-                case "ve-ha-tang": return "Hạ tầng";
-                case "": case null: return "Tự động";
+                case "ve-kien-truc": return L.Tr("Kiến trúc");
+                case "ve-mep": return L.Tr("Điện nước");
+                case "ve-ha-tang": return L.Tr("Hạ tầng");
+                case "": case null: return L.Tr("Tự động");
                 default: return s;
             }
         }
@@ -56,7 +58,7 @@ namespace ClaudeCAD.Plugin.Core
                 case "claude-opus-5-5": return "Opus 5.5";
                 case "claude-sonnet-5-5": return "Sonnet 5.5";
                 case "claude-haiku-5-5": return "Haiku 5.5";
-                default: return "Mặc định";
+                default: return L.Tr("Mặc định");
             }
         }
 
@@ -81,6 +83,7 @@ namespace ClaudeCAD.Plugin.Core
             ["versions"] = Versions, ["snapshot_next_to_drawing"] = SnapshotNextToDrawing,
             ["defer_tools"] = DeferTools,
             ["work_mode"] = WorkModeLogic.Normalize(WorkMode),
+            ["language"] = L.Normalize(Language),
             ["history"] = History.Cast<object>().ToList(),
             ["last_skills"] = LastSkills?.Cast<object>().ToList(),
         });
@@ -109,6 +112,7 @@ namespace ClaudeCAD.Plugin.Core
             s.SnapshotNextToDrawing = Bool("snapshot_next_to_drawing", false);
             s.DeferTools = Bool("defer_tools", true);
             s.WorkMode = WorkModeLogic.Normalize(Str("work_mode", WorkModeLogic.Both));
+            s.Language = L.Normalize(Str("language", L.Vi));
             if (d.TryGetValue("history", out var h) && h is List<object> hl) s.History = hl.OfType<string>().Take(MaxHistory).ToList();
             if (d.TryGetValue("last_skills", out var ls) && ls is List<object> lsl) s.LastSkills = SkillSelection.Clean(lsl.OfType<string>());
             return s;

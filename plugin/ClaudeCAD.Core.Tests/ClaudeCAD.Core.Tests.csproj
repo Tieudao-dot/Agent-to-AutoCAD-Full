@@ -21,6 +21,8 @@
     <Compile Include="..\ClaudeCAD.Plugin\Core\MarkdownLite.cs" Link="Core\MarkdownLite.cs" />
     <Compile Include="..\ClaudeCAD.Plugin\Core\ChatStore.cs" Link="Core\ChatStore.cs" />
     <Compile Include="..\ClaudeCAD.Plugin\Core\PaletteSettings.cs" Link="Core\PaletteSettings.cs" />
+    <Compile Include="..\ClaudeCAD.Plugin\Core\Lang.cs" Link="Core\Lang.cs" />
+    <Compile Include="..\ClaudeCAD.Plugin\Core\LangEn.cs" Link="Core\LangEn.cs" />
     <Compile Include="..\ClaudeCAD.Plugin\Core\QuickTemplates.cs" Link="Core\QuickTemplates.cs" />
     <Compile Include="..\ClaudeCAD.Plugin\Core\SkillStore.cs" Link="Core\SkillStore.cs" />
     <Compile Include="..\ClaudeCAD.Plugin\Core\Macros.cs" Link="Core\Macros.cs" />

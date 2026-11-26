@@ -19,10 +19,10 @@ namespace ClaudeCAD.Plugin.Core
         public const double MLeaderDoglegLength = 2.5;
 
         /// <summary>The ⚙ row of the deferred tools (F4) and its one-line explanation.</summary>
-        public const string DeferToolsLabel = "Nạp gọn lệnh";
+        public const string DeferToolsLabel = "Nạp gọn lệnh"; // vi: key
         public const string DeferToolsTip =
-            "Bật: mở chat nhanh và nhẹ hơn, Claude tự tìm lệnh ít dùng khi cần. Tắt: nạp đủ mô tả mọi lệnh như trước (tốn token hơn). " +
-            "Áp dụng từ cuộc chat mới (bấm Chat mới); cuộc chat đã có tin nhắn giữ cách nạp lúc bắt đầu.";
+            "Bật: mở chat nhanh và nhẹ hơn, Claude tự tìm lệnh ít dùng khi cần. Tắt: nạp đủ mô tả mọi lệnh như trước (tốn token hơn). " + // vi: a key, shown through L.Tr
+            "Áp dụng từ cuộc chat mới (bấm Chat mới); cuộc chat đã có tin nhắn giữ cách nạp lúc bắt đầu."; // vi: key
     }
 
     /// <summary>
@@ -101,7 +101,7 @@ namespace ClaudeCAD.Plugin.Core
         public static string CardMessage(string tool, string what, IEnumerable<string> handles) =>
             $"Confirmation required: {tool} would {what}, which is not on a confirmation card the user approved. Nothing was changed. " +
             $"Call request_confirmation with handles [{string.Join(", ", handles.Select(h => "\"" + h + "\""))}] and one Vietnamese sentence saying what will be overwritten or deleted, " +
-            $"and end your turn. After the user presses Đồng ý, call {tool} again with the same parameters and {Param} = those handles. A typed \"ok\" does not count.";
+            $"and end your turn. After the user presses Đồng ý, call {tool} again with the same parameters and {Param} = those handles. A typed \"ok\" does not count."; // vi: for Claude
     }
 
     /// <summary>Nâng cấp đợt F5: the multileader style of setup_standards (with the text and dimension styles).</summary>

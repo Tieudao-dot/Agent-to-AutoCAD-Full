@@ -265,9 +265,9 @@ namespace ClaudeCAD.Plugin.Core
 
         /// <summary>What the palette says when ExternalSolidEdits refuses a macro (Vietnamese, for the user).</summary>
         public static string ExternalSolidEditsMessage(List<string> edits) =>
-            "Macro này sửa khối 3D có sẵn trong bản vẽ (" + string.Join("; ", edits.Take(3)) + (edits.Count > 3 ? "; …" : "") + "). " +
-            "Chạy macro không có thẻ xác nhận nên tớ không chạy. Nhờ Claude làm việc này (Claude hỏi bằng thẻ xác nhận), " +
-            "hoặc lưu lại macro chỉ sửa khối do chính macro dựng.";
+            L.Tr("Macro này sửa khối 3D có sẵn trong bản vẽ (") + string.Join("; ", edits.Take(3)) + (edits.Count > 3 ? "; …" : "") + "). " +
+            L.Tr("Chạy macro không có thẻ xác nhận nên tớ không chạy. Nhờ Claude làm việc này (Claude hỏi bằng thẻ xác nhận), ") +
+            L.Tr("hoặc lưu lại macro chỉ sửa khối do chính macro dựng.");
 
         /// <summary>Values of params named handle / handles / *_handle(s) (where tools take entity handles).</summary>
         public static IEnumerable<string> HandleParams(Dictionary<string, object> p)
@@ -351,7 +351,7 @@ namespace ClaudeCAD.Plugin.Core
         {
             var groups = m.Calls.GroupBy(c => c.Tool).OrderByDescending(g => g.Count()).Take(4)
                 .Select(g => $"{g.Key} ×{g.Count()}");
-            return $"{m.Calls.Count} lệnh: {string.Join(", ", groups)}{(m.Calls.Select(c => c.Tool).Distinct().Count() > 4 ? ", …" : "")}";
+            return L.Tr("{0} lệnh: {1}{2}", m.Calls.Count, string.Join(", ", groups), (m.Calls.Select(c => c.Tool).Distinct().Count() > 4 ? ", …" : ""));
         }
     }
 
@@ -439,7 +439,7 @@ namespace ClaudeCAD.Plugin.Core
 
         public string Save(Macro m)
         {
-            if (string.IsNullOrWhiteSpace(m.Name)) throw new ArgumentException("Tên macro không được để trống.");
+            if (string.IsNullOrWhiteSpace(m.Name)) throw new ArgumentException(L.Tr("Tên macro không được để trống."));
             Directory.CreateDirectory(Root);
             var file = Path.Combine(Root, FileName(m.Name));
             File.WriteAllText(file, m.ToJson(), new UTF8Encoding(false));

@@ -103,9 +103,9 @@ namespace ClaudeCAD.Plugin.Core
 
         public bool IsEmpty => Added + Modified + Erased == 0;
 
-        public string Headline => $"Thêm {Added} · Sửa {Modified} · Xóa {Erased}";
+        public string Headline => L.Tr("Thêm {0} · Sửa {1} · Xóa {2}", Added, Modified, Erased);
 
-        public static string KindLabel(string kind) => kind == "added" ? "Thêm" : kind == "modified" ? "Sửa" : "Xóa";
+        public static string KindLabel(string kind) => kind == "added" ? L.Tr("Thêm") : kind == "modified" ? L.Tr("Sửa") : L.Tr("Xóa");
 
         /// <summary>Groups (kind, layer, handle) into rows: kinds in order added, modified, erased; layers by count.</summary>
         public static ChangeSummary Build(IEnumerable<(string kind, string layer, string handle)> items)
@@ -180,10 +180,10 @@ namespace ClaudeCAD.Plugin.Core
             get
             {
                 var s = new List<string>();
-                if (Current) s.Add("hiện hành");
-                if (!On) s.Add("tắt");
-                if (Frozen) s.Add("đóng băng");
-                if (Locked) s.Add("khóa");
+                if (Current) s.Add(L.Tr("hiện hành"));
+                if (!On) s.Add(L.Tr("tắt"));
+                if (Frozen) s.Add(L.Tr("đóng băng"));
+                if (Locked) s.Add(L.Tr("khóa"));
                 if (Xref) s.Add("xref");
                 return string.Join(", ", s);
             }
@@ -240,7 +240,7 @@ namespace ClaudeCAD.Plugin.Core
         public string Kind;      // layer | block | text_style | dim_style | layout
 
         public string KindLabel =>
-            Kind == "layer" ? "layer" : Kind == "block" ? "block" : Kind == "text_style" ? "kiểu chữ" : Kind == "dim_style" ? "kiểu kích thước" : Kind == "layout" ? "layout" : Kind;
+            Kind == "layer" ? "layer" : Kind == "block" ? "block" : Kind == "text_style" ? L.Tr("kiểu chữ") : Kind == "dim_style" ? L.Tr("kiểu kích thước") : Kind == "layout" ? "layout" : Kind;
     }
 
     public static class Mentions
@@ -330,7 +330,7 @@ namespace ClaudeCAD.Plugin.Core
         /// <summary>Writes (or deletes when empty) the folder notes file. Throws on I/O errors.</summary>
         public static void SaveFolder(string drawingPath, string text)
         {
-            var f = FolderFile(drawingPath) ?? throw new InvalidOperationException("Bản vẽ chưa được lưu nên chưa có thư mục dự án.");
+            var f = FolderFile(drawingPath) ?? throw new InvalidOperationException(L.Tr("Bản vẽ chưa được lưu nên chưa có thư mục dự án."));
             text = (text ?? "").Trim();
             if (text.Length == 0) { if (File.Exists(f)) File.Delete(f); return; }
             File.WriteAllText(f, Clip(text) + "\n", new UTF8Encoding(false));
@@ -348,8 +348,8 @@ namespace ClaudeCAD.Plugin.Core
             var parts = new List<string>();
             var f = Clip(folderNotes);
             var d = Clip(drawingNotes);
-            if (f.Length > 0) parts.Add("Ghi chú dự án (cả thư mục):\n" + f);
-            if (d.Length > 0) parts.Add("Ghi chú riêng bản vẽ này:\n" + d);
+            if (f.Length > 0) parts.Add("Ghi chú dự án (cả thư mục):\n" + f); // vi: for Claude
+            if (d.Length > 0) parts.Add("Ghi chú riêng bản vẽ này:\n" + d); // vi: for Claude
             return parts.Count == 0 ? null : string.Join("\n\n", parts);
         }
     }

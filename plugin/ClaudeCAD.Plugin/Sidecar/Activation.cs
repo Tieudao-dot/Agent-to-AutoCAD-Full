@@ -173,11 +173,11 @@ namespace ClaudeCAD.Plugin.Sidecar
             get
             {
                 var st = DeviceStatus;
-                if (st.Ok && st.Status == "disabled") return "Máy này đã bị chủ plugin tạm khóa. " + Contact + ".";
-                if (st.Ok && st.Status == "pending") return "Máy này đang chờ chủ plugin duyệt lại. " + Contact + " nếu chờ lâu.";
-                if (st.Ok && st.ClockBack) return "Đồng hồ máy đang chậm hơn lần dùng trước. Chỉnh lại ngày giờ Windows cho đúng, kết nối mạng rồi bấm \"Kiểm tra lại\".";
-                if (st.Ok && !st.Fresh) return $"Plugin đã quá {LicenseLogic.StatusMaxAgeDays} ngày không kiểm tra được với chủ plugin ({st.Reason}). Kết nối mạng rồi bấm \"Kiểm tra lại\".";
-                return $"Chưa xác nhận được máy này với chủ plugin ({st.Reason}). Kết nối mạng rồi bấm \"Kiểm tra lại\".";
+                if (st.Ok && st.Status == "disabled") return L.Tr("Máy này đã bị chủ plugin tạm khóa. ") + Contact + ".";
+                if (st.Ok && st.Status == "pending") return L.Tr("Máy này đang chờ chủ plugin duyệt lại. ") + Contact + L.Tr(" nếu chờ lâu.");
+                if (st.Ok && st.ClockBack) return L.Tr("Đồng hồ máy đang chậm hơn lần dùng trước. Chỉnh lại ngày giờ Windows cho đúng, kết nối mạng rồi bấm \"Kiểm tra lại\".");
+                if (st.Ok && !st.Fresh) return L.Tr("Plugin đã quá {0} ngày không kiểm tra được với chủ plugin ({1}). Kết nối mạng rồi bấm \"Kiểm tra lại\".", LicenseLogic.StatusMaxAgeDays, st.Reason);
+                return L.Tr("Chưa xác nhận được máy này với chủ plugin ({0}). Kết nối mạng rồi bấm \"Kiểm tra lại\".", st.Reason);
             }
         }
 
@@ -185,12 +185,12 @@ namespace ClaudeCAD.Plugin.Sidecar
         {
             get
             {
-                if (!IsActivated) return $"chưa kích hoạt — {Check.Reason} (mã máy {MachineCode})";
-                if (!DeviceAllowed) return $"bị tạm khóa (mã máy {MachineCode}) — {BlockedMessage}";
+                if (!IsActivated) return L.Tr("chưa kích hoạt — {0} (mã máy {1})", Check.Reason, MachineCode);
+                if (!DeviceAllowed) return L.Tr("bị tạm khóa (mã máy {0}) — {1}", MachineCode, BlockedMessage);
                 var st = DeviceStatus;
-                var device = ServiceUrl == null ? "" : st.Status == "offline" ? " · miễn kiểm tra từ xa" : $" · được phép dùng (kiểm tra {st.Date})";
-                var plan = ServiceUrl == null ? "" : $" · gói {PlanLabel}";
-                return $"đã kích hoạt (mã máy {MachineCode}, từ {Check.Issued}){device}{plan}";
+                var device = ServiceUrl == null ? "" : st.Status == "offline" ? L.Tr(" · miễn kiểm tra từ xa") : L.Tr(" · được phép dùng (kiểm tra {0})", st.Date);
+                var plan = ServiceUrl == null ? "" : L.Tr(" · gói {0}", PlanLabel);
+                return L.Tr("đã kích hoạt (mã máy {0}, từ {1}){2}{3}", MachineCode, Check.Issued, device, plan);
             }
         }
 
@@ -235,7 +235,7 @@ namespace ClaudeCAD.Plugin.Sidecar
         }
 
         public static string ServiceUrl => Config.url;
-        public static string Contact => Config.contact;
+        public static string Contact => L.Tr(Config.contact);
         public static string DeviceName => Environment.MachineName;
 
         private static HttpClient NewClient()
@@ -266,7 +266,7 @@ namespace ClaudeCAD.Plugin.Sidecar
         /// <summary>Asks the service to email the owner this machine's key. Returns a sentence for the palette.</summary>
         public static async Task<(bool ok, string message)> RequestAsync()
         {
-            if (ServiceUrl == null) return (false, "Bản plugin này chưa có máy chủ kích hoạt. " + Contact + " và gửi mã máy " + MachineCode + ".");
+            if (ServiceUrl == null) return (false, L.Tr("Bản plugin này chưa có máy chủ kích hoạt. ") + Contact + L.Tr(" và gửi mã máy ") + MachineCode + ".");
             var url = LicenseLogic.BuildUrl(ServiceUrl, new[]
             {
                 new KeyValuePair<string, string>("action", "request"),
@@ -280,16 +280,16 @@ namespace ClaudeCAD.Plugin.Sidecar
                 using (var c = NewClient())
                 {
                     var r = LicenseLogic.ParseResponse(await c.GetStringAsync(url).ConfigureAwait(false));
-                    if (!r.ok) return (false, "Không gửi được yêu cầu: " + r.error);
+                    if (!r.ok) return (false, L.Tr("Không gửi được yêu cầu: ") + r.error);
                     try { Directory.CreateDirectory(Root); File.WriteAllText(RequestStamp, DateTime.UtcNow.ToString("o", CultureInfo.InvariantCulture)); } catch { }
                     Logger.Info("activation requested for " + MachineCode);
-                    return (true, "Đã gửi yêu cầu kích hoạt cho chủ plugin. " + Contact + " để nhận key.");
+                    return (true, L.Tr("Đã gửi yêu cầu kích hoạt cho chủ plugin. ") + Contact + L.Tr(" để nhận key."));
                 }
             }
             catch (Exception ex)
             {
                 Logger.Warn("activation request failed: " + ex.Message);
-                return (false, "Không gửi được yêu cầu (kiểm tra mạng). " + Contact + " và gửi mã máy " + MachineCode + ".");
+                return (false, L.Tr("Không gửi được yêu cầu (kiểm tra mạng). ") + Contact + L.Tr(" và gửi mã máy ") + MachineCode + ".");
             }
         }
 
@@ -379,7 +379,7 @@ namespace ClaudeCAD.Plugin.Sidecar
         /// </summary>
         public static async Task<(bool ok, string message)> CheckStatusAsync()
         {
-            if (ServiceUrl == null) return (true, "Bản plugin này không dùng máy chủ kích hoạt.");
+            if (ServiceUrl == null) return (true, L.Tr("Bản plugin này không dùng máy chủ kích hoạt."));
             var url = LicenseLogic.BuildUrl(ServiceUrl, new[]
             {
                 new KeyValuePair<string, string>("action", "status"),
@@ -392,9 +392,9 @@ namespace ClaudeCAD.Plugin.Sidecar
                 {
                     var r = LicenseLogic.ParseResponse(await c.GetStringAsync(url).ConfigureAwait(false));
                     if (!r.ok || string.IsNullOrEmpty(r.status))
-                        return (false, "Không kiểm tra được trạng thái máy: " + (r.error ?? "máy chủ không trả lời đúng."));
+                        return (false, L.Tr("Không kiểm tra được trạng thái máy: ") + (r.error ?? L.Tr("máy chủ không trả lời đúng.")));
                     var st = LicenseLogic.VerifyStatus(r.status, MachineCode, DateTime.UtcNow);
-                    if (!st.Ok) return (false, "Trả lời của máy chủ không hợp lệ: " + st.Reason + ".");
+                    if (!st.Ok) return (false, L.Tr("Trả lời của máy chủ không hợp lệ: ") + st.Reason + ".");
                     // a fresh answer dated by the service: this clock is right again (a clock that was wrong-ahead recovers)
                     if (st.Fresh) RememberSeen(DateTime.UtcNow, reset: true);
                     var refused = TrySaveStatus(r.status, st, fromService: true); // never older than the saved one
@@ -413,15 +413,15 @@ namespace ClaudeCAD.Plugin.Sidecar
                     Logger.Info("device status: " + st.Status + " (" + MachineCode + ")");
                     if (st.Status == "disabled") return (true, BlockedMessage);
                     if (st.Status == "active") return (true, IsActivated
-                        ? "Máy này đang được chủ plugin cho phép dùng."
-                        : "Máy đã được duyệt nhưng chưa lưu được giấy phép — thử lại.");
-                    return (true, "Máy này đang chờ chủ plugin duyệt. " + Contact + " để được duyệt nhanh.");
+                        ? L.Tr("Máy này đang được chủ plugin cho phép dùng.")
+                        : L.Tr("Máy đã được duyệt nhưng chưa lưu được giấy phép — thử lại."));
+                    return (true, L.Tr("Máy này đang chờ chủ plugin duyệt. ") + Contact + L.Tr(" để được duyệt nhanh."));
                 }
             }
             catch (Exception ex)
             {
                 Logger.Warn("status check failed: " + ex.Message);
-                return (false, "Không kết nối được máy chủ kích hoạt (kiểm tra mạng rồi thử lại).");
+                return (false, L.Tr("Không kết nối được máy chủ kích hoạt (kiểm tra mạng rồi thử lại)."));
             }
         }
 
@@ -445,32 +445,32 @@ namespace ClaudeCAD.Plugin.Sidecar
                 if (planLine != null)
                 {
                     var pc = LicenseLogic.VerifyPlan(planLine, MachineCode);
-                    if (!pc.Ok) return (false, "Dòng CCF1 (gói) không dùng được: " + pc.Reason + ".");
+                    if (!pc.Ok) return (false, L.Tr("Dòng CCF1 (gói) không dùng được: ") + pc.Reason + ".");
                     if (!SavePlan(planLine))
-                        return (false, $"Dòng gói này ngày {pc.Date}, cũ hơn dòng gói máy đang có ({PlanLine.Date}): không dùng được. Dán dòng gói mới nhất trong email của chủ plugin.");
+                        return (false, L.Tr("Dòng gói này ngày {0}, cũ hơn dòng gói máy đang có ({1}): không dùng được. Dán dòng gói mới nhất trong email của chủ plugin.", pc.Date, PlanLine.Date));
                     if (license == null && statusLine == null)
                         return IsActivated
-                            ? (true, "Đã lưu gói " + PlanLogic.Label(pc.Plan) + " cho máy này.")
-                            : (false, "Đã lưu dòng gói, còn thiếu dòng giấy phép CCL1| — dán đủ các dòng trong email của chủ plugin.");
+                            ? (true, L.Tr("Đã lưu gói ") + PlanLogic.Label(pc.Plan) + L.Tr(" cho máy này."))
+                            : (false, L.Tr("Đã lưu dòng gói, còn thiếu dòng giấy phép CCL1| — dán đủ các dòng trong email của chủ plugin."));
                 }
                 if (statusLine != null)
                 {
                     var st = LicenseLogic.VerifyStatus(statusLine, MachineCode, DateTime.UtcNow);
-                    if (!st.Ok) return (false, "Dòng CCS1 (mã miễn kiểm tra) không dùng được: " + st.Reason + ".");
+                    if (!st.Ok) return (false, L.Tr("Dòng CCS1 (mã miễn kiểm tra) không dùng được: ") + st.Reason + ".");
                     var refused = TrySaveStatus(statusLine, st, fromService: false);
                     if (refused != null) return (false, refused);
                     if (license == null)
                         return IsActivated && DeviceAllowed
-                            ? (true, "Đã lưu mã miễn kiểm tra cho máy này.")
+                            ? (true, L.Tr("Đã lưu mã miễn kiểm tra cho máy này."))
                             : IsActivated
-                                ? (false, "Đã lưu dòng CCS1 nhưng máy chưa dùng được: " + BlockedMessage)
-                                : (false, "Đã lưu dòng CCS1, còn thiếu dòng giấy phép CCL1| — dán đủ các dòng trong email của chủ plugin.");
+                                ? (false, L.Tr("Đã lưu dòng CCS1 nhưng máy chưa dùng được: ") + BlockedMessage)
+                                : (false, L.Tr("Đã lưu dòng CCS1, còn thiếu dòng giấy phép CCL1| — dán đủ các dòng trong email của chủ plugin."));
                 }
-                if (license == null) return (false, "Thiếu dòng giấy phép CCL1| trong mã dán vào.");
+                if (license == null) return (false, L.Tr("Thiếu dòng giấy phép CCL1| trong mã dán vào."));
             }
             else if (LicenseLogic.IsShortKey(input))
             {
-                if (ServiceUrl == null) return (false, "Bản plugin này chưa có máy chủ kích hoạt — xin chủ plugin mã kích hoạt offline (một dòng dài bắt đầu bằng CCL1|).");
+                if (ServiceUrl == null) return (false, L.Tr("Bản plugin này chưa có máy chủ kích hoạt — xin chủ plugin mã kích hoạt offline (một dòng dài bắt đầu bằng CCL1|)."));
                 var url = LicenseLogic.BuildUrl(ServiceUrl, new[]
                 {
                     new KeyValuePair<string, string>("action", "activate"),
@@ -482,7 +482,7 @@ namespace ClaudeCAD.Plugin.Sidecar
                     using (var c = NewClient())
                     {
                         var r = LicenseLogic.ParseResponse(await c.GetStringAsync(url).ConfigureAwait(false));
-                        if (!r.ok || string.IsNullOrEmpty(r.license)) return (false, r.error ?? "Key không đúng.");
+                        if (!r.ok || string.IsNullOrEmpty(r.license)) return (false, r.error ?? L.Tr("Key không đúng."));
                         license = r.license;
                         if (!string.IsNullOrEmpty(r.status))
                         {
@@ -496,18 +496,18 @@ namespace ClaudeCAD.Plugin.Sidecar
                 catch (Exception ex)
                 {
                     Logger.Warn("activation failed: " + ex.Message);
-                    return (false, "Không kết nối được máy chủ kích hoạt (kiểm tra mạng rồi thử lại). Máy không có mạng: xin chủ plugin mã kích hoạt offline.");
+                    return (false, L.Tr("Không kết nối được máy chủ kích hoạt (kiểm tra mạng rồi thử lại). Máy không có mạng: xin chủ plugin mã kích hoạt offline."));
                 }
             }
-            else return (false, "Key gồm 16 ký tự dạng XXXX-XXXX-XXXX-XXXX (hoặc mã offline bắt đầu bằng CCL1|).");
+            else return (false, L.Tr("Key gồm 16 ký tự dạng XXXX-XXXX-XXXX-XXXX (hoặc mã offline bắt đầu bằng CCL1|)."));
 
             var check = LicenseLogic.Verify(license, MachineCode);
-            if (!check.Ok) return (false, "Mã kích hoạt không dùng được: " + check.Reason + ".");
+            if (!check.Ok) return (false, L.Tr("Mã kích hoạt không dùng được: ") + check.Reason + ".");
             Directory.CreateDirectory(Root);
             File.WriteAllText(LicenseFile, license.Trim(), new UTF8Encoding(false));
             _check = check;
             Logger.Info("activated " + MachineCode);
-            return (true, "Đã kích hoạt ClaudeCAD cho máy này (vĩnh viễn). Cập nhật bản mới không cần nhập lại key.");
+            return (true, L.Tr("Đã kích hoạt ClaudeCAD cho máy này (vĩnh viễn). Cập nhật bản mới không cần nhập lại key."));
         }
     }
 }

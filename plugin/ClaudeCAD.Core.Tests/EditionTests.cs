@@ -111,7 +111,7 @@ namespace ClaudeCAD.Core.Tests
             var plugin = Path.Combine("plugin", "ClaudeCAD.Plugin");
             Assert.Contains("new PaletteSet(Core.ProductInfo.DisplayName, \"CLAUDECHAT\", PaletteGuid)", Src(plugin, "UI", "ChatPalette.cs"));
             Assert.Contains("ProductInfo.WithVersion(ProductInfo.ShortVersion(typeof(ChatControl).Assembly.GetName().Version))", Src(plugin, "UI", "ChatControl.cs"));
-            Assert.Contains("sb.AppendLine(ProductInfo.DisplayName + \" — tự kiểm tra \"", Src(plugin, "SelfTest.cs"));
+            Assert.Contains("sb.AppendLine(ProductInfo.DisplayName + L.Tr(\" — tự kiểm tra \")", Src(plugin, "SelfTest.cs")); // nâng cấp đợt H9
             Assert.Contains("ProductInfo.DisplayName + \" — báo cáo lỗi \"", Src(plugin, "DiagnosticsBundle.cs"));
             // the bundle carries the edition mark
             Assert.Contains("path.join(contents, 'edition.json')", Src("bundle", "make-bundle.mjs"));

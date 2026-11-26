@@ -34,7 +34,7 @@ namespace ClaudeCAD.Core.Tests
         public void The_palette_sends_it_and_prewarms_again_when_it_changes()
         {
             var ui = Plugin("UI", "ChatControl.cs");
-            Assert.Contains("_deferTools = CheckRow(work, F5Numbers.DeferToolsLabel, F5Numbers.DeferToolsTip);", ui);
+            Assert.Contains("_deferTools = CheckRow(work, Tr(F5Numbers.DeferToolsLabel), Tr(F5Numbers.DeferToolsTip));", ui); // nâng cấp đợt H9: shown through Tr
             Assert.Contains("_settings.DeferTools = _deferTools.IsChecked == true;", ui);
             var c = Plugin("ChatController.cs");
             Assert.Contains("if (!ChatDefer()) ctx[\"defer_tools\"] = false;", c); // bản chốt đợt F: the chat's own way

@@ -273,8 +273,8 @@ namespace ClaudeCAD.Plugin.Core
             {
                 var bp = Allowed(plan, tool) ? BlockedParam(plan, tool, p) : null;
                 string what = !Allowed(plan, tool) ? tool : bp == null ? null
-                    : tool + (Blocked3dParam(plan, tool, p) != null ? (ThreeDValues.ContainsKey(tool) ? " (FBX, phần 3D)" : " (số tầng)") : BlockedTextValue(plan, tool, p) != null ? " (thuộc tính chữ / kích thước)"
-                        : TextParams.TryGetValue(tool, out var tp) && tp == "table_position" ? " (bảng trong bản vẽ)" : " (thuộc tính block)");
+                    : tool + (Blocked3dParam(plan, tool, p) != null ? (ThreeDValues.ContainsKey(tool) ? L.Tr(" (FBX, phần 3D)") : L.Tr(" (số tầng)")) : BlockedTextValue(plan, tool, p) != null ? L.Tr(" (thuộc tính chữ / kích thước)")
+                        : TextParams.TryGetValue(tool, out var tp) && tp == "table_position" ? L.Tr(" (bảng trong bản vẽ)") : L.Tr(" (thuộc tính block)"));
                 if (what != null && !list.Contains(what)) list.Add(what);
             }
             return list;
@@ -284,9 +284,9 @@ namespace ClaudeCAD.Plugin.Core
         public static string MacroBlockedText(string macro, string plan, IList<string> blocked, string contact)
         {
             var shown = blocked.Take(5).ToList();
-            var more = blocked.Count > shown.Count ? $" và {blocked.Count - shown.Count} lệnh khác" : "";
-            return $"Không chạy macro \"{macro}\": máy này dùng gói {Label(plan)}, mà macro có lệnh ngoài gói ({string.Join(", ", shown)}{more}). " +
-                   "Bản vẽ không bị thay đổi. Liên hệ chủ plugin để mở thêm gói" + (string.IsNullOrWhiteSpace(contact) ? "." : $" ({contact}).");
+            var more = blocked.Count > shown.Count ? L.Tr(" và {0} lệnh khác", blocked.Count - shown.Count) : "";
+            return L.Tr("Không chạy macro \"{0}\": máy này dùng gói {1}, mà macro có lệnh ngoài gói ({2}{3}). ", macro, Label(plan), string.Join(", ", shown), more) +
+                   L.Tr("Bản vẽ không bị thay đổi. Liên hệ chủ plugin để mở thêm gói") + (string.IsNullOrWhiteSpace(contact) ? "." : $" ({contact}).");
         }
 
         public static List<string> AllowedTools(string plan) =>
@@ -352,19 +352,19 @@ namespace ClaudeCAD.Plugin.Core
             {
                 case TwoD: return "2D";
                 case ThreeD: return "3D";
-                default: return "Cả hai";
+                default: return L.Tr("Cả hai");
             }
         }
 
         public static string Tip(string mode) =>
-            "Chế độ làm việc (máy gói Full): " + Label(mode) + ". \"Cả hai\" có đủ lệnh 2D và 3D; chọn \"2D\" hoặc \"3D\" để Claude chỉ nạp lệnh của nhóm đó " +
-            "(mỗi lần mở chat tốn ít token hơn). Đổi chế độ áp dụng từ tin nhắn sau, đoạn chat giữ nguyên.";
+            L.Tr("Chế độ làm việc (máy gói Full): ") + Label(mode) + L.Tr(". \"Cả hai\" có đủ lệnh 2D và 3D; chọn \"2D\" hoặc \"3D\" để Claude chỉ nạp lệnh của nhóm đó ") +
+            L.Tr("(mỗi lần mở chat tốn ít token hơn). Đổi chế độ áp dụng từ tin nhắn sau, đoạn chat giữ nguyên.");
 
         /// <summary>The line the palette adds when the mode changes (it applies from the next message).</summary>
         public static string ChangedNote(string mode, bool busy) =>
-            $"Đã chuyển sang chế độ {Label(mode)}" +
-            (Normalize(mode) == Both ? " (đủ lệnh 2D và 3D)" : $" (Claude chỉ dùng lệnh {Label(mode)})") +
-            (busy ? ": áp dụng từ tin nhắn sau, lượt đang chạy giữ chế độ cũ." : ": áp dụng từ tin nhắn tới, đoạn chat giữ nguyên.");
+            L.Tr("Đã chuyển sang chế độ {0}", Label(mode)) +
+            (Normalize(mode) == Both ? L.Tr(" (đủ lệnh 2D và 3D)") : L.Tr(" (Claude chỉ dùng lệnh {0})", Label(mode))) +
+            (busy ? L.Tr(": áp dụng từ tin nhắn sau, lượt đang chạy giữ chế độ cũ.") : L.Tr(": áp dụng từ tin nhắn tới, đoạn chat giữ nguyên."));
 
         /// <summary>The other mode that has the tool ("3D" for a 3D tool in the 2D mode).</summary>
         private static string OtherMode(string mode) => Normalize(mode) == TwoD ? "3D" : "2D";
@@ -379,7 +379,7 @@ namespace ClaudeCAD.Plugin.Core
             var other = OtherMode(mode);
             return $"{tool}: the user set the palette to the {label} work mode, which leaves the {other} tools out (this machine's plan is Full: it has every tool). " +
                    "Do not try other tools to get the same result and do not mention plans, buying or upgrading. Tell the user in Vietnamese: " +
-                   $"\"Đang ở chế độ {label}, đổi sang {other} hoặc Cả hai (nút chế độ trên khung chat) để {(other == "3D" ? "vẽ 3D" : "vẽ 2D")}.\" Then do what the {label} mode allows.";
+                   $"\"Đang ở chế độ {label}, đổi sang {other} hoặc Cả hai (nút chế độ trên khung chat) để {(other == "3D" ? "vẽ 3D" : "vẽ 2D")}.\" Then do what the {label} mode allows."; // vi: for Claude
         }
 
         /// <summary>
@@ -388,12 +388,12 @@ namespace ClaudeCAD.Plugin.Core
         /// </summary>
         public static string NoTwoDReason(string workMode) =>
             Normalize(workMode) == ThreeD
-                ? " (outside the 3D work mode the user chose; the 2D or Cả hai mode has it: do not mention plans)"
+                ? " (outside the 3D work mode the user chose; the 2D or Cả hai mode has it: do not mention plans)" // vi: for Claude
                 : " (this machine's plan has no 2D)";
 
         /// <summary>A parameter outside the mode (block attributes in 3D, array levels in 2D…): the same wording.</summary>
         public static string BlockedParamMessage(string tool, string param, string mode) =>
             $"{tool}: '{param}' is outside the {Label(mode)} work mode the user chose (this machine's plan is Full). " +
-            $"Do not mention plans or upgrades; tell the user in Vietnamese: \"Đang ở chế độ {Label(mode)}, đổi sang {OtherMode(mode)} hoặc Cả hai (nút chế độ trên khung chat) để dùng phần này.\"";
+            $"Do not mention plans or upgrades; tell the user in Vietnamese: \"Đang ở chế độ {Label(mode)}, đổi sang {OtherMode(mode)} hoặc Cả hai (nút chế độ trên khung chat) để dùng phần này.\""; // vi: for Claude
     }
 }

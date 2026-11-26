@@ -47,7 +47,7 @@ namespace ClaudeCAD.Plugin
                 ScheduleFirstStart();
                 AcApp.PreTranslateMessage += OnPreTranslateMessage;
                 var ed = AcApp.DocumentManager.MdiActiveDocument?.Editor;
-                ed?.WriteMessage("\n" + ProductInfo.DisplayName + " đã nạp. Gõ CLAUDECHAT để mở khung chat.\n");
+                ed?.WriteMessage("\n" + ProductInfo.DisplayName + L.Tr(" đã nạp. Gõ CLAUDECHAT để mở khung chat.\n"));
             }
             catch (System.Exception ex)
             {
@@ -189,7 +189,7 @@ namespace ClaudeCAD.Plugin
             catch (System.Exception ex)
             {
                 Logger.Error("CLAUDECHAT failed", ex);
-                AcApp.DocumentManager.MdiActiveDocument?.Editor.WriteMessage("\nClaudeCAD lỗi: " + ex.Message + "\n");
+                AcApp.DocumentManager.MdiActiveDocument?.Editor.WriteMessage(L.Tr("\nClaudeCAD lỗi: ") + ex.Message + "\n");
             }
         }
 
@@ -242,14 +242,14 @@ namespace ClaudeCAD.Plugin
             var ed = AcApp.DocumentManager.MdiActiveDocument?.Editor;
             try
             {
-                ed?.WriteMessage("\n" + ProductInfo.DisplayName + ": đang tự kiểm tra trên một bản vẽ tạm (bản vẽ của cậu không bị đụng tới)...\n");
+                ed?.WriteMessage("\n" + ProductInfo.DisplayName + L.Tr(": đang tự kiểm tra trên một bản vẽ tạm (bản vẽ của cậu không bị đụng tới)...\n"));
                 var summary = SelfTest.Run();
-                AcApp.DocumentManager.MdiActiveDocument?.Editor.WriteMessage("\n" + ProductInfo.DisplayName + " tự kiểm tra: " + summary + "\n");
+                AcApp.DocumentManager.MdiActiveDocument?.Editor.WriteMessage("\n" + ProductInfo.DisplayName + L.Tr(" tự kiểm tra: ") + summary + "\n");
             }
             catch (System.Exception ex)
             {
                 Logger.Error("CLAUDECHATSELFTEST failed", ex);
-                AcApp.DocumentManager.MdiActiveDocument?.Editor.WriteMessage("\nClaudeCAD tự kiểm tra lỗi: " + ex.Message + "\n");
+                AcApp.DocumentManager.MdiActiveDocument?.Editor.WriteMessage(L.Tr("\nClaudeCAD tự kiểm tra lỗi: ") + ex.Message + "\n");
             }
         }
 

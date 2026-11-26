@@ -236,6 +236,8 @@ export interface UserContext {
    * then that mode's; Claude is told to switch the mode, never to buy a plan. Absent = no mode limits the chat.
    */
   work_mode?: WorkMode;
+  /** Nâng cấp đợt H9: "en" when the user chose English in ⚙ (absent = Vietnamese). */
+  language?: 'en';
 }
 
 export const WORK_MODES = ['2d', '3d'] as const;
@@ -420,6 +422,7 @@ function parseContext(v: unknown): UserContext | undefined {
   if (c.defer_tools === false) out.defer_tools = false;
   if (c.plan_first === false) out.plan_first = false;
   if (c.suggestions === false) out.suggestions = false;
+  if (c.language === 'en') out.language = 'en';
   const manual = parseManualChanges(c.manual_changes);
   if (manual) out.manual_changes = manual;
   if (typeof c.service_plan === 'string' && (SERVICE_PLANS as readonly string[]).includes(c.service_plan)) {

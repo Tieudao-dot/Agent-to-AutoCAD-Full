@@ -2,7 +2,10 @@ using System.Collections.Generic;
 
 namespace ClaudeCAD.Plugin.UI
 {
-    /// <summary>Vietnamese labels for the tool status line of the palette.</summary>
+    /// <summary>
+    /// Vietnamese labels for the tool status line of the palette. Nâng cấp đợt H9: each label is a key of the
+    /// English table (L.Tr at the lookup, so a changed language shows at once); a test checks every label has English.
+    /// </summary>
     public static class ToolLabels
     {
         private static readonly Dictionary<string, string> Labels = new Dictionary<string, string>
@@ -172,7 +175,7 @@ namespace ClaudeCAD.Plugin.UI
         public static string Describe(string tool)
         {
             if (string.IsNullOrEmpty(tool)) return "";
-            return Labels.TryGetValue(tool, out var l) ? l + " (" + tool + ")" : tool;
+            return Labels.TryGetValue(tool, out var l) ? Core.L.Tr(l) + " (" + tool + ")" : tool;
         }
     }
 }

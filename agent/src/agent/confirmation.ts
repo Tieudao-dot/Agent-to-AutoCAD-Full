@@ -232,13 +232,15 @@ export function createdHandles(tool: string, params: Record<string, unknown>, re
 const PHRASES = [
   'đồng ý', 'dong y', 'xác nhận', 'xac nhan', 'làm đi', 'lam di', 'cứ làm', 'cu lam', 'tiếp tục', 'tiep tuc',
   'chắc chắn', 'chac chan', 'xóa đi', 'xoa di', 'xóa luôn', 'xoa luon', 'được rồi', 'duoc roi', 'go ahead', 'đổi đi', 'sửa đi',
+  // nâng cấp đợt H9: English answers
+  'do it', 'go on', 'yes please', 'delete it', 'erase it', 'replace it', 'that is fine', 'sounds good',
 ].map((p) => p.split(' '));
 /** Accepted among the first words of a short reply. */
-const ANYWHERE = new Set(['ok', 'okay', 'oke', 'okie', 'yes', 'yep', 'confirm']);
+const ANYWHERE = new Set(['ok', 'okay', 'oke', 'okie', 'yes', 'yep', 'confirm', 'confirmed', 'proceed', 'sure', 'agreed', 'approve', 'approved']);
 /** Accepted only as the first word ("có, xóa đi" yes; "có bao nhiêu..." / "có thể xóa..." no). */
 const LEADING = new Set(['có', 'ừ', 'ừm', 'uh', 'y', 'đúng', 'được', 'duoc', 'chuẩn', 'vâng', 'dạ']);
 /** A refusal when among the first words ("Đừng tiếp tục", "Chưa đồng ý", "khỏi xóa"); "không sao" is not one. */
-const NEGATIONS = new Set(['không', 'khong', 'đừng', 'dừng', 'chưa', 'chua', 'khỏi', 'khoi', 'hủy', 'huy', 'no', 'nope']);
+const NEGATIONS = new Set(['không', 'khong', 'đừng', 'dừng', 'chưa', 'chua', 'khỏi', 'khoi', 'hủy', 'huy', 'no', 'nope', 'not', 'don', 'dont', 'stop', 'cancel', 'wait']);
 const FIRST_WORDS = 3;
 
 /**
