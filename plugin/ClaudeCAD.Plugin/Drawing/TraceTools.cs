@@ -242,7 +242,8 @@ namespace ClaudeCAD.Plugin.Drawing
         }
 
         /// <summary>Sửa KFG (nghi vấn G5, bảo mật): no file of another computer of the network (Windows may send the sign-in there).</summary>
-        private static void CheckPathAllowed(ToolContext ctx, string path, string chatDir, string tool)
+        /// <summary>Also used by Drawing/OtherDrawing.cs (nâng cấp đợt H3): the same rule for another drawing file.</summary>
+        internal static void CheckPathAllowed(ToolContext ctx, string path, string chatDir, string tool)
         {
             if (string.IsNullOrWhiteSpace(path) || (chatDir != null && TraceLogic.IsInside(path, chatDir))) return;
             string drawing = null;
@@ -281,7 +282,7 @@ namespace ClaudeCAD.Plugin.Drawing
             catch (Exception) { return false; }
         }
 
-        private static string AttachmentFolder()
+        internal static string AttachmentFolder()
         {
             try { return Path.GetFullPath(UI.ChatAttachments.Folder); } catch (Exception) { return null; }
         }

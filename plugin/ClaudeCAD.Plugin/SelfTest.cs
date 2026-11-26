@@ -1221,6 +1221,38 @@ namespace ClaudeCAD.Plugin
                     : new SelfTestRules.Verdict(false, string.Join("; ", errs));
             });
 
+            // Nâng cấp đợt H3 (shared with H4): another drawing read next to the open one (side database, released at once):
+            // a DWG and a DXF copy of this drawing give the same number of objects; the file can be deleted right after (not locked)
+            Check("Nâng cấp đợt H3: đọc bản vẽ khác chỉ để đọc (DWG + DXF, không khóa file, bản vẽ đang mở không đổi)", () =>
+            {
+                var errs = new List<string>();
+                string before = doc.Name;
+                var ctx0 = new ToolContext(doc, null, false, null);
+                string dwg = Path.Combine(dir, "h3-doc-cung.dwg"), dxf = Path.Combine(dir, "h3-doc-cung.dxf");
+                foreach (var f in new[] { dwg, dxf }) if (File.Exists(f)) File.Delete(f);
+                DrawingService.ExportDrawing(ctx0, new Params("export_drawing", new Dictionary<string, object> { ["format"] = "dwg", ["output"] = dwg }));
+                DrawingService.ExportDrawing(ctx0, new Params("export_drawing", new Dictionary<string, object> { ["format"] = "dxf", ["output"] = dxf }));
+                int CountOf(string f, out string fmt)
+                {
+                    using (var od = OtherDrawing.Open(ctx0, f, "selftest"))
+                    using (var tr = od.Db.TransactionManager.StartTransaction())
+                    {
+                        od.ModelEntities(tr, 1000000, out int total);
+                        fmt = (string)od.Info()["format"];
+                        tr.Commit();
+                        return total;
+                    }
+                }
+                int nDwg = CountOf(dwg, out string f1), nDxf = CountOf(dxf, out string f2);
+                if (nDwg <= 0) errs.Add("DWG đọc được 0 đối tượng");
+                if (nDwg != nDxf) errs.Add($"DWG {nDwg} đối tượng, DXF {nDxf}");
+                try { File.Delete(dwg); File.Delete(dxf); } catch (Exception ex) { errs.Add("file còn bị khóa sau khi đọc: " + ex.Message); }
+                try { OtherDrawing.Open(ctx0, Path.Combine(dir, "khong-co.dwg"), "selftest").Dispose(); errs.Add("file không có mà không báo lỗi"); }
+                catch (ToolException) { }
+                if (doc.Name != before) errs.Add("bản vẽ đang mở bị đổi tên");
+                return errs.Count == 0 ? new SelfTestRules.Verdict(true, $"{nDwg} đối tượng, {f1}; DXF {f2}") : new SelfTestRules.Verdict(false, string.Join("; ", errs));
+            });
+
             string versionFile = Path.Combine(dir, "version-copy.dwg");
             Do("Bản sao phiên bản (Wblock + SaveAs)", () =>
             {
