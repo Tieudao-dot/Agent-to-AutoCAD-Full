@@ -51,4 +51,5 @@ Commit cuối của nhánh này là điểm xuất phát của H9. Chưa chạy 
 
 ## 5. CI
 
-*(ghi sau khi chạy)*
+Run 45840644593 trên `886e699` (commit code cuối): **xanh**, log Windows `# pass 457 / # fail 0`, lõi 1671 / 1671. Commit sau đó
+chỉ là tài liệu (mục này). Một lượt CI (giới hạn 2).
