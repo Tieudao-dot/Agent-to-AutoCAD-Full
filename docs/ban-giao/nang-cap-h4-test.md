@@ -73,4 +73,4 @@ Thêm mục F (F1–F8) vào `docs/checklist-dot-h4.md`.
 
 ## 8. CI
 
-(ghi sau khi chạy)
+Run 45790012533 trên `2c1b44a`: **xanh**, 1 / 2 lượt. Log Windows: trợ lý `# tests 425`, `# pass 425`, `# fail 0`; lõi 1548 / 1548; UI test và build 3 target qua. Commit sau đó chỉ ghi mục này, code giữ nguyên như `2c1b44a`.
