@@ -31,4 +31,8 @@ export const EN: Readonly<Record<string, string>> = {
   'xóa {0}': 'erased {0}',
   '{0} kết quả': '{0} results',
   'ảnh {0}×{1}': 'image {0}×{1}',
+  'Trợ lý không đọc được tin nhắn (có thể do ảnh đính kèm quá lớn). Bớt ảnh hoặc dùng ảnh nhỏ hơn rồi gửi lại.': 'The assistant could not read the message (an attached image may be too large). Attach fewer or smaller images and send again.',
+  'file {0} / {1} (Dừng để ngừng sau file đang làm)': 'file {0} / {1} (Stop ends after the current file)',
+  'bắt đầu render, khoảng {0} s (Dừng / Esc để hủy)': 'starting the render, about {0} s (Stop / Esc to cancel)',
+  'AutoCAD đang bận render, chờ thêm…': 'AutoCAD is busy rendering, waiting…',
 };

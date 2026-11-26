@@ -358,7 +358,7 @@ namespace ClaudeCAD.Plugin
             Ui.Relabel(from, to);
             if (_transcript != null) Ui.LoadTranscript(_transcript, false);
             ShowPlan();
-            Ui.SetConnection(_ipc.IsConnected ? (string.IsNullOrEmpty(_readyInfo) ? Tr("Đã kết nối") : Tr("Đã kết nối · ") + _readyInfo) : Tr("Mất kết nối với trợ lý..."), _ipc.IsConnected);
+            Ui.SetConnection(_ipc.IsConnected ? (string.IsNullOrEmpty(_readyInfo) ? Tr("Đã kết nối") : Tr("Đã kết nối · ") + Tr(_readyInfo)) : Tr("Mất kết nối với trợ lý..."), _ipc.IsConnected);
             if (!_busy) SchedulePrewarm();
         }
 
@@ -1952,7 +1952,7 @@ namespace ClaudeCAD.Plugin
             {
                 var a = t.IsFaulted ? new AuthStatus { Error = t.Exception?.GetBaseException().Message } : t.Result;
                 var extra = a.Method == "api_key_saved" ? " (" + ApiKeyStore.Mask(ApiKeyStore.Load()) + ")" : "";
-                var text = Tr("Đang dùng: ") + a.Label + extra + (string.IsNullOrEmpty(_readyInfo) ? "" : " · " + _readyInfo);
+                var text = Tr("Đang dùng: ") + a.Label + extra + (string.IsNullOrEmpty(_readyInfo) ? "" : " · " + Tr(_readyInfo));
                 if (gen != _accountGen) return; // signed in / out or key changed meanwhile: this answer is stale
                 if (a.Error == null) { _accountText = text; _accountAt = DateTime.UtcNow; }
                 Ui.SetAccountStatus(text);
@@ -2605,7 +2605,7 @@ namespace ClaudeCAD.Plugin
                     {
                         string info = msg.TryGetValue("info", out var i) ? i as string : null;
                         if (!string.IsNullOrEmpty(info)) _readyInfo = info;
-                        Ui.SetConnection(Tr("Đã kết nối") + (string.IsNullOrEmpty(info) ? "" : " · " + info), true);
+                        Ui.SetConnection(Tr("Đã kết nối") + (string.IsNullOrEmpty(info) ? "" : " · " + Tr(info)), true); // KTP-06: "sidecar sẵn sàng" is sent before the assistant knows the language
                         SchedulePrewarm(); // F4: the assistant (re)started: have Claude ready for the first message
                         break;
                     }

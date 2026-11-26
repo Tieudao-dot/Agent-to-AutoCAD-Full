@@ -253,7 +253,7 @@ const FIRST_WORDS = 3;
 const FILLERS = new Set([
   'đi', 'di', 'luôn', 'luon', 'nhé', 'nhe', 'nha', 'nhá', 'ạ', 'a', 'à', 'vậy', 'vay', 'thế', 'the', 'thì', 'rồi', 'roi', 'đó', 'do', 'này', 'nay',
   'hết', 'het', 'tất', 'tat', 'cả', 'ca', 'em', 'anh', 'chị', 'chi', 'bạn', 'ban', 'cậu', 'cau', 'tớ', 'mình', 'minh', 'làm', 'lam', 'xóa', 'xoa',
-  'thôi', 'thoi', 'cũng', 'cung', 'please', 'pls', 'thanks', 'thank', 'you', 'all', 'them', 'it', 'and', 'go', 'ahead', 'on', 'fine', 'good',
+  'cũng', 'cung', 'please', 'pls', 'thanks', 'thank', 'you', 'all', 'them', 'it', 'and', 'go', 'ahead', 'on', 'fine', 'good',
   'great', 'right', 'now',
 ]);
 const ALLOWED = new Set<string>([...ANYWHERE, ...LEADING, ...FILLERS, ...PHRASES.flat()]);
@@ -275,7 +275,10 @@ export function isConfirmation(text: string | undefined): boolean {
     if (NEGATIONS.has(tokens[i]!) && !(tokens[i] === 'không' && tokens[i + 1] === 'sao') && !(tokens[i] === 'khong' && tokens[i + 1] === 'sao')) return false;
   }
   // sửa KTP-A: "không sao" is the one refusal word allowed (it means "no problem"); then every word must be a yes / filler word
-  const plain = tokens.filter((w, i) => !((w === 'không' || w === 'khong') && tokens[i + 1] === 'sao') && !(w === 'sao' && (tokens[i - 1] === 'không' || tokens[i - 1] === 'khong')));
+  // KTP-04: "thôi" alone is a refusal ("dạ thôi", "ừ thôi" = no thanks); only "thôi được" (fine then) is a yes
+  const pair = (w: string, i: number, a: string[], b: string) =>
+    (a.includes(w) && tokens[i + 1] === b) || (w === b && a.includes(tokens[i - 1] ?? ''));
+  const plain = tokens.filter((w, i) => !pair(w, i, ['không', 'khong'], 'sao') && !((w === 'thôi' || w === 'thoi') && (tokens[i + 1] === 'được' || tokens[i + 1] === 'duoc')));
   if (plain.length === 0 || plain.some((w) => !ALLOWED.has(w))) return false;
   for (let i = 0; i < Math.min(tokens.length, FIRST_WORDS); i++) {
     if (PHRASES.some((ph) => ph.every((w, k) => tokens[i + k] === w))) return true;

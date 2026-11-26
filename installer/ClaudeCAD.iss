@@ -228,8 +228,73 @@ english.H9Msg54=Checking the key...
 english.H9Msg55=This PC is activated.
 vietnamese.H9LoginNow=Đăng nhập Claude ngay (trình duyệt mở ra, bấm đồng ý một lần — không cần mở AutoCAD)
 english.H9LoginNow=Sign in to Claude now (the browser opens, agree once — AutoCAD is not needed)
+; KTP-07: the fixed error texts of the activation server (Code.gs.template, unchanged): the key (both languages) and its text
+vietnamese.H9SrvKey01=Yêu cầu không hợp lệ.
+english.H9SrvKey01=Yêu cầu không hợp lệ.
+vietnamese.H9Srv01=Yêu cầu không hợp lệ.
+english.H9Srv01=Invalid request.
+vietnamese.H9SrvKey02=Mã máy không hợp lệ.
+english.H9SrvKey02=Mã máy không hợp lệ.
+vietnamese.H9Srv02=Mã máy không hợp lệ.
+english.H9Srv02=Invalid machine code.
+vietnamese.H9SrvKey03=Máy chủ kích hoạt đang bận, thử lại sau ít phút.
+english.H9SrvKey03=Máy chủ kích hoạt đang bận, thử lại sau ít phút.
+vietnamese.H9Srv03=Máy chủ kích hoạt đang bận, thử lại sau ít phút.
+english.H9Srv03=The activation server is busy, try again in a few minutes.
+vietnamese.H9SrvKey04=Có quá nhiều máy mới xin kích hoạt trong giờ này, thử lại sau.
+english.H9SrvKey04=Có quá nhiều máy mới xin kích hoạt trong giờ này, thử lại sau.
+vietnamese.H9Srv04=Có quá nhiều máy mới xin kích hoạt trong giờ này, thử lại sau.
+english.H9Srv04=Too many new PCs asked for activation this hour, try again later.
+vietnamese.H9SrvKey05=Có quá nhiều yêu cầu kích hoạt trong giờ này, thử lại sau.
+english.H9SrvKey05=Có quá nhiều yêu cầu kích hoạt trong giờ này, thử lại sau.
+vietnamese.H9Srv05=Có quá nhiều yêu cầu kích hoạt trong giờ này, thử lại sau.
+english.H9Srv05=Too many activation requests this hour, try again later.
+vietnamese.H9SrvKey06=Máy chủ kích hoạt đã hết lượt gửi email hôm nay.
+english.H9SrvKey06=Máy chủ kích hoạt đã hết lượt gửi email hôm nay.
+vietnamese.H9Srv06=Máy chủ kích hoạt đã hết lượt gửi email hôm nay.
+english.H9Srv06=The activation server has used up today's emails.
+vietnamese.H9SrvKey07=Lỗi máy chủ kích hoạt:
+english.H9SrvKey07=Lỗi máy chủ kích hoạt:
+vietnamese.H9Srv07=Lỗi máy chủ kích hoạt:
+english.H9Srv07=Activation server error:
+vietnamese.H9SrvKey08=Key không đúng với máy này (mã máy
+english.H9SrvKey08=Key không đúng với máy này (mã máy
+vietnamese.H9Srv08=Key không đúng với máy này (mã máy
+english.H9Srv08=The key does not match this PC (machine code
+vietnamese.H9SrvKey09=). Kiểm tra lại key, hoặc xin key mới.
+english.H9SrvKey09=). Kiểm tra lại key, hoặc xin key mới.
+vietnamese.H9Srv09=). Kiểm tra lại key, hoặc xin key mới.
+english.H9Srv09=). Check the key, or ask for a new one.
 
 [Code]
+
+{ KTP-07: an activation server's error in the language of Setup (an unknown text stays as it came) }
+function TrServer(S: String): String;
+var
+  I: Integer;
+  K: String;
+begin
+  Result := S;
+  if ActiveLanguage() <> 'english' then exit;
+  for I := 1 to 6 do
+    if S = CustomMessage(Format('H9SrvKey%.2d', [I])) then
+    begin
+      Result := CustomMessage(Format('H9Srv%.2d', [I]));
+      exit;
+    end;
+  K := CustomMessage('H9SrvKey07');
+  if Pos(K, S) = 1 then
+  begin
+    Result := CustomMessage('H9Srv07') + ' ' + Trim(Copy(S, Length(K) + 1, Length(S)));
+    exit;
+  end;
+  K := CustomMessage('H9SrvKey08');
+  if Pos(K, S) = 1 then
+  begin
+    StringChangeEx(Result, K, CustomMessage('H9Srv08'), True);
+    StringChangeEx(Result, CustomMessage('H9SrvKey09'), CustomMessage('H9Srv09'), True);
+  end;
+end;
 #if FileExists(AddBackslash(SourcePath) + BundleDir + "\Contents\node\node.exe")
   #define BundledNode
 #endif
@@ -835,7 +900,7 @@ begin
     SetStatus(CustomMessage('H9Msg27'))
   else if not JsonOk(Body) then
   begin
-    if JsonValue(Body, 'error') <> '' then SetStatus(JsonValue(Body, 'error') + ' ' + CustomMessage('H9Msg28'))
+    if JsonValue(Body, 'error') <> '' then SetStatus(TrServer(JsonValue(Body, 'error')) + ' ' + CustomMessage('H9Msg28'))
     else SetStatus(CustomMessage('H9Msg29'));
   end
   else
@@ -964,7 +1029,7 @@ begin
   Lic := JsonValue(Body, 'license');
   if (not JsonOk(Body)) or (Pos('CCL1|' + MachineCode() + '|', Lic) <> 1) then
   begin
-    Err := JsonValue(Body, 'error');
+    Err := TrServer(JsonValue(Body, 'error'));
     if Err = '' then Err := CustomMessage('H9Msg39');
     exit;
   end;

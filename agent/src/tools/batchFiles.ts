@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { USER_CONFIRMED_PARAM } from '../agent/confirmation.js';
 import type { ToolResponse } from '../ipc/protocol.js';
 import { clean, confirmDesc, handles, toCallToolResult, type AnyTool, type ToolBridge } from './common.js';
+import { tr } from '../i18n.js';
 
 /**
  * Nâng cấp đợt H5 (docs/ban-giao/nang-cap-h5.md): batch_files, "làm nhiều file một lúc". The plugin does one file per call
@@ -44,7 +45,7 @@ export async function runBatch(b: ToolBridge, params: Record<string, unknown>, o
   let stopped = false;
   for (let i = 0; i < count; i++) {
     if (o.signal?.aborted) { stopped = true; break; }
-    b.status('batch_files', 'running', { summary: `file ${i + 1} / ${count} (Dừng để ngừng sau file đang làm)` });
+    b.status('batch_files', 'running', { summary: tr('file {0} / {1} (Dừng để ngừng sau file đang làm)', i + 1, count) });
     const r = await b.call('batch_files', { ...base, action: 'run', index: i, stamp });
     if (!r.ok && r.error.code === 'TIMEOUT') {
       // Soát KTH-02: no answer in time. AutoCAD may still be working on this file (the write / print can finish after the

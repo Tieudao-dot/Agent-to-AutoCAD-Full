@@ -366,6 +366,12 @@ namespace ClaudeCAD.Plugin.Core
             (Normalize(mode) == Both ? L.Tr(" (đủ lệnh 2D và 3D)") : L.Tr(" (Claude chỉ dùng lệnh {0})", Label(mode))) +
             (busy ? L.Tr(": áp dụng từ tin nhắn sau, lượt đang chạy giữ chế độ cũ.") : L.Tr(": áp dụng từ tin nhắn tới, đoạn chat giữ nguyên."));
 
+        /// <summary>
+        /// KTP-35: the name of the "both" choice of the mode button as the palette shows it now ("Cả hai" / "Both"), for the
+        /// sentences Claude is told to say (the 2D / 3D names are the same in both languages).
+        /// </summary>
+        private static string BothButton => L.IsEnglish ? "Both" : "Cả hai"; // vi: the button name in each language
+
         /// <summary>The other mode that has the tool ("3D" for a 3D tool in the 2D mode).</summary>
         private static string OtherMode(string mode) => Normalize(mode) == TwoD ? "3D" : "2D";
 
@@ -379,7 +385,7 @@ namespace ClaudeCAD.Plugin.Core
             var other = OtherMode(mode);
             return $"{tool}: the user set the palette to the {label} work mode, which leaves the {other} tools out (this machine's plan is Full: it has every tool). " +
                    "Do not try other tools to get the same result and do not mention plans, buying or upgrading. Tell the user in the user\'s language: " +
-                   $"\"Đang ở chế độ {label}, đổi sang {other} hoặc Cả hai (nút chế độ trên khung chat) để {(other == "3D" ? "vẽ 3D" : "vẽ 2D")}.\" Then do what the {label} mode allows."; // vi: for Claude
+                   $"\"Đang ở chế độ {label}, đổi sang {other} hoặc {BothButton} (nút chế độ trên khung chat) để {(other == "3D" ? "vẽ 3D" : "vẽ 2D")}.\" Then do what the {label} mode allows."; // vi: for Claude
         }
 
         /// <summary>
@@ -394,6 +400,6 @@ namespace ClaudeCAD.Plugin.Core
         /// <summary>A parameter outside the mode (block attributes in 3D, array levels in 2D…): the same wording.</summary>
         public static string BlockedParamMessage(string tool, string param, string mode) =>
             $"{tool}: '{param}' is outside the {Label(mode)} work mode the user chose (this machine's plan is Full). " +
-            $"Do not mention plans or upgrades; tell the user in the user\'s language: \"Đang ở chế độ {Label(mode)}, đổi sang {OtherMode(mode)} hoặc Cả hai (nút chế độ trên khung chat) để dùng phần này.\""; // vi: for Claude
+            $"Do not mention plans or upgrades; tell the user in the user\'s language: \"Đang ở chế độ {Label(mode)}, đổi sang {OtherMode(mode)} hoặc {BothButton} (nút chế độ trên khung chat) để dùng phần này.\""; // vi: for Claude
     }
 }

@@ -53,7 +53,7 @@ export function interactionTools(emit: (msg: SidecarToPlugin) => void, plan?: st
       'propose_plan',
       'Show a plan card with "Làm" / "Sửa kế hoạch" / "Bỏ" buttons BEFORE a big multi-step drawing task (a whole floor plan, a full MEP layout, ' +
         'many sheets, roughly more than 50 new objects or several different drawing steps). summary: one sentence in the language of the user; steps: 2-12 short ' +
-        'Vietnamese steps with the key sizes, layers and assumptions. Look at the drawing first (get_drawing_info, list_layers) but do not change it. ' +
+        'steps in the language of the user with the key sizes, layers and assumptions. Look at the drawing first (get_drawing_info, list_layers) but do not change it. ' +
         'After calling it, END YOUR TURN; "Làm" arrives as the next user message ("Làm theo kế hoạch."), or the user writes what to change. ' +
         'Not for small or clearly specified requests.',
       {
@@ -91,7 +91,7 @@ export function interactionTools(emit: (msg: SidecarToPlugin) => void, plan?: st
 
     tool(
       'suggest_next_steps',
-      'Show 1-3 buttons under your reply with the most useful NEXT requests the user is likely to make (Vietnamese, imperative, under 60 ' +
+      'Show 1-3 buttons under your reply with the most useful NEXT requests the user is likely to make (in the language of the user, imperative, under 60 ' +
         'characters, complete enough to send as-is), e.g. "Ghi kích thước các phòng", "Thêm tên phòng và diện tích", "Bố trí đèn trần". ' +
         'Call it once, as the last tool call of a turn that changed or analysed the drawing. Do not mention the buttons in your text.',
       {

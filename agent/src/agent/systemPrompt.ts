@@ -175,6 +175,7 @@ export const ENGLISH_SECTION =
   '- The palette\'s buttons read in English, so name them that way (rules and tool results use the Vietnamese names): Đồng ý = Yes, ' +
   'Không / Hủy = No, Làm = Do it, Sửa kế hoạch = Edit plan, Bỏ = Skip, Chỉ xem = View only, Dừng = Stop, Chat mới = New chat, ' +
   'Cả hai = Both, gói = plan, chủ plugin = plugin owner.\n' +
+  '- Where a rule or a tool result says to write "Cậu có đồng ý không?", write "Do you agree?" instead.\n' +
   '- Skills, project notes and some tool messages are in Vietnamese: read them, answer in English.\n' +
   '- Texts you put INTO the drawing (room names, table heads, notes, dimensions text, title blocks, sheet names, layer names and ' +
   'descriptions) stay Vietnamese as the standard / skill says, unless the user asks for English text in the drawing.\n' +
