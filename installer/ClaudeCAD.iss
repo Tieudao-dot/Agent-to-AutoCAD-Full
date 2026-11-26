@@ -66,12 +66,17 @@ Name: "english"; MessagesFile: "compiler:Default.isl"
 ; KT-38 (12/11/2026): replacing the original ClaudeCAD, its update link (to the original repository) must not stay: a
 ; Full build made with --update-url brings its own, one made without would otherwise update back to the original
 Type: files; Name: "{app}\Contents\update-config.json"; Check: ReplacesOriginal
+; nâng cấp đợt H1: the waiting copy of the skills is always the new version's (a skill dropped by the new version does not linger)
+Type: filesandordirs; Name: "{app}\Contents\skills-ban-moi"
 
 [Files]
 ; program files are replaced on upgrade
 Source: "{#BundleDir}\*"; DestDir: "{app}"; Excludes: "Contents\skills\*"; Flags: recursesubdirs createallsubdirs ignoreversion
 ; skills: never overwrite files the user may have edited
 Source: "{#BundleDir}\Contents\skills\*"; DestDir: "{app}\Contents\skills"; Flags: recursesubdirs createallsubdirs onlyifdoesntexist uninsneveruninstall
+; nâng cấp đợt H1: the new version's skills wait here; at its first start the plugin replaces the skills the user never
+; changed and puts the new one next to a changed one (Core/SkillSync.cs). Nothing of the user's is deleted.
+Source: "{#BundleDir}\Contents\skills\*"; DestDir: "{app}\Contents\skills-ban-moi"; Flags: recursesubdirs createallsubdirs ignoreversion
 
 #define ClaudeExe "{app}\Contents\agent\node_modules\@anthropic-ai\claude-agent-sdk-win32-x64\claude.exe"
 

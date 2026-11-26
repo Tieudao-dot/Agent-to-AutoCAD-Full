@@ -225,6 +225,7 @@ namespace ClaudeCAD.Plugin
                 Ui.ApplySettings(_settings);
                 ApplyTheme();
                 Ui.SetTemplates(QuickTemplates.LoadAll(PluginPaths.TemplatesFile, QuickTemplates.UserFile));
+                SyncShippedSkills(); // nâng cấp đợt H1: the new version's skills, the user's own kept
                 InitSkills();
                 _macroStore = new MacroStore(MacrosRoot);
                 Ui.SetMacros(_macroStore.List());
@@ -383,6 +384,25 @@ namespace ClaudeCAD.Plugin
 
         /// <summary>Skill folder of the plugin (Contents\skills in the bundle, repo\skills in dev).</summary>
         private string SkillsRoot => PluginPaths.SkillsDirectory ?? Path.Combine(PluginPaths.DllDirectory, "skills");
+
+        /// <summary>
+        /// Nâng cấp đợt H1: on an upgraded machine, skills the user never changed get the new version; for the changed ones the new
+        /// version is put next to them and the chat names them once (Core/SkillSync.cs).
+        /// </summary>
+        private void SyncShippedSkills()
+        {
+            try
+            {
+                var parent = Path.GetDirectoryName(SkillsRoot.TrimEnd('\\', '/'));
+                if (string.IsNullOrEmpty(parent)) return;
+                var r = SkillSync.Sync(Path.Combine(parent, SkillSync.StagedFolder), SkillsRoot, SkillSync.KnownShipped);
+                if (r.Added.Count + r.Replaced.Count + r.KeptWithNew.Count > 0)
+                    Logger.Info($"skills: {r.Added.Count} added, {r.Replaced.Count} updated, {r.KeptWithNew.Count} kept (user's) with the new one next to them");
+                var note = SkillSync.NoticeText(r.Notice);
+                if (note != null) Ui.AddNote(note);
+            }
+            catch (Exception ex) { Logger.Warn("skills: sync failed: " + ex.Message); }
+        }
 
         private void InitSkills()
         {

@@ -93,6 +93,8 @@ namespace ClaudeCAD.Plugin.Core
             sb.AppendLine($"robocopy {q(stagedBundle)} {q(installedBundle)} /E /PURGE /XD {q(Path.Combine(stagedBundle, "Contents", "skills"))} {q(Path.Combine(installedBundle, "Contents", "skills"))} /R:5 /W:2 /NP >> {q(logFile)}");
             // skills: only add files that do not exist yet (keep user edits)
             sb.AppendLine($"robocopy {q(Path.Combine(stagedBundle, "Contents", "skills"))} {q(Path.Combine(installedBundle, "Contents", "skills"))} /E /XC /XN /XO /R:2 /W:1 /NP >> {q(logFile)}");
+            // nâng cấp đợt H1: the new skills also wait in skills-ban-moi; the plugin replaces the ones the user never changed (SkillSync)
+            sb.AppendLine($"robocopy {q(Path.Combine(stagedBundle, "Contents", "skills"))} {q(Path.Combine(installedBundle, "Contents", SkillSync.StagedFolder))} /MIR /R:2 /W:1 /NP >> {q(logFile)}");
             sb.AppendLine($"rmdir /s /q {q(stagedBundle)}");
             sb.AppendLine($"echo %date% %time% update done >> {q(logFile)}");
             return sb.ToString();
