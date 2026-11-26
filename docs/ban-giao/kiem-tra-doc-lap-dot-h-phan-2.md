@@ -369,3 +369,31 @@ Lượt soát mất khoảng 20 phút. Chi phí cả thread khoảng $32,7.
 - **B:** KTP-51 và KTP-54 d; chuẩn bị số khe hở tối thiểu cho thép cột.
 - **C:** KTP-50, 52, 53, KTP-54 b và ghi chú về ví dụ trong skill; sau đó gộp hai nhánh A, B và chạy CI.
 - **Hỏi chủ dự án:** khe hở tối thiểu cho thép cột.
+
+## Soát lại lượt 3, lượt cuối (27/11 01h25, trên `f94e2e2`)
+
+Chủ dự án chốt (27/11): lượt soát 3 là lượt cuối. Lỗi còn lại để vào mục "còn lại" của báo cáo, sửa sau khi chủ dự án thử
+thật.
+
+- **Test:** lõi 1723 / 1723, trợ lý 467 / 467, build 3 bản 0 lỗi.
+- **Test thử:** 84 ca, đạt 82. Một ca đổi kết quả vì lỗi KTP-51 đã sửa; một ca là lỗi mới KTP-55.
+- **Xác nhận gõ tay:** khoảng 230 câu cũ + 42 câu mới. Danh sách câu bị từ chối y hệt lượt trước: không câu nào mới bị chặn,
+  không câu nào mới lọt.
+- **8 / 8 mục sửa đúng:** KTP-49, 48 / 52, 50, 51, 53, 54, khe thép cột 50 mm, và lượt liếc lại các KTP đã đúng (không hỏng).
+- **Khe thép cột tính lại:**
+  - từ chối: 4Ø20 / 150 (khe 48), 12Ø25 / 300 (khe 46), 20Ø25 / 300;
+  - nhận: 8Ø20 / 300, 12Ø25 / 400, 16Ø20 / 400.
+
+### Lỗi còn lại (không sửa ở đợt này)
+
+| Mã | Mức | Lỗi | Khách gặp / cách tránh |
+| --- | --- | --- | --- |
+| KTP-55 | Nhẹ | File `.txt` cách khoảng trắng, tiêu đề "Tên điểm X Y Z Mã" mà không dòng nào có mã. Kết quả 0 điểm, lời báo "Z is not a number" (sai lý do) | Xóa cột "Mã" khỏi tiêu đề, hoặc lưu file dạng CSV / Excel |
+
+### Ghi chú
+
+- **Ống gập ngược:** gập ngược 45° từ đầu chung được coi là mối nối, không báo chạm. Ngưỡng 30° là số kỹ thuật.
+- **Cột nhỏ:** cột 150 × 150 chỉ đặt được 4 thanh Ø ≤ 18 với khe 50 mm.
+- **Chữ đồng ý đứng một mình:** "ghi đè", "thay thế", "overwrite" gõ riêng vẫn là đồng ý.
+
+Lượt soát mất khoảng 15 phút. Chi phí cả thread khoảng $33,5.
