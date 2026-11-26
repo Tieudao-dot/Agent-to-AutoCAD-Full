@@ -1129,7 +1129,7 @@ AutoCAD thứ hai). Khoảng 30 phút. "Đạt" là thấy đúng như cột ph�
 | C1 | "In PDF cả thư mục" (**ít nhất 3 file**, các file có layout) | Mỗi file một PDF cùng tên cạnh file, đủ các layout; AutoCAD mở từng file (chỉ đọc) rồi đóng, trở lại bản vẽ của cậu. Khung chat **không** báo "Cậu đã chuyển sang bản vẽ khác giữa lượt" và không dừng sau file đầu (Test & sửa H5 sửa lỗi này); lịch sử chat vẫn là của bản vẽ của cậu |
 | C2 | Làm lại C1 | Thẻ nói rõ số PDF có sẵn sẽ bị thay; Đồng ý thì thay |
 | C3 | File chỉ có Model (không layout) | File đó **Lỗi** "the drawing has no paper layouts"; các file khác vẫn in |
-| C4 | Một file đang mở ở đây có thay đổi chưa lưu | Bỏ qua, nhờ lưu trước |
+| C4 | Một file đang mở ở đây có thay đổi chưa lưu **ở tab đang xem** | Bỏ qua, nhờ lưu trước. *(Sửa KTH-08)* Đang mở ở **tab khác** thì in bản đang hiện trên màn hình của tab đó (plugin chỉ biết thay đổi chưa lưu của tab đang xem): lưu trước khi in hàng loạt |
 
 ### D. Đếm block, giới hạn, gói (~5 phút)
 

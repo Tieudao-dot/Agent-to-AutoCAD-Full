@@ -37,14 +37,26 @@ namespace ClaudeCAD.Plugin.Drawing
         private static BatchPlan PlanOf(ToolContext ctx, Params p, string tool)
         {
             var b = new BatchPlan { Task = BatchLogic.TaskOf(p.Str("task")) };
+            // nghi vấn KTH (macro sửa tay): a macro cannot answer the card, and the card is what lets a run touch the user's files
+            if (ctx.Dispatcher?.MacroRunning == true)
+                throw ToolException.Invalid($"{tool}: not run from a macro (it works on other drawing files and needs the user's card). Ask in the chat instead.");
             ctx.Dispatcher?.RequireToolInPlan(BatchLogic.SubTool(b.Task)); // the same plan / work-mode gate as one drawing
             if (BatchLogic.Writes(b.Task) && ctx.Dispatcher?.ViewOnly == true)
                 throw new ToolException(ErrorCodes.ReadOnly, $"{tool}: \"Chỉ xem\" is on: the files cannot be changed. Checking, counting and PDF still work.");
             var files = p.StringsOpt("files");
             string folder = p.Str("folder", null);
             if (folder != null) { folder = folder.Trim().Trim('"'); DrawingService.CheckPathAllowed(ctx, folder, AttachmentFolder(), tool); }
-            if ((files == null || files.Count == 0) && (folder == null || !Directory.Exists(folder)))
-                throw ToolException.Invalid($"{tool}: folder '{folder}' does not exist. Give the folder of the drawings (or files).");
+            // Sửa KTH-07: a folder given must exist, with or without files (a backup folder is never made where there was none)
+            if (folder != null && !Directory.Exists(folder))
+                throw ToolException.Invalid($"{tool}: folder '{folder}' does not exist. Give the folder of the drawings (or only the files).");
+            if ((files == null || files.Count == 0) && folder == null)
+                throw ToolException.Invalid($"{tool}: give the folder of the drawings (or the files).");
+            // Sửa KTH-05: wrong settings are said before the card, not after it at every file
+            var groupsAsked = p.StringsOpt("groups");
+            if (groupsAsked != null)
+                foreach (var g in groupsAsked)
+                    if (DrawingCheckLogic.Find(g) == null) throw ToolException.Invalid($"{tool}: unknown group '{g}' ({string.Join(", ", DrawingCheckLogic.Groups.Select(x => x.Id))}).");
+            if (b.Task == "standards" && p.Has("scale") && !p.Has("company")) StandardsLogic.ScaleDenominator(p.Get("scale"), tool);
             if (files != null) foreach (var f in files) DrawingService.CheckPathAllowed(ctx, f, AttachmentFolder(), tool);
             b.Root = folder != null ? Path.GetFullPath(folder) : null;
             b.Files = BatchLogic.Collect(b.Task, b.Root, files?.Select(f => Path.GetFullPath(f.Trim().Trim('"'))).ToList(), p.Bool("recursive", false),
@@ -109,7 +121,7 @@ namespace ClaudeCAD.Plugin.Drawing
                 };
                 if (b.More > 0) r["not_included"] = $"{b.More} more drawing(s): at most {H5Numbers.MaxFiles} in one run (run again on a sub-folder or a list of files).";
                 if (b.Files.Count > H5Numbers.MaxListed) r["files_more"] = b.Files.Count - H5Numbers.MaxListed;
-                if (BatchLogic.Writes(b.Task)) r["backup_folder"] = Path.Combine(b.Root ?? Path.GetDirectoryName(b.Files[0]), H5Numbers.BackupFolder);
+                if (BatchLogic.Writes(b.Task)) AddBackupFolders(r, b, (string)r["stamp"]); // Sửa KTH-06
                 if (pdfExisting > 0) r["pdf_overwrite"] = pdfExisting;
                 r["card"] = $"Ask the user with request_confirmation (handles = [confirm_token]) in one Vietnamese sentence: {what}" +
                     (pdfExisting > 0 ? $", {pdfExisting} PDF(s) already there are replaced" : "") + $", {skipped.Count} skipped. Then call again with confirm_handles.";
@@ -188,9 +200,12 @@ namespace ClaudeCAD.Plugin.Drawing
             using (var od = OtherDrawing.Open(ctx, file, tool))
             using (var tr = od.Db.TransactionManager.StartTransaction())
             {
-                foreach (var e in od.ModelEntities(tr, G2Numbers.MaxScan, out _))
+                // Sửa KTH-04: every object of model space is counted (no 20 000 limit), one at a time (no list kept)
+                var bt = (BlockTable)tr.GetObject(od.Db.BlockTableId, OpenMode.ForRead);
+                var ms = (BlockTableRecord)tr.GetObject(bt[BlockTableRecord.ModelSpace], OpenMode.ForRead);
+                foreach (ObjectId id in ms)
                 {
-                    if (!(e is BlockReference br)) continue;
+                    if (id.IsErased || !(tr.GetObject(id, OpenMode.ForRead, false) is BlockReference br)) continue;
                     var btr = (BlockTableRecord)tr.GetObject(br.IsDynamicBlock ? br.DynamicBlockTableRecord : br.BlockTableRecord, OpenMode.ForRead);
                     if (btr.IsFromExternalReference || btr.IsAnonymous || btr.IsLayout) continue;
                     counts[btr.Name] = (counts.TryGetValue(btr.Name, out var c) ? Convert.ToInt32(c) : 0) + 1;
@@ -324,8 +339,17 @@ namespace ClaudeCAD.Plugin.Drawing
                 catch (UnauthorizedAccessException) { throw ToolException.Invalid($"{tool}: no permission to write in '{folder}'."); }
                 res["excel"] = path;
             }
-            if (BatchLogic.Writes(b.Task)) res["backup_folder"] = Path.Combine(b.Root ?? Path.GetDirectoryName(b.Files[0]), H5Numbers.BackupFolder, stamp);
+            if (BatchLogic.Writes(b.Task)) AddBackupFolders(res, b, stamp); // Sửa KTH-06
             return res;
+        }
+
+        /// <summary>Sửa KTH-06: the backup folder of the run, or every one of them when the files are in several folders.</summary>
+        private static void AddBackupFolders(Dictionary<string, object> r, BatchPlan b, string stamp)
+        {
+            var all = BatchLogic.BackupFolders(b.Root, b.Files, stamp);
+            if (all.Count == 1) { r["backup_folder"] = all[0]; return; }
+            r["backup_folder"] = "next to each file's folder (" + all.Count + " folders)";
+            r["backup_folders"] = all.Take(H5Numbers.MaxListed).Cast<object>().ToList();
         }
     }
 }

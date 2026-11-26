@@ -23,10 +23,20 @@ export function stopsRun(r: ToolResponse): boolean {
   return !r.ok && ['NOT_IN_PLAN', 'READ_ONLY'].includes(r.error.code) || (!r.ok && /Confirmation required/.test(r.error.message));
 }
 
+/**
+ * Sửa KTH-01: the call carries the card. Claude sends confirm_handles; only the bridge (session.paramsToSend) turns the
+ * approved ones into the plugin's confirmed flag (USER_CONFIRMED_PARAM), on each plugin call, after this point. So the run starts on confirm_handles; when they
+ * were not approved on a card, the plugin refuses the first file and that refusal is the answer (nothing was done).
+ */
+export function cardGiven(params: Record<string, unknown>): boolean {
+  const asked = params.confirm_handles;
+  return (Array.isArray(asked) && asked.length > 0) || params[USER_CONFIRMED_PARAM] !== undefined;
+}
+
 export async function runBatch(b: ToolBridge, params: Record<string, unknown>, o: BatchOptions = {}): Promise<ToolResponse> {
   const { excel, ...base } = params;
   const plan = await b.call('batch_files', { ...base, action: 'plan' });
-  if (!plan.ok || base[USER_CONFIRMED_PARAM] === undefined) return plan; // the plan (files, skipped, token) for the card
+  if (!plan.ok || !cardGiven(base)) return plan; // the plan (files, skipped, token) for the card
   const p = plan.result as Row;
   const count = typeof p.count === 'number' ? p.count : 0;
   const stamp = p.stamp;

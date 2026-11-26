@@ -51,6 +51,8 @@ Tất cả ở `H5Numbers` (`Core/BatchFiles.cs`).
 | Số nhóm lỗi ghi cho mỗi file khi soát | 3 | | |
 | Cỡ file lớn nhất | 200 MB (như H3, `OtherDrawingNumbers.MaxFileMb`) | lớn hơn: bỏ qua | |
 | Tên thư mục sao lưu | `_sao-luu-claudecad` | | dấu `_` để nằm đầu danh sách, dễ thấy |
+| *(Sửa KTH-02)* Thời gian chờ một file khi soát / đếm block | 2 phút (như các lệnh chậm) | quá hạn: file đó báo lỗi hết giờ, lượt chạy tiếp | `agent/src/ipc/rpc.ts`, `batchTimeout` |
+| *(Sửa KTH-02)* Thời gian chờ một file khi áp chuẩn / in PDF | 5 phút (trần chung của mọi lệnh) | như trên | mở + ghi / in một bản vẽ lớn |
 
 Không đặt giới hạn thời gian mỗi file: mỗi file là một lần gọi riêng nên giới hạn thời gian có sẵn của một lần gọi vẫn áp dụng.
 
