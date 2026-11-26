@@ -25,11 +25,19 @@ vẽ một khối hộp trên layer `A-BEAM-3D`.
 1. "Đi ống gió cấp 400x300 từ (0,5000) tới (6000,5000) rồi lên tới (6000,5000,4000), cao độ 3200": ống hộp chữ nhật trên
    `M-DUCT-3D`, mặt rộng nằm ngang, co hộp ở chỗ rẽ lên; đoạn đứng **không xoắn** so với co (mặt rộng liền mạch).
 2. "Đi ống gió hồi" mà không nói cỡ: Claude hỏi cỡ.
+3. *(Test & sửa H7)* Ống gió 600x300 đi theo trục X, lên đứng, rồi đi theo trục **Y** ở trên: cả hai đoạn ngang đều có mặt rộng
+   600 **nằm ngang** (đo chiều cao 300); Claude nói tiết diện phải xoay ở đầu ống đứng (thực tế cần đoạn chuyển tiếp).
 
 ## C. Đi dưới dầm, UCS (~4 phút)
 
 1. "Đi ống cấp nước D32 dưới dầm từ … tới …" (tuyến đi dưới một dầm 3D): đỉnh ống cách đáy dầm 100 mm (đo bằng `DIST`), không chạm dầm.
 2. Đặt UCS xoay 30° và cao +3000 (`UCS` → Z → 30, rồi dời gốc lên 3000), đi một ống theo tọa độ UCS: ống nằm đúng chỗ theo UCS.
+3. *(Test & sửa H7)* Bản vẽ có dầm hai tầng chồng nhau, "đi ống dưới dầm" ở tầng trên: Claude báo có dầm ở nhiều cao độ, đã dùng
+   dầm thấp nhất, nhờ cho cao độ nếu ống ở tầng khác.
+4. *(Test & sửa H7)* UCS nghiêng (`UCS` → X → 90), đi ống theo mặt bằng kèm cao độ: Claude nói UCS đang nghiêng, nhờ cho điểm
+   x, y, z hoặc đặt lại UCS; không vẽ gì sai chỗ.
+5. *(Test & sửa H7)* "Đi ống thoát D110 qua các điểm (0,0,3000) (4000,0,2960) (4000,3000,2900)": Claude báo đoạn dốc nhất mức 1 %
+   thấp hơn 1,2 %.
 
 ## D. Thống kê, Excel, va chạm (~6 phút)
 

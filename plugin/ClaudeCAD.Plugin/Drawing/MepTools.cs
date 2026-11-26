@@ -91,13 +91,27 @@ namespace ClaudeCAD.Plugin.Drawing
             if (given3d && p.Has("slope")) throw ToolException.Invalid($"{tool}: the points already give their heights (x, y, z): leave out slope, or give the points in plan (x, y) with elevation and slope.");
             if (!given3d)
             {
+                // Test & sửa H7: plan points take one height: a UCS tilted out of plan would put them on its slanted plane
+                var frame = ctx.Dispatcher?.CurrentFrame ?? UcsFrame.World;
+                if (!frame.ZUp) throw ToolException.Invalid($"{tool}: the UCS is tilted out of plan: give each point as x, y, z, or call reset_ucs (or a UCS only moved / turned in plan) first.");
                 double z0;
                 if (p.Has("elevation")) z0 = p.Num("elevation") / f;
                 else if (p.Bool("under_beams", false)) z0 = UnderBeams(ctx, pts, half, f, warnings, tool);
                 else throw ToolException.Invalid($"{tool}: the points are in plan (x, y): give elevation (mm, height of the centre line) or under_beams: true, or give each point as x, y, z.");
                 pts = slope.HasValue && slope > 0 ? MepLogic.Sloped(pts, z0, slope.Value) : pts.Select(q => new[] { q[0], q[1], z0 }).ToList();
             }
-            if (sys.Slopes && slope.HasValue)
+            double? realSlope = null;
+            if (sys.Slopes && given3d)
+            {
+                // Test & sửa H7: the points give the heights: the warning reads their own fall, not the default slope
+                var (least, rises) = MepLogic.SlopesOf(pts);
+                realSlope = least;
+                if (rises) warnings.Add("A part of the drain rises towards its end (the first point should be the high end): tell the user.");
+                var min = MepLogic.MinSlope(sa);
+                if (least.HasValue && !rises && min.HasValue && least < min - 1e-9)
+                    warnings.Add($"The flattest part falls {MepLogic.Num(least.Value)}%, less than {min}% for D{MepLogic.Num(sa)}: tell the user (the drain may not empty well).");
+            }
+            else if (sys.Slopes && slope.HasValue)
             {
                 var min = MepLogic.MinSlope(sa);
                 if (min.HasValue && slope < min - 1e-9) warnings.Add($"Slope {slope}% is less than {min}% for D{MepLogic.Num(sa)}: tell the user (the drain may not empty well).");
@@ -123,6 +137,8 @@ namespace ClaudeCAD.Plugin.Drawing
 
             double bend = MepLogic.BendRadius(sys, sa, f, p.Has("bend_radius") ? p.Num("bend_radius") : (double?)null);
             var pieces = MepLogic.Layout(pts, bend, tool);
+            if (sys.Rect && pieces.Any(x => x.Twist))
+                warnings.Add("The duct runs in two directions round a riser: its section turns at the top of the riser (a real duct needs a transition piece there). Tell the user.");
             string layer = p.Str("layer", sys.Layer3d);
             var layersCreated = new List<string>();
             if (EnsureLayer(ctx, layer, sys.Color)) layersCreated.Add(layer);
@@ -177,6 +193,7 @@ namespace ClaudeCAD.Plugin.Drawing
                 ["note"] = "Drawn at the size given (the plugin does not size pipes or work out flows). Check with capture_view (sw_iso); mep_report gives the schedule and the check against beams / columns.",
             };
             if (slope.HasValue && slope > 0 && !given3d) res["slope_percent"] = slope.Value;
+            if (realSlope.HasValue) res["least_slope_percent"] = Math.Round(realSlope.Value, 2);
             if (tee != null) res["tee"] = tee;
             if (layersCreated.Count > 0) res["layers_created"] = layersCreated;
             if (warnings.Count > 0) res["warnings"] = warnings.Cast<object>().ToList();
@@ -235,6 +252,7 @@ namespace ClaudeCAD.Plugin.Drawing
         {
             double x0 = plan.Min(q => q[0]), x1 = plan.Max(q => q[0]), y0 = plan.Min(q => q[1]), y1 = plan.Max(q => q[1]);
             double? beam = null, slab = null;
+            var beamBottoms = new List<double>();
             int n = 0;
             foreach (ObjectId id in ctx.ModelSpace)
             {
@@ -246,10 +264,16 @@ namespace ClaudeCAD.Plugin.Drawing
                 var mn = ex.Value.MinPoint; var mx = ex.Value.MaxPoint;
                 if (mx.X < x0 || mn.X > x1 || mx.Y < y0 || mn.Y > y1) continue;
                 var l = (s.Layer ?? "").ToUpperInvariant();
-                if (l.Contains("BEAM") || l.Contains("DAM")) beam = beam.HasValue ? Math.Min(beam.Value, mn.Z) : mn.Z;
+                if (l.Contains("BEAM") || l.Contains("DAM")) { beam = beam.HasValue ? Math.Min(beam.Value, mn.Z) : mn.Z; beamBottoms.Add(mn.Z); }
                 else if (l.Contains("SLAB") || l.Contains("SAN")) slab = slab.HasValue ? Math.Min(slab.Value, mn.Z) : mn.Z;
             }
-            if (beam.HasValue) return beam.Value - H7Numbers.TopBelowBeamMm / f - half;
+            if (beam.HasValue)
+            {
+                // Test & sửa H7: beams of two floors over the route: the lowest one is used; say so (the pipe may belong upstairs)
+                if (beamBottoms.Max() - beamBottoms.Min() > 1000 / f)
+                    warnings.Add($"Beams at several heights over the route (bottoms {string.Join(", ", beamBottoms.Select(z => Math.Round(z * f)).Distinct().OrderBy(z => z).Take(5))} mm): the lowest was used. On another floor give elevation instead.");
+                return beam.Value - H7Numbers.TopBelowBeamMm / f - half;
+            }
             if (slab.HasValue)
             {
                 warnings.Add("No beam over the route: the pipe goes under the slab.");

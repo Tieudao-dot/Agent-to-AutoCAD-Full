@@ -262,7 +262,7 @@ namespace ClaudeCAD.Core.Tests
             foreach (var e in pcs.Where(x => x.Kind == "elbow"))
             {
                 int i = pcs.IndexOf(e);
-                Near(pcs[i - 1].W, e.W);
+                if (!e.Twist) Near(pcs[i - 1].W, e.W); // Test & sửa H7: the top elbow turns the section (runs in two directions)
                 Near(MepLogic.Rotate(e.W, e.Axis, e.Angle), pcs[i + 1].W, 1e-9); // the end of the elbow meets the next piece
             }
             Assert.Equal(0, MepLogic.Dot(pipes[2].W, MepLogic.Unit(MepLogic.Sub(pipes[2].B, pipes[2].A))), 9);

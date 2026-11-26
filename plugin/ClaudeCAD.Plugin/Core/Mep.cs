@@ -71,6 +71,8 @@ namespace ClaudeCAD.Plugin.Core
         public double Angle, Radius;
         /// <summary>The width axis of the section at the start (a duct's width): carried along the route so a duct never twists.</summary>
         public double[] W;
+        /// <summary>Test & sửa H7: an elbow where a duct's section must turn (a riser between runs in two directions).</summary>
+        public bool Twist;
         /// <summary>Centre-line length (drawing units).</summary>
         public double Length;
     }
@@ -187,7 +189,8 @@ namespace ClaudeCAD.Plugin.Core
             for (int i = 1; i < pts.Count - 1; i++)
             {
                 var u = Unit(Sub(pts[i], clean[clean.Count - 1])); var v = Unit(Sub(pts[i + 1], pts[i]));
-                if (Dot(u, v) < 1 - 1e-9) clean.Add(pts[i]);
+                // Test & sửa H7: a turn under MinTurn is no corner (a revolve of a few millionths of a radian can fail)
+                if (Dot(u, v) < Math.Cos(MinTurn)) clean.Add(pts[i]);
             }
             clean.Add(pts[pts.Count - 1]);
             int n = clean.Count;
@@ -219,18 +222,65 @@ namespace ClaudeCAD.Plugin.Core
                 var d = Unit(Sub(clean[i + 1], clean[i]));
                 var a = Add(clean[i], Mul(d, trim[i]));
                 var b = Sub(clean[i + 1], Mul(d, trim[i + 1]));
-                w = Unit(Sub(w, Mul(d, Dot(w, d)))); // across this segment
-                if (Norm(w) < 1e-9) w = Section(d).w;
+                // Test & sửa H7: a run that is not vertical keeps its width level (the user's width is horizontal); a riser
+                // carries the width of the elbow before it
+                if (!IsVertical(d)) { var lv = Section(d).w; w = Dot(lv, w) < 0 ? Mul(lv, -1) : lv; }
+                else
+                {
+                    w = Unit(Sub(w, Mul(d, Dot(w, d)))); // across this segment
+                    if (Norm(w) < 1e-9) w = Section(d).w;
+                }
                 if (Dist(a, b) > 1e-9) pieces.Add(new MepPiece { Kind = "pipe", A = a, B = b, Length = Dist(a, b), W = w });
                 if (i + 1 < n - 1)
                 {
                     var e = elbows[i + 1];
                     e.W = w;
+                    var next = Unit(Sub(clean[i + 2], clean[i + 1]));
+                    if (IsVertical(d) && !IsVertical(next))
+                    {
+                        // a riser into a level run: the elbow starts with the section that ends level; the section turns at
+                        // the top of the riser when the two runs go different ways (a real duct needs a transition there)
+                        var target = Section(next).w;
+                        var back = Rotate(target, e.Axis, -e.Angle);
+                        back = Unit(Sub(back, Mul(d, Dot(back, d))));
+                        if (Norm(back) > 1e-9)
+                        {
+                            if (Dot(back, w) < 0) back = Mul(back, -1);
+                            e.Twist = Math.Abs(Dot(back, w)) < 1 - 1e-6;
+                            e.W = back;
+                        }
+                    }
+                    w = Rotate(e.W, e.Axis, e.Angle);
+                    // any other turn: the next level run must meet the end of the elbow, else the section turns there
+                    if (!IsVertical(next) && Math.Abs(Dot(w, Section(next).w)) < 1 - 1e-6) e.Twist = true;
                     pieces.Add(e);
-                    w = Rotate(w, e.Axis, e.Angle);
                 }
             }
             return pieces;
+        }
+
+        /// <summary>Test & sửa H7: smallest turn (radians) that makes an elbow; less is drawn straight (about 0.06°).</summary>
+        public const double MinTurn = 1e-3;
+
+        /// <summary>A vertical direction (a riser): no level width axis.</summary>
+        public static bool IsVertical(double[] d) => Norm(Cross(new[] { 0.0, 0, 1 }, Unit(d))) < 1e-6;
+
+        /// <summary>
+        /// Test & sửa H7: the slopes (%) of a route given with its heights, from the first point to the last: (smallest fall, a
+        /// segment rises). Vertical segments (a stack) are left out; null when every segment is vertical.
+        /// </summary>
+        public static (double? least, bool rises) SlopesOf(IList<double[]> pts)
+        {
+            double? least = null; bool rises = false;
+            for (int i = 1; i < pts.Count; i++)
+            {
+                double run = Math.Sqrt(Sq(pts[i][0] - pts[i - 1][0]) + Sq(pts[i][1] - pts[i - 1][1]));
+                if (run < 1e-9) continue;
+                double fall = (pts[i - 1][2] - pts[i][2]) / run * 100;
+                if (fall < -1e-9) rises = true;
+                least = least.HasValue ? Math.Min(least.Value, fall) : fall;
+            }
+            return (least, rises);
         }
 
         /// <summary>The axes of a cross-section along a direction: w horizontal (the width of a duct), h the other one.</summary>
