@@ -38,7 +38,7 @@ namespace ClaudeCAD.Plugin.Core
         /// <summary>What Claude gets when no closed boundary surrounds the point.</summary>
         public static string NoBoundaryMessage(double[] pt) =>
             $"draw_hatch: no closed boundary found around pick_point [{F(pt[0])}, {F(pt[1])}]. The point must lie inside an area fully closed by " +
-            "lines / polylines / arcs (no gaps) and be visible on screen (zoom to it first). Tell the user in Vietnamese that the area is not " +
+            "lines / polylines / arcs (no gaps) and be visible on screen (zoom to it first). Tell the user in the user\'s language that the area is not " +
             "closed (or the point is outside), or close the gap / use boundary_handles or boundary_points.";
 
         // ================================================================== dimensions of a floor plan
@@ -630,7 +630,7 @@ namespace ClaudeCAD.Plugin.Core
         public static string ReplaceCardMessage(int count) =>
             $"Confirmation required: find_replace_text changes existing text, and {count} of these objects are not on a confirmation card the user approved. " +
             "Nothing was replaced. First call find_replace_text without handles (preview), then call request_confirmation with the preview's handles and " +
-            "one Vietnamese sentence with the count, the find and the replace text and an example (e.g. \"Thay 'P.NGU' bằng 'PHÒNG NGỦ' ở 12 chữ (vd: P.NGU 1 → PHÒNG NGỦ 1)?\"), " +
+            "one sentence in the user's language with the count, the find and the replace text and an example (e.g. \"Thay 'P.NGU' bằng 'PHÒNG NGỦ' ở 12 chữ (vd: P.NGU 1 → PHÒNG NGỦ 1)?\"), " +
             "and end your turn. Replace (with exactly those handles) only after the user presses Đồng ý.";
 
         // ================================================================== several layouts in one PDF

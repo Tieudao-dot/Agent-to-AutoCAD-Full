@@ -449,7 +449,7 @@ namespace ClaudeCAD.Plugin.Drawing
                 result["kept_handles"] = kept.Take(perCall).ToList();
                 result["kept"] = keptWhat.Take(30).ToList();
                 if (kept.Count > perCall) result["kept_more"] = kept.Count - perCall;
-                result["next"] = "Layers of the drawing that differ from the company standard were kept. Ask the user: request_confirmation with kept_handles and one Vietnamese sentence naming them, " +
+                result["next"] = "Layers of the drawing that differ from the company standard were kept. Ask the user: request_confirmation with kept_handles and one sentence in the user's language naming them, " +
                     "end the turn; after Đồng ý call setup_standards again with the same company and handles = kept_handles." +
                     (kept.Count > perCall ? $" {kept.Count} layers differ: this card covers the first {perCall}; the next call lists the rest (kept_more), ask again for them." : "");
             }

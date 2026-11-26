@@ -245,23 +245,23 @@ namespace ClaudeCAD.Plugin.Core
             TextValues.TryGetValue(tool ?? "", out var tv) && tv.param == param
                 ? $"{tool}: this machine's plan is \"{Label(plan)}\", which has no text or dimensions, and '{param}' asks for " +
                   $"{string.Join(" / ", tv.values)} properties from the 2D group. Leave them out (layer, color, linetype... are copied on every plan), " +
-                  $"or tell the user in Vietnamese that this machine uses the \"{Label(plan)}\" plan and that the plugin owner can open the 2D group" +
+                  $"or tell the user in the user\'s language that this machine uses the \"{Label(plan)}\" plan and that the plugin owner can open the 2D group" +
                   (string.IsNullOrWhiteSpace(contact) ? "." : $" ({contact}).")
             : ThreeDValues.TryGetValue(tool ?? "", out var v3) && v3.param == param
                 // Test & sửa H2: FBX on a plan without 3D (before: the block-attribute text)
                 ? $"{tool}: this machine's plan is \"{Label(plan)}\", which has no 3D, and {param} {string.Join(" / ", v3.values)} (the 3D solids as meshes) belongs to the 3D group. " +
-                  "Offer dwg or dxf instead (3ds Max opens DWG too), or tell the user in Vietnamese that this machine uses the " +
+                  "Offer dwg or dxf instead (3ds Max opens DWG too), or tell the user in the user\'s language that this machine uses the " +
                   $"\"{Label(plan)}\" plan and that the plugin owner can open the 3D group" + (string.IsNullOrWhiteSpace(contact) ? "." : $" ({contact}).")
             : ThreeDParams.TryGetValue(tool ?? "", out var p3) && p3 == param
                 ? $"{tool}: this machine's plan is \"{Label(plan)}\", which has no 3D, and '{param}' (copies stacked along Z) belongs to the 3D group. " +
-                  "Leave levels out (one level), or tell the user in Vietnamese that this machine uses the " +
+                  "Leave levels out (one level), or tell the user in the user\'s language that this machine uses the " +
                   $"\"{Label(plan)}\" plan and that the plugin owner can open the 3D group" + (string.IsNullOrWhiteSpace(contact) ? "." : $" ({contact}).")
                 : param == "table_position"
                 ? $"{tool}: this machine's plan is \"{Label(plan)}\", which has no text, and '{param}' inserts a table (text, 2D group) into the drawing. " +
-                  "Call it without table_position (the numbers come back to you) and show them to the user in the chat, or tell the user in Vietnamese that a table in the drawing needs the " +
+                  "Call it without table_position (the numbers come back to you) and show them to the user in the chat, or tell the user in the user\'s language that a table in the drawing needs the " +
                   $"\"Full\" plan and that the plugin owner can open the 2D group" + (string.IsNullOrWhiteSpace(contact) ? "." : $" ({contact}).")
                 : $"{tool}: this machine's plan is \"{Label(plan)}\", which has no text, and '{param}' (block attributes) is text from the 2D group. " +
-            "Define or insert the block without attributes, or tell the user in Vietnamese that this machine uses the " +
+            "Define or insert the block without attributes, or tell the user in the user\'s language that this machine uses the " +
             $"\"{Label(plan)}\" plan and that the plugin owner can open the 2D group" +
             (string.IsNullOrWhiteSpace(contact) ? "." : $" ({contact}).");
 
@@ -298,7 +298,7 @@ namespace ClaudeCAD.Plugin.Core
             var g = GroupOf(tool);
             var need = g == ToolGroup.ThreeD ? "3D" : g == ToolGroup.TwoD ? "2D" : "Full";
             return $"{tool}: this machine's plan is \"{Label(plan)}\" and this tool belongs to the {need} group, which the plan does not include. " +
-                   "Do not try other tools to get the same result. Tell the user in Vietnamese that this machine uses the " +
+                   "Do not try other tools to get the same result. Tell the user in the user\'s language that this machine uses the " +
                    $"\"{Label(plan)}\" plan and that the plugin owner can open the {need} group" +
                    (string.IsNullOrWhiteSpace(contact) ? "." : $" ({contact}).");
         }
@@ -378,7 +378,7 @@ namespace ClaudeCAD.Plugin.Core
             var label = Label(mode);
             var other = OtherMode(mode);
             return $"{tool}: the user set the palette to the {label} work mode, which leaves the {other} tools out (this machine's plan is Full: it has every tool). " +
-                   "Do not try other tools to get the same result and do not mention plans, buying or upgrading. Tell the user in Vietnamese: " +
+                   "Do not try other tools to get the same result and do not mention plans, buying or upgrading. Tell the user in the user\'s language: " +
                    $"\"Đang ở chế độ {label}, đổi sang {other} hoặc Cả hai (nút chế độ trên khung chat) để {(other == "3D" ? "vẽ 3D" : "vẽ 2D")}.\" Then do what the {label} mode allows."; // vi: for Claude
         }
 
@@ -394,6 +394,6 @@ namespace ClaudeCAD.Plugin.Core
         /// <summary>A parameter outside the mode (block attributes in 3D, array levels in 2D…): the same wording.</summary>
         public static string BlockedParamMessage(string tool, string param, string mode) =>
             $"{tool}: '{param}' is outside the {Label(mode)} work mode the user chose (this machine's plan is Full). " +
-            $"Do not mention plans or upgrades; tell the user in Vietnamese: \"Đang ở chế độ {Label(mode)}, đổi sang {OtherMode(mode)} hoặc Cả hai (nút chế độ trên khung chat) để dùng phần này.\""; // vi: for Claude
+            $"Do not mention plans or upgrades; tell the user in the user\'s language: \"Đang ở chế độ {Label(mode)}, đổi sang {OtherMode(mode)} hoặc Cả hai (nút chế độ trên khung chat) để dùng phần này.\""; // vi: for Claude
     }
 }

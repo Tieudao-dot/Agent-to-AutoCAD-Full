@@ -254,7 +254,8 @@ export function isConfirmation(text: string | undefined): boolean {
   if (t.endsWith('?')) return false; // "…thì ok không?" asks back
   const tokens = t.split(/[\s,.!?;:()"'…-]+/u).filter(Boolean);
   if (tokens.length === 0 || tokens.length > 12) return false; // confirmations are short replies
-  for (let i = 0; i < Math.min(tokens.length, FIRST_WORDS + 1); i++) {
+  // nâng cấp đợt H9: a refusal word anywhere makes it no ("yes but don't delete the walls", "ok, không xóa tường") — unsure = no
+  for (let i = 0; i < tokens.length; i++) {
     if (NEGATIONS.has(tokens[i]!) && !(tokens[i] === 'không' && tokens[i + 1] === 'sao') && !(tokens[i] === 'khong' && tokens[i + 1] === 'sao')) return false;
   }
   for (let i = 0; i < Math.min(tokens.length, FIRST_WORDS); i++) {
@@ -543,7 +544,7 @@ export function confirmationError(tool: string, params: Record<string, unknown>,
     return (
       `Confirmation required: this ${tool} call builds from layers the user has not confirmed (${guessed.slice(0, 20).join(', ')}). ` +
       'A layer mapping you worked out yourself must be approved on a card first. Do not retry now and do not work around it (no wall_handles collected from those layers either). ' +
-      'Call request_confirmation with one Vietnamese sentence that writes every layer name exactly as in the drawing and what it is ' +
+      'Call request_confirmation with one sentence in the language of the user that writes every layer name exactly as in the drawing and what it is ' +
       '(e.g. "Dựng 3D với: tường = TUONG, cửa đi = CUA, cửa sổ = CUASO?"), and end your turn. ' +
       'Build after the user presses Đồng ý, with exactly the layers named on that card.'
     );
@@ -554,7 +555,7 @@ export function confirmationError(tool: string, params: Record<string, unknown>,
     return (
       `Confirmation required: ${f2} would overwrite or delete ${texts.length} existing item(s) (${texts.slice(0, 20).join(', ')}) that are not on a confirmation card the user approved. ` +
       'Only the Đồng ý button of a card listing these handles allows it; a typed "ok" / "đồng ý" does not count. Do not retry now. ' +
-      'Call request_confirmation with exactly these handles and one Vietnamese sentence saying what will be overwritten or deleted, and end your turn. ' +
+      'Call request_confirmation with exactly these handles and one sentence in the language of the user saying what will be overwritten or deleted, and end your turn. ' +
       'After Đồng ý, call it again with the same parameters and these handles.'
     );
   }
@@ -563,7 +564,7 @@ export function confirmationError(tool: string, params: Record<string, unknown>,
       `Confirmation required: find_replace_text would change ${texts.length} existing text object(s) that are not on a confirmation card the user approved. ` +
       'Replacing always needs the Đồng ý button of a card listing them; a typed "ok" / "đồng ý" does not count. Do not retry now and do not work around it ' +
       '(no edit_text / set_block_attributes one by one). Run find_replace_text without handles (preview), call request_confirmation with its match_handles and ' +
-      'one Vietnamese sentence (count, find → replace, one example), and end your turn. Replace with exactly those handles after the user presses Đồng ý.'
+      'one sentence in the language of the user (count, find → replace, one example), and end your turn. Replace with exactly those handles after the user presses Đồng ý.'
     );
   }
   // C2 (12/11/2026): only the Đồng ý button of a card that listed these solids unlocks them, not a typed yes
@@ -573,7 +574,7 @@ export function confirmationError(tool: string, params: Record<string, unknown>,
       `Confirmation required: this ${tool} call would change or erase ${solids.length} 3D solid(s) that were already in the drawing before this turn ` +
       `(${solids.slice(0, 20).join(', ')}${solids.length > 20 ? ', …' : ''}). Only the Đồng ý button of a confirmation card that lists these handles ` +
       'allows it; a typed "ok" / "đồng ý" or the plan card\'s "Làm" does not. Do not retry now and do not work around it. ' +
-      'Call request_confirmation now with exactly these handles and one Vietnamese sentence saying what will change (e.g. "Trừ 2 lỗ cửa khỏi tường 2F4A?"), ' +
+      'Call request_confirmation now with exactly these handles and one sentence in the language of the user saying what will change (e.g. "Trừ 2 lỗ cửa khỏi tường 2F4A?"), ' +
       'and end your turn. Run the operation only after the user presses Đồng ý.'
     );
   }
@@ -588,7 +589,7 @@ export function confirmationError(tool: string, params: Record<string, unknown>,
     : `this ${tool} call would modify or erase ${add} existing objects (more than ${CONFIRM_THRESHOLD})`;
   return (
     `Confirmation required: ${what}. ` +
-    'Do not retry now and do not split the change into smaller calls. Tell the user in Vietnamese how many objects and what will change, ask "Cậu có đồng ý không?", ' +
+    'Do not retry now and do not split the change into smaller calls. Tell the user in the user\'s language how many objects and what will change, ask "Cậu có đồng ý không?", ' +
     'and end your turn. Run the operation only after the user confirms in their next message.'
   );
 }

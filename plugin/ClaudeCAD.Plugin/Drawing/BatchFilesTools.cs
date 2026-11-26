@@ -123,7 +123,7 @@ namespace ClaudeCAD.Plugin.Drawing
                 if (b.Files.Count > H5Numbers.MaxListed) r["files_more"] = b.Files.Count - H5Numbers.MaxListed;
                 if (BatchLogic.Writes(b.Task)) AddBackupFolders(r, b, (string)r["stamp"]); // Sửa KTH-06
                 if (pdfExisting > 0) r["pdf_overwrite"] = pdfExisting;
-                r["card"] = $"Ask the user with request_confirmation (handles = [confirm_token]) in one Vietnamese sentence: {what}" +
+                r["card"] = $"Ask the user with request_confirmation (handles = [confirm_token]) in one sentence in the user's language: {what}" +
                     (pdfExisting > 0 ? $", {pdfExisting} PDF(s) already there are replaced" : "") + $", {skipped.Count} skipped. Then call again with confirm_handles.";
                 return r;
             }

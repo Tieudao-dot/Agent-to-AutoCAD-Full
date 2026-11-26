@@ -221,7 +221,7 @@ const planeArgs = {
 
 const ON_EXISTING_SOLID =
   ' It changes an existing solid: when it existed before this turn (also when you built it in an earlier turn), first call request_confirmation ' +
-  'with the handle and one Vietnamese sentence, and end the turn; run it after the user agrees.';
+  'with the handle and one sentence in the language of the user, and end the turn; run it after the user agrees.';
 
 const CHECK_AFTER = ' Returns the handle, volume_before and the new volume / min / max: check them, then look with capture_view (sw_iso, conceptual).';
 

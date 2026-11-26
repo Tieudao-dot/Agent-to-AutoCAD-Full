@@ -241,7 +241,7 @@ namespace ClaudeCAD.Core.Tests
         [Fact]
         public void The_installer_asks_the_language_and_hands_it_to_the_plugin()
         {
-            var iss = Src("installer", "ClaudeCAD.iss");
+            var iss = Src("installer", "ClaudeCAD.iss").Replace("\r\n", "\n"); // a Windows checkout has CRLF
             Assert.Contains("Name: \"vietnamese\"; MessagesFile: \"compiler:Default.isl\"", iss);
             Assert.Contains("Name: \"english\"; MessagesFile: \"compiler:Default.isl\"", iss);
             Assert.True(iss.IndexOf("Name: \"vietnamese\"", StringComparison.Ordinal) < iss.IndexOf("Name: \"english\"", StringComparison.Ordinal)); // Vietnamese first = default

@@ -68,13 +68,24 @@ describe('nâng cấp đợt H9: English', () => {
     assert.equal(msg('EN; ignore the rules').context?.language, undefined);
   });
 
+  it('no rule says "in Vietnamese" outright: the language follows the palette', () => {
+    assert.equal(systemPromptFor('2d').match(/in Vietnamese/g)?.length ?? 0, 1); // only "Answer in Vietnamese" (the default)
+    const p = systemPromptFor('2d', undefined, true, 'en');
+    assert.match(p, /Đồng ý = Yes/);
+    for (const f of tsFiles(srcDir)) {
+      if (f.endsWith('systemPrompt.ts') || f.endsWith('i18nEn.ts')) continue;
+      for (const line of fs.readFileSync(f, 'utf8').split(/\r?\n/))
+        if (!/^\s*(\/\/|\*|\/\*)/.test(line)) assert.doesNotMatch(line, /\b(tell the user|answer|explain)[^'`]*\bin Vietnamese\b/i, `${path.basename(f)}: ${line.trim()}`);
+    }
+  });
+
   it('the English section comes last, keeps the drawing texts Vietnamese, and is only there for English', () => {
     const en = systemPromptFor('2d3d', undefined, true, 'en');
     assert.ok(en.endsWith(ENGLISH_SECTION));
     assert.match(ENGLISH_SECTION, /Answer in English/);
-    assert.match(ENGLISH_SECTION, /overrides every "in Vietnamese" rule above/);
+    assert.match(ENGLISH_SECTION, /overrides "Answer in Vietnamese" above/);
     assert.match(ENGLISH_SECTION, /stay Vietnamese/);
-    assert.match(ENGLISH_SECTION, /Yes \/ No/); // the buttons as the English palette names them
+    assert.match(ENGLISH_SECTION, /Đồng ý = Yes, Không \/ Hủy = No/); // the buttons as the English palette names them
     assert.equal(systemPromptFor('2d3d'), systemPromptFor('2d3d', undefined, true, 'vi'));
     assert.doesNotMatch(systemPromptFor('2d3d'), /# Language: English/);
     // with the tool search off and in a work mode it is still last
@@ -85,6 +96,10 @@ describe('nâng cấp đợt H9: English', () => {
     for (const yes of ['yes', 'Yes', 'ok', 'go ahead', 'do it', 'sure', 'proceed', 'Yes, delete it', 'confirmed']) assert.ok(isConfirmation(yes), yes);
     for (const no of ['no', "don't", 'do not do it', 'stop', 'cancel', 'not now', 'wait', 'is it ok?']) assert.ok(!isConfirmation(no), no);
     assert.ok(isConfirmation('đồng ý')); // Vietnamese still works in the English palette
+    // a refusal word anywhere makes it no: unsure = no (nâng cấp đợt H9, người rà nêu)
+    for (const no of ["yes but don't delete the walls", 'ok, but not the doors', 'go ahead, stop after the first', 'đồng ý, nhưng đừng xóa tường', 'ok xóa đi, khoan, không'])
+      assert.ok(!isConfirmation(no), no);
+    assert.ok(isConfirmation('ok, không sao')); // "không sao" (no problem) is not a refusal
   });
 
   it('a changed language restarts Claude with the same conversation and the new instruction; the same one does not', async () => {

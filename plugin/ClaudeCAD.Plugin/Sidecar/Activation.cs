@@ -173,8 +173,8 @@ namespace ClaudeCAD.Plugin.Sidecar
             get
             {
                 var st = DeviceStatus;
-                if (st.Ok && st.Status == "disabled") return L.Tr("Máy này đã bị chủ plugin tạm khóa. ") + Contact + ".";
-                if (st.Ok && st.Status == "pending") return L.Tr("Máy này đang chờ chủ plugin duyệt lại. ") + Contact + L.Tr(" nếu chờ lâu.");
+                if (st.Ok && st.Status == "disabled") return L.Tr("Máy này đã bị chủ plugin tạm khóa. {0}.", Contact);
+                if (st.Ok && st.Status == "pending") return L.Tr("Máy này đang chờ chủ plugin duyệt lại. {0} nếu chờ lâu.", Contact);
                 if (st.Ok && st.ClockBack) return L.Tr("Đồng hồ máy đang chậm hơn lần dùng trước. Chỉnh lại ngày giờ Windows cho đúng, kết nối mạng rồi bấm \"Kiểm tra lại\".");
                 if (st.Ok && !st.Fresh) return L.Tr("Plugin đã quá {0} ngày không kiểm tra được với chủ plugin ({1}). Kết nối mạng rồi bấm \"Kiểm tra lại\".", LicenseLogic.StatusMaxAgeDays, st.Reason);
                 return L.Tr("Chưa xác nhận được máy này với chủ plugin ({0}). Kết nối mạng rồi bấm \"Kiểm tra lại\".", st.Reason);
@@ -266,7 +266,7 @@ namespace ClaudeCAD.Plugin.Sidecar
         /// <summary>Asks the service to email the owner this machine's key. Returns a sentence for the palette.</summary>
         public static async Task<(bool ok, string message)> RequestAsync()
         {
-            if (ServiceUrl == null) return (false, L.Tr("Bản plugin này chưa có máy chủ kích hoạt. ") + Contact + L.Tr(" và gửi mã máy ") + MachineCode + ".");
+            if (ServiceUrl == null) return (false, L.Tr("Bản plugin này chưa có máy chủ kích hoạt. {0} và gửi mã máy {1}.", Contact, MachineCode));
             var url = LicenseLogic.BuildUrl(ServiceUrl, new[]
             {
                 new KeyValuePair<string, string>("action", "request"),
@@ -283,13 +283,13 @@ namespace ClaudeCAD.Plugin.Sidecar
                     if (!r.ok) return (false, L.Tr("Không gửi được yêu cầu: ") + r.error);
                     try { Directory.CreateDirectory(Root); File.WriteAllText(RequestStamp, DateTime.UtcNow.ToString("o", CultureInfo.InvariantCulture)); } catch { }
                     Logger.Info("activation requested for " + MachineCode);
-                    return (true, L.Tr("Đã gửi yêu cầu kích hoạt cho chủ plugin. ") + Contact + L.Tr(" để nhận key."));
+                    return (true, L.Tr("Đã gửi yêu cầu kích hoạt cho chủ plugin. {0} để nhận key.", Contact));
                 }
             }
             catch (Exception ex)
             {
                 Logger.Warn("activation request failed: " + ex.Message);
-                return (false, L.Tr("Không gửi được yêu cầu (kiểm tra mạng). ") + Contact + L.Tr(" và gửi mã máy ") + MachineCode + ".");
+                return (false, L.Tr("Không gửi được yêu cầu (kiểm tra mạng). {0} và gửi mã máy {1}.", Contact, MachineCode));
             }
         }
 
@@ -415,7 +415,7 @@ namespace ClaudeCAD.Plugin.Sidecar
                     if (st.Status == "active") return (true, IsActivated
                         ? L.Tr("Máy này đang được chủ plugin cho phép dùng.")
                         : L.Tr("Máy đã được duyệt nhưng chưa lưu được giấy phép — thử lại."));
-                    return (true, L.Tr("Máy này đang chờ chủ plugin duyệt. ") + Contact + L.Tr(" để được duyệt nhanh."));
+                    return (true, L.Tr("Máy này đang chờ chủ plugin duyệt. {0} để được duyệt nhanh.", Contact));
                 }
             }
             catch (Exception ex)
@@ -450,7 +450,7 @@ namespace ClaudeCAD.Plugin.Sidecar
                         return (false, L.Tr("Dòng gói này ngày {0}, cũ hơn dòng gói máy đang có ({1}): không dùng được. Dán dòng gói mới nhất trong email của chủ plugin.", pc.Date, PlanLine.Date));
                     if (license == null && statusLine == null)
                         return IsActivated
-                            ? (true, L.Tr("Đã lưu gói ") + PlanLogic.Label(pc.Plan) + L.Tr(" cho máy này."))
+                            ? (true, L.Tr("Đã lưu gói {0} cho máy này.", PlanLogic.Label(pc.Plan)))
                             : (false, L.Tr("Đã lưu dòng gói, còn thiếu dòng giấy phép CCL1| — dán đủ các dòng trong email của chủ plugin."));
                 }
                 if (statusLine != null)

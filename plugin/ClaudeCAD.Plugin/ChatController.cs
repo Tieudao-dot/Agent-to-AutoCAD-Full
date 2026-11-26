@@ -1833,7 +1833,7 @@ namespace ClaudeCAD.Plugin
                         Ui.ShowToast(Tr("Đã đăng nhập Claude."), ChatControl.ToastKind.Success);
                         RestartSidecarQuietly();
                     }
-                    else Ui.AddLoginCard(Tr("Chưa đăng nhập xong (") + status.Label + Tr("). Bấm lại để thử lần nữa."));
+                    else Ui.AddLoginCard(Tr("Chưa đăng nhập xong ({0}). Bấm lại để thử lần nữa.", status.Label));
                 }));
             }
             catch (Exception ex)

@@ -76,7 +76,7 @@ namespace ClaudeCAD.Plugin.Core
                    $"already in the drawing before this turn ({list}). Nothing was {(erase ? "erased" : "exploded")}. Only the Đồng ý button of a confirmation " +
                    "card that lists these handles allows it; a typed \"ok\" / \"đồng ý\" or the plan card's \"Làm\" does not. Do not retry now and do not " +
                    "work around it (no copy-then-explode, no erase and redraw). Call request_confirmation now with exactly these handles and one " +
-                   $"Vietnamese sentence saying what will change (e.g. \"{(erase ? "Xóa khối 2F4A?" : "Phá khối 2F4A thành các mặt?")}\"), and end your turn.";
+                   $"sentence in the user's language saying what will change (e.g. \"{(erase ? "Xóa khối 2F4A?" : "Phá khối 2F4A thành các mặt?")}\"), and end your turn.";
         }
 
         // ================================================================= views

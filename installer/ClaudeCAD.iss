@@ -29,6 +29,14 @@
 #ifndef ActivationContact
   #define ActivationContact "Liên hệ Zalo owner: 0344644415"
 #endif
+; nâng cấp đợt H9: the English pages show the default contact in English; a contact the owner set stays as written
+#ifndef ActivationContactEn
+  #if ActivationContact == "Liên hệ Zalo owner: 0344644415"
+    #define ActivationContactEn "Contact the owner on Zalo: 0344644415"
+  #else
+    #define ActivationContactEn ActivationContact
+  #endif
+#endif
 ; the contact text goes into Pascal string literals: double any '
 #define ContactPas StringChange(ActivationContact, "'", "''")
 
@@ -205,11 +213,11 @@ english.H9Msg39=The key does not match this PC.
 english.H9Msg40=Activate {#AppDisplayName}
 english.H9Msg41=The plugin owner grants use for each PC.
 english.H9Msg42={#AppDisplayName} only works once the plugin owner allows this PC. The request is sent automatically;
-english.H9Msg43={#ActivationContact} to get approved quickly.
+english.H9Msg43={#ActivationContactEn} to get approved quickly.
 english.H9Msg44=If you have a key, paste it below. Without a key you can still press Next to install — once approved,
 english.H9Msg45=opening AutoCAD is enough (or press "Check again" in the Claude chat palette).
 english.H9Msg46={#AppDisplayName} installs only with an activation code from the plugin owner, one per PC.
-english.H9Msg47={#ActivationContact}, send the machine code below to get the activation code (a long line starting with CCL1|).
+english.H9Msg47={#ActivationContactEn}, send the machine code below to get the activation code (a long line starting with CCL1|).
 english.H9Msg48=Machine code (send it to the plugin owner):
 english.H9Msg49=Copy
 english.H9Msg50=Send the request again

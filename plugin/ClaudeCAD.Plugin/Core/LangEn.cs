@@ -938,6 +938,17 @@ namespace ClaudeCAD.Plugin.Core
             ["Reset dynamic block"] = "Reset dynamic block",
             ["Xoay 3D"] = "Rotate 3D",
             ["bỏ qua: bước tạo đối tượng trước đó bị lỗi"] = "skipped: an earlier step that creates objects failed",
+            ["Máy này đã bị chủ plugin tạm khóa. {0}."] = "The plugin owner has locked this PC. {0}.",
+            ["Máy này đang chờ chủ plugin duyệt lại. {0} nếu chờ lâu."] = "This PC is waiting for the plugin owner's approval again. {0} if it takes long.",
+            ["Bản plugin này chưa có máy chủ kích hoạt. {0} và gửi mã máy {1}."] = "This plugin build has no activation server. {0} and send the machine code {1}.",
+            ["Đã gửi yêu cầu kích hoạt cho chủ plugin. {0} để nhận key."] = "Activation request sent to the plugin owner. {0} to get a key.",
+            ["Không gửi được yêu cầu (kiểm tra mạng). {0} và gửi mã máy {1}."] = "Could not send the request (check the internet connection). {0} and send the machine code {1}.",
+            ["Máy này đang chờ chủ plugin duyệt. {0} để được duyệt nhanh."] = "This PC is waiting for the plugin owner's approval. {0} to get approved quickly.",
+            ["Đã lưu gói {0} cho máy này."] = "Saved the plan {0} for this PC.",
+            ["Bong bóng ở icon {0} trên thanh trạng thái khi khung chat đang đóng / tự ẩn; và thông báo Windows khi AutoCAD không phải cửa sổ trước mặt"] = "A bubble on the {0} icon of the status bar while the palette is closed / auto-hidden; and a Windows notification when AutoCAD is not the front window",
+            ["Dự án — dùng chung cho mọi bản vẽ trong thư mục (file {0} cạnh bản vẽ)"] = "Project — shared by every drawing in the folder (file {0} next to the drawing)",
+            ["Chưa đăng nhập xong ({0}). Bấm lại để thử lần nữa."] = "Sign-in not finished ({0}). Press again to retry.",
+            ["Macro này sửa khối 3D có sẵn trong bản vẽ ({0}). Chạy macro không có thẻ xác nhận nên tớ không chạy. Nhờ Claude làm việc này (Claude hỏi bằng thẻ xác nhận), hoặc lưu lại macro chỉ sửa khối do chính macro dựng."] = "This macro changes 3D solids already in the drawing ({0}). Running a macro has no confirmation card, so I did not run it. Ask Claude to do it (Claude asks with a confirmation card), or save the macro again so it only changes solids the macro builds itself.",
         };
     }
 }

@@ -265,9 +265,8 @@ namespace ClaudeCAD.Plugin.Core
 
         /// <summary>What the palette says when ExternalSolidEdits refuses a macro (Vietnamese, for the user).</summary>
         public static string ExternalSolidEditsMessage(List<string> edits) =>
-            L.Tr("Macro này sửa khối 3D có sẵn trong bản vẽ (") + string.Join("; ", edits.Take(3)) + (edits.Count > 3 ? "; …" : "") + "). " +
-            L.Tr("Chạy macro không có thẻ xác nhận nên tớ không chạy. Nhờ Claude làm việc này (Claude hỏi bằng thẻ xác nhận), ") +
-            L.Tr("hoặc lưu lại macro chỉ sửa khối do chính macro dựng.");
+            L.Tr("Macro này sửa khối 3D có sẵn trong bản vẽ ({0}). Chạy macro không có thẻ xác nhận nên tớ không chạy. Nhờ Claude làm việc này (Claude hỏi bằng thẻ xác nhận), hoặc lưu lại macro chỉ sửa khối do chính macro dựng.",
+                string.Join("; ", edits.Take(3)) + (edits.Count > 3 ? "; …" : ""));
 
         /// <summary>Values of params named handle / handles / *_handle(s) (where tools take entity handles).</summary>
         public static IEnumerable<string> HandleParams(Dictionary<string, object> p)

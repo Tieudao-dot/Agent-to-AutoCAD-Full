@@ -49,7 +49,7 @@
 | # | Quyết định | Lý do / đổi lại được không |
 | --- | --- | --- |
 | 1 | **Chữ vẽ vào bản vẽ giữ tiếng Việt khi chọn English** (chủ dự án chốt 26/11/2026 ~20h45). Gồm: tiêu đề bảng, khung tên, tên tờ, tên cọc, mô tả layer. | Hồ sơ nộp ở Việt Nam theo chuẩn Việt Nam. Khách nhờ Claude đổi từng chữ được. Có test kiểm các file vẽ chữ không gọi `Tr` |
-| 2 | Tiêu đề cột Excel xuất ra cũng giữ tiếng Việt | Excel là tài liệu đi kèm bản vẽ, cùng lý do với mục 1. Đổi được bằng cách bọc `Tr` ở `Core/Xlsx.cs` |
+| 2 | **File Excel giữ tiếng Việt như bảng trên bản vẽ** (luồng chính chọn 26/11): tiêu đề, "Cộng Ø", "Tổng" | Bảng vừa chèn vào bản vẽ vừa xuất Excel, và `XlsxLogic.DataRows` nhận dòng "Tổng" bằng cách so chữ. Tài liệu khách ghi "(cả bảng xuất Excel)" |
 | 3 | Không dịch skill | Claude đọc skill tiếng Việt rồi trả lời tiếng Anh. Rẻ, an toàn, skill khách sửa không phải giữ hai bản |
 | 4 | Lời báo plugin gửi cho Claude (lỗi lệnh, NOT_IN_PLAN, "Chỉ xem"…) không dịch | Claude đọc rồi tự nói lại bằng ngôn ngữ khách chọn. Đã dặn trong `ENGLISH_SECTION` |
 | 5 | SelfTest: chỉ dịch tên bước và dòng tổng; chi tiết kỹ thuật từng bước giữ tiếng Việt | Phần chi tiết là để người phát triển đọc (khoảng 240 câu kỹ thuật). Dịch thêm thì tốn và dễ sai mà khách không cần |
@@ -58,7 +58,10 @@
 | 8 | Ngôn ngữ chọn ở bộ cài chỉ áp dụng cho máy chưa có cài đặt khung chat | Máy đang dùng không bị đổi ngôn ngữ khi cài đè |
 | 9 | Bộ cài dùng `Default.isl` cho cả hai ngôn ngữ | Inno Setup không có sẵn file tiếng Việt chính thức. Nút chuẩn (Next / Back…) vẫn tiếng Anh như bản trước; các câu khách hay vướng thì đã tiếng Việt |
 | 10 | Dòng liên hệ mặc định "Liên hệ Zalo owner…" có bản tiếng Anh. Dòng chủ plugin tự đặt (`update-config.json` / `activation.json`) giữ nguyên chữ chủ plugin viết | Không đoán bản dịch chữ của chủ plugin. Trang kích hoạt trong bộ cài English vẫn hiện dòng liên hệ đã cấu hình (mặc định tiếng Việt) |
-| 11 | Khi chọn English, Claude nhận thêm "yes, ok, sure, proceed, go ahead, do it…" là đồng ý; "no, not, don't, stop, cancel, wait" là không | Các chữ này nằm trong danh sách xác nhận gõ tay (luật 20 đối tượng). Luật khối 3D vẫn chỉ nhận nút trên thẻ |
+| 12 | **Xuất chat ra Markdown theo ngôn ngữ giao diện lúc xuất** (luồng chính chọn 26/11) | Đây là chữ giao diện, không phải chữ trên bản vẽ |
+| 13 | Câu dặn Claude "tell the user in Vietnamese" đổi thành "in the user's language" / "in the language of the user" | Prompt gốc nói ngôn ngữ của khách là tiếng Việt, trừ khi phần "# Language" ở cuối nói khác. Rẻ, không phải nhánh hai bản prompt |
+| 14 | `install.ps1` (cài bằng PowerShell cho người quản trị) giữ tiếng Việt | Dùng cho người cài hộ nhiều máy, không phải khách |
+| 11 | Claude nhận thêm "yes, ok, sure, proceed, go ahead, do it…" là đồng ý; "no, not, don't, stop, cancel, wait" là không. **Từ phủ định ở bất kỳ đâu trong câu là không đồng ý** (cả tiếng Việt: "ok, nhưng đừng xóa tường" = không; "không sao" vẫn là đồng ý) | Không chắc thì không đồng ý. Luật khối 3D vẫn chỉ nhận nút trên thẻ |
 
 ## 4. Con số chờ chủ dự án duyệt
 
@@ -107,7 +110,8 @@ Không có số mới khách thấy.
   - `plugin/ClaudeCAD.Plugin/Core/Lang.cs`, `Core/LangEn.cs`, `UI/ChatControl.Lang.cs`;
   - `agent/src/i18n.ts`, `agent/src/i18nEn.ts`;
   - `plugin/ClaudeCAD.Core.Tests/NangCapH9Tests.cs` (10 test + `InnoMessages.Cm` cho test bộ cài cũ);
-  - `agent/test/nangcaph9.test.ts` (6 test);
+  - `agent/test/nangcaph9.test.ts` (7 test);
+  - `plugin/ClaudeCAD.UI.Tests/NangCapH9LanguageUiTests.cs` (2 UI test);
   - `docs/checklist-dot-h9.md`, bàn giao này.
 - **Sửa (bọc `Tr`):**
   - `UI/ChatControl.cs` (thêm ô Ngôn ngữ), `ChatController.cs` (đổi ngôn ngữ, ngôn ngữ từ bộ cài, `context.language`);
@@ -136,10 +140,25 @@ Không có số mới khách thấy.
 4. **Bộ cài chưa được biên dịch trên Linux.** CI Windows biên dịch nó. Pascal Script phải nhận được `[CustomMessage('…'), CustomMessage('…')]` trong mảng nút của `TaskDialogMsgBox`.
 5. **Chữ tiếng Việt không dấu** (vd "Theo AutoCAD", "low — nhanh") không bị test bắt. Tớ đã bọc các chỗ thấy được.
 
+## 7b. 9 điểm người rà nêu trước (luồng chính chuyển 26/11 14h50)
+
+| # | Điểm | Đã làm |
+| --- | --- | --- |
+| 1 | Câu dặn "tell the user in Vietnamese" viết cứng (~15 chỗ C# + TS) | Đổi thành "in the user's language" (C#) / "in the language of the user" (TS) trong mọi lời dặn và lời báo cho Claude: `Plans.cs`, `ToolDispatcher.cs`, `Util2D.cs`, `Solids.cs`, `Solids2.cs`, `Standards2D(Tools).cs`, `BatchFilesTools.cs`, `CompanyStandardTools.cs`, `Util2DTools.cs`, `F5.cs`, `systemPrompt.ts`, `confirmation.ts`, `solids.ts`, `utility2d.ts`, `interaction.ts`, `drawingCheck.ts`. Prompt gốc: "the user's language is Vietnamese unless a # Language section at the end says otherwise". Test trợ lý: không còn "tell the user … in Vietnamese" ngoài câu mặc định |
+| 2 | Lời dặn bắt nói nguyên văn tiếng Việt ("cỡ mẫu, kỹ sư quyết", tên nút Đồng ý / Làm / Chỉ xem / Dừng) | Giữ nguyên trong lời dặn (test H8 so khít). `ENGLISH_SECTION` có bảng đổi tên nút: Đồng ý = Yes, Không / Hủy = No, Làm = Do it, Sửa kế hoạch = Edit plan, Bỏ = Skip, Chỉ xem = View only, Dừng = Stop, Chat mới = New chat, Cả hai = Both. Ngoài ra dặn Claude dịch cụm tiếng Việt trong kết quả lệnh (ví dụ "cỡ mẫu, kỹ sư quyết") |
+| 3 | Nhận xác nhận gõ tay | Thêm sure / go ahead / do it / proceed…; thêm phủ định don't / not / cancel / stop / wait; **từ phủ định ở bất kỳ đâu trong câu là không đồng ý** (trước đây chỉ xét 4 chữ đầu). Test trợ lý: "yes but don't delete the walls", "ok, but not the doors", "đồng ý, nhưng đừng xóa tường" → không; "ok, không sao" → có |
+| 4 | Bảng vừa chèn bản vẽ vừa xuất Excel | Giữ tiếng Việt (luồng chính chọn). Không bọc `Tr` ở Rebar / Estimate / Xlsx / DrawingSet; test H9 kiểm các file này không gọi `Tr`. Tài liệu khách ghi "(cả bảng xuất Excel)" |
+| 5 | Chuỗi code so khít để nhận diện | Không đụng: "cột" / "dầm", "TƯỜNG", "cửa" (nằm trong file vẽ chữ, không bọc). `_readyInfo.Contains("·")` so chữ của trợ lý, không dịch. SelfTest / UI test tìm nút theo chữ tiếng Việt vẫn đúng vì mặc định là tiếng Việt. **Thêm UI test English** `NangCapH9LanguageUiTests` (2 test, chạy riêng không song song): khung chat mở bằng English; khung chat đang mở đổi sang English rồi về lại; chữ khách đã gõ không bị đổi |
+| 6 | Chữ ghép bằng nối chuỗi | Bọc cả câu có chỗ trống: Activation (tạm khóa / chờ duyệt / chưa có máy chủ / đã gửi yêu cầu / lưu gói), Macros (sửa khối 3D có sẵn), ChatControl (bong bóng icon, ghi chú dự án), ChatController (chưa đăng nhập xong). Plans "Không chạy macro…", ChatExtras "Thêm {0} · Sửa {1} · Xóa {2}", License Reason, SidecarManager "lần {0}/{1}" đã là cả câu. Còn vài câu dài ghép hai câu trọn (vd "✓ Đã lưu macro…" + ", hoặc Tại điểm…"), mỗi mảnh dịch được |
+| 7 | Chữ giao diện sinh ở trợ lý | `tr()` cho tóm tắt lệnh (`content.ts`) và lời báo lỗi (`session.ts`); plugin gửi `context.language` trong mỗi tin nhắn và trong lần khởi động sẵn |
+| 8 | Bộ cài | Đã làm như mục 2 (`[CustomMessages]` có tiền tố ngôn ngữ, ngôn ngữ ghi vào `{app}\Contents\language.txt`, plugin đọc khi chưa có cài đặt). Bộ cài chạy quyền người dùng (`PrivilegesRequired=lowest`), nhưng vẫn ghi vào `{app}` như người rà đề nghị. `install.ps1` giữ tiếng Việt (Quyết định tự chọn 14) |
+| 9 | Khác | H6 / H7 / H8: chỉ lời báo đi qua giao diện được dịch; tên cọc, nhãn ống, bảng thép giữ tiếng Việt (không bọc ở Terrain / Mep / Rebar / StructureTools). Xuất chat Markdown theo ngôn ngữ lúc xuất (quyết định 12). Dòng liên hệ mặc định: C# (`L.Tr(DefaultContact)` → "Contact the owner on Zalo: …") và bộ cài (`ActivationContactEn`, chỉ khi dòng liên hệ là mặc định) cùng bản tiếng Anh |
+
 ## 8. Test
 
 - Lõi **1681 / 1681** (thêm 10 test H9).
-- Trợ lý **463 / 463** (thêm 6 test H9).
+- Trợ lý **464 / 464** (thêm 7 test H9).
+- UI test WPF: thêm 2 test English (chỉ chạy trên CI Windows); project build qua trên Linux.
 - Build `net48`, `net8.0-windows`, `net10.0-windows`: 0 lỗi; 1 cảnh báo cũ ở `TraceTools.cs`, không thuộc H9.
 - CI: ghi ở mục 9.
 

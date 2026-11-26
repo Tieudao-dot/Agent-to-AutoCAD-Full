@@ -877,7 +877,7 @@ namespace ClaudeCAD.Plugin.UI
             fonts.Children.Add(minus);
             fonts.Children.Add(plus);
             Row(look, Tr("Cỡ chữ"), fonts, Tr("Mặc định theo cỡ chữ palette của AutoCAD; chọn cỡ ở đây thì giữ cỡ của cậu"));
-            _notify = CheckRow(look, Tr("Báo khi lượt xong"), Tr("Bong bóng ở icon ") + ProductInfo.DisplayName + Tr(" trên thanh trạng thái khi khung chat đang đóng / tự ẩn; và thông báo Windows khi AutoCAD không phải cửa sổ trước mặt"));
+            _notify = CheckRow(look, Tr("Báo khi lượt xong"), Tr("Bong bóng ở icon {0} trên thanh trạng thái khi khung chat đang đóng / tự ẩn; và thông báo Windows khi AutoCAD không phải cửa sổ trước mặt", ProductInfo.DisplayName));
             _hotkey = CheckRow(look, Tr("Phím tắt Ctrl+Shift+Space"), Tr("Mở palette và đặt con trỏ vào ô nhập (lệnh tắt: CC)"));
             p.Children.Add(new Category(Tr("CHUNG — GIAO DIỆN"), look).Root);
 
@@ -2495,7 +2495,7 @@ namespace ClaudeCAD.Plugin.UI
             _notesDrawing.Text = drawingText ?? "";
             _notesFolder.IsEnabled = folderFile != null;
             _notesFolderLabel.Text = folderFile != null
-                ? Tr("Dự án — dùng chung cho mọi bản vẽ trong thư mục (file ") + System.IO.Path.GetFileName(folderFile) + Tr(" cạnh bản vẽ)")
+                ? Tr("Dự án — dùng chung cho mọi bản vẽ trong thư mục (file {0} cạnh bản vẽ)", System.IO.Path.GetFileName(folderFile))
                 : Tr("Dự án — lưu bản vẽ trước để có ghi chú chung cho cả thư mục");
             _notesPanel.Visibility = Visibility.Visible;
             (folderFile != null ? _notesFolder : _notesDrawing).Focus();

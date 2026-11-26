@@ -137,7 +137,7 @@ Báo cáo nghiên cứu: giao diện lấy màu, font và các điểm vào từ
   cậu đã gõ và câu trả lời cũ của Claude giữ nguyên.
 - Claude trả lời bằng ngôn ngữ mới **từ tin nhắn tiếp theo** (cùng cuộc chat, vẫn nhớ ngữ cảnh). Ở English, Claude xưng "I" /
   "you", thẻ và gợi ý viết tiếng Anh, khách xác nhận được bằng "yes", "ok", "go ahead" (vẫn nhận "đồng ý").
-- **English chỉ đổi giao diện và câu trả lời, chữ trên bản vẽ giữ tiếng Việt**: tên phòng, tiêu đề bảng, khung tên, tên tờ,
+- **English chỉ đổi giao diện và câu trả lời, chữ trên bản vẽ giữ tiếng Việt** (cả bảng xuất Excel): tên phòng, tiêu đề bảng, khung tên, tên tờ,
   tên cọc, mô tả layer, tiêu đề cột Excel… theo chuẩn bản vẽ Việt Nam (chủ dự án chốt 26/11/2026). Muốn chữ nào trên bản vẽ
   bằng tiếng Anh thì nhờ Claude đổi.
 - Bộ cài hỏi ngôn ngữ ở hộp đầu tiên; lựa chọn đó là ngôn ngữ của plugin ở lần mở đầu tiên (máy đã dùng plugin trước đó giữ

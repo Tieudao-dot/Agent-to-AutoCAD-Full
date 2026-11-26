@@ -38,7 +38,7 @@ export function drawingCheckTools(b: ToolBridge): AnyTool[] {
       'Repair one group found by check_drawing: layer_zero / defpoints (move to layer, which the user chooses), not_bylayer (back to ByLayer), ' +
         'nonstandard_styles (the style of the standard), empty_text / duplicates (extra copies) / zero_length (erase), dim_override (measured value again), ' +
         'viewport_unlocked (lock). Objects on locked layers are left out. The first call changes nothing and refuses with one token for the card: ' +
-        'call request_confirmation with it and one Vietnamese sentence (what, how many), end the turn; after Đồng ý call again with the same parameters ' +
+        'call request_confirmation with it and one sentence in the language of the user (what, how many), end the turn; after Đồng ý call again with the same parameters ' +
         'and confirm_handles. One U undoes it.',
       {
         fix: z.enum(FIX_GROUPS),
