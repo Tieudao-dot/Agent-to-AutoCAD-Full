@@ -105,6 +105,8 @@ namespace ClaudeCAD.Plugin.Core
                 "check_drawing fix_drawing");
             // nâng cấp đợt G5 (Drawing/TraceTools.cs): trace a photo / scan / PDF scan (2D / Full)
             Add(ToolGroup.TwoD, "trace_image");
+            // nâng cấp đợt H2 (Drawing/ExportTools.cs): DXF / older DWG on every plan, FBX 3D / Full (ThreeDValues)
+            Add(ToolGroup.Common, "export_drawing");
             // 3D phases 1, 2 and 3 (Drawing/SolidTools.cs, Solid2Tools.cs, PlanTo3dTools.cs, SectionTools.cs): only the 3D and Full plans
             Add(ToolGroup.ThreeD,
                 // draw_solid (nâng cấp đợt A) replaces the six primitives for Claude; their old names stay for recorded macros
@@ -169,8 +171,18 @@ namespace ClaudeCAD.Plugin.Core
         };
 
         /// <summary>The 3D parameter of this call the plan does not have (array_rect levels above 1 on a plan without 3D), or null.</summary>
+        /// <summary>Nâng cấp đợt H2: values of a Common tool's parameter that are 3D (export_drawing format fbx: 3D / Full).</summary>
+        public static readonly IReadOnlyDictionary<string, (string param, string[] values)> ThreeDValues =
+            new Dictionary<string, (string, string[])>(StringComparer.Ordinal)
+            {
+                ["export_drawing"] = ("format", new[] { "fbx" }),
+            };
+
         public static string Blocked3dParam(string plan, string tool, IDictionary<string, object> p)
         {
+            if (tool != null && p != null && !Has3D(plan) && ThreeDValues.TryGetValue(tool, out var tv) && p.TryGetValue(tv.param, out var tvv) && tvv != null
+                && tv.values.Contains((Convert.ToString(tvv, System.Globalization.CultureInfo.InvariantCulture) ?? "").Trim().ToLowerInvariant().TrimStart('.')))
+                return tv.param;
             if (tool == null || p == null || Has3D(plan) || !ThreeDParams.TryGetValue(tool, out var name)) return null;
             if (!p.TryGetValue(name, out var v) || v == null) return null;
             try { return Convert.ToDouble(v, System.Globalization.CultureInfo.InvariantCulture) > 1 ? name : null; }

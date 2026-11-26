@@ -8,6 +8,7 @@ import { annotationTools } from './annotation.js';
 import { utility2dTools } from './utility2d.js';
 import { drawingCheckTools } from './drawingCheck.js';
 import { traceTools } from './trace.js';
+import { exportDrawingTools } from './exportDrawing.js';
 import { batchTools } from './batch.js';
 import { blockTools } from './blocks.js';
 import { captureTools } from './capture.js';
@@ -74,6 +75,7 @@ export function buildTools(bridge: ToolBridge, allowed?: readonly string[], plan
     ...estimateTools(bridge), // nâng cấp đợt G3
     ...drawingCheckTools(bridge), // nâng cấp đợt G2
     ...traceTools(bridge), // nâng cấp đợt G5
+    ...exportDrawingTools(bridge), // nâng cấp đợt H2
     ...systemTools(bridge),
   ];
   const kept = allowed ? all.filter((t) => new Set(allowed).has(t.name)) : all;
