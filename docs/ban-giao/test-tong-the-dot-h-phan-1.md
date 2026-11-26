@@ -112,5 +112,5 @@ Báo cáo `docs/ban-giao/kiem-tra-doc-lap-dot-h-phan-1.md`: 27 lỗi KTH (2 nặ
   - **KTH-28** (mới, H3): bản sửa KTH-15 chọn đỉnh đầu polyline kín bằng so khít, nay theo dung sai. `full/nang-cap-h-sua-kth-b` @ `815715a`;
   - **nốt KTH-02** (H5): gặp hết giờ thì dừng lượt, nói file đó có thể đã làm xong. `full/nang-cap-h-sua-kth-c` @ `c9bed1e`.
 - **Hạn chế còn lại của KTH-28:** phòng vừa đổi hình vừa có hai đỉnh chênh x dưới dung sai có thể ra "bớt + thêm" thay vì "đổi". Hiếm gặp.
-- CI lượt 2: ghi dưới.
+- CI lượt 2 (lượt cuối): run 45813679683 trên `93096dc`: **xanh**; log Windows `# tests 443`, `# pass 443`, `# fail 0`; lõi 1608 / 1608; UI test và build 3 target qua. Commit sau đó chỉ ghi dòng này, code giữ nguyên như `93096dc`.
 
