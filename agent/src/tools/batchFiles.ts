@@ -46,6 +46,11 @@ export async function runBatch(b: ToolBridge, params: Record<string, unknown>, o
     if (o.signal?.aborted) { stopped = true; break; }
     b.status('batch_files', 'running', { summary: `file ${i + 1} / ${count} (Dừng để ngừng sau file đang làm)` });
     const r = await b.call('batch_files', { ...base, action: 'run', index: i, stamp });
+    if (!r.ok && r.error.code === 'TIMEOUT') {
+      // Soát KTH-02: no answer in time. AutoCAD may still be working on this file (the write / print can finish after the
+      // wait), so the run stops here instead of starting the next file, and the user checks that file before running again
+      return partialResult(plan.id, rows, count, `TIMEOUT: ${r.error.message}`.slice(0, 400), listed(p, i));
+    }
     if (stopsRun(r)) {
       if (rows.length === 0) return r;
       // Test & sửa H5: refused half way (e.g. a file was added to the folder, so the card no longer matches): the files
@@ -83,7 +88,7 @@ function totals(rows: Row[]): Record<string, number> {
 }
 
 /** A run stopped by the plugin after some files: what was done, and why it stopped (no summary file is written). */
-export function partialResult(id: string, rows: Row[], count: number, why: string): ToolResponse {
+export function partialResult(id: string, rows: Row[], count: number, why: string, timedOutFile?: string): ToolResponse {
   const short = rows.map((r) => ({ file: r.file, status: r.status, ...(r.reason ? { reason: r.reason } : {}), ...(r.backup ? { backup: r.backup } : {}) }));
   return {
     id,
@@ -93,6 +98,11 @@ export function partialResult(id: string, rows: Row[], count: number, why: strin
       done: rows.length,
       of: count,
       stopped: `the run stopped after ${rows.length} of ${count} files (${why}); the files listed here were done, the others were not touched. Tell the user, then plan again if they want the rest.`,
+      ...(timedOutFile !== undefined ? {
+        timed_out_file: timedOutFile,
+        check_first: `${timedOutFile} got no answer in time: AutoCAD may still have finished it (written or printed; for standards its backup is already in _sao-luu-claudecad). ` +
+          'Tell the user to open it and check before running again; a new run would do it again.',
+      } : {}),
       files: short.slice(0, 200),
     },
   } as ToolResponse;

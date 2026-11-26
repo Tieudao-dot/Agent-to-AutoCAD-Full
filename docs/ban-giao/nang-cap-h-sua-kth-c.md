@@ -26,3 +26,21 @@ Con số mới (khách thấy gián tiếp: file quá lâu báo lỗi hết gi�
 
 Test sau lần sửa cuối: lõi **1585 / 1585** (thêm 4 ở `SuaKthCTests.cs`), trợ lý **441 / 441** (thêm 5), build `net48`, `net8.0-windows`, `net10.0-windows` 0 lỗi (1
 cảnh báo CA2022 có sẵn ở `TraceTools.cs`).
+
+## Soát lại KTH-02 (sau kiểm tra độc lập)
+
+Thread kiểm tra độc lập soát lại: KTH-01, 03 → 08 và hai nghi vấn sửa đúng. KTH-02 mới đúng phần chính: khi một file quá hạn
+(`TIMEOUT`), lượt vẫn ghi lỗi cho file đó rồi đi tiếp file sau.
+
+Đã sửa (`agent/src/tools/batchFiles.ts`):
+
+- gặp `TIMEOUT` thì **dừng lượt** (không bắt đầu file kế tiếp, vì AutoCAD có thể vẫn đang làm file đó);
+- trả kết quả dở qua `partialResult`: kể các file đã xong;
+- thêm `timed_out_file` + `check_first`: file đó có thể đã ghi / in xong (áp chuẩn thì bản sao lưu đã có), nhờ khách mở kiểm
+  trước khi chạy lại;
+- không ghi file tổng hợp (như các trường hợp dừng giữa lượt khác).
+
+Nhánh đã gộp `full/nang-cap-h-tong-the` @ `b7e408f` trước khi sửa. Không đụng `DrawingCompare.cs`.
+
+Test sau lần sửa này: lõi **1605 / 1605**, trợ lý **443 / 443** (thêm 2 ở `agent/test/nangcaph5.test.ts`: quá hạn giữa lượt,
+quá hạn ở file đầu); build 3 target 0 lỗi (1 cảnh báo CA2022 có sẵn). Không chạy CI (thread giữ nhánh tích hợp chạy).
