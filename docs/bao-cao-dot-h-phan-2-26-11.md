@@ -25,7 +25,8 @@
   - CI Windows xanh (run 45873682917, log `# fail 0`).
 - **Chưa phần nào chạy trên AutoCAD thật, Claude thật, bộ cài thật hay file khảo sát thật.** Chưa phát hành: `main` vẫn là
   v0.9.3 của bản gốc.
-- **Bộ cài thử bản 7** (đủ đợt F + G + H phần 1 + H phần 2): xem mục 3.
+- **Bộ cài thử bản 7** (đủ đợt F + G + H phần 1 + H phần 2): build xong 01h38 ngày 27/11, CI xanh (run 45876397319). Link tải ở mục 3
+  và ở thread ["Lưu trữ bộ cài"](https://claude.ai/code/session_01D56HmJdn7RASaJtfgMQp5x).
 
 ## 2. Plugin có thêm gì
 
@@ -46,7 +47,9 @@ Mọi lệnh mới đều hoãn nạp.
 
 ## 3. Việc cần cậu làm
 
-1. **Cài bộ cài thử bản 7.** Link tải: BỘ_CÀI_LINK. Hướng dẫn từng bước: thread
+1. **Cài bộ cài thử bản 7.** [Tải `AgentToAutoCADFull-ThuNoiBo-nang-cap-7-0.9.4`](https://github.com/Tieudao-dot/Agent-to-AutoCAD-Full/actions/runs/45876397319/artifacts/15146375314)
+   (khoảng 142 MB, tải được tới 24/02/2027; mở link bằng trình duyệt đã đăng nhập GitHub). CI xanh (run 45876397319, lõi 1733,
+   trợ lý `# fail 0`). Hướng dẫn từng bước: thread
    ["Lưu trữ bộ cài"](https://claude.ai/code/session_01D56HmJdn7RASaJtfgMQp5x).
    - Cài đè lên bản 6 được. Skill cậu đã sửa vẫn được giữ.
    - Bộ cài có trang chọn ngôn ngữ mới. Lần đầu cứ chọn **Tiếng Việt**; mục P2-0-5 sẽ thử English sau.
@@ -204,8 +207,8 @@ cậu quay lại, tớ hỏi một câu.
   | Thread Test & sửa F1 (viết H7, H8; rà H9; sửa KTP phần H7 / H8, 3 lượt) | ≈ 41,4 |
   | Thread đợt F2 (viết H6; rà H7, H8; test tổng thể; sửa KTP phần H6; giữ nhánh, gộp, CI) | ≈ 37,0 |
   | Kiểm tra độc lập đợt H phần 2 (1 lượt tìm + 3 lượt soát) | ≈ 33,5 |
-  | Bộ cài thử bản 7 | BỘ_CÀI_CHI_PHÍ |
-  | **Cộng** | **TỔNG_CHI_PHÍ** |
+  | Bộ cài thử bản 7 | ≈ 6,6 |
+  | **Cộng** | **≈ 160** |
 
   Chưa kể luồng chính.
 - **Phần tốn nhất:** vòng sửa / soát sau kiểm tra độc lập, khoảng 2 giờ 20 phút và một nửa chi phí. Lý do: vài bản sửa sinh lỗi
@@ -217,7 +220,7 @@ cậu quay lại, tớ hỏi một câu.
 | Thứ | Ở đâu |
 | --- | --- |
 | Mã chốt phần 2 | `full/nang-cap-h-tong-the-2` @ `f94e2e2` (CI 45873682917) |
-| Bộ cài thử bản 7 | BỘ_CÀI_NHÁNH. Nhánh này không bao giờ gộp |
+| Bộ cài thử bản 7 | `full/ban-thu-noi-bo` @ `24f3b0d`, CI 45876397319 xanh, lõi 1733 (gồm 10 test bản thử), trợ lý 467. Nhánh này không bao giờ gộp |
 | Checklist thử tay | `docs/checklist-tong-the.md` trên nhánh chốt (khối "Đợt H phần 2") |
 | Con số và quyết định chờ duyệt | `docs/dot-h-cho-duyet.md` trên nhánh chốt (phần 2) |
 | Số tiêu chuẩn phần 2 | [`dot-h-so-tieu-chuan.md`](dot-h-so-tieu-chuan.md) (bản trên nhánh chốt có thêm hai dòng khe hở thép) |

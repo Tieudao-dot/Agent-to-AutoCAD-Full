@@ -252,3 +252,5 @@ Sau đợt F + G (ước tính, đo ở thread test tổng thể đợt G; đợ
   - 23h28 test tổng thể phần 2 xong (`6bcd5b5`, CI 45857510577 xanh); kiểm tra độc lập phần 2 xong: 36 lỗi KTP (3 nặng ở H9 / xác nhận gõ tay), [`kiem-tra-doc-lap-dot-h-phan-2.md`](ban-giao/kiem-tra-doc-lap-dot-h-phan-2.md). 23h30 chia ba thread sửa.
 - **27/11/2026:**
   - 00h08 sửa KTP xong: A (H9, `06c3fb6`), B (H7 / H8, `bca2b36`), C (H6, `0ed7562`, tìm thêm 1 lỗi nặng `Alignment.At`). Gộp `0d5da4c`, CI 45863381169 xanh (lõi 1708, trợ lý 467); commit cuối `5611f3f` (chỉ bàn giao). Thread kiểm tra độc lập phần 2 đang soát lại.
+  - 00h20 → 01h25 ba vòng sửa / soát lại KTP (lượt 2 `83508ee`, lượt 3 `f94e2e2`, CI 45873682917 xanh). Chủ dự án chốt thêm: khe thép dầm 25 / 30 mm, thép cột 50 mm (TCVN 5574); lượt soát 3 là lượt cuối. Kết quả: 55 lỗi KTP, 54 sửa đúng, 1 nhẹ để lại (KTP-55).
+  - 01h38 bộ cài thử bản 7 xong (`full/ban-thu-noi-bo` @ `24f3b0d`, CI 45876397319 xanh, artifact `ThuNoiBo-nang-cap-7-0.9.4`, 142 MB); link gửi thread Lưu trữ bộ cài. **Đợt H phần 2 xong**, báo cáo [`bao-cao-dot-h-phan-2-26-11.md`](bao-cao-dot-h-phan-2-26-11.md).
