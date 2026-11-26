@@ -232,3 +232,5 @@ Sau đợt F + G (ước tính, đo ở thread test tổng thể đợt G; đợ
   - 17h33 test tổng thể phần 1 xong (thread đợt F1): 2 lỗi chéo + 1 lỗi tài liệu, `full/nang-cap-h-tong-the` @ `aa5753c`
     (code `9612510`, CI 45802392263 xanh, `# fail 0`, lõi 1581, trợ lý 436). Token lúc mở chat tăng ~0,1–0,2k.
   - 17h46 mở thread kiểm tra độc lập đợt H phần 1 (`session_01D56HmH63NM9pSxbHQh6Ckv`, agent mới, chỉ ghi lỗi KTH-xx).
+  - 18h05 kiểm tra độc lập báo 27 lỗi (2 nặng ở H5, 13 vừa, 12 nhẹ): [`ban-giao/kiem-tra-doc-lap-dot-h-phan-1.md`](ban-giao/kiem-tra-doc-lap-dot-h-phan-1.md).
+    18h10 chia ba thread sửa: đợt F2 phần H5, Test & sửa F1 phần H1 / H2 / H3, đợt F1 phần H4 + prompt, gộp và CI.
