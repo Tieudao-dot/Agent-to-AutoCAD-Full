@@ -190,3 +190,41 @@ Hai nhóm số thread tự chọn hôm 13/11, nay hỏi lại theo quy tắc "co
 | Lan can | Cao 1100; khe song ≤ 100; trụ cách nhau ≤ 1500; tay vịn và trụ 50 × 50; song 20 × 20; thanh dưới cách sàn 100; tấm kín dày 20 | Giữ nguyên |
 
 Các số đợt E chốt 13/11 giữ nguyên: cao bậc 160, rộng bậc 280, vế rộng 1000, mái bằng dày 150, mái dốc 30°, đua 600.
+
+## Đợt H (đề xuất 26/11/2026, chờ chủ dự án chốt)
+
+Chủ dự án chọn 26/11 làm tiếp **nhóm 1** (việc nhỏ còn sót) và **nhóm 3** (tính năng mới cho khách) trong danh sách luồng
+chính đưa. Nhóm 2 (tự cập nhật, thống kê mức dùng, bản dùng thử cho khách) chưa làm vì cần máy chủ kích hoạt.
+
+| Đợt | Nội dung | Gói | Ước |
+| --- | --- | --- | --- |
+| H1 | Nhóm 1: máy nâng cấp từ bản cũ nhận skill mới (cách làm chờ chủ dự án chọn); vẽ lại từ PDF scan đọc thẳng trang PDF, không còn dựa vào ảnh chụp của AutoCAD; sửa KFG-43 (soát lỗi chậm khi nhiều điểm / block trùng x, y); lấy thêm test từ bản vá cũ của đợt F2 (`docs/ban-giao/f2-test-thread-con-ban-va.md`) và soát lại điểm 1 trong đó | Mọi gói | $15–25 |
+| H2 | Xuất định dạng khác: DXF, DWG đời cũ (gửi đối tác dùng AutoCAD cũ), FBX cho 3ds Max / SketchUp | Theo nội dung (FBX: 3D / Full) | $10–20 |
+| H3 | So sánh hai bản vẽ (bản cũ và bản sửa): khoanh chỗ thêm / bớt / đổi bằng đám mây, kèm bảng liệt kê | 2D / Full | $20–35 |
+| H4 | Học chuẩn công ty từ bản vẽ mẫu: đọc layer, kiểu chữ, kiểu kích thước, khung tên từ file mẫu, lưu thành bộ chuẩn công ty; dùng cho áp chuẩn, soát lỗi và tạo tờ có khung tên | 2D / Full | $25–35 |
+| H5 | Làm nhiều file một lúc: chọn thư mục, chạy soát lỗi / áp chuẩn / in PDF / xuất bảng cho từng file, báo cáo chung; thẻ xác nhận trước khi sửa file, có bản sao lưu | Theo lệnh dùng | $30–45 |
+| H6 | Hạ tầng: nhập điểm khảo sát từ Excel / CSV (đổi trục VN-2000), ghi cao độ, đường đồng mức, trắc dọc theo tuyến, trắc ngang tại các cọc | 2D / Full | $40–60 |
+| H7 | MEP 3D: đi ống tròn và ống gió chữ nhật theo tuyến (cỡ ống, độ dốc, cao độ), co / tê ở chỗ rẽ, layer theo hệ, thống kê chiều dài theo hệ và cỡ ống, soát va chạm với dầm / cột (dùng lại lệnh có sẵn) | 3D / Full | $35–50 |
+| H8 | Kết cấu: móng đơn / móng băng; bản vẽ thép dầm, cột, sàn (mặt cắt, ký hiệu thanh); bảng thống kê thép (đường kính, chiều dài, số thanh, khối lượng) | Móng 3D: 3D / Full; thép: 2D / Full | $45–60 |
+| H9 | Giao diện tiếng Anh: chọn ngôn ngữ trong ⚙; chữ trên khung chat, thẻ xác nhận, thông báo, bộ cài; Claude trả lời theo ngôn ngữ chọn | Mọi gói | $30–45 |
+| Cuối | Test tổng thể; kiểm tra độc lập (agent mới); bộ cài thử | — | $35–55 mỗi lần |
+
+- **Chi phí và thời gian (ước theo số thật đợt F, G):**
+  - chia hai phần: phần 1 (H1 → H5 + cuối, ra bộ cài bản 6) $135–205, khoảng 7–10 giờ; phần 2 (H6 → H9 + cuối, ra bản 7)
+    $190–270, khoảng 10–14 giờ. Tổng $325–475, đắt hơn làm một mạch khoảng $30–40 vì thêm một lượt kiểm cuối;
+  - làm một mạch: $295–435, khoảng 17–23 giờ, một bộ cài khi xong hết;
+  - chưa tính lúc dừng vì chạm giới hạn sử dụng 5 giờ (dùng chung mọi thread; đợt G dừng khoảng 3 giờ).
+- **Thứ tự và các cặp chạy cùng lúc (đề xuất, chờ chủ dự án đồng ý từng cặp):**
+  - phần 1: H1 với H2 (bộ cài, PDF, soát lỗi / xuất file: khác mảng); rồi H3 với H4 (cả hai đọc file bản vẽ khác, thread
+    gộp đưa phần đọc file về một chỗ); rồi H5 riêng (dùng chuẩn công ty của H4, soát lỗi và in PDF đã có);
+  - phần 2: H6 với H7 (hạ tầng 2D, ống 3D); rồi H8 riêng; H9 sau cùng, riêng, vì đụng mọi chữ trên giao diện và phải dịch
+    cả chữ của các đợt trước.
+- **Thread:** dùng lại ba thread lưu được lên GitHub (đợt F1, Test & sửa F1, đợt F2), viết và rà là hai thread khác nhau;
+  kiểm tra độc lập mở thread mới (không cần lưu). Xuất phát từ nhánh chốt `full/nang-cap-g-tong-the` @ `547d6af`.
+- **Con số:** gom vào `docs/dot-h-cho-duyet.md`. Cách duyệt chờ chủ dự án chọn.
+- **Giới hạn nêu rõ cho khách:**
+  - bảng thép là thống kê từ bản vẽ, không phải tính toán kết cấu (không tính cần bao nhiêu thép);
+  - MEP chỉ vẽ theo cỡ ống khách đưa, không tính thủy lực / lưu lượng;
+  - trắc dọc, trắc ngang, móng, thép theo TCVN; kết quả là bản vẽ hỗ trợ, kỹ sư vẫn kiểm.
+- **Bản 5 chưa chạy trên AutoCAD thật.** Lỗi chủ dự án báo khi thử bản 5 được sửa trước và gộp vào chuỗi đợt H.
+- Lệnh mới làm tăng token mở chat; nạp gọn lệnh (đợt F4) giữ mức tăng nhỏ, đo lại ở test tổng thể.
