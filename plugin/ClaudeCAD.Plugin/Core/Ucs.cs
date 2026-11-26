@@ -347,6 +347,8 @@ namespace ClaudeCAD.Plugin.Core
             "setup_standards", "layer_state",
             // nâng cấp đợt F3: no coordinates (materials; views are saved / shown as they are)
             "set_material", "named_view",
+            // nâng cấp đợt H3: both drawings are compared in their own WCS, the clouds are drawn where the objects are
+            "compare_drawings",
         };
 
         /// <summary>Params that are directions / displacements (turned, not moved) in Ref mode, any tool.</summary>

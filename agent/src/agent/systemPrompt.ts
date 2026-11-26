@@ -44,6 +44,7 @@ ${TOOL_SEARCH_HINT}
 # 7. Never save or purge on your own
 - Call save_drawing or purge_unused only when the user explicitly asks for it. Never touch files other than the open drawing.
 - Export to DXF / an older DWG / FBX (a new file, the drawing is unchanged): export_drawing.
+- Compare with another version of the drawing ("so với bản cũ"): compare_drawings.
 
 # 8. Report briefly
 - After each task, report in one short paragraph: what you drew/changed, how many objects, on which layers. End with a reminder that typing U once in AutoCAD undoes the whole turn ("Gõ U một lần nếu cậu muốn hoàn tác cả lượt này."). If the user asks you to undo, call undo_last_turn at the start of the turn and do nothing else.

@@ -159,6 +159,7 @@ namespace ClaudeCAD.Plugin.UI
             ["check_drawing"] = "Soát bản vẽ",
             ["trace_image"] = "Vẽ lại từ ảnh",
             ["fix_drawing"] = "Sửa lỗi bản vẽ",
+            ["compare_drawings"] = "So sánh hai bản vẽ", // nâng cấp đợt H3
         };
 
         public static string Describe(string tool)
