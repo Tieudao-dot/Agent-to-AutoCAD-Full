@@ -1546,6 +1546,20 @@ namespace ClaudeCAD.Plugin
                 }
                 var sta = T(new Dictionary<string, object> { ["action"] = "stations", ["alignment_handle"] = align });
                 if (Convert.ToInt32(sta["stakes"]) < 3) errs.Add($"lý trình: {sta["stakes"]} cọc");
+                // Sửa KTP lượt 2 (KTP-47b): in a mm drawing the stakes run the whole alignment and the last one sits on its end
+                using (doc.LockDocument())
+                using (var tr = doc.TransactionManager.StartTransaction())
+                {
+                    var ms = (BlockTableRecord)tr.GetObject(SymbolUtilityServices.GetBlockModelSpaceId(doc.Database), OpenMode.ForRead);
+                    var mids = new List<Point3d>();
+                    foreach (ObjectId id in ms)
+                        if (tr.GetObject(id, OpenMode.ForRead) is Line ln && ln.Layer == H6Numbers.LayerStation.name)
+                            mids.Add(new Point3d((ln.StartPoint.X + ln.EndPoint.X) / 2, (ln.StartPoint.Y + ln.EndPoint.Y) / 2, 0));
+                    var end = new Point3d(95000, 50000, 0);
+                    double toEnd = mids.Count == 0 ? double.MaxValue : mids.Min(m => m.DistanceTo(end));
+                    if (toEnd >= 1) errs.Add($"lý trình: cọc cuối cách điểm cuối tuyến {toEnd:0.###} mm (cần < 1 mm)");
+                    tr.Commit();
+                }
                 var pro = T(new Dictionary<string, object>
                 {
                     ["action"] = "profile", ["alignment_handle"] = align, ["position"] = new List<object> { 0.0, -200000.0 },

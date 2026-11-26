@@ -375,7 +375,10 @@ Không có số mới khách thấy (H9 và Test & sửa H9).
 | *(H7)* `under_beams` | theo từng đoạn tuyến (dầm trên đoạn nào thì đoạn đó) | |
 | *(H6, KTP-08 / 09)* File không tiêu đề, cột 1 là số nguyên nhỏ trước tọa độ thật | cột 1 là tên điểm | cho cột bằng `columns` |
 | *(H6, KTP-10)* Số "1.234" (một dấu chấm) | là số thập phân 1,234; chỉ ≥ 2 nhóm hoặc nhóm + phẩy thập phân mới là dấu nghìn | |
-| *(KTP-02 → 04, H9)* Xác nhận gõ tay | **danh sách đóng**: chỉ đồng ý khi mọi chữ trong câu là chữ đồng ý, chữ của cụm đồng ý ("xóa đi", "go ahead") hoặc chữ đệm (nhé, ạ, please…). Câu có chữ khác ("ko", "nếu", "if", "thôi", "chờ", "later", "❌"…) là không chắc = không đồng ý, Claude hỏi lại; "thôi được", "không sao" vẫn là đồng ý | thêm chữ đệm vào `FILLERS` (`agent/src/agent/confirmation.ts`) khi thử thật thấy thiếu |
+| *(H6, KTP-12 / 39)* File `.txt` cách bằng dấu cách, số phẩy thập phân | mọi dòng nhiều chữ có phẩy chỉ nằm trong số → tách theo khoảng trắng (tab nếu có), phẩy là dấu thập phân; dòng một chữ không tính | cho cột bằng `columns` |
+| *(H6, KTP-22)* Tiêu đề có cả "STT" và "Tên điểm" | tên lấy cột "Tên"; "STT / TT / ID / No" chỉ làm tên khi không có cột tên | |
+| *(H6, KTP-26)* Đỉnh tuyến trùng cọc đầu / cuối (trong 1 cm) | tên cọc "Đầu/Đ…", "Cuối/Đ…" | |
+| *(KTP-02 → 04, H9)* Xác nhận gõ tay | **danh sách đóng**: chỉ đồng ý khi mọi chữ trong câu là chữ đồng ý, chữ của cụm đồng ý ("xóa đi", "go ahead") hoặc chữ đệm (nhé, ạ, please…). Câu có chữ khác ("ko", "nếu", "if", "thôi", "chờ", "later", "❌"…) là không chắc = không đồng ý, Claude hỏi lại; "thôi được" là đồng ý, "không sao" là **không** (có chữ "không") | thêm chữ đệm vào `FILLERS` (`agent/src/agent/confirmation.ts`) khi thử thật thấy thiếu |
 | *(KTP-07, H9)* Câu lỗi từ máy chủ kích hoạt khi English | máy chủ không đổi; plugin và bộ cài dịch 8 câu lỗi cố định, câu lạ hiện nguyên văn | `L.ServerTexts` |
 | *(KTP-05, H9)* Ngôn ngữ lúc AutoCAD vừa nạp plugin | đặt theo cài đặt (máy mới: ngôn ngữ chọn ở bộ cài) trước dòng "đã nạp…" | |
 

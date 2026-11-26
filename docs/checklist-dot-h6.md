@@ -63,3 +63,10 @@ Khoảng cao đều và cọc 20 m: kỹ sư đối chiếu TCVN hiện hành tr
 | E4 | *(H6T-2)* File không có dòng tiêu đề, 4 cột: X, Y, Z, mã (vd `1234012.5,567045.25,12.35,TN`) | X / Y / Z đúng cột (không lấy X làm tên điểm) |
 | E5 | *(H6T-4)* Bản vẽ đã chạy "thiết lập style chuẩn", nhập điểm + đồng mức, rồi "soát bản vẽ" | Không báo các layer `C-…` của hạ tầng là layer ngoài chuẩn |
 | E6 | *(H6T-5)* Ghi lý trình mặt bằng (50 m) rồi vẽ trắc dọc | Trên mặt bằng vạch 50 m chỉ ghi lý trình (vd `Km0+050.00`), không có tên `C…`; tên `C1, C2…` chỉ ở trắc dọc / trắc ngang (cọc 20 m); cọc H, Km, đỉnh vẫn có tên |
+| E7 | *(Sửa KTP-10 / 11)* File Excel có số dạng `1.234.012,500` (dấu nghìn) và ô chữ `567 045,25` | Đọc đúng 1234012,5 / 567045,25 |
+| E8 | *(Sửa KTP-12 / 39)* File `.txt` cách bằng dấu cách, số phẩy thập phân (`P1 1234012,5 567045,25 12,35`), dòng đầu chỉ một chữ (`SODIEM`) | Đủ điểm, X / Y / Z đúng (không lấy phẩy làm dấu tách) |
+| E9 | *(Sửa KTP-08 / 09 / 48)* File không tiêu đề "số thứ tự, X, Y, Z" (`1;1234012.5;567045.25;12.35`); rồi file `.txt` có tiêu đề `Tên điểm  X  Y  Z` | Cột 1 là tên điểm; file `.txt` đọc đủ điểm theo tiêu đề |
+| E10 | *(Sửa KTP-37)* Excel có tên bảng ở hàng 1, vài hàng trống, tiêu đề `STT; Tên; X; Y; Z` ở hàng 12 | Claude nhận cột theo tiêu đề, tên điểm lấy cột "Tên" (không lấy STT) |
+| E11 | *(Sửa KTP-26)* Tuyến có đỉnh trùng điểm cuối (trong 1 cm) | Cọc cuối ghi `Cuối/Đ…`, không phải `C…/Đ…` |
+| E12 | *(Sửa lỗi `Alignment.At`)* Bản vẽ **mm**, tuyến dài vài trăm mét, ghi lý trình rồi vẽ trắc dọc / trắc ngang | Cọc rải đủ dọc tuyến (không dồn ở mét đầu); cọc cuối đúng điểm cuối polyline |
+| E13 | *(Sửa KTP-24)* Bản vẽ **mét**, vẽ trắc dọc | Claude báo trục "metres × 1" (bản vẽ mm: "× 1000"); khung trắc đặt đúng chỗ |

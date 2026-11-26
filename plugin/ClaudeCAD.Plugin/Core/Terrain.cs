@@ -199,10 +199,12 @@ namespace ClaudeCAD.Plugin.Core
         {
             var sample = lines.Where(l => l.Trim().Length > 0).Take(20).ToList();
             if (sample.Count == 0 || !sample.Any(l => l.Contains(','))) return false;
+            if (!sample.Any(l => l.Contains(',') && Regex.Split(l.Trim(), @"\s+").Length >= 2)) return false;
             foreach (var l in sample)
             {
                 var words = Regex.Split(l.Trim(), @"\s+");
-                if (words.Length < 2) return false;
+                // Sửa KTP-39: a line of one word ("SODIEM", a title) says nothing about the separator
+                if (words.Length < 2) { if (l.Contains(',')) return false; continue; }
                 if (words.Any(w => w.Contains(',') && !Regex.IsMatch(w, @"^[+-]?\d+,\d+$"))) return false;
             }
             return true;
@@ -368,13 +370,18 @@ namespace ClaudeCAD.Plugin.Core
         public static int FindHeader(IList<List<string>> rows, out Columns cols)
         {
             cols = new Columns();
-            for (int r = 0; r < Math.Min(rows.Count, 10); r++)
+            // Sửa KTP-37: the first 10 rows that are not empty (blank rows are kept, KTP-23)
+            int seen = 0;
+            for (int r = 0; r < rows.Count && seen < 10; r++)
             {
+                if (!rows[r].Any(x => !string.IsNullOrWhiteSpace(x))) continue;
+                seen++;
                 var c = new Columns();
                 int rowNumber = -1;
-                for (int i = 0; i < rows[r].Count; i++)
+                var keys = HeaderKeys(rows, r);
+                for (int i = 0; i < keys.Count; i++)
                 {
-                    var k = Plain(rows[r][i]);
+                    var k = keys[i];
                     if (k.Length == 0) continue;
                     if (c.X < 0 && XKeys.Contains(k)) c.X = i;
                     else if (c.Y < 0 && YKeys.Contains(k)) c.Y = i;
@@ -387,6 +394,33 @@ namespace ClaudeCAD.Plugin.Core
                 if (c.X >= 0 && c.Y >= 0) { cols = c; return r; }
             }
             return -1;
+        }
+
+        private static readonly string[][] AllKeys = { NameKeys, RowNumberKeys, XKeys, YKeys, ZKeys, CodeKeys };
+        private static bool IsKey(string k) => AllKeys.Any(a => a.Contains(k));
+
+        /// <summary>
+        /// Sửa KTP-48: the plain keys of a header row. A file split by spaces cuts "Tên điểm" in two; when the row has more cells
+        /// than the next data row, words that together make a known key ("ten diem", "cao do", "toa do x") are joined back.
+        /// </summary>
+        private static List<string> HeaderKeys(IList<List<string>> rows, int r)
+        {
+            var plain = rows[r].Select(Plain).ToList();
+            var next = rows.Skip(r + 1).FirstOrDefault(x => x.Any(y => !string.IsNullOrWhiteSpace(y)));
+            if (next == null || plain.Count <= next.Count) return plain;
+            var joined = new List<string>();
+            for (int i = 0; i < plain.Count; i++)
+            {
+                string k = plain[i];
+                for (int w = 3; w >= 2; w--)
+                    if (i + w <= plain.Count)
+                    {
+                        var m = string.Join(" ", plain.Skip(i).Take(w));
+                        if (IsKey(m)) { k = m; i += w - 1; break; }
+                    }
+                joined.Add(k);
+            }
+            return joined.Count == next.Count ? joined : plain;
         }
 
         /// <summary>

@@ -93,6 +93,10 @@ namespace ClaudeCAD.Core.Tests
             Assert.DoesNotContain("WCS, mm", Src("agent", "src", "tools", "terrain.ts"));
             Assert.DoesNotContain("metres × 1000", Src("plugin", "ClaudeCAD.Plugin", "Drawing", "TerrainTools.cs"));
             Assert.DoesNotContain("m × 1000", Src("skills", "ve-ha-tang", "SKILL.md"));
+            // Sửa KTP lượt 2: "nhân 1000", "x_cad = Y × 1000", "×1000" (only "× 1000 khi bản vẽ mm" may stay)
+            var skill = Src("skills", "ve-ha-tang", "SKILL.md");
+            Assert.DoesNotContain("nhân 1000", skill);
+            Assert.Empty(System.Text.RegularExpressions.Regex.Matches(skill, @"×\s?1000(?! khi bản vẽ mm)"));
         }
 
         [Fact]
@@ -121,7 +125,9 @@ namespace ClaudeCAD.Core.Tests
         public void Suspicions_and_the_alignment_length_in_drawing_units()
         {
             var src = Src("plugin", "ClaudeCAD.Plugin", "Drawing", "TerrainTools.cs");
-            Assert.Contains("double len = Length * H6Numbers.UnitsPerMetre;", src);
+            // lượt 2: clamped to the length measured on the curve (not metres × units)
+            Assert.Contains("double len = LengthUnits;", src);
+            Assert.Contains("a.LengthUnits = c.GetDistanceAtParameter(c.EndParam)", src);
             Assert.Contains("ctx.Db.UpdateExt(true);", src);
             Assert.Contains("Split('/').Any(want.Contains)", src);
             // a grid in VN-2000 millimetres keeps every hull triangle
@@ -129,5 +135,39 @@ namespace ClaudeCAD.Core.Tests
             for (int i = 0; i < 6; i++) for (int j = 0; j < 6; j++) pts.Add((5.67e8 + i * 1000, 1.234e9 + j * 1000, i));
             Assert.Equal(2 * 5 * 5, Tin.Build(pts, 0).Triangles.Count);
         }
-    }
+    
+        [Fact]
+        public void KTP37_header_after_blank_rows_is_still_found()
+        {
+            var text = "BẢNG TỌA ĐỘ ĐIỂM ĐO\n" + new string('\n', 10) + "STT;Tên;X;Y;Z\n1;P1;1234012.5;567045.25;12.35\n2;P2;1234020;567050;12.8\n";
+            var f = SurveyReader.Interpret(SurveyReader.ParseText(text));
+            Assert.StartsWith("from the header row", f.Columns);
+            Assert.Equal("P1", f.Points[0].Name);
+            Assert.Equal(1234012.5, f.Points[0].X, 6);
+            Assert.Equal(12.35, f.Points[0].Z.Value, 6);
+        }
+
+        [Fact]
+        public void KTP39_a_one_word_line_does_not_turn_decimal_commas_into_separators()
+        {
+            var f = SurveyReader.Interpret(SurveyReader.ParseText("SODIEM\nP1 1234012,5 567045,25 12,35\nP2 1234020,5 567050,75 12,8\n"));
+            Assert.Equal(2, f.Points.Count);
+            Assert.Equal(567045.25, f.Points[0].Y, 6);
+            Assert.Equal(12.8, f.Points[1].Z.Value, 6);
+        }
+
+        [Fact]
+        public void KTP48_two_word_header_in_a_space_separated_file()
+        {
+            var f = SurveyReader.Interpret(SurveyReader.ParseText("Tên điểm  X  Y  Cao độ\nP1 1234012.5 567045.25 12.35\nP2 1234020 567050 12.8\n"));
+            Assert.StartsWith("from the header row", f.Columns);
+            Assert.Equal(2, f.Points.Count);
+            Assert.Equal("P2", f.Points[1].Name);
+            Assert.Equal(567050, f.Points[1].Y, 6);
+            Assert.Equal(12.8, f.Points[1].Z.Value, 6);
+            // a delimited file with the same words in one cell is unchanged
+            var g = SurveyReader.Interpret(SurveyReader.ParseText("Tên điểm;X;Y;Z\nP1;1234012.5;567045.25;12.35\n"));
+            Assert.Equal("P1", g.Points[0].Name);
+        }
+}
 }

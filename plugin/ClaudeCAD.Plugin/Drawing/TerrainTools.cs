@@ -203,13 +203,14 @@ namespace ClaudeCAD.Plugin.Drawing
 
         private sealed class Alignment
         {
-            public Curve Curve; public double Length; public List<double> Vertices = new List<double>();
+            public Curve Curve; public double Length, LengthUnits; public List<double> Vertices = new List<double>();
             public double Start; public string Handle;
             public (Point3d p, Vector3d t) At(double s)
             {
                 // Sửa KTP (thêm): Length is in metres, s in drawing units: clamp to the length in drawing units (clamping to
                 // the metres put every stake of a mm drawing within its first metre)
-                double len = Length * H6Numbers.UnitsPerMetre;
+                // Sửa KTP lượt 2: the length measured on the curve itself (metres × units can pass the end by one ulp)
+                double len = LengthUnits;
                 s = Math.Max(0, Math.Min(len, s));
                 var pt = Curve.GetPointAtDist(s);
                 var d = Curve.GetFirstDerivative(Curve.GetParameterAtPoint(pt));
@@ -235,8 +236,8 @@ namespace ClaudeCAD.Plugin.Drawing
             if (!(e is Curve c) || e is Ray || e is Xline)
                 throw ToolException.Invalid($"terrain: alignment {h} is a {e.GetType().Name}; give the handle of the centre line (polyline / line / arc).");
             var a = new Alignment { Curve = c, Handle = h, Start = p.Num("start_chainage", 0) };
-            a.Length = c.GetDistanceAtParameter(c.EndParam) - c.GetDistanceAtParameter(c.StartParam);
-            a.Length /= H6Numbers.UnitsPerMetre;
+            a.LengthUnits = c.GetDistanceAtParameter(c.EndParam) - c.GetDistanceAtParameter(c.StartParam);
+            a.Length = a.LengthUnits / H6Numbers.UnitsPerMetre;
             if (c is Polyline pl)
                 for (int i = 1; i < pl.NumberOfVertices - 1; i++) a.Vertices.Add(pl.GetDistanceAtParameter(i) / H6Numbers.UnitsPerMetre);
             if (!(a.Length > 0)) throw ToolException.Invalid($"terrain: alignment {h} has no length.");

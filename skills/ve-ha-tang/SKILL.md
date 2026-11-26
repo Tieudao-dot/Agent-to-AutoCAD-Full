@@ -8,14 +8,14 @@ plan: 2d
 
 > Khung chuẩn mẫu — người dùng điền chuẩn riêng. Luôn theo đúng nội dung hiện có của file này.
 
-Quy ước hệ thống vẫn là **mm**; tọa độ thực tính bằng **mét** phải nhân 1000. Tỷ lệ in mặc định 1:500 cho mặt bằng tuyến.
+Quy ước hệ thống vẫn là **mm**; tọa độ thực tính bằng **mét** đổi theo đơn vị bản vẽ (× 1000 khi bản vẽ mm, giữ nguyên khi bản vẽ m). Tỷ lệ in mặc định 1:500 cho mặt bằng tuyến.
 
 ## 1. Quy trình chuẩn bị (luôn làm trước khi vẽ)
 
 1. Gọi `get_drawing_info` và `list_layers`. Xem `extents` để biết bản vẽ đang dùng tọa độ thực (số rất lớn) hay tọa độ cục bộ.
 2. Tạo trong **một `batch_execute`** các layer còn thiếu theo bảng mục 2. Chữ / kích thước theo tỷ lệ in (vd 1:500): `setup_standards`; trang in có khung tên: `create_sheet`.
-3. **Gốc tọa độ**: tọa độ VN-2000 cỡ hàng trăm nghìn – hàng triệu mét (×1000 thành 10⁸–10⁹ mm). Nếu bản vẽ trắng, hỏi người dùng một câu: vẽ theo tọa độ thực hay trừ một điểm gốc (ví dụ gốc = điểm đầu tuyến)? Nếu dùng gốc cục bộ, ghi một dòng `add_text` ở góc bản vẽ: "Gốc tọa độ: X = …, Y = … (VN-2000)".
-4. **Đổi trục**: trong VN-2000, X là hướng Bắc, Y là hướng Đông. Trong AutoCAD: x_cad = Y × 1000, y_cad = X × 1000 (trừ gốc nếu có). Luôn nhắc lại quy ước này trong câu trả lời đầu tiên khi nhận bảng tọa độ.
+3. **Gốc tọa độ**: tọa độ VN-2000 cỡ hàng trăm nghìn – hàng triệu mét (bản vẽ mm: 10⁸–10⁹ mm). Nếu bản vẽ trắng, hỏi người dùng một câu: vẽ theo tọa độ thực hay trừ một điểm gốc (ví dụ gốc = điểm đầu tuyến)? Nếu dùng gốc cục bộ, ghi một dòng `add_text` ở góc bản vẽ: "Gốc tọa độ: X = …, Y = … (VN-2000)".
+4. **Đổi trục**: trong VN-2000, X là hướng Bắc, Y là hướng Đông. Trong AutoCAD: x_cad = Y × k, y_cad = X × k (k = 1000 khi bản vẽ mm, k = 1 khi bản vẽ m; trừ gốc nếu có). Luôn nhắc lại quy ước này trong câu trả lời đầu tiên khi nhận bảng tọa độ.
 
 ## 2. Bảng layer chuẩn
 
@@ -34,7 +34,7 @@ Quy ước hệ thống vẫn là **mm**; tọa độ thực tính bằng **mét
 
 ## 3. Tuyến đường
 
-- Tim tuyến: `draw_polyline` qua các điểm tọa độ (đã đổi trục, ×1000), layer `C-ROAD-CL`. Đoạn cong nằm ngang: dùng `bulges` (bulge = tan(góc ở tâm / 4), dấu dương khi cong phải theo chiều đi).
+- Tim tuyến: `draw_polyline` qua các điểm tọa độ (đã đổi trục, × k), layer `C-ROAD-CL`. Đoạn cong nằm ngang: dùng `bulges` (bulge = tan(góc ở tâm / 4), dấu dương khi cong phải theo chiều đi).
 - Mép đường, bó vỉa, vỉa hè: `offset_entity` từ tim tuyến về hai phía theo mặt cắt (ví dụ đường B = 7.5 m: mép đường ±3750, bó vỉa ±3750, mép vỉa hè ±(3750 + bề rộng hè)).
 - Vỉa hè: hatch `AR-CONC` scale 50 hoặc `ANSI37` scale 500, layer `C-SIDEWALK`.
 

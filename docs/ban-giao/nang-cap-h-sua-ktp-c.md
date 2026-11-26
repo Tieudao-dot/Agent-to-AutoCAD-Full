@@ -28,9 +28,23 @@ lập: `docs/ban-giao/kiem-tra-doc-lap-dot-h-phan-2.md` (luồng chính). Chưa 
 
 **Lỗi thêm tìm thấy khi sửa (nặng, của H6 gốc):** `Alignment.At` kẹp khoảng cách vào chiều dài tuyến tính bằng **mét**, trong
 khi khoảng cách truyền vào là **đơn vị bản vẽ**: bản vẽ mm có mọi cọc dồn trong mét đầu tuyến (lý trình, trắc dọc, trắc ngang sai
-hẳn; test lõi không bắt vì cần AutoCAD, SelfTest sẽ báo). Nay kẹp theo chiều dài đơn vị bản vẽ.
+hẳn; test lõi không bắt vì cần AutoCAD; SelfTest lúc đó cũng không bắt vì chỉ đếm số cọc). Nay kẹp theo chiều dài đơn vị bản vẽ;
+lượt 2 kẹp theo chiều dài đo trên chính đường cong và SelfTest H6 kiểm cọc cuối cách điểm cuối polyline < 1 mm (bản vẽ mm).
 
 Test: `plugin/ClaudeCAD.Core.Tests/SuaKtpCTests.cs` (10 test).
+
+## 1b. Lượt 2 (sau soát lại của kiểm tra độc lập)
+
+| Mã | Lỗi | Sửa | Test |
+| --- | --- | --- | --- |
+| KTP-37 | `FindHeader` chỉ dò 10 hàng đầu, hàng trống (giữ từ KTP-23) chiếm chỗ | Dò 10 hàng **không rỗng** | Tên bảng hàng 1, tiêu đề "STT;Tên;X;Y;Z" hàng 12 |
+| KTP-39 | `CommasAreDecimal` trả false khi có một dòng một chữ ("SODIEM") | Bỏ qua dòng một chữ không có dấu phẩy; phải có ít nhất một dòng nhiều chữ có phẩy | "SODIEM" + 2 dòng phẩy thập phân |
+| KTP-48 | `.txt` tiêu đề "Tên điểm  X  Y  Z": tên hai chữ làm lệch cột, 0 điểm | Khi hàng tiêu đề nhiều ô hơn hàng số liệu kế tiếp, ghép các chữ liền nhau thành từ khóa đã biết ("ten diem", "cao do", "toa do x"…); chỉ dùng khi ghép xong đúng số ô | Tiêu đề "Tên điểm X Y Cao độ"; tiêu đề `;` giữ nguyên |
+| KTP-24 (nốt) | `SKILL.md` còn "nhân 1000", "x_cad = Y × 1000" | "đổi theo đơn vị bản vẽ", "x_cad = Y × k (k = 1000 bản vẽ mm, 1 bản vẽ m)" | Test KTP-24 bắt thêm "nhân 1000" và mọi "×1000" trừ "× 1000 khi bản vẽ mm" |
+| Cọc cuối | `Alignment.At` kẹp theo mét × đơn vị, có thể vượt chiều dài thật 1 ulp | Kẹp theo `LengthUnits` = chiều dài đo trên đường cong | Test nguồn; SelfTest H6 kiểm cọc cuối < 1 mm |
+| KTP-47 b / c / d | Bàn giao ghi sai "SelfTest sẽ báo"; thiếu mục thử tay; thiếu quyết định KTP-12, 22, 26 | Sửa chữ ở §1; thêm E7 → E13 vào P2-H6 (`checklist-tong-the.md`) và `checklist-dot-h6.md`; thêm 3 dòng vào `dot-h-cho-duyet.md` | |
+
+Sửa luôn câu của tớ ở `dot-h-cho-duyet.md` (KTP-47a, theo quyết định luồng chính): "không sao" gõ riêng là **không** đồng ý.
 
 ## 2. Gộp và tài liệu
 
