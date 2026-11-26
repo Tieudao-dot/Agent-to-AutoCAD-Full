@@ -48,5 +48,5 @@ Test: `plugin/ClaudeCAD.Core.Tests/SuaKtpCTests.cs` (10 test).
 
 - Sau khi gộp A + B: lõi **1708 / 1708**, trợ lý **467 / 467** (`# fail 0`). Build `net48`, `net8.0-windows`,
   `net10.0-windows`: 0 lỗi.
-- CI: xem tin báo cáo về luồng chính (số run, log `# fail 0`, lõi `Failed: 0`).
+- CI 45863381169 trên `0d5da4c`: xanh, log trợ lý `# fail 0` (467), lõi `Failed: 0` (1708).
 - Chưa thử trên AutoCAD thật.
