@@ -106,6 +106,37 @@ describe('H5: batch_files', () => {
     const r = await runBatch(planned, { task: 'check', folder: 'C:/a', user_confirmed: ['T'] });
     assert.equal((r as any).result.files[0].file, 'ban-ve-a.dwg');
   });
+
+  it('Soát KTH-02: a file that times out stops the run, the files done are listed, that file is to be checked', async () => {
+    const late = { id: 'e', ok: false, error: { code: 'TIMEOUT', message: 'no answer from AutoCAD after 300 s' } } as ToolResponse;
+    const { b, calls } = fakeBridge(4, (i) => (i === 1 ? late : null));
+    const planned: ToolBridge = { ...b, call: async (t, p) => {
+      const r = await b.call(t, p);
+      if (p.action === 'plan' && r.ok) (r.result as any).files = ['a.dwg', 'b.dwg', 'c.dwg', 'd.dwg'];
+      return r;
+    } };
+    const r = await runBatch(planned, { task: 'pdf', folder: 'C:/a', user_confirmed: ['T'] });
+    assert.ok(r.ok);
+    const res = (r as any).result;
+    assert.equal(res.done, 1);
+    assert.deepEqual(res.files.map((f: any) => f.file), ['f0.dwg']);
+    assert.match(res.stopped, /after 1 of 4/);
+    assert.match(res.stopped, /TIMEOUT/);
+    assert.equal(res.timed_out_file, 'b.dwg');
+    assert.match(res.check_first, /may still have finished/);
+    assert.equal(calls.filter((c) => c.action === 'run').length, 2, 'the next file is not started');
+    assert.ok(!calls.some((c) => c.action === 'finish'));
+  });
+
+  it('Soát KTH-02: a time-out on the first file is reported the same way', async () => {
+    const late = { id: 'e', ok: false, error: { code: 'TIMEOUT', message: 'late' } } as ToolResponse;
+    const { b, calls } = fakeBridge(3, (i) => (i === 0 ? late : null));
+    const r = await runBatch(b, { task: 'standards', folder: 'C:/a', user_confirmed: ['T'] });
+    assert.ok(r.ok);
+    assert.equal((r as any).result.done, 0);
+    assert.equal((r as any).result.timed_out_file, '#1');
+    assert.equal(calls.filter((c) => c.action === 'run').length, 1);
+  });
 });
 
 describe('Sửa KTH-01 / 02: batch_files on the real path', () => {
