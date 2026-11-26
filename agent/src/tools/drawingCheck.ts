@@ -28,6 +28,7 @@ export function drawingCheckTools(b: ToolBridge): AnyTool[] {
         groups: z.array(z.enum(CHECK_GROUPS)).optional().describe('Only these groups (default all).'),
         layouts: z.boolean().optional().describe('Also check the layouts (default true).'),
         sheets: z.array(z.string().min(1)).max(50).optional().describe('Default-named layouts (Layout1…) with only a viewport to check in full as sheets (the user says they are).'),
+        company: z.string().min(1).max(60).optional().describe('A company standard learnt with company_standard (name): layers / styles / text heights checked against it.'),
         examples: z.number().int().min(1).max(50).optional().describe('Example handles per group (default 5).'),
         ...excelParams,
       },

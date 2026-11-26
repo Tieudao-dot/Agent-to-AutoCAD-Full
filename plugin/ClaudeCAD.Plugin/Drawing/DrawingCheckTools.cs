@@ -28,6 +28,8 @@ namespace ClaudeCAD.Plugin.Drawing
             public readonly Dictionary<string, SortedSet<string>> Layouts = new Dictionary<string, SortedSet<string>>(StringComparer.Ordinal);
             public readonly List<string> Notes = new List<string>();
             public string Prefix;
+            /// <summary>Nâng cấp đợt H4: the company standard checked against (instead of the Vietnamese one), or null.</summary>
+            public CompanyStandard Company;
             public int? Scale;
             public double MmPerUnit = 1;
             public string Units;
@@ -174,9 +176,9 @@ namespace ClaudeCAD.Plugin.Drawing
         private static bool Wanted(HashSet<string> only, params string[] groups) => only == null || groups.Any(only.Contains);
 
         /// <summary>The whole scan (only = the groups wanted; null = all).</summary>
-        private static CheckScan ScanDrawing(ToolContext ctx, HashSet<string> only, bool layouts = true, ICollection<string> sheets = null)
+        private static CheckScan ScanDrawing(ToolContext ctx, HashSet<string> only, bool layouts = true, ICollection<string> sheets = null, CompanyStandard company = null)
         {
-            var s = new CheckScan();
+            var s = new CheckScan { Company = company };
             s.MmPerUnit = FloorPlanLogic.MmPerUnit(Convert.ToInt32(ctx.Db.Insunits), out s.Units);
             var tst = (TextStyleTable)ctx.Tr.GetObject(ctx.Db.TextStyleTableId, OpenMode.ForRead);
             var styleNames = new List<string>();
@@ -191,7 +193,14 @@ namespace ClaudeCAD.Plugin.Drawing
                     foreach (ObjectId id in dst) { s.Scale = DrawingCheckLogic.DimStyleScale(s.Prefix, NameOf(ctx, id)); if (s.Scale != null) break; }
                 }
             }
-            double[] heights = s.Prefix != null && s.Scale != null ? DrawingCheckLogic.StandardHeights(s.Scale.Value, s.MmPerUnit) : null;
+            double[] heights = company != null ? CompanyStandardLogic.Heights(company, s.MmPerUnit)
+                : s.Prefix != null && s.Scale != null ? DrawingCheckLogic.StandardHeights(s.Scale.Value, s.MmPerUnit) : null;
+            // nâng cấp đợt H4: with a company standard its own layers / styles are the standard
+            bool std = s.Prefix != null || company != null;
+            bool LayerOk(string l) => company != null ? CompanyStandardLogic.HasLayer(company, l) : DrawingCheckLogic.IsStandardLayer(l);
+            bool TextOk(string st) => company != null ? CompanyStandardLogic.HasTextStyle(company, st) : DrawingCheckLogic.IsStandardTextStyle(s.Prefix, st);
+            bool DimOk(string st) => company != null ? CompanyStandardLogic.HasDimStyle(company, st) : DrawingCheckLogic.IsStandardDimStyle(s.Prefix, st);
+            bool MlOk(string st) => company != null ? CompanyStandardLogic.HasMLeaderStyle(company, st) : MLeaderStyleLogic.IsStandardName(st);
             double dupTol = G2Numbers.DuplicateTolMm / s.MmPerUnit, zeroTol = G2Numbers.ZeroLengthMm / s.MmPerUnit;
 
             var layerCache = new Dictionary<ObjectId, LayerTableRecord>();
@@ -273,7 +282,7 @@ namespace ClaudeCAD.Plugin.Drawing
                     if ((ltr.IsOff || ltr.IsFrozen || !ltr.IsPlottable) && !string.Equals(layer, "Defpoints", StringComparison.OrdinalIgnoreCase)
                         && !string.Equals(layer, G5Numbers.Layer, StringComparison.OrdinalIgnoreCase) && Wanted(only, "hidden_layers"))
                         s.Hit("hidden_layers", id, layer);
-                    if (s.Prefix != null && !DrawingCheckLogic.IsStandardLayer(layer) && Wanted(only, "nonstandard_layers")) s.Hit("nonstandard_layers", id, layer);
+                    if (std && !LayerOk(layer) && Wanted(only, "nonstandard_layers")) s.Hit("nonstandard_layers", id, layer);
 
                     // properties (the standard sheet frame sets its own line weight on purpose)
                     if (Wanted(only, "not_bylayer") && !layer.StartsWith(F2Numbers.FrameLayer, StringComparison.OrdinalIgnoreCase)
@@ -285,10 +294,10 @@ namespace ClaudeCAD.Plugin.Drawing
                     if (txt != null)
                     {
                         if (string.IsNullOrWhiteSpace(txt)) { if (Wanted(only, "empty_text")) s.Hit("empty_text", id); }
-                        else if (s.Prefix != null)
+                        else if (std)
                         {
                             var style = NameOf(ctx, e is DBText t0 ? t0.TextStyleId : ((MText)e).TextStyleId);
-                            if (!DrawingCheckLogic.IsStandardTextStyle(s.Prefix, style)) { if (Wanted(only, "nonstandard_styles")) s.Hit("nonstandard_styles", id); }
+                            if (!TextOk(style)) { if (Wanted(only, "nonstandard_styles")) s.Hit("nonstandard_styles", id); }
                             else if (model && heights != null && Wanted(only, "text_height")
                                      && DrawingCheckLogic.HeightOff(e is DBText t1 ? t1.Height : ((MText)e).TextHeight, heights, out _))
                                 s.Hit("text_height", id);
@@ -298,10 +307,10 @@ namespace ClaudeCAD.Plugin.Drawing
                     {
                         dims++; // Sửa KFG-16: a dimension on a layout counts too
                         if (Wanted(only, "dim_override") && DrawingCheckLogic.HidesMeasurement(dm.DimensionText)) s.Hit("dim_override", id);
-                        if (s.Prefix != null && Wanted(only, "nonstandard_styles") && !DrawingCheckLogic.IsStandardDimStyle(s.Prefix, NameOf(ctx, dm.DimensionStyle)))
+                        if (std && Wanted(only, "nonstandard_styles") && !DimOk(NameOf(ctx, dm.DimensionStyle)))
                             s.Hit("nonstandard_styles", id);
                     }
-                    if (e is MLeader ml && s.Prefix != null && Wanted(only, "nonstandard_styles") && !MLeaderStyleLogic.IsStandardName(NameOf(ctx, ml.MLeaderStyle)))
+                    if (e is MLeader ml && std && Wanted(only, "nonstandard_styles") && !MlOk(NameOf(ctx, ml.MLeaderStyle)))
                         s.Hit("nonstandard_styles", id);
                     if (model && DrawingCheckLogic.IsWallLayer(layer) && e is Curve) { walls++; if (wallIds.Count < G2Numbers.ExamplesPerGroup) wallIds.Add(id); }
 
@@ -388,7 +397,11 @@ namespace ClaudeCAD.Plugin.Drawing
             if (Wanted(only, "no_dimensions") && walls > 0 && dims == 0 && !stopped)
                 foreach (var w in wallIds) s.Hit("no_dimensions", w);
 
-            if (s.Prefix == null)
+            if (company != null)
+            {
+                if (heights == null) s.Notes.Add($"The company standard '{company.Name}' has no text heights: text heights were not checked.");
+            }
+            else if (s.Prefix == null)
                 s.Notes.Add("The drawing does not use the standard of setup_standards (no KT-ARIAL / VN-ARIAL text style): layer names, styles and text heights were not checked; its own layers and styles are not errors.");
             else if (s.Scale == null)
                 s.Notes.Add($"No dimension style {s.Prefix}-<scale> in the drawing: the text heights were not checked.");
@@ -413,7 +426,8 @@ namespace ClaudeCAD.Plugin.Drawing
                 }
             }
             int examples = p.Int("examples", G2Numbers.ExamplesPerGroup, 1, 50);
-            var s = ScanDrawing(ctx, only, p.Bool("layouts", true), p.StringsOpt("sheets"));
+            var company = p.Has("company") ? CompanyStandardLogic.Require(CompanyRoot, p.Str("company"), "check_drawing") : null; // nâng cấp đợt H4
+            var s = ScanDrawing(ctx, only, p.Bool("layouts", true), p.StringsOpt("sheets"), company);
 
             var groups = new List<Dictionary<string, object>>();
             var summary = new Dictionary<string, object> { ["nen_sua"] = 0, ["can_nhac"] = 0, ["goi_y"] = 0 };
@@ -429,12 +443,15 @@ namespace ClaudeCAD.Plugin.Drawing
                     ["level"] = def.Level,
                     ["count"] = count,
                     ["examples"] = hs.Take(examples).Cast<object>().ToList(),
-                    ["fix"] = def.Fixable ? def.Id : null,
+                    // a company standard: its styles are not the ones fix_drawing applies (setup_standards company, then set_entity_props)
+                    ["fix"] = def.Fixable && !(company != null && def.NeedsStandard) ? def.Id : null,
                     ["hint"] = def.Hint,
                 };
                 if (s.Layers.TryGetValue(def.Id, out var ls)) g["layers"] = ls.Take(30).Cast<object>().ToList();
                 if (s.Layouts.TryGetValue(def.Id, out var lo)) g["layouts"] = lo.Take(30).Cast<object>().ToList();
-                if (def.Id == "text_height" && s.Scale != null)
+                if (def.Id == "text_height" && company != null)
+                    g["standard_heights"] = (CompanyStandardLogic.Heights(company, s.MmPerUnit) ?? new double[0]).Select(v => (object)Acad.R(v)).ToList();
+                else if (def.Id == "text_height" && s.Scale != null)
                     g["standard_heights"] = DrawingCheckLogic.StandardHeights(s.Scale.Value, s.MmPerUnit).Select(v => (object)Acad.R(v)).ToList();
                 groups.Add(g);
                 string key = DrawingCheckLogic.LevelKey(def.Level);
@@ -446,7 +463,7 @@ namespace ClaudeCAD.Plugin.Drawing
                 ["total"] = s.Total,
                 ["complete"] = s.Scanned >= s.Total,
                 ["units"] = s.Units,
-                ["standard"] = s.Prefix,
+                ["standard"] = company != null ? "company: " + company.Name : s.Prefix,
                 ["groups"] = groups,
                 ["summary"] = summary,
             };

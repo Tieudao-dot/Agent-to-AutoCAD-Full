@@ -52,6 +52,7 @@
     <Compile Include="..\ClaudeCAD.Plugin\Core\SkillSync.cs" Link="Core\SkillSync.cs" />
     <Compile Include="..\ClaudeCAD.Plugin\Core\PdfRender.cs" Link="Core\PdfRender.cs" />
     <Compile Include="..\ClaudeCAD.Plugin\Core\OtherDrawing.cs" Link="Core\OtherDrawing.cs" />
+    <Compile Include="..\ClaudeCAD.Plugin\Core\CompanyStandard.cs" Link="Core\CompanyStandard.cs" />
     <Compile Include="..\ClaudeCAD.Plugin\Core\Solids3.cs" Link="Core\Solids3.cs" />
   </ItemGroup>
   <ItemGroup>

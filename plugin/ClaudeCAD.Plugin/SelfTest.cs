@@ -1253,6 +1253,47 @@ namespace ClaudeCAD.Plugin
                 return errs.Count == 0 ? new SelfTestRules.Verdict(true, $"{nDwg} đối tượng, {f1}; DXF {f2}") : new SelfTestRules.Verdict(false, string.Join("; ", errs));
             });
 
+            // Nâng cấp đợt H4: learn a company standard from a copy of this drawing (into a test folder, never the user's
+            // standards), read it back, delete it with its card token; the template file is unchanged
+            Check("Nâng cấp đợt H4: học chuẩn công ty từ bản vẽ mẫu (layer, kiểu chữ, file mẫu không đổi), xem, xóa", () =>
+            {
+                var errs = new List<string>();
+                var ctx0 = new ToolContext(doc, null, false, null);
+                string mau = Path.Combine(dir, "h4-mau.dwg");
+                if (File.Exists(mau)) File.Delete(mau);
+                DrawingService.ExportDrawing(ctx0, new Params("export_drawing", new Dictionary<string, object> { ["format"] = "dwg", ["output"] = mau }));
+                var stamp = File.GetLastWriteTimeUtc(mau);
+                long size = new FileInfo(mau).Length;
+                string keep = DrawingService.CompanyRoot;
+                DrawingService.CompanyRoot = Path.Combine(dir, "chuan-cong-ty");
+                try
+                {
+                    var r = (Dictionary<string, object>)DrawingService.CompanyStandardTool(ctx0, new Params("company_standard", new Dictionary<string, object> { ["action"] = "learn", ["file"] = mau, ["name"] = "Tự kiểm H4" }));
+                    int layers = Convert.ToInt32(r["layers"]);
+                    if (layers <= 0) errs.Add("không học được layer nào");
+                    if (!(r["template_kept"] is bool kept && kept)) errs.Add("không giữ được bản chép file mẫu");
+                    var shown = (Dictionary<string, object>)DrawingService.CompanyStandardTool(ctx0, new Params("company_standard", new Dictionary<string, object> { ["action"] = "show", ["name"] = "tu kiem h4" }));
+                    if (Convert.ToInt32(shown["layers"]) != layers) errs.Add("xem lại không ra cùng số layer");
+                    try
+                    {
+                        DrawingService.CompanyStandardTool(ctx0, new Params("company_standard", new Dictionary<string, object> { ["action"] = "delete", ["name"] = "Tự kiểm H4" }));
+                        errs.Add("xóa mà không hỏi thẻ");
+                    }
+                    catch (ToolException) { }
+                    DrawingService.CompanyStandardTool(ctx0, new Params("company_standard", new Dictionary<string, object>
+                    {
+                        ["action"] = "delete", ["name"] = "Tự kiểm H4",
+                        [SolidLogic.UserConfirmedParam] = new List<object> { CompanyStandardLogic.Token("delete", "Tự kiểm H4") },
+                    }));
+                    if (CompanyStandardLogic.List(DrawingService.CompanyRoot).Count != 0) errs.Add("xóa rồi vẫn còn");
+                    if (File.GetLastWriteTimeUtc(mau) != stamp || new FileInfo(mau).Length != size) errs.Add("file mẫu bị đổi");
+                    try { File.Delete(mau); } catch (Exception ex) { errs.Add("file mẫu còn bị khóa: " + ex.Message); }
+                    return errs.Count == 0 ? new SelfTestRules.Verdict(true, $"{layers} layer, {((List<object>)r["text_styles"]).Count} kiểu chữ; xóa có thẻ; file mẫu không đổi")
+                        : new SelfTestRules.Verdict(false, string.Join("; ", errs));
+                }
+                finally { DrawingService.CompanyRoot = keep; }
+            });
+
             string versionFile = Path.Combine(dir, "version-copy.dwg");
             Do("Bản sao phiên bản (Wblock + SaveAs)", () =>
             {

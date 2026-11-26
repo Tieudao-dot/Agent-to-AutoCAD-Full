@@ -147,6 +147,7 @@ namespace ClaudeCAD.Plugin.UI
             ["presspull"] = "Kéo / ấn mặt khối",
             ["export_stl"] = "Xuất STL",
             ["export_drawing"] = "Xuất DXF / DWG / FBX",
+            ["company_standard"] = "Chuẩn công ty", // nâng cấp đợt H4
             ["volume_schedule"] = "Bảng khối lượng",
             ["setup_standards"] = "Thiết lập style chuẩn",
             ["create_sheet"] = "Tạo trang in có khung tên",

@@ -357,7 +357,7 @@ const CARD_PARAM_TOOLS = new Set([...PLUGIN_CONFIRMED, ...REPLACE_TOOLS]);
  * refuses with the handles for the card; Claude repeats them in confirm_handles after Đồng ý, and only those on the card
  * the user approved reach the plugin as user_confirmed (a typed yes never does).
  */
-export const F5_CARD_TOOLS = new Set(['plot_pdf', 'export_stl', 'export_drawing', 'named_view', 'set_material', 'block_schedule', 'area_schedule', 'volume_schedule', 'check_interference',
+export const F5_CARD_TOOLS = new Set(['plot_pdf', 'export_stl', 'export_drawing', 'company_standard', 'named_view', 'set_material', 'block_schedule', 'area_schedule', 'volume_schedule', 'check_interference',
   // nâng cấp đợt G1: replacing the drawing set made before, and its PDF
   'create_drawing_set',
   // nâng cấp đợt G3: the Excel file of the estimate

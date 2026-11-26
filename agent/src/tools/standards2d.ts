@@ -21,6 +21,7 @@ export function standards2dTools(b: ToolBridge): AnyTool[] {
       {
         scale: scale.optional(),
         standard: z.string().optional().describe('The palette "Tiêu chuẩn" skill, e.g. "ve-kien-truc".'),
+        company: z.string().min(1).max(60).optional().describe('A company standard learnt with company_standard (name): its layers / styles instead of the Vietnamese ones (scale not used).'),
         make_current: z.boolean().optional(),
         handles: handles.max(50).optional().describe(OVERWRITE),
       }),
@@ -45,6 +46,8 @@ export function standards2dTools(b: ToolBridge): AnyTool[] {
           .describe('Title block texts; date, scale, paper are filled automatically.'),
         locked: z.boolean().optional(),
         activate: z.boolean().optional(),
+        company: z.string().min(1).max(60).optional().describe('A company standard learnt with company_standard (name): its paper and title block (copied from the template).'),
+        attributes: z.record(z.string(), z.string()).optional().describe('Company title block: tag → text.'),
       }),
 
     cadTool(b, 'insert_library_block',

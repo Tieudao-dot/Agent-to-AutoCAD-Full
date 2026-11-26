@@ -105,6 +105,8 @@ namespace ClaudeCAD.Plugin.Core
                 "check_drawing fix_drawing");
             // nâng cấp đợt G5 (Drawing/TraceTools.cs): trace a photo / scan / PDF scan (2D / Full)
             Add(ToolGroup.TwoD, "trace_image");
+            // nâng cấp đợt H4 (Drawing/CompanyStandardTools.cs): learn a company standard from a template (2D / Full, like setup_standards)
+            Add(ToolGroup.TwoD, "company_standard");
             // nâng cấp đợt H2 (Drawing/ExportTools.cs): DXF / older DWG on every plan, FBX 3D / Full (ThreeDValues)
             Add(ToolGroup.Common, "export_drawing");
             // 3D phases 1, 2 and 3 (Drawing/SolidTools.cs, Solid2Tools.cs, PlanTo3dTools.cs, SectionTools.cs): only the 3D and Full plans

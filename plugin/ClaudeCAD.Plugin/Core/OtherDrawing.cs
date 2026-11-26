@@ -35,7 +35,7 @@ namespace ClaudeCAD.Plugin.Core
         {
             if (string.IsNullOrWhiteSpace(path)) throw ToolException.Invalid($"{tool}: give the full path of the other drawing (.dwg or .dxf).");
             var ext = Path.GetExtension(path).ToLowerInvariant();
-            if (ext != ".dwg" && ext != ".dxf")
+            if (ext != ".dwg" && ext != ".dxf" && ext != ".dwt") // nâng cấp đợt H4: a template (.dwt) is a DWG
             {
                 string hint = ext == ".dwl" || ext == ".dwl2" ? " That is AutoCAD's lock file: give the .dwg next to it." :
                     ext == ".bak" || ext == ".sv$" ? " That is a backup: ask the user to rename a copy of it to .dwg first." :
@@ -46,7 +46,7 @@ namespace ClaudeCAD.Plugin.Core
             if (bytes <= 0) throw ToolException.Invalid($"{tool}: '{Path.GetFileName(path)}' is empty.");
             if (bytes > (long)OtherDrawingNumbers.MaxFileMb * 1024 * 1024)
                 throw ToolException.Invalid($"{tool}: '{Path.GetFileName(path)}' is {bytes / 1048576.0:0.#} MB, more than {OtherDrawingNumbers.MaxFileMb} MB: too big to read next to the open drawing.");
-            return ext.Substring(1);
+            return ext == ".dwt" ? "dwg" : ext.Substring(1);
         }
 
         /// <summary>The file code of a DWG ("AC1032") from its first bytes, or null when the bytes are not a DWG header.</summary>
