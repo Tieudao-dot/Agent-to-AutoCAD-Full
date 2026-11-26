@@ -4,8 +4,7 @@ import { cadTool, handle, wcsPoint, type AnyTool, type ToolBridge } from './comm
 /**
  * Nâng cấp đợt H6 (docs/ban-giao/nang-cap-h6.md): hạ tầng — survey points from a sheet, contours, chainage ticks, long
  * and cross sections. 2D / Full, deferred. Only the drawing changes (no file is written): no card. The default numbers
- * (scales, stake spacing, contour interval…) live in the plugin (H6Numbers) and wait for the owner's approval: they are
- * not written here.
+ * live in the plugin (H6Numbers); approved by the owner 26/11 (docs/dot-h-so-tieu-chuan.md), repeated in the description.
  */
 export const TERRAIN_ACTIONS = ['import_points', 'contours', 'stations', 'profile', 'cross_sections'] as const;
 
@@ -17,7 +16,9 @@ export function terrainTools(b: ToolBridge): AnyTool[] {
         'points at their level on C-SURVEY-PT with level and name texts. Real coordinates: ask the user, then origin "real" / "auto" / [X, Y]. ' +
         'contours: from those points (TIN), major lines labelled. stations {alignment_handle}: chainage ticks on the plan. ' +
         'profile {alignment_handle}: long section with its table (design: [[chainage, level], …] optional). cross_sections {alignment_handle}: at the stakes. ' +
-        'Without numbers given, the plugin uses its defaults and returns them: tell the user which were used.',
+        'Defaults: profile 1:1000 / 1:100, cross sections 1:200 and 15 m each side, stakes every 20 m (H every 100 m, Km every 1 000 m), plan ticks every 50 m, ' +
+        'datum (MSS) whole metres at least 2 m below the lowest level, contour interval by plan scale (1:500 → 0.5 m, 1:1000 / 1:2000 → 1 m), a major line every 5. ' +
+        'The contour interval and the 20 m stakes are defaults: the engineer checks them against the TCVN in force. The result gives the numbers used: tell the user.',
       {
         action: z.enum(TERRAIN_ACTIONS),
         file: z.string().min(1).max(260).optional().describe('import_points: full path of the survey sheet.'),

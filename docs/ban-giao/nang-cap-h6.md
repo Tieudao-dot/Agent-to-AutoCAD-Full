@@ -3,9 +3,10 @@
 Thread `session_01D56HmFcYrzsme7GoBm8tNC` (người viết). Nhánh `full/nang-cap-h6`, tách từ `full/nang-cap-h-tong-the` @ `76ecfae`
 (chốt phần 1). Chạy cùng lúc với H7 (MEP 3D). Thử tay: `docs/checklist-dot-h6.md`. Chưa chạy trên AutoCAD thật.
 
-**Chưa xong:** các số theo tiêu chuẩn (mục 3a) đang chờ chủ dự án duyệt. Code dùng số đề xuất để test chạy, đặt hết ở
-`H6Numbers` (`plugin/ClaudeCAD.Plugin/Core/Terrain.cs`). Chưa đưa số nào vào skill, prompt, mô tả lệnh hay tài liệu cho khách.
-Duyệt xong chỉ sửa chỗ đó (và thêm vào skill `ve-ha-tang` nếu cậu muốn).
+**Số theo tiêu chuẩn đã duyệt 26/11** (chủ dự án chọn "dùng hết số đề xuất", ghi ở `docs/dot-h-so-tieu-chuan.md` mục "Kết quả
+duyệt"). Số ở một chỗ: `H6Numbers` (`plugin/ClaudeCAD.Plugin/Core/Terrain.cs`); skill `ve-ha-tang` mục 7 và mô tả lệnh `terrain`
+nhắc lại (đổi số thì đổi cả ba chỗ; test `NangCapH6Tests` giữ cho chúng khớp). Khoảng cao đều đồng mức và khoảng cọc chi tiết
+20 m: **số mặc định, kỹ sư đối chiếu TCVN hiện hành trước khi dùng** (ghi trong skill và mô tả lệnh).
 
 ## 1. Khách thấy gì
 
@@ -29,14 +30,15 @@ Một lệnh `terrain` (gói 2D / Full, hoãn nạp), năm việc:
 | `Core/Terrain.cs` (mới) | `H6Numbers`; đọc CSV / TXT (phẩy, chấm phẩy, tab, khoảng trắng, dấu phẩy thập phân) và .xlsx (sheet đầu), nhận cột theo tiêu đề tiếng Việt / Anh hoặc vị trí; đổi trục; lưới tam giác Delaunay (Bowyer–Watson quét theo x) + nội suy; đồng mức (nối đoạn thành polyline, đường kín / hở); cọc (Km, H1…H9, C1…, Đ1…, Đầu, Cuối); MSS; bố trí trắc dọc / trắc ngang thành các nét + chữ |
 | `Drawing/TerrainTools.cs` (mới) | lệnh `terrain`: đọc file (luật đường dẫn G5), vẽ điểm / chữ / đồng mức / vạch lý trình / khung trắc |
 | `Core/Plans.cs`, `Core/Ucs.cs`, `DrawingService.cs`, `UI/ToolLabels.cs`, `SelfTest.cs` | nhóm 2D, giữ WCS (tọa độ khảo sát là tọa độ thật), đăng ký, nhãn "Hạ tầng: điểm đo, đồng mức, trắc", bước tự kiểm (mỗi chỗ 1 – 2 dòng) |
+| `skills/ve-ha-tang/SKILL.md` | mục 7 mới: lệnh `terrain` và các số mặc định đã duyệt (máy nâng cấp nhận bản mới nếu khách chưa sửa skill, theo H1) |
 | `agent/src/tools/terrain.ts` (mới), `index.ts`, `systemPrompt.ts` (1 dòng ở phần 2D), `ipc/rpc.ts` (`terrain` vào nhóm lệnh chậm 2 phút) | |
 
 File dùng chung đã sửa (để thread gộp H6 + H7 gỡ): `Plans.cs`, `Ucs.cs`, `DrawingService.cs`, `ToolLabels.cs`, `SelfTest.cs`,
 `index.ts`, `systemPrompt.ts`, `rpc.ts`, csproj test. Mỗi chỗ thêm 1 – 3 dòng ngay sau dòng của H5.
 
-## 3a. Số theo tiêu chuẩn — CHỜ DUYỆT (bảng H6 của `docs/dot-h-so-tieu-chuan.md`)
+## 3a. Số theo tiêu chuẩn — đã duyệt 26/11 (bảng H6 của `docs/dot-h-so-tieu-chuan.md`)
 
-Tất cả ở `H6Numbers`, nhóm đầu. Đang gán đúng số đề xuất trong bảng:
+Tất cả ở `H6Numbers`, nhóm đầu:
 
 | Số | Đang gán | Ở đâu |
 | --- | --- | --- |
@@ -44,7 +46,7 @@ Tất cả ở `H6Numbers`, nhóm đầu. Đang gán đúng số đề xuất tr
 | Tỉ lệ trắc ngang | 1:200 | `CrossScale` |
 | MSS | mét chẵn, thấp hơn cao độ nhỏ nhất ≥ 2 m | `DatumMarginM` |
 | Khoảng cọc | 20 m; H mỗi 100 m; Km mỗi 1 000 m; thêm đầu / cuối / đỉnh | `StakeDetailM`, `Stake100M`, `StakeKmM` |
-| Vạch lý trình mặt bằng | 50 m (**cậu chọn 50 hay 20**) | `PlanTickM` |
+| Vạch lý trình mặt bằng | 50 m trên mặt bằng; 20 m trên trắc dọc / trắc ngang (cọc chi tiết) | `PlanTickM` |
 | Bề rộng trắc ngang | 15 m mỗi bên | `CrossHalfWidthM` |
 | Khoảng cao đều | 1:500 → 0,5 m; 1:1000 → 1 m; 1:2000 → 1 m (tỉ lệ khác: lấy tỉ lệ gần nhất) | `ContourIntervals` |
 | Đường cái | cứ 5 đường | `MajorEvery` |
@@ -52,8 +54,8 @@ Tất cả ở `H6Numbers`, nhóm đầu. Đang gán đúng số đề xuất tr
 | Cỡ chữ in | 2,5 mm; tiêu đề 3,5 / 5 mm | `TextMm`, `TitleMm`, `BigTitleMm` |
 | VN-2000 | chỉ đổi trục, m × 1000, không đổi múi chiếu | `AxisSwap`, `UnitsPerMetre` |
 
-Sáu chỗ "chưa chắc" của bảng tiêu chuẩn: hai chỗ thuộc H6 (khoảng cao đều theo tỉ lệ, khoảng cọc chi tiết 20 m) đều là một
-số trong `H6Numbers`, đổi một dòng.
+Hai chỗ "chưa chắc" thuộc H6 (khoảng cao đều theo tỉ lệ, khoảng cọc chi tiết 20 m): dùng số đề xuất, ghi "số mặc định, kỹ sư
+đối chiếu TCVN hiện hành trước khi dùng" trong skill và mô tả lệnh. Mỗi chỗ là một số trong `H6Numbers`, đổi một dòng.
 
 ## 3b. Con số chờ chủ dự án duyệt (số thường)
 
@@ -71,6 +73,8 @@ số trong `H6Numbers`, đổi một dòng.
 | Hai điểm trùng | cách nhau < 1 mm (thật) thì bỏ điểm sau | số điểm "trùng bỏ" | |
 | Ngưỡng tọa độ thật | > 100 000 m | Claude hỏi gốc tọa độ | VN-2000 ở Việt Nam luôn lớn hơn |
 | Tên / màu layer | `C-SURVEY-PT` 3, `C-LEVEL` 2, `C-COORD` 3, `C-TOPO-MINR` 8, `C-TOPO-MAJR` 33 (0,35), `C-STATION` 2, `C-PROF-GRID` 8, `C-PROF-GRND` 3 (0,35), `C-PROF-DSGN` 1 (0,35), `C-PROF-TEXT` 7, `C-TEXT` 7 | | `C-LEVEL`, `C-COORD`, `C-STATION`, `C-TEXT` giữ như skill |
+
+Số theo tiêu chuẩn (mục 3a): **đã duyệt 26/11**; các số trong bảng 3b vẫn chờ duyệt.
 
 Thời gian chờ lệnh (số kỹ thuật, không phải hỏi): `terrain` vào nhóm lệnh chậm, 2 phút.
 
@@ -98,9 +102,9 @@ Thời gian chờ lệnh (số kỹ thuật, không phải hỏi): `terrain` và
 
 | Gói / chế độ | Nạp gọn trước → sau | Tắt nạp gọn trước → sau |
 | --- | --- | --- |
-| 2D | 13,9k → 14,0k (+178 ký tự) | 48,0k → 49,3k |
+| 2D | 13,9k → 14,0k (+178 ký tự) | 48,0k → 49,4k |
 | 3D | 19,2k → 19,2k (không đổi) | 46,4k → 46,4k |
-| Full · Cả hai | 21,2k → 21,3k | 69,3k → 70,6k |
+| Full · Cả hai | 21,2k → 21,3k | 69,3k → 70,7k |
 
 "Trước" là `76ecfae`. Đo bằng số ký tự (khoảng 3,5 ký tự / token).
 

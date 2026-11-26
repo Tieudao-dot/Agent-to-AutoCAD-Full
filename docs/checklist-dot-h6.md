@@ -4,8 +4,9 @@
 một file điểm đo thật (CSV hoặc Excel, khoảng 100 – 2 000 điểm, có cột Tên / X / Y / Cao độ theo VN-2000). Khoảng 30 phút.
 "Đạt" là thấy đúng như cột phải; khác thì chụp màn hình và ghi số thứ tự.*
 
-**Lưu ý:** các số mặc định (tỉ lệ trắc dọc / trắc ngang, khoảng cọc, bề rộng trắc ngang, khoảng cao đều, đường cái, số lẻ,
-cỡ chữ) **đang chờ cậu duyệt** (`docs/dot-h-so-tieu-chuan.md` mục H6). Khi thử, xem số Claude báo đã dùng có hợp không.
+**Số mặc định** (cậu duyệt 26/11): trắc dọc 1:1000 / 1:100, trắc ngang 1:200 rộng 15 m mỗi bên, cọc chi tiết 20 m, vạch lý trình
+mặt bằng 50 m, khoảng cao đều 0,5 m (1:500) / 1 m (1:1000, 1:2000), cứ 5 đường có 1 đường cái, MSS mét chẵn thấp hơn ≥ 2 m.
+Khoảng cao đều và cọc 20 m: kỹ sư đối chiếu TCVN hiện hành trước khi dùng.
 
 ## A. Nhập điểm (~8 phút)
 

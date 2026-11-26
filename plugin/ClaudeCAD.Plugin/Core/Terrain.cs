@@ -12,13 +12,13 @@ namespace ClaudeCAD.Plugin.Core
 {
     /// <summary>
     /// Nâng cấp đợt H6 (hạ tầng): the numbers of <c>terrain</c>, one place each (docs/ban-giao/nang-cap-h6.md).
-    /// The first group follows the standards / practice (docs/dot-h-so-tieu-chuan.md, mục H6): it is
-    /// <b>waiting for the owner's approval</b> and is not written in the skill, the prompt or the tool description.
+    /// The first group follows the standards / practice (docs/dot-h-so-tieu-chuan.md, mục H6): approved by the owner 26/11
+    /// ("dùng hết số đề xuất"); the skill ve-ha-tang and the tool description repeat them (change both with them).
     /// The second group are plain numbers ("Con số chờ chủ dự án duyệt" in the handoff).
     /// </summary>
     public static class H6Numbers
     {
-        // ---------------------------------------------------------------- theo tiêu chuẩn / thông lệ: CHỜ DUYỆT
+        // ---------------------------------------------------------------- theo tiêu chuẩn / thông lệ: ĐÃ DUYỆT 26/11
         /// <summary>Long section (trắc dọc): horizontal / vertical print scales (1:1000 / 1:100).</summary>
         public static int ProfileScaleH = 1000;
         public static int ProfileScaleV = 100;
@@ -30,7 +30,7 @@ namespace ClaudeCAD.Plugin.Core
         public static double StakeDetailM = 20;
         public static double Stake100M = 100;
         public static double StakeKmM = 1000;
-        /// <summary>Chainage ticks on the plan of the alignment. Owner to choose: 50 (the skill now) or 20 like the sections.</summary>
+        /// <summary>Chainage ticks on the plan of the alignment (50 m; the sections use the 20 m stakes). Owner 26/11.</summary>
         public static double PlanTickM = 50;
         /// <summary>Cross-section width each side of the centre line when the user gives none.</summary>
         public static double CrossHalfWidthM = 15;

@@ -272,7 +272,7 @@ namespace ClaudeCAD.Core.Tests
         }
 
         [Fact]
-        public void Standard_numbers_stay_in_one_place_and_out_of_the_skill_prompt_and_description()
+        public void Approved_standard_numbers_in_one_place_match_the_skill_and_the_description()
         {
             Assert.Equal(1000, H6Numbers.ProfileScaleH);
             Assert.Equal(100, H6Numbers.ProfileScaleV);
@@ -284,10 +284,13 @@ namespace ClaudeCAD.Core.Tests
             var desc = Src("agent", "src", "tools", "terrain.ts");
             var prompt = Src("agent", "src", "agent", "systemPrompt.ts");
             var skill = Src("skills", "ve-ha-tang", "SKILL.md");
-            foreach (var n in new[] { "1:1000", "1:100", "1:200", "20 m", "15 m", "0.5 m", "0,5 m", "MSS" })
-                Assert.DoesNotContain(n, desc);
-            // the skill is not changed by H6 until the numbers are approved
-            Assert.DoesNotContain("terrain", skill);
+            // approved 26/11: the skill and the description say the same numbers as H6Numbers
+            foreach (var n in new[] { "1:1000", "1:100", "1:200", "15 m", "20 m", "50 m", "2 m" })
+                Assert.Contains(n, desc);
+            foreach (var n in new[] { "1:1000", "đứng 1:100", "1:200", "15 m", "20 m", "50 m", "0,5 m", "Cứ 5 đường", "terrain" })
+                Assert.Contains(n, skill);
+            Assert.Contains("kỹ sư đối chiếu TCVN hiện hành", skill);
+            Assert.Contains("TCVN in force", desc);
             Assert.Contains("terrain", prompt);
             Assert.DoesNotContain("trắc dọc 1:", prompt);
         }
