@@ -247,3 +247,4 @@ Sau đợt F + G (ước tính, đo ở thread test tổng thể đợt G; đợ
   - 20h07 rà H6 xong (5 lỗi); 20h35 rà H7 xong (6 lỗi); 20h36 H8 kết cấu bắt đầu (gộp H6-test + H7-test).
   - ~20h45 chủ dự án chốt H9: chữ vẽ vào bản vẽ giữ tiếng Việt khi chọn English (chỉ đổi giao diện và câu trả lời).
   - 21h40 rà H8 xong (3 lỗi; `886e699`, CI 45840644593 xanh); 21h42 H9 tiếng Anh bắt đầu (thread đợt F1), thread Test & sửa F1 đọc trước để rà.
+  - 22h40 H9 tiếng Anh viết xong (`60a2047`, CI 45850823367 xanh sau 1 lượt đỏ vì test CRLF); 22h42 thread Test & sửa F1 bắt đầu rà H9.
