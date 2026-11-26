@@ -109,8 +109,8 @@ ghi "số mặc định, kỹ sư đối chiếu TCVN hiện hành":
 ## 7. CI
 
 - Lượt gộp: run 45831302439 trên `7d023db`: xanh, `# fail 0`.
-- H8 lượt 1: run 45835715473 trên `c01e557` (bản trước khi sửa 3 lỗi): KQ_LUOT1.
-- H8 lượt 2: KQ_LUOT2.
+- H8 lượt 1: run 45835715473 trên `c01e557` (bản trước khi sửa 3 lỗi): xanh, `# pass 457 / # fail 0`, lõi 1664, UI 38 / 38.
+- H8 lượt 2: run 45837703644 trên `ca89b95` (đã sửa 3 lỗi): xanh, `# pass 457 / # fail 0`, lõi 1666, UI 38 / 38.
 
 ## 7b. Sửa sau khi đọc trước (26/11, thread F2 nêu 3 chỗ, cả 3 là lỗi thật)
 
