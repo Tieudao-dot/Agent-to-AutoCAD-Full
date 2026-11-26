@@ -107,5 +107,5 @@ Báo cáo `docs/ban-giao/kiem-tra-doc-lap-dot-h-phan-1.md`: 27 lỗi KTH (2 nặ
   - các quyết định mới.
 - Checklist H4 thêm F9 → F13; các thread B / C đã cập nhật checklist H1 / H5 và khối tương ứng trong checklist tổng.
 - Test sau gộp: lõi **1605 / 1605**, trợ lý **441 / 441**, build 3 target qua.
-- CI: ghi dưới.
+- CI: run 45810078065 trên `0275e38`: **xanh**, 1 / 2 lượt; log Windows `# tests 441`, `# pass 441`, `# fail 0`; lõi 1605 / 1605; UI test và build 3 target qua. Commit sau đó chỉ ghi dòng này, code giữ nguyên như `0275e38`.
 
