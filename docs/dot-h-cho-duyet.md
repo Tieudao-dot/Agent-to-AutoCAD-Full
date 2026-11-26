@@ -375,3 +375,14 @@ Không có số mới khách thấy (H9 và Test & sửa H9).
 | *(H7)* `under_beams` | theo từng đoạn tuyến (dầm trên đoạn nào thì đoạn đó) | |
 | *(H6, KTP-08 / 09)* File không tiêu đề, cột 1 là số nguyên nhỏ trước tọa độ thật | cột 1 là tên điểm | cho cột bằng `columns` |
 | *(H6, KTP-10)* Số "1.234" (một dấu chấm) | là số thập phân 1,234; chỉ ≥ 2 nhóm hoặc nhóm + phẩy thập phân mới là dấu nghìn | |
+| *(KTP-02 → 04, H9)* Xác nhận gõ tay | **danh sách đóng**: chỉ đồng ý khi mọi chữ trong câu là chữ đồng ý, chữ của cụm đồng ý ("xóa đi", "go ahead") hoặc chữ đệm (nhé, ạ, please…). Câu có chữ khác ("ko", "nếu", "if", "thôi", "chờ", "later", "❌"…) là không chắc = không đồng ý, Claude hỏi lại; "thôi được", "không sao" vẫn là đồng ý | thêm chữ đệm vào `FILLERS` (`agent/src/agent/confirmation.ts`) khi thử thật thấy thiếu |
+| *(KTP-07, H9)* Câu lỗi từ máy chủ kích hoạt khi English | máy chủ không đổi; plugin và bộ cài dịch 8 câu lỗi cố định, câu lạ hiện nguyên văn | `L.ServerTexts` |
+| *(KTP-05, H9)* Ngôn ngữ lúc AutoCAD vừa nạp plugin | đặt theo cài đặt (máy mới: ngôn ngữ chọn ở bộ cài) trước dòng "đã nạp…" | |
+
+### Con số mới chờ duyệt
+
+| Số | Dùng ở đâu | Khách thấy gì | Vì sao đề xuất |
+| --- | --- | --- | --- |
+| 6,25d mỗi móc 180° thép trơn | `H8Numbers.PlainHookAddFactor` (KTP-21; luồng chính chọn) | Chiều dài thanh thép trơn trong bảng thép (sàn Ø8a200: L = 3060) | Cách tính móc 180° thường dùng (đo tới mép lớp bảo vệ rồi cộng 6,25d); kỹ sư đối chiếu TCVN hiện hành |
+| 100 mm | `H8Numbers.MinSpanMm`: nhịp dầm nhỏ nhất | Nhịp nhỏ hơn: báo lỗi, nhờ kiểm đơn vị | Chặn bản vẽ sai đơn vị (m vẽ thành mm) mà không chặn dầm thật |
+| 1 × cạnh | `MepLogic.BendRadius`: bán kính co ống gió khi rẽ theo cạnh lớn hơn bề rộng | Co rẽ đứng của ống gió dẹt to hơn trước, có câu báo | Co không tự cắt vào mình; như co ống gió thường gặp |

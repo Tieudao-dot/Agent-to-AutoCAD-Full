@@ -34,8 +34,19 @@ Test: `plugin/ClaudeCAD.Core.Tests/SuaKtpCTests.cs` (10 test).
 
 ## 2. Gộp và tài liệu
 
-*(ghi sau khi gộp `full/nang-cap-h-sua-ktp-a`, `full/nang-cap-h-sua-ktp-b`)*
+- Gộp `full/nang-cap-h-sua-ktp-b` @ `bca2b36` (H7 / H8) rồi `full/nang-cap-h-sua-ktp-a` @ `06c3fb6` (H9, kèm báo cáo
+  kiểm tra độc lập và tài liệu luồng chính): cả hai gộp sạch, không chồng nhau.
+- `docs/checklist-tong-the.md`: chép lại phần H7 / H8 (bản nhánh B) vào khối "Đợt H phần 2"; thêm P2-0-6b và C3c (xác nhận gõ
+  tay theo danh sách đóng: "ko đồng ý", "nếu", "thôi", "đợi" ra không; "Vâng, tớ đồng ý", "Thôi được, xóa đi" ra có).
+- `docs/dot-h-cho-duyet.md` phần "Sau kiểm tra độc lập đợt H phần 2": quyết định tự chọn mới của A, B, C (KTP-21 móc 6,25d,
+  bán kính co ống gió, nhịp tối thiểu, dòng Cộng theo loại thép, khe hở, layer `S-`, `under_beams`, H6 KTP-08 / 09 / 10,
+  xác nhận gõ tay KTP-02 → 04, câu lỗi máy chủ KTP-07, ngôn ngữ lúc nạp KTP-05) và bảng **Con số mới chờ duyệt** (6,25d,
+  100 mm, 1 × cạnh).
+- KTP-36: dòng H9 ở §1 `test-tong-the-dot-h-phan-2.md` sửa lại (câu "nếu / if", "ko đồng ý" lúc đó chưa chặn, đã sửa ở nhánh A).
 
 ## 3. Test / CI
 
-*(ghi sau)*
+- Sau khi gộp A + B: lõi **1708 / 1708**, trợ lý **467 / 467** (`# fail 0`). Build `net48`, `net8.0-windows`,
+  `net10.0-windows`: 0 lỗi.
+- CI: xem tin báo cáo về luồng chính (số run, log `# fail 0`, lõi `Failed: 0`).
+- Chưa thử trên AutoCAD thật.

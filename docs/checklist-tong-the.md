@@ -1169,7 +1169,8 @@ AutoCAD thứ hai). Khoảng 30 phút. "Đạt" là thấy đúng như cột ph�
 | P2-0-3 | **Soát va chạm ống**: một mô hình có dầm / cột thật, đi vài tuyến ống (có ống chéo, ống gió lên đứng), `mep_report` clash | Chỗ chạm / sát đúng (đo bằng `DIST`); ống chéo xa cột không bị báo; ống gió đi X → đứng → Y giữ mặt rộng nằm ngang ở cả hai đoạn |
 | P2-0-4 | **Bảng thống kê thép** một dầm + một cột + một ô sàn, đưa kỹ sư **tính tay** | Chiều dài từng thanh, số thanh, kg theo đường kính khớp tính tay (neo 30d, bẻ L 10d thép gân, móc 180° thép trơn, nối chồng khi > 11,7 m); không cộng hao hụt |
 | P2-0-5 | **Bộ cài chọn English**, cài xong mở khung chat; rồi **cài lại** (cài đè) | Khung chat tiếng Anh ngay lần đầu; cài lại vẫn giữ ngôn ngữ đang dùng (không đổi về tiếng Việt) |
-| P2-0-6 | Chọn English, nhờ việc có thẻ xác nhận, **gõ tay** "yes" / "go ahead"; rồi "yes but don’t delete the walls", "ok, except the doors" | Hai câu đầu: làm; hai câu sau (có điều kiện, có dấu nháy cong): **không** làm, Claude hỏi lại |
+| P2-0-6 | Chọn English, nhờ việc có thẻ xác nhận, **gõ tay** "yes" / "go ahead"; rồi "yes but don’t delete the walls", "ok, except the doors", "yes if you keep the walls", "yes later" | Hai câu đầu: làm; các câu sau (có điều kiện, để sau, có dấu nháy cong): **không** làm, Claude hỏi lại |
+| P2-0-6b | *(KTP-02 → 04)* Tiếng Việt, cùng việc đó, gõ tay "ko đồng ý", "đồng ý nếu giữ tường", "dạ thôi", "ok đợi đã"; rồi "Vâng, tớ đồng ý", "Thôi được, xóa đi" | Bốn câu đầu: **không** xóa, Claude hỏi lại; hai câu sau: xóa |
 | P2-0-7 | Chọn English, vẽ trắc dọc, ống, bảng thép, xuất Excel | Chữ trên bản vẽ và Excel **giữ tiếng Việt**; Claude trả lời tiếng Anh |
 
 ## P2-H6. Hạ tầng: điểm khảo sát, đồng mức, trắc dọc, trắc ngang (~40 phút); mục của `checklist-dot-h6.md`
@@ -1379,6 +1380,8 @@ AutoCAD thứ hai). Khoảng 30 phút. "Đạt" là thấy đúng như cột ph�
 - [ ] C3. Xóa > 20 đối tượng: thẻ xác nhận tiếng Anh (Yes / No); gõ "yes" là làm, gõ "no" là không làm.
 - [ ] C3b. (Test & sửa H9) Cũng việc xóa đó, gõ câu có điều kiện: "yes but don’t delete the walls" (dấu nháy cong của
   điện thoại / Mac), "đồng ý nhưng giữ tường", "ok xóa hết trừ cửa": Claude **không** xóa, hỏi lại.
+- [ ] C3c. (Sửa KTP-A) Cũng việc xóa đó, gõ "ko đồng ý", "đồng ý nếu giữ tường", "dạ thôi", "ok đợi đã": **không** xóa;
+  "Vâng, tớ đồng ý", "Thôi được, xóa đi": xóa. Câu đồng ý dài có chữ lạ ("ok xóa hết mấy cái tường đó") là **không chắc**: Claude hỏi lại.
 - [ ] C4. "Vẽ bảng thống kê block", "tạo tờ A3 có khung tên", "ra bộ hồ sơ" khi đang English: **chữ trên bản vẽ vẫn tiếng
   Việt** (tiêu đề bảng, khung tên, tên tờ); câu trả lời tiếng Anh.
 - [ ] C5. Xuất Excel khi đang English: tiêu đề cột trong file vẫn tiếng Việt.
