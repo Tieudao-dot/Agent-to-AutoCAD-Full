@@ -1239,8 +1239,10 @@ AutoCAD thứ hai). Khoảng 30 phút. "Đạt" là thấy đúng như cột ph�
    - ống tròn 3D trên layer `P-DRAIN-3D` (xanh lá), có **một co** ở góc;
    - ống D110, dốc 2 % về điểm cuối (đầu cuối thấp hơn đầu đầu khoảng 140 mm); Claude nói độ dốc và cao độ hai đầu;
    - xoay góc nhìn (`3DORBIT` hoặc "xem phối cảnh tây nam") thấy co nối liền hai đoạn, không hở, không chồng.
-3. "Đi ống cấp nước D25 từ (1000,0) tới (1000,-2000), cao độ 3000, nối vào ống vừa vẽ": nếu điểm đầu nằm trên ống kia,
-   Claude vẽ **tê** ở chỗ nối (khối hơi to hơn ống chính). Không nằm trên ống thì Claude báo rõ.
+3. *(sửa KTP-16)* "Đi ống thoát nước D60 từ (1000,0) tới (1000,-2000), cao độ 2780, nối vào ống vừa vẽ" (2780 = tim ống
+   chính tại x = 1000, vì ống chính dốc 2 % từ 2800): Claude vẽ **tê** ở chỗ nối (khối hơi to hơn ống chính). Cho cao độ
+   3000: Claude báo điểm đầu không nằm trên ống và nói tim ống chính ở đó cao bao nhiêu. "Đi ống **cấp** nước D25 … nối vào
+   ống thoát đó": Claude báo **khác hệ**, không vẽ.
 4. "Đi ống thoát nước độ dốc 0,5%": Claude **cảnh báo** độ dốc thấp hơn mức tối thiểu của cỡ ống. Ống thoát sàn D60 không nói
    độ dốc: dốc 2,5 %, **không** có cảnh báo.
 5. "Đi ống PCCC từ … tới …" mà **không nói cỡ**: Claude hỏi cỡ ống (không tự chọn).
@@ -1261,7 +1263,7 @@ AutoCAD thứ hai). Khoảng 30 phút. "Đạt" là thấy đúng như cột ph�
    dầm thấp nhất, nhờ cho cao độ nếu ống ở tầng khác.
 4. *(Test & sửa H7)* UCS nghiêng (`UCS` → X → 90), đi ống theo mặt bằng kèm cao độ: Claude nói UCS đang nghiêng, nhờ cho điểm
    x, y, z hoặc đặt lại UCS; không vẽ gì sai chỗ.
-5. *(Test & sửa H7)* "Đi ống thoát D110 qua các điểm (0,0,3000) (4000,0,2960) (4000,3000,2900)": Claude báo đoạn dốc nhất mức 1 %
+5. *(Test & sửa H7)* "Đi ống thoát D110 qua các điểm (0,0,3000) (4000,0,2960) (4000,3000,2900)": Claude báo đoạn **phẳng nhất** mức 1 %
    thấp hơn 1,2 %.
 
 ### D. Thống kê, Excel, va chạm (~6 phút)
@@ -1271,15 +1273,20 @@ AutoCAD thứ hai). Khoảng 30 phút. "Đạt" là thấy đúng như cột ph�
 3. "Thống kê ống có cộng hao hụt 5%": thêm cột "Chiều dài + hao hụt 5%".
 4. "Soát ống va chạm với dầm cột": Claude kể chỗ **chạm** và chỗ **sát** (dưới khoảng hở), có handle hai bên; ống của cùng
    một tuyến, hay nhánh với ống chính của nó, không bị báo. Một ống đi chéo qua phòng, xa cột: **không** bị báo "sát".
-6. *(Test & sửa H7)* Sau khi đi vài tuyến ống, "soát bản vẽ": layer `P-…-3D`, `M-DUCT-3D`, `F-SPRK-3D` **không** bị báo "ngoài chuẩn".
-5. Máy gói 2D: hỏi "đi ống cấp nước 3D" → Claude nói gói này không có lệnh 3D.
+5. *(Test & sửa H7)* Sau khi đi vài tuyến ống, "soát bản vẽ": layer `P-…-3D`, `M-DUCT-3D`, `F-SPRK-3D` **không** bị báo "ngoài chuẩn".
+6. Máy gói 2D: hỏi "đi ống cấp nước 3D" → Claude nói gói này không có lệnh 3D.
+7. *(sửa KTP-13, 14)* Ống gió 600x300 "đi dưới dầm" rồi "soát va chạm": **không** bị báo "sát" chính dầm đó (đỉnh ống cách
+   đáy dầm 100 mm). Hai tuyến nối đầu nhau (vd D110 rồi đi tiếp D90 từ điểm cuối): **không** bị báo "sát 0 mm".
+8. *(sửa KTP-27, 28)* Xuất Excel: thống kê ống ra file `…-ong-mep.xlsx` (sheet "Thống kê ống MEP"), va chạm ra file riêng
+   `…-va-cham-ong-mep.xlsx`; cột "Hệ" ghi tên tiếng Việt ("Cấp nước", "Ống gió cấp"…).
+9. *(sửa KTP-17)* Ống gió 200x500 rẽ lên đứng: co dùng bán kính 500 (cạnh cao) và Claude nói vì sao. Ống D110 với
+   "bán kính co 20": Claude báo bán kính phải lớn hơn 55.
 
 ### E. Giới hạn nói rõ với khách
 
 - Claude nói rõ chỉ vẽ theo cỡ ống khách đưa (hoặc cỡ mặc định của loại ống), **không tính thủy lực / lưu lượng**.
 - Hỏi "độ dốc tối thiểu ống D100 là bao nhiêu": Claude nói 1,2 % là số mặc định, kỹ sư đối chiếu TCVN hiện hành.
 - U một lần xóa hết ống vừa vẽ của lượt.
-
 
 ## P2-H8. Kết cấu: thép dầm / cột / sàn, bảng thép, móng (~25 phút); mục của `checklist-dot-h8.md`
 
@@ -1296,12 +1303,14 @@ AutoCAD thứ hai). Khoảng 30 phút. "Đạt" là thấy đúng như cột ph�
 4. "Neo 150 mm": Claude **cảnh báo** neo dưới mức tối thiểu.
 5. "Mặt cắt cột 300x300 cao 3,3 m, 8Ø20": 8 chấm (4 góc + 4 giữa cạnh), đai; chiều dài thanh = 3300 + 35d.
 6. "Thép sàn ô 4x3 m" (không nói thép): dùng Ø8 a200 hai phương, có móc 180° (thép trơn), Claude nói là thép mẫu.
+   *(sửa KTP-21)* Thanh dài 4000 − 2 × 20 + 2 × 6,25 × 8 = **4060**, thanh ngắn **3060** (mỗi móc cộng 6,25d).
 7. "6Ø25 trong dầm rộng 200": Claude báo **không đủ chỗ** một hàng, không tự dồn.
 
 ### B. Bảng thống kê thép (~6 phút)
 
 1. "Thống kê thép": mỗi số hiệu một dòng (cấu kiện, hình dạng, Ø, CB240-T / CB400-V, dài 1 thanh làm tròn 10 mm, số thanh,
-   tổng dài, kg), dòng "Cộng Ø…" cho từng đường kính, dòng Tổng. Kiểm tay một dòng: kg = 0,00617 × d² × tổng dài (m).
+   tổng dài, kg), dòng "Cộng Ø…" cho từng đường kính, dòng "Cộng CB240-T" / "Cộng CB400-V" cho từng loại thép
+   *(sửa KTP)*, dòng Tổng. Kiểm tay một dòng: kg = 0,00617 × d² × tổng dài (m).
 2. "Chèn bảng thống kê thép vào bản vẽ tại …": bảng trong bản vẽ.
 3. "Xuất bảng thép ra Excel": file `.xlsx`; gọi lại thì Claude hỏi thẻ ghi đè.
 4. "Có cộng hao hụt 3%": thêm cột "Khối lượng + hao hụt 3%". Không nói thì **không** có cột này.
@@ -1316,6 +1325,14 @@ AutoCAD thứ hai). Khoảng 30 phút. "Đạt" là thấy đúng như cột ph�
    bằng thước: bề rộng 220 mm ra 11 mm trên giấy); chữ đai ghi "a150/a200"; thanh Ø18 L=6440.
 2. "Vẽ mặt cắt cột 300x300 20Ø25": Claude báo không đủ chỗ, nhờ bớt thanh hoặc tăng cỡ cột.
 
+### Sửa KTP (sau kiểm tra độc lập phần 2, ~3 phút)
+
+1. *(KTP-19)* Dầm nhịp 5000, đai Ø6a150/a200: đai đầu tiên và đai cuối cùng đều cách gối **50**; hai đầu dầm có số đai a150
+   bằng nhau; đoạn giữa chia đều (khoảng cách không quá 200).
+2. *(KTP-20)* "5Ø20 trong dầm rộng 200": Claude báo **không đủ chỗ** (khe hở giữa hai thanh phải ít nhất bằng một thanh).
+3. *(KTP-31)* "Vẽ thép dầm nhịp 50": Claude báo nhịp quá ngắn (ít nhất 100 mm), không ra lỗi lạ của AutoCAD.
+4. *(KTP-18)* "Dựng móng băng theo trục (0,0) → (6000,0) **không sườn**": móng băng phẳng, không lỗi.
+
 ### C. Móng 3D (~5 phút, gói 3D / Full)
 
 1. "Dựng móng đơn tại (0,0) và (4000,0)" (không nói cỡ): móng 1200 × 1200 đế 350 trên `S-FOOT-3D`, bê tông lót dày 100,
@@ -1329,7 +1346,6 @@ AutoCAD thứ hai). Khoảng 30 phút. "Đạt" là thấy đúng như cột ph�
 
 - Claude nói rõ: bản vẽ hỗ trợ, không tính kết cấu; không tự chọn số thanh / đường kính thép chủ; kỹ sư vẫn kiểm.
 - U một lần xóa hết phần vừa vẽ của lượt.
-
 
 ## P2-H9. Giao diện tiếng Anh (~30 phút); mục của `checklist-dot-h9.md`
 

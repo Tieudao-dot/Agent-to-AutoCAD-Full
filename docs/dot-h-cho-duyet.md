@@ -359,3 +359,19 @@ Không có số mới khách thấy (H9 và Test & sửa H9).
 | Skill `ve-mep`, `ve-ket-cau` là `plan: 2d` (máy gói 3D không nạp) | **giữ** `plan: 2d` (quyết định 12/11: skill 2D không nạp trên máy 3D để không tốn token và không gợi lệnh 2D). Mô tả `draw_mep` / `build_footing` đã có số mặc định và câu "kỹ sư đối chiếu TCVN" | đổi sang `plan: all` (máy 3D nạp cả phần 2D của skill) |
 | Soát theo chuẩn công ty (H4) với layer của lệnh mới | layer không có trong bộ chuẩn công ty bị báo khác chuẩn (như `A-…`) | miễn layer của lệnh như layer khung tên |
 | `mep_report`, `rebar_schedule` dưới UCS | đọc, không đổi tọa độ; `table_position` là điểm UCS (như lệnh đọc khác) | |
+
+## Sau kiểm tra độc lập đợt H phần 2 (sửa KTP, 26/11)
+
+### Quyết định tự chọn mới
+
+| Tình huống | Đã chọn | Muốn đổi thì |
+| --- | --- | --- |
+| *(KTP-21, H8)* Móc 180° thép trơn | thép trơn đo tới mép lớp bảo vệ rồi cộng **6,25d** mỗi móc (luồng chính chọn); sàn Ø8a200 ra L = 3060 | `H8Numbers.PlainHookAddFactor` |
+| *(H7)* Ống gió rẽ theo cạnh cao (rẽ đứng) | bán kính mặc định chỉ tăng khi cần: co rẽ theo cạnh lớn hơn bề rộng lấy 1 × cạnh đó, và báo khách | `MepLogic.BendRadius` |
+| *(H8)* Nhịp dầm nhỏ nhất | 100 mm (nhỏ hơn: báo lỗi, nhờ kiểm đơn vị) | `H8Numbers.MinSpanMm` |
+| *(H8)* Bảng thép | thêm dòng "Cộng CB240-T" / "Cộng CB400-V" (tổng theo loại thép) | |
+| *(KTP-13, H7)* Khe hở báo ra | đo theo tiết diện về phía vật kia (dưới dầm: nửa chiều cao); bước kiểm chạm thật vẫn dùng nửa đường chéo (không bỏ sót) | |
+| *(H7)* Nhận layer dầm / cột khi soát va chạm | `S-` chỉ khi đứng đầu tên layer | `MepLogic.IsStructureLayer` |
+| *(H7)* `under_beams` | theo từng đoạn tuyến (dầm trên đoạn nào thì đoạn đó) | |
+| *(H6, KTP-08 / 09)* File không tiêu đề, cột 1 là số nguyên nhỏ trước tọa độ thật | cột 1 là tên điểm | cho cột bằng `columns` |
+| *(H6, KTP-10)* Số "1.234" (một dấu chấm) | là số thập phân 1,234; chỉ ≥ 2 nhóm hoặc nhóm + phẩy thập phân mới là dấu nghìn | |
