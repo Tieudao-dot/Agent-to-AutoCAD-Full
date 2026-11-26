@@ -19,6 +19,9 @@ quy tắc làm việc và danh bạ thread: [`../CLAUDE.md`](../CLAUDE.md).
   - **Nhánh chốt: `full/nang-cap-g-tong-the` @ `547d6af`** (code `e1455fb`, CI 45710924398 xanh, lõi 1445, trợ lý 407).
   - Báo cáo cho chủ dự án: [`bao-cao-dot-f-g-26-11.md`](bao-cao-dot-f-g-26-11.md). Tiến độ từng bước:
     [`ke-hoach-nang-cap-lenh.md`](ke-hoach-nang-cap-lenh.md) mục "Đợt F", "Đợt G".
+  - **Đính chính 26/11:** log CI của commit chốt (run 45710924398) và bản 5 (45713707097) còn 3 test trợ lý hỏng trên
+    Windows (`# fail 3`; Linux qua hết), CI không báo đỏ vì bước test chỉ tính lệnh cuối. Đang chẩn đoán và sửa ở
+    `full/nang-cap-h-sua-ci`. Luồng chính từ nay đọc số `# fail` trong log trước khi báo CI xanh.
   - **Chưa phần nào của đợt F / G chạy trên AutoCAD thật. Con số chờ chủ dự án duyệt:**
     [`dot-f-cho-duyet.md`](dot-f-cho-duyet.md), [`dot-g-cho-duyet.md`](dot-g-cho-duyet.md).
 
@@ -218,3 +221,5 @@ Sau đợt F + G (ước tính, đo ở thread test tổng thể đợt G; đợ
     $312 (chưa kể luồng chính). Chờ chủ dự án: thử tay, duyệt con số.
   - Chủ dự án chọn làm tiếp nhóm 1 + nhóm 3 (**đợt H**), chốt 3 điểm. Giao H1 (thread đợt F1) và H2 (thread Test & sửa F1)
     chạy cùng lúc từ `547d6af`.
+  - 14h31 H2 viết xong (`export_drawing`), 14h43 H1 viết xong; giao rà chéo (H2: thread đợt F2, H1: thread Test & sửa F1).
+    Thread H1 phát hiện CI Windows bỏ qua test trợ lý hỏng (3 test, có từ bản chốt G và bản 5); giao thread đợt F1 sửa.

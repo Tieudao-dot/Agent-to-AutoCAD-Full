@@ -141,6 +141,13 @@ do luồng chính quyết để chuỗi không dừng:
 | Kiểm tra độc lập F + G (agent khác, cậu yêu cầu) | Lượt đầu 27 lỗi; ba lượt soát lại thấy thêm 16 lỗi nhỏ hơn. Tổng 43 (1 nhiều khả năng nặng, 11 vừa, 31 nhẹ): 42 sửa đúng, 1 nhẹ chấp nhận. 9 lỗi của đợt F vẫn đúng |
 | Luồng chính tự kiểm | CI xanh đúng commit chốt `547d6af`; sau commit code cuối `e1455fb` chỉ có tài liệu thay đổi. Bộ cài bản 5: CI xanh đúng commit `c901952`, nhánh đã chứa `547d6af`, phần khác nhánh chốt chỉ là 13 file của bản thử (nhãn, bỏ kích hoạt, hạn dùng); file bộ cài có trên GitHub, 135 MB |
 
+**Đính chính 26/11 (sau báo cáo):** CI "xanh" của commit chốt (run 45710924398) và bộ cài bản 5 (run 45713707097) còn
+**3 test trợ lý hỏng trên Windows** (log ghi `# fail 3`; trên Linux cả 407 test đều qua). Bước test trợ lý của CI chỉ tính
+mã lỗi của lệnh cuối nên không báo đỏ; luồng chính đã không đọc log nên không thấy. Ba test: ghi chú mũi tên theo style
+chuẩn (F5), Claude xem ảnh vẽ lại (G5), block 3D không điền thuộc tính (KT-42). Đang chẩn đoán xem có phải lỗi thật trên
+Windows không và sửa cả CI (đợt H, nhánh `full/nang-cap-h-sua-ci`). Từ nay luồng chính đọc số `# fail` trong log trước khi
+báo CI xanh.
+
 Lỗi nhiều khả năng nặng của lượt cuối: "render góc nhìn đã lưu" có thể báo lỗi không render được. Đã sửa, cần cậu thử
 thật (G0-3).
 
