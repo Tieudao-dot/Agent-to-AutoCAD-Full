@@ -26,6 +26,12 @@ namespace ClaudeCAD.Plugin.Core
         public const string PlainGrade = "CB240-T", RibbedGrade = "CB400-V";
         /// <summary>Plain bar: 180° hook, inside bend 2.5d, straight 3d. Stirrup: 135° hook, straight max(6d, 75 mm). Ribbed bar: L bend 10d.</summary>
         public const double PlainHookBendFactor = 2.5, PlainHookStraightFactor = 3, StirrupHookFactor = 6, StirrupHookMinMm = 75, RibbedBendFactor = 10;
+        /// <summary>
+        /// KTP-21 (luồng chính chọn 26/11/2026): the length one 180° hook of a plain bar adds to a bar measured to the face of the
+        /// cover, by the usual rule 6.25d (bend 2.5d inside, 3d straight: the approved hook; the part of the bend already in the
+        /// straight length is not counted twice).
+        /// </summary>
+        public const double PlainHookAddFactor = 6.25;
         /// <summary>Weight of a bar: KgPerMFactor × d² (kg / m, d in mm).</summary>
         public const double KgPerMFactor = 0.00617;
         public static readonly double[] Diameters = { 6, 8, 10, 12, 14, 16, 18, 20, 22, 25, 28, 32 };
@@ -52,6 +58,8 @@ namespace ClaudeCAD.Plugin.Core
         public const int MaxBarsInSection = 40, MaxFootings = 500, MaxStirrupLines = 400;
         /// <summary>The first stirrup this far (mm) from the face of the support; spacings allowed between these (mm).</summary>
         public const double FirstStirrupMm = 50, MinSpacingMm = 50, MaxSpacingMm = 1000;
+        /// <summary>KTP-31: the shortest beam span drawn (mm); less is refused with a plain message.</summary>
+        public const double MinSpanMm = 100;
         /// <summary>Layers: footings, lean concrete (3D); concrete outline, bars, texts (2D details).</summary>
         public const string FootingLayer = "S-FOOT-3D", LeanLayer = "S-LEAN-3D", ConcreteLayer = "S-CONC", RebarLayer = "S-REBAR", TextLayer = "S-REBAR-TEXT";
         public const short FootingColor = 8, LeanColor = 9, ConcreteColor = 7, RebarColor = 1, TextColor = 7;
@@ -138,9 +146,8 @@ namespace ClaudeCAD.Plugin.Core
                 : null;
         }
 
-        /// <summary>Extra length of one end hook (mm): plain bar 180° (half a bend of 2.5d inside + 3d straight); ribbed bar: none.</summary>
-        public static double MainHook(double d) =>
-            Plain(d) ? Math.PI * (H8Numbers.PlainHookBendFactor * d + d) / 2 + H8Numbers.PlainHookStraightFactor * d : 0;
+        /// <summary>Extra length of one end hook (mm): plain bar 180° (bend 2.5d inside, 3d straight) adds 6.25d (KTP-21); ribbed bar: none.</summary>
+        public static double MainHook(double d) => Plain(d) ? H8Numbers.PlainHookAddFactor * d : 0;
 
         /// <summary>
         /// Extra length at an anchored end of a main bar (mm): plain bar, its 180° hook; ribbed bar, its L bend of 10d
@@ -160,19 +167,24 @@ namespace ClaudeCAD.Plugin.Core
         }
 
         /// <summary>
-        /// The stirrups of a beam span (mm): end zones (StirrupEndShare of the span by each support) at the end spacing, the middle
-        /// at the middle spacing; first stirrup half a spacing from the support. Returns the positions along the span.
+        /// The stirrups of a beam span (mm), the same at both ends (KTP-19): the first stirrup FirstStirrupMm from each support,
+        /// then the end spacing through each end zone (StirrupEndShare of the span), the middle shared evenly at no more than the
+        /// middle spacing. Returns the positions along the span, left to right.
         /// </summary>
         public static List<double> StirrupPositions(double span, double endSpacing, double midSpacing)
         {
-            var r = new List<double>();
-            double zone = span * H8Numbers.StirrupEndShare;
-            double x = Math.Min(H8Numbers.FirstStirrupMm, span / 2);
-            while (x <= span - H8Numbers.FirstStirrupMm + 1e-9)
+            double first = H8Numbers.FirstStirrupMm;
+            if (span <= 2 * first + 1e-9) return new List<double> { span / 2 };
+            double zone = Math.Min(span * H8Numbers.StirrupEndShare, span / 2);
+            var left = new List<double>();
+            for (double x = first; x <= zone + 1e-9 && x <= span / 2 + 1e-9; x += endSpacing) left.Add(x);
+            double xl = left[left.Count - 1], xr = span - xl;
+            var r = new List<double>(left);
+            if (xr - xl > 1e-9)
             {
-                r.Add(x);
-                bool end = x < zone - 1e-9 || x > span - zone + 1e-9;
-                x += end ? endSpacing : midSpacing;
+                int n = Math.Max(1, (int)Math.Ceiling((xr - xl) / midSpacing - 1e-9));
+                for (int i = 1; i < n; i++) r.Add(xl + (xr - xl) * i / n);
+                for (int i = left.Count - 1; i >= 0; i--) r.Add(span - left[i]);
             }
             return r;
         }
@@ -184,7 +196,8 @@ namespace ClaudeCAD.Plugin.Core
             if (last < first - 1e-9) throw ToolException.Invalid($"{DrawTool}: Ø{Num(barDia)} bars do not fit in {Num(b)} mm with the cover.");
             if (n == 1) return new List<double> { b / 2 };
             double gap = (last - first) / (n - 1);
-            if (gap < barDia - 1e-9) throw ToolException.Invalid($"{DrawTool}: {n}Ø{Num(barDia)} do not fit in one row of {Num(b)} mm (less than one bar between them): ask the user for fewer bars or a wider section.");
+            // KTP-20: the clear gap between two bars (centre to centre less one bar) must be at least one bar
+            if (gap - barDia < barDia - 1e-9) throw ToolException.Invalid($"{DrawTool}: {n}Ø{Num(barDia)} do not fit in one row of {Num(b)} mm (less than one bar between them): ask the user for fewer bars or a wider section.");
             return Enumerable.Range(0, n).Select(i => first + i * gap).ToList();
         }
 
@@ -262,6 +275,7 @@ namespace ClaudeCAD.Plugin.Core
             double stirrupDia, double endSpacing, double midSpacing, double? anchorMm, List<string> warnings)
         {
             if (span <= 0) throw ToolException.Invalid($"{DrawTool}: span must be more than 0 (mm).");
+            if (span < H8Numbers.MinSpanMm) throw ToolException.Invalid($"{DrawTool}: span {Num(span)} mm is too short for a beam drawing (at least {Num(H8Numbers.MinSpanMm)} mm): check the span (mm).");
             double cover = Cover("beam", Math.Max(bottom.d, top.d));
             StirrupLength(b, h, cover, stirrupDia); // the section fits
             BarPositions(bottom.n, b, cover, stirrupDia, bottom.d);
@@ -372,6 +386,14 @@ namespace ClaudeCAD.Plugin.Core
             {
                 double kg = Math.Round(g.Sum(r => r.Kg), H8Numbers.WeightDecimals);
                 var l = new List<object> { "", $"Cộng Ø{Num(g.Key.Dia)}", "", g.Key.Dia, g.Key.Grade, "", g.Sum(r => r.Count), Math.Round(g.Sum(r => r.TotalM), 2), kg, g.Sum(r => r.Splices) };
+                if (wasteShare.HasValue) l.Insert(9, Math.Round(kg * (1 + wasteShare.Value), H8Numbers.WeightDecimals));
+                t.Add(l);
+            }
+            // KTP (nghi vấn): the approved table totals by diameter and by steel grade: one row per grade (CB240-T, CB400-V)
+            foreach (var g in rows.GroupBy(r => r.Grade).OrderBy(g => g.Min(r => r.Dia)))
+            {
+                double kg = Math.Round(g.Sum(r => r.Kg), H8Numbers.WeightDecimals);
+                var l = new List<object> { "", $"Cộng {g.Key}", "", "", g.Key, "", g.Sum(r => r.Count), Math.Round(g.Sum(r => r.TotalM), 2), kg, g.Sum(r => r.Splices) };
                 if (wasteShare.HasValue) l.Insert(9, Math.Round(kg * (1 + wasteShare.Value), H8Numbers.WeightDecimals));
                 t.Add(l);
             }

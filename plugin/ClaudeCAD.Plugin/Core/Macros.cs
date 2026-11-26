@@ -166,10 +166,11 @@ namespace ClaudeCAD.Plugin.Core
         /// <summary>
         /// handle / handles / *_handle(s) / handle1, handle2 (fillet_entities, chamfer_entities) / target, subtract
         /// (solid_subtract: without them a replayed subtract would cut the recorded solids, not the new ones) / source
-        /// (match_properties, nâng cấp đợt B).
+        /// (match_properties, nâng cấp đợt B) / connect_to (draw_mep's branch: KTP-15, without it a replayed branch joins the
+        /// recorded main pipe, not the one the macro drew again).
         /// </summary>
         public static bool IsHandleKey(string k) =>
-            k == "handle" || k == "handles" || k == "target" || k == "subtract" || k == "source" || k.EndsWith("_handle", StringComparison.Ordinal) || k.EndsWith("_handles", StringComparison.Ordinal) ||
+            k == "handle" || k == "handles" || k == "target" || k == "subtract" || k == "source" || k == "connect_to" || k.EndsWith("_handle", StringComparison.Ordinal) || k.EndsWith("_handles", StringComparison.Ordinal) ||
             (k.Length > 6 && k.StartsWith("handle", StringComparison.Ordinal) && k.Substring(6).All(char.IsDigit));
 
         /// <summary>

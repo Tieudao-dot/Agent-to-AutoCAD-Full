@@ -39,7 +39,7 @@ Thread `session_01D56HmFrL65iF9oJokvqXw5` (người viết). Nhánh `full/nang-c
   - mỗi ống được soát với dầm / cột (khối 3D trên layer có BEAM / COL / DAM / COT / S-, hoặc các khối khách chỉ trong
     `other_handles`) và với ống của tuyến khác;
   - "chạm" = hai khối giao nhau (dùng `CheckInterference` và đo thể tích giao như `check_interference`);
-  - "sát" = gần hơn khoảng hở (đo giữa hai hộp bao);
+  - "sát" = gần hơn khoảng hở (ống thẳng đo từ trục ống, theo đúng tiết diện: ống gió dưới dầm tính nửa chiều cao; co / tê đo giữa hai hộp bao; sửa KTP-13 / KTP-30);
   - ống cùng một tuyến, hoặc nhánh với ống chính của nó, không bị báo;
   - `excel` có danh sách.
 
@@ -93,9 +93,10 @@ Thread `session_01D56HmFrL65iF9oJokvqXw5` (người viết). Nhánh `full/nang-c
   Chiều dài lấy theo dấu lúc vẽ. Khách kéo giãn ống bằng lệnh AutoCAD thì thống kê không đổi; vẽ lại bằng `draw_mep` thì đúng.
 - Chiều dài co tính theo đường tim (bán kính × góc), cộng vào chiều dài của cỡ ống đó.
 - Tê đếm vào hệ và cỡ của **nhánh**.
-- Soát "sát": ống thẳng đo từ trục (đúng cả khi chéo); co / tê đo giữa hai hộp bao. Ống gió lấy nửa đường chéo mặt cắt
-  (về phía an toàn).
-- Dầm / cột tìm theo tên layer (BEAM / COL / DAM / COT / S-). Khách dùng tên khác thì chỉ khối qua `other_handles`.
+- Soát "sát": ống thẳng đo từ trục (đúng cả khi chéo); co / tê đo giữa hai hộp bao. Ống gió: việc soát chạm (có chạy
+  `CheckInterference` không) vẫn lấy nửa đường chéo mặt cắt (về phía an toàn); khe hở báo ra đo theo đúng tiết diện về phía
+  vật kia (sửa KTP-13, 26/11). Hai tuyến nối đầu nhau (đầu trục trùng trong 1 mm) không bị báo (KTP-14).
+- Dầm / cột tìm theo tên layer (BEAM / COL / DAM / COT, hoặc bắt đầu bằng S-; sửa 26/11: trước đây "S-" ở bất kỳ đâu). Khách dùng tên khác thì chỉ khối qua `other_handles`.
 - `under_beams`: dầm tìm theo tên layer BEAM / DAM, sàn theo SLAB / SAN; lấy đáy thấp nhất trong vùng tuyến đi qua.
 - Không tính độ dốc cho ống cấp nước / PCCC / ống gió, trừ khi khách cho `slope`.
 

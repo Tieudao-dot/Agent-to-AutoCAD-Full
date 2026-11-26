@@ -25,12 +25,14 @@ AutoCAD 2022–2027. Phần A, B cần máy gói 2D hoặc Full; phần C cần 
 4. "Neo 150 mm": Claude **cảnh báo** neo dưới mức tối thiểu.
 5. "Mặt cắt cột 300x300 cao 3,3 m, 8Ø20": 8 chấm (4 góc + 4 giữa cạnh), đai; chiều dài thanh = 3300 + 35d.
 6. "Thép sàn ô 4x3 m" (không nói thép): dùng Ø8 a200 hai phương, có móc 180° (thép trơn), Claude nói là thép mẫu.
+   *(sửa KTP-21)* Thanh dài 4000 − 2 × 20 + 2 × 6,25 × 8 = **4060**, thanh ngắn **3060** (mỗi móc cộng 6,25d).
 7. "6Ø25 trong dầm rộng 200": Claude báo **không đủ chỗ** một hàng, không tự dồn.
 
 ## B. Bảng thống kê thép (~6 phút)
 
 1. "Thống kê thép": mỗi số hiệu một dòng (cấu kiện, hình dạng, Ø, CB240-T / CB400-V, dài 1 thanh làm tròn 10 mm, số thanh,
-   tổng dài, kg), dòng "Cộng Ø…" cho từng đường kính, dòng Tổng. Kiểm tay một dòng: kg = 0,00617 × d² × tổng dài (m).
+   tổng dài, kg), dòng "Cộng Ø…" cho từng đường kính, dòng "Cộng CB240-T" / "Cộng CB400-V" cho từng loại thép
+   *(sửa KTP)*, dòng Tổng. Kiểm tay một dòng: kg = 0,00617 × d² × tổng dài (m).
 2. "Chèn bảng thống kê thép vào bản vẽ tại …": bảng trong bản vẽ.
 3. "Xuất bảng thép ra Excel": file `.xlsx`; gọi lại thì Claude hỏi thẻ ghi đè.
 4. "Có cộng hao hụt 3%": thêm cột "Khối lượng + hao hụt 3%". Không nói thì **không** có cột này.
@@ -44,6 +46,14 @@ AutoCAD 2022–2027. Phần A, B cần máy gói 2D hoặc Full; phần C cần 
 1. "Vẽ thép dầm 220x400 nhịp 5000, 2Ø18 dưới, 2Ø16 trên": in khung nhìn tỉ lệ 1:50 thì mặt cắt bên cạnh đọc đúng **1:20** (đo
    bằng thước: bề rộng 220 mm ra 11 mm trên giấy); chữ đai ghi "a150/a200"; thanh Ø18 L=6440.
 2. "Vẽ mặt cắt cột 300x300 20Ø25": Claude báo không đủ chỗ, nhờ bớt thanh hoặc tăng cỡ cột.
+
+## Sửa KTP (sau kiểm tra độc lập phần 2, ~3 phút)
+
+1. *(KTP-19)* Dầm nhịp 5000, đai Ø6a150/a200: đai đầu tiên và đai cuối cùng đều cách gối **50**; hai đầu dầm có số đai a150
+   bằng nhau; đoạn giữa chia đều (khoảng cách không quá 200).
+2. *(KTP-20)* "5Ø20 trong dầm rộng 200": Claude báo **không đủ chỗ** (khe hở giữa hai thanh phải ít nhất bằng một thanh).
+3. *(KTP-31)* "Vẽ thép dầm nhịp 50": Claude báo nhịp quá ngắn (ít nhất 100 mm), không ra lỗi lạ của AutoCAD.
+4. *(KTP-18)* "Dựng móng băng theo trục (0,0) → (6000,0) **không sườn**": móng băng phẳng, không lỗi.
 
 ## C. Móng 3D (~5 phút, gói 3D / Full)
 

@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { cadTool, excelParams, handles, type AnyTool, type ToolBridge } from './common.js';
+import { cadTool, excelParams, handle, handles, type AnyTool, type ToolBridge } from './common.js';
 
 /**
  * Nâng cấp đợt H7 (docs/ban-giao/nang-cap-h7.md): MEP pipes and ducts in 3D (3D / Full plans), deferred.
@@ -35,7 +35,7 @@ export function mepTools(b: ToolBridge): AnyTool[] {
         under_beams: z.boolean().optional().describe('Top of the pipe 100 mm under the lowest beam over the route (300 mm under the slab without beams), instead of elevation.'),
         slope: z.number().min(0).max(100).optional().describe('Fall in % along the route (drains; others are level unless given).'),
         bend_radius: z.number().positive().optional().describe('Elbow centre-line radius (mm); default from the size.'),
-        connect_to: z.string().regex(/^[0-9A-Fa-f]{1,16}$/).optional().describe('Handle of a straight pipe drawn by draw_mep that the first point is on: a tee there.'),
+        connect_to: handle.optional().describe('Handle of a straight pipe drawn by draw_mep that the first point is on: a tee there.'),
         layer: z.string().optional().describe('Layer (default: the 3D layer of the system).'),
       }),
     cadTool(b, 'mep_report',
