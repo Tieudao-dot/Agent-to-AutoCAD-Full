@@ -455,7 +455,7 @@ namespace ClaudeCAD.Plugin.Core
             ["Đóng — về bản hiện tại"] = "Close — back to current",
             ["Đóng tab chỉ xem của bản sao và quay lại bản vẽ đang làm"] = "Close the view-only tab of the copy and go back to the drawing you work on",
             ["Lượt đang chạy: thời gian đã trôi qua và số thao tác Claude đã làm trên bản vẽ. Esc trong ô nhập hoặc nút Dừng để dừng"] = "Running turn: time so far and the number of operations Claude did on the drawing. Esc in the input box or the Stop button stops it",
-            ["Bỏ"] = "Remove",
+            ["Bỏ"] = "Skip",
             ["Không gửi tin đang chờ này nữa"] = "Do not send this waiting message",
             ["Gửi"] = "Send",
             ["Gửi (Enter). Shift+Enter xuống dòng, / để chọn mẫu lệnh, ↑↓ gọi lại tin đã gửi"] = "Send (Enter). Shift+Enter new line, / to pick a command template, ↑↓ recall sent messages",
@@ -925,6 +925,19 @@ namespace ClaudeCAD.Plugin.Core
             ["lỗi: "] = "error: ",
             ["Tài khoản Claude"] = "Claude account",
             ["chưa đăng nhập"] = "not signed in",
+            ["Xoay"] = "Rotate",
+            ["Offset"] = "Offset",
+            ["Ghi text"] = "Add text",
+            ["Ghi mtext"] = "Add mtext",
+            ["Regen"] = "Regen",
+            ["Purge"] = "Purge",
+            ["In PDF"] = "Plot to PDF",
+            ["Bind xref"] = "Bind xref",
+            ["Trim"] = "Trim",
+            ["Extend"] = "Extend",
+            ["Reset dynamic block"] = "Reset dynamic block",
+            ["Xoay 3D"] = "Rotate 3D",
+            ["bỏ qua: bước tạo đối tượng trước đó bị lỗi"] = "skipped: an earlier step that creates objects failed",
         };
     }
 }

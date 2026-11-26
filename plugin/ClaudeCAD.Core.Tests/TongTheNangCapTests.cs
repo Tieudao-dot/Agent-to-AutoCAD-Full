@@ -182,12 +182,12 @@ namespace ClaudeCAD.Core.Tests
             int claude = body.IndexOf("PluginProcesses('claude.exe', ExpandConstant('{app}'), True);", StringComparison.Ordinal);
             int busy = body.IndexOf("FileInUse()", StringComparison.Ordinal);
             Assert.True(kt07 >= 0 && kt07 < acad && acad < node && node < claude && claude < busy, "order KT-07 → AutoCAD → helpers → files");
-            Assert.Contains("Hãy khởi động lại máy rồi chạy lại bộ cài, trước khi mở AutoCAD.", body);
+            Assert.Contains(InnoMessages.Cm(iss, "Hãy khởi động lại máy rồi chạy lại bộ cài, trước khi mở AutoCAD."), body); // nâng cấp đợt H9
             // AutoCAD: asked (Thử lại / Hủy), never stopped; helpers: only inside {app}
             Assert.Contains("PluginProcesses('acad.exe', '', False)", iss);
             Assert.DoesNotContain("PluginProcesses('acad.exe', '', True)", iss);
-            Assert.Contains("'Hãy lưu bản vẽ và đóng hết AutoCAD, rồi bấm Thử lại.'", iss);
-            Assert.Contains("['Thử lại', 'Hủy']", iss);
+            Assert.Contains(InnoMessages.Cm(iss, "Hãy lưu bản vẽ và đóng hết AutoCAD, rồi bấm Thử lại."), iss);
+            Assert.Contains("[" + InnoMessages.Cm(iss, "Thử lại") + ", " + InnoMessages.Cm(iss, "Hủy") + "]", iss);
             Assert.Contains("if (Dir <> '') and (Pos(Prefix, Lowercase(Path)) <> 1) then continue;", iss);
             // the leftover retry box (a file in use while copying) is Vietnamese too
             Assert.Contains("AbortRetryIgnoreRetry=&Thử lại", iss);

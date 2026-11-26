@@ -1578,7 +1578,7 @@ namespace ClaudeCAD.Plugin
                         if (missing.Count == 0) { runnable.Add(i); continue; }
                         failed++;
                         if (firstError == null) firstError = Tr("{0}: bỏ qua vì đối tượng {1} của bước trước không vẽ được", m.Calls[i].Tool, string.Join(", ", missing));
-                        AddToolLog(new ToolLogEntry { Tool = m.Calls[i].Tool, State = "error", Error = "bỏ qua: bước tạo đối tượng trước đó bị lỗi" });
+                        AddToolLog(new ToolLogEntry { Tool = m.Calls[i].Tool, State = "error", Error = Tr("bỏ qua: bước tạo đối tượng trước đó bị lỗi") });
                     }
                     var g = runnable;
                     if (g.Count == 0) continue;

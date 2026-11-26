@@ -2825,7 +2825,7 @@ namespace ClaudeCAD.Plugin.UI
             _accountStatus.Text = text ?? "";
             // Not signed in is the one time the account group matters: open it so the buttons are in view.
             if ((text ?? "").IndexOf("chưa đăng nhập", StringComparison.OrdinalIgnoreCase) >= 0 // vi
-                || (text ?? "").IndexOf(Core.L.English("chưa đăng nhập") ?? "not signed in", StringComparison.OrdinalIgnoreCase) >= 0) _accountCat?.Expand();
+                || (text ?? "").IndexOf(Core.L.English("chưa đăng nhập") ?? "not signed in", StringComparison.OrdinalIgnoreCase) >= 0) _accountCat?.Expand(); // vi: the key of the English text
         });
 
         private Border BuildApiKeyPanel()

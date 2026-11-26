@@ -60,8 +60,9 @@ namespace ClaudeCAD.Plugin.Core
             }
             catch (FormatException)
             {
-                // a broken translation never breaks the palette: the Vietnamese template is known good
-                return string.Format(CultureInfo.CurrentCulture, vi, args);
+                // a broken translation never breaks the palette: the Vietnamese template, else the text as it is
+                try { return string.Format(CultureInfo.CurrentCulture, vi, args); }
+                catch (FormatException) { return f; }
             }
         }
 
