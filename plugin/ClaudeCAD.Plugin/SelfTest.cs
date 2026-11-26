@@ -1384,6 +1384,63 @@ namespace ClaudeCAD.Plugin
                 return errs.Count == 0 ? new SelfTestRules.Verdict(true, "soát 2 file, áp chuẩn 2 file (có sao lưu), cần thẻ") : new SelfTestRules.Verdict(false, string.Join("; ", errs));
             });
 
+            // Nâng cấp đợt H6: a survey sheet (CSV, VN-2000 axes, a sloping ground) → points, contours, an alignment,
+            // chainage ticks, a long section with a design line, cross sections (test drawing only)
+            Check("Nâng cấp đợt H6: hạ tầng (nhập điểm CSV, đồng mức, lý trình, trắc dọc, trắc ngang)", () =>
+            {
+                var errs = new List<string>();
+                string csv = Path.Combine(dir, "h6-diem.csv");
+                var sb = new System.Text.StringBuilder("Tên;X;Y;Cao độ\r\n");
+                int n = 0;
+                for (int i = 0; i <= 10; i++)
+                    for (int j = 0; j <= 10; j++)
+                        sb.Append($"P{++n};{(1000 + i * 10).ToString(CultureInfo.InvariantCulture)};{(2000 + j * 10).ToString(CultureInfo.InvariantCulture)};{(10 + j * 0.1 + i * 0.05).ToString("0.000", CultureInfo.InvariantCulture).Replace('.', ',')}\r\n");
+                File.WriteAllText(csv, sb.ToString());
+                Dictionary<string, object> T(Dictionary<string, object> q)
+                {
+                    using (doc.LockDocument())
+                    using (var tr = doc.TransactionManager.StartTransaction())
+                    {
+                        var r = (Dictionary<string, object>)DrawingService.TerrainTool(new ToolContext(doc, tr, true, null), new Params("terrain", q));
+                        tr.Commit();
+                        return r;
+                    }
+                }
+                var imp = T(new Dictionary<string, object> { ["action"] = "import_points", ["file"] = csv, ["origin"] = new List<object> { 1000.0, 2000.0 } });
+                if (Convert.ToInt32(imp["points"]) != 121) errs.Add($"nhập {imp["points"]} điểm (cần 121)");
+                var con = T(new Dictionary<string, object> { ["action"] = "contours", ["interval"] = 0.5 });
+                if (Convert.ToInt32(con["minor"]) + Convert.ToInt32(con["major"]) < 3) errs.Add($"đồng mức: {con["minor"]} + {con["major"]} đường");
+                string align;
+                using (doc.LockDocument())
+                using (var tr = doc.TransactionManager.StartTransaction())
+                {
+                    var ms = (BlockTableRecord)tr.GetObject(SymbolUtilityServices.GetBlockModelSpaceId(doc.Database), OpenMode.ForWrite);
+                    var pl = new Polyline();
+                    pl.AddVertexAt(0, new Point2d(5000, 50000), 0, 0, 0);
+                    pl.AddVertexAt(1, new Point2d(50000, 60000), 0, 0, 0);
+                    pl.AddVertexAt(2, new Point2d(95000, 50000), 0, 0, 0);
+                    pl.SetDatabaseDefaults(doc.Database);
+                    ms.AppendEntity(pl); tr.AddNewlyCreatedDBObject(pl, true);
+                    align = pl.Handle.ToString();
+                    tr.Commit();
+                }
+                var sta = T(new Dictionary<string, object> { ["action"] = "stations", ["alignment_handle"] = align });
+                if (Convert.ToInt32(sta["stakes"]) < 3) errs.Add($"lý trình: {sta["stakes"]} cọc");
+                var pro = T(new Dictionary<string, object>
+                {
+                    ["action"] = "profile", ["alignment_handle"] = align, ["position"] = new List<object> { 0.0, -200000.0 },
+                    ["design"] = new List<object> { new List<object> { 0.0, 10.5 }, new List<object> { 92.0, 11.0 } },
+                });
+                if (Convert.ToInt32(pro["stakes"]) < 6) errs.Add($"trắc dọc: {pro["stakes"]} cọc");
+                if (pro.ContainsKey("off_surface")) errs.Add("trắc dọc: có cọc ngoài mặt địa hình");
+                var crs = T(new Dictionary<string, object> { ["action"] = "cross_sections", ["alignment_handle"] = align, ["half_width"] = 8.0, ["position"] = new List<object> { 0.0, -400000.0 } });
+                if (Convert.ToInt32(crs["sections"]) < 5) errs.Add($"trắc ngang: {crs["sections"]} mặt cắt");
+                try { File.Delete(csv); } catch (Exception) { }
+                return errs.Count == 0
+                    ? new SelfTestRules.Verdict(true, $"121 điểm, {Convert.ToInt32(con["minor"]) + Convert.ToInt32(con["major"])} đồng mức, {pro["stakes"]} cọc, {crs["sections"]} trắc ngang")
+                    : new SelfTestRules.Verdict(false, string.Join("; ", errs));
+            });
+
             string versionFile = Path.Combine(dir, "version-copy.dwg");
             Do("Bản sao phiên bản (Wblock + SaveAs)", () =>
             {

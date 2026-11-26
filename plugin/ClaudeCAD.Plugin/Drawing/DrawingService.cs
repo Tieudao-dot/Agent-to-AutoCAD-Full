@@ -90,6 +90,7 @@ namespace ClaudeCAD.Plugin.Drawing
             RegisterCompare(d); // nâng cấp đợt H3: compare_drawings (Drawing/CompareTools.cs)
             RegisterCompanyStandard(d); // nâng cấp đợt H4: company_standard (Drawing/CompanyStandardTools.cs)
             RegisterBatchFiles(d); // nâng cấp đợt H5: batch_files (Drawing/BatchFilesTools.cs)
+            RegisterTerrain(d); // nâng cấp đợt H6: terrain (Drawing/TerrainTools.cs)
         }
 
         private static void RegisterSystem(ToolDispatcher d, ITurnHost host)

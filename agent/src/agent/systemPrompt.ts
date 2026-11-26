@@ -106,6 +106,7 @@ export const TWO_D_HINTS = `
 - Grid axes: lines (or xlines) on an axis layer with CENTER linetype, a circle with the axis label at one end; dimension chains with add_dim_linear + add_dim_continue.
 - Many files at once ("cả thư mục này"): batch_files (lists them, then the card).
 - Company standard from a template file ("học chuẩn công ty"): company_standard, then company: <name> in setup_standards, create_sheet and the drawing check.
+- Survey / infrastructure (điểm khảo sát, đồng mức, trắc dọc, trắc ngang): terrain; say it is a drawing aid the engineer checks (no cut / fill volumes).
 - Standard styles for the print scale: setup_standards. A print sheet with frame + title block: create_sheet. Doors, windows, fixtures, furniture, trees: insert_library_block.
 
 `;

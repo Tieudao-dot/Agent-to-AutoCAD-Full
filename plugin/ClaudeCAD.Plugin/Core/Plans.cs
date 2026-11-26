@@ -113,6 +113,8 @@ namespace ClaudeCAD.Plugin.Core
             Add(ToolGroup.Common, "compare_drawings");
             // nâng cấp đợt H5 (Drawing/BatchFilesTools.cs): its four tasks are 2D tools (2D / Full; each also checked inside)
             Add(ToolGroup.TwoD, "batch_files");
+            // nâng cấp đợt H6 (Drawing/TerrainTools.cs): survey points, contours, long / cross sections (2D / Full)
+            Add(ToolGroup.TwoD, "terrain");
             // 3D phases 1, 2 and 3 (Drawing/SolidTools.cs, Solid2Tools.cs, PlanTo3dTools.cs, SectionTools.cs): only the 3D and Full plans
             Add(ToolGroup.ThreeD,
                 // draw_solid (nâng cấp đợt A) replaces the six primitives for Claude; their old names stay for recorded macros

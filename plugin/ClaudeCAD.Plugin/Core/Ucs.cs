@@ -351,6 +351,8 @@ namespace ClaudeCAD.Plugin.Core
             "compare_drawings",
             // test tổng thể đợt H: file tools without coordinates (another file's numbers are never turned into this UCS)
             "export_drawing", "company_standard", "batch_files",
+            // nâng cấp đợt H6: survey coordinates are real (VN-2000) ones, never turned into a UCS
+            "terrain",
         };
 
         /// <summary>Params that are directions / displacements (turned, not moved) in Ref mode, any tool.</summary>
