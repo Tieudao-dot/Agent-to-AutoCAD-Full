@@ -105,13 +105,13 @@ namespace ClaudeCAD.Core.Tests
             Assert.Contains("AppName={#AppDisplayName}", iss);
             Assert.Contains("AppVerName={#AppDisplayName} {#AppVersion}", iss);
             Assert.Contains("UninstallDisplayName={#AppDisplayName}", iss);
-            Assert.Contains("'Kích hoạt {#AppDisplayName}'", iss);
+            Assert.Contains(InnoMessages.Cm(iss, "Kích hoạt {#AppDisplayName}"), iss); // nâng cấp đợt H9: a [CustomMessages] text
             Assert.Contains("FinishedLabel={#AppDisplayName} đã được cài", iss);
             Assert.Contains($"Name=\"{ProductInfo.DisplayName}\"", Manifest);
             var plugin = Path.Combine("plugin", "ClaudeCAD.Plugin");
             Assert.Contains("new PaletteSet(Core.ProductInfo.DisplayName, \"CLAUDECHAT\", PaletteGuid)", Src(plugin, "UI", "ChatPalette.cs"));
             Assert.Contains("ProductInfo.WithVersion(ProductInfo.ShortVersion(typeof(ChatControl).Assembly.GetName().Version))", Src(plugin, "UI", "ChatControl.cs"));
-            Assert.Contains("sb.AppendLine(ProductInfo.DisplayName + \" — tự kiểm tra \"", Src(plugin, "SelfTest.cs"));
+            Assert.Contains("sb.AppendLine(ProductInfo.DisplayName + L.Tr(\" — tự kiểm tra \")", Src(plugin, "SelfTest.cs")); // nâng cấp đợt H9
             Assert.Contains("ProductInfo.DisplayName + \" — báo cáo lỗi \"", Src(plugin, "DiagnosticsBundle.cs"));
             // the bundle carries the edition mark
             Assert.Contains("path.join(contents, 'edition.json')", Src("bundle", "make-bundle.mjs"));
@@ -145,9 +145,12 @@ namespace ClaudeCAD.Core.Tests
             Assert.True(silent > 0 && silent < box, "a silent install must not show the question");
             // the two buttons read "Tiếp tục" / "Hủy" (decided 12/11/2026): a task dialog with button labels, not MsgBox (OK / Cancel)
             Assert.DoesNotContain(":= MsgBox(", confirm);
-            foreach (var t in new[] { "bản gốc, chỉ 2D", "phiên bản ' + ExistingVersion", "Lịch sử chat, cài đặt và đăng nhập Claude được giữ", "Key cũ không dùng được", "kích hoạt lại", "chọn gói",
-                                      "Bấm Tiếp tục để cài, Hủy để thoát", "MB_OKCANCEL, ['Tiếp tục', 'Hủy'], 0) = IDOK" })
-                Assert.Contains(t, confirm);
+            // nâng cấp đợt H9: the texts are [CustomMessages] (vietnamese + english), the code reads them
+            foreach (var t in new[] { "bản gốc, chỉ 2D", "Lịch sử chat, cài đặt và đăng nhập Claude được giữ", "Key cũ không dùng được", "kích hoạt lại", "chọn gói",
+                                      "Bấm Tiếp tục để cài, Hủy để thoát" })
+                Assert.Contains(InnoMessages.Cm(iss, t), confirm);
+            Assert.Contains(InnoMessages.Cm(iss, ", phiên bản") + " + ' ' + ExistingVersion", confirm); // the edge space stays in the code
+            Assert.Contains("MB_OKCANCEL, [" + InnoMessages.Cm(iss, "Tiếp tục") + ", " + InnoMessages.Cm(iss, "Hủy") + "], 0) = IDOK", confirm);
             Assert.Contains("Log('silent install: replacing '", confirm);
             var init = Body(iss, "function InitializeSetup(): Boolean;");
             Assert.True(init.IndexOf("ConfirmReplaceOriginal()", StringComparison.Ordinal) < init.IndexOf("#ifdef BundledNode", StringComparison.Ordinal),

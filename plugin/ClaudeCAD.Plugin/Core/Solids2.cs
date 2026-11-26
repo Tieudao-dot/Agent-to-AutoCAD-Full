@@ -507,7 +507,7 @@ namespace ClaudeCAD.Plugin.Core
 
         public static string InterferenceUnconfirmedNote(int n) =>
             $"{n} more pair(s) touch or may overlap but were not measured (only the first {MaxInterferencePairs} flagged pairs are measured per call), " +
-            "so they are neither confirmed clashes nor confirmed safe. Tell the user this in Vietnamese, and check a smaller list (unconfirmed_pairs, or handles against other_handles) to measure them.";
+            "so they are neither confirmed clashes nor confirmed safe. Tell the user this in the user's language, and check a smaller list (unconfirmed_pairs, or handles against other_handles) to measure them.";
 
         public static string InterferenceTruncatedNote(int candidates, int checkedPairs) =>
             $"Only the first {checkedPairs} of {candidates} pairs whose bounding boxes touch were checked (limit {MaxInterferenceCandidates} per call), " +

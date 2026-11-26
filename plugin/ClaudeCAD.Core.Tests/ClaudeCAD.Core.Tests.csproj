@@ -21,6 +21,8 @@
     <Compile Include="..\ClaudeCAD.Plugin\Core\MarkdownLite.cs" Link="Core\MarkdownLite.cs" />
     <Compile Include="..\ClaudeCAD.Plugin\Core\ChatStore.cs" Link="Core\ChatStore.cs" />
     <Compile Include="..\ClaudeCAD.Plugin\Core\PaletteSettings.cs" Link="Core\PaletteSettings.cs" />
+    <Compile Include="..\ClaudeCAD.Plugin\Core\Lang.cs" Link="Core\Lang.cs" />
+    <Compile Include="..\ClaudeCAD.Plugin\Core\LangEn.cs" Link="Core\LangEn.cs" />
     <Compile Include="..\ClaudeCAD.Plugin\Core\QuickTemplates.cs" Link="Core\QuickTemplates.cs" />
     <Compile Include="..\ClaudeCAD.Plugin\Core\SkillStore.cs" Link="Core\SkillStore.cs" />
     <Compile Include="..\ClaudeCAD.Plugin\Core\Macros.cs" Link="Core\Macros.cs" />
@@ -56,6 +58,9 @@
     <Compile Include="..\ClaudeCAD.Plugin\Core\DrawingCompare.cs" Link="Core\DrawingCompare.cs" />
     <Compile Include="..\ClaudeCAD.Plugin\Core\CompanyStandard.cs" Link="Core\CompanyStandard.cs" />
     <Compile Include="..\ClaudeCAD.Plugin\Core\BatchFiles.cs" Link="Core\BatchFiles.cs" />
+    <Compile Include="..\ClaudeCAD.Plugin\Core\Terrain.cs" Link="Core\Terrain.cs" />
+    <Compile Include="..\ClaudeCAD.Plugin\Core\Mep.cs" Link="Core\Mep.cs" />
+    <Compile Include="..\ClaudeCAD.Plugin\Core\Rebar.cs" Link="Core\Rebar.cs" />
     <Compile Include="..\ClaudeCAD.Plugin\Core\Solids3.cs" Link="Core\Solids3.cs" />
   </ItemGroup>
   <ItemGroup>

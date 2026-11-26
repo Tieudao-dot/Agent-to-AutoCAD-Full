@@ -84,7 +84,7 @@ namespace ClaudeCAD.Plugin.Drawing
 
         public const string ReadOnlyMessage =
             "The user turned on \"Chỉ xem\" (read-only) for this drawing: you may only read, measure, look at and explain it. " +
-            "Do not try other tools to change it; tell the user in Vietnamese that you did not change anything and that they can turn off \"Chỉ xem\" (🔒 in the palette) if they want changes.";
+            "Do not try other tools to change it; tell the user in the user\'s language that you did not change anything and that they can turn off \"Chỉ xem\" (🔒 in the palette) if they want changes.";
 
         // batch calls that succeeded; recorded only when the whole batch committed (main thread only)
         private readonly List<(string tool, Dictionary<string, object> p, object result)> _pendingRecords = new List<(string, Dictionary<string, object>, object)>();

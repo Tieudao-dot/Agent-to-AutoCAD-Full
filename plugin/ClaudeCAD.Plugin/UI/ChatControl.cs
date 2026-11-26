@@ -11,6 +11,7 @@ using System.Windows.Media;
 using System.Windows.Threading;
 using ClaudeCAD.Plugin.Core;
 using ClaudeCAD.Plugin.Drawing;
+using static ClaudeCAD.Plugin.Core.L;
 
 namespace ClaudeCAD.Plugin.UI
 {
@@ -120,7 +121,7 @@ namespace ClaudeCAD.Plugin.UI
         private Button _addSkill, _skillsBtn;
         private List<SkillInfo> _skills = new List<SkillInfo>();
         private HashSet<string> _chatSkills = new HashSet<string>(StringComparer.Ordinal);
-        private ComboBox _model, _effort, _theme;
+        private ComboBox _model, _effort, _theme, _language;
         private CheckBox _notify, _visualCheck, _planFirst, _suggestCheck, _hotkey, _versionsCheck, _sideSnapshot;
         private CheckBox _deferTools; // nâng cấp đợt F5
         private Button _versionsBtn;
@@ -224,10 +225,10 @@ namespace ClaudeCAD.Plugin.UI
 
             // ---- top bar: status + usage | Xuất, ⚙, New, Stop
             var top = new DockPanel { Margin = new Thickness(6, 6, 6, 2) };
-            _settingsBtn = IconButton("settings", "Cài đặt — model, mức suy nghĩ, giao diện, cỡ chữ, thông báo");
-            _export = IconButton("export", "Xuất — lưu cuộc chat này ra file Markdown");
-            _new = IconButton("new-chat", "Chat mới — mở đoạn chat mới cho bản vẽ này, đoạn cũ vẫn xem lại được");
-            _stop = IconButton("stop", "Dừng — ngắt lượt đang chạy; phần đã vẽ xong vẫn giữ (hoàn tác bằng 1 lần U)");
+            _settingsBtn = IconButton("settings", Tr("Cài đặt — model, mức suy nghĩ, giao diện, cỡ chữ, thông báo"));
+            _export = IconButton("export", Tr("Xuất — lưu cuộc chat này ra file Markdown"));
+            _new = IconButton("new-chat", Tr("Chat mới — mở đoạn chat mới cho bản vẽ này, đoạn cũ vẫn xem lại được"));
+            _stop = IconButton("stop", Tr("Dừng — ngắt lượt đang chạy; phần đã vẽ xong vẫn giữ (hoàn tác bằng 1 lần U)"));
             _stop.IsEnabled = false;
             _compactBtn = IconButton("chevron-down", CompactTip(false));
             _compactBtn.Click += (s, e) => SetCompact(!_compact);
@@ -251,7 +252,7 @@ namespace ClaudeCAD.Plugin.UI
             top.Children.Add(_modeBtn);
             top.Children.Add(_planBadge);
             var statusStack = new StackPanel { VerticalAlignment = VerticalAlignment.Center };
-            _connection = MutedText("Đang khởi động...");
+            _connection = MutedText(Tr("Đang khởi động..."));
             _usage = MutedText("");
             _usage.FontSize = 11;
             statusStack.Children.Add(_connection);
@@ -285,30 +286,30 @@ namespace ClaudeCAD.Plugin.UI
             // ---- context bar (feature 9)
             var ctxBar = new WrapPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(6, 0, 6, 4) };
             _ctxBar = ctxBar;
-            ctxBar.Children.Add(MutedText("Tỷ lệ "));
-            _scale = MakeCombo(PaletteSettings.Scales.Select(s => s == "" ? "Tự động" : s).ToArray(), 76);
-            _scale.ToolTip = "Tỷ lệ in: quyết định chiều cao chữ và kích thước.";
+            ctxBar.Children.Add(MutedText(Tr("Tỷ lệ ")));
+            _scale = MakeCombo(PaletteSettings.Scales.Select(s => s == "" ? Tr("Tự động") : s).ToArray(), 76);
+            _scale.ToolTip = Tr("Tỷ lệ in: quyết định chiều cao chữ và kích thước.");
             ctxBar.Children.Add(_scale);
-            _addSkill = IconButton("add", "Add skill — thêm file .md từ máy (chọn nhiều file được): vào thư viện và dùng luôn ở đoạn chat này");
+            _addSkill = IconButton("add", Tr("Add skill — thêm file .md từ máy (chọn nhiều file được): vào thư viện và dùng luôn ở đoạn chat này"));
             _addSkill.Margin = new Thickness(6, 0, 1, 0);
             _addSkill.Click += (s, e) => AddSkillRequested?.Invoke();
             ctxBar.Children.Add(_addSkill);
-            _skillsBtn = IconButton("skills", "Skill — skill đang dùng ở đoạn chat này (− bỏ, + dùng) và thư viện skill đã thêm");
+            _skillsBtn = IconButton("skills", Tr("Skill — skill đang dùng ở đoạn chat này (− bỏ, + dùng) và thư viện skill đã thêm"));
             _skillsBtn.Click += (s, e) => { RefreshSkillsPanel(); _skillsPopup.IsOpen = !_skillsPopup.IsOpen; };
             ctxBar.Children.Add(_skillsBtn);
-            _layersBtn = IconButton("layers", "Layer — chọn layer để chat chỉnh sửa (đổi màu, nét, khóa… hoặc sửa đối tượng trên layer)");
+            _layersBtn = IconButton("layers", Tr("Layer — chọn layer để chat chỉnh sửa (đổi màu, nét, khóa… hoặc sửa đối tượng trên layer)"));
             _layersBtn.Click += (s, e) => ToggleLayerPanel();
             ctxBar.Children.Insert(ctxBar.Children.IndexOf(_addSkill), _layersBtn);
-            _macrosBtn = IconButton("macro", "Macro — chạy lại các lượt vẽ đã lưu, không cần Claude (không tốn token)");
+            _macrosBtn = IconButton("macro", Tr("Macro — chạy lại các lượt vẽ đã lưu, không cần Claude (không tốn token)"));
             _macrosBtn.Click += (s, e) => { RefreshMacrosPanel(); _macrosPopup.IsOpen = !_macrosPopup.IsOpen; };
             ctxBar.Children.Add(_macrosBtn);
-            _notesBtn = IconButton("notes", "Ghi chú dự án — gửi kèm mọi tin nhắn (cao độ, chiều dày tường, khung tên…)");
+            _notesBtn = IconButton("notes", Tr("Ghi chú dự án — gửi kèm mọi tin nhắn (cao độ, chiều dày tường, khung tên…)"));
             _notesBtn.Click += (s, e) => NotesRequested?.Invoke();
             ctxBar.Children.Add(_notesBtn);
-            _versionsBtn = IconButton("versions", "Phiên bản — bản sao bản vẽ trước khi chat sửa (30 phút/lần, giữ 10 bản): mở ra xem, Đóng để về bản hiện tại");
+            _versionsBtn = IconButton("versions", Tr("Phiên bản — bản sao bản vẽ trước khi chat sửa (30 phút/lần, giữ 10 bản): mở ra xem, Đóng để về bản hiện tại"));
             _versionsBtn.Click += (s, e) => { RefreshVersionsPanel(); _versionsPopup.IsOpen = !_versionsPopup.IsOpen; };
             ctxBar.Children.Add(_versionsBtn);
-            _readOnlyBtn = new ToggleButton { Content = Icons.WithText("unlock", "Sửa được"), ToolTip = "Chỉ xem: Claude chỉ được đọc, đo, hỏi đáp — không sửa bản vẽ này", MinWidth = 40, Margin = new Thickness(4, 0, 0, 0), Padding = new Thickness(8, 2, 8, 2) };
+            _readOnlyBtn = new ToggleButton { Content = Icons.WithText("unlock", Tr("Sửa được")), ToolTip = Tr("Chỉ xem: Claude chỉ được đọc, đo, hỏi đáp — không sửa bản vẽ này"), MinWidth = 40, Margin = new Thickness(4, 0, 0, 0), Padding = new Thickness(8, 2, 8, 2) };
             _readOnlyBtn.Checked += (s, e) => { PaintReadOnly(); if (!_suppressReadOnlyEvent) ReadOnlyToggled?.Invoke(true); };
             _readOnlyBtn.Unchecked += (s, e) => { PaintReadOnly(); if (!_suppressReadOnlyEvent) ReadOnlyToggled?.Invoke(false); };
             ctxBar.Children.Add(_readOnlyBtn);
@@ -327,7 +328,7 @@ namespace ClaudeCAD.Plugin.UI
                 Padding = new Thickness(8, 2, 8, 3),
                 BorderThickness = new Thickness(0, 1, 0, 0),
                 Visibility = Visibility.Collapsed,
-                ToolTip = "Bấm để mở rộng và xem đoạn chat",
+                ToolTip = Tr("Bấm để mở rộng và xem đoạn chat"),
                 Focusable = false,
             };
             Theme.Ref(_compactLine, BackgroundProperty, Theme.PanelBg);
@@ -354,7 +355,7 @@ namespace ClaudeCAD.Plugin.UI
 
             // ---- banner while an old version is open (read-only tab)
             var bannerRow = new DockPanel { Margin = new Thickness(8, 5, 8, 5) };
-            var closeVersion = new Button { Content = "Đóng — về bản hiện tại", ToolTip = "Đóng tab chỉ xem của bản sao và quay lại bản vẽ đang làm", Padding = new Thickness(10, 2, 10, 2), FontWeight = FontWeights.SemiBold, VerticalAlignment = VerticalAlignment.Center };
+            var closeVersion = new Button { Content = Tr("Đóng — về bản hiện tại"), ToolTip = Tr("Đóng tab chỉ xem của bản sao và quay lại bản vẽ đang làm"), Padding = new Thickness(10, 2, 10, 2), FontWeight = FontWeights.SemiBold, VerticalAlignment = VerticalAlignment.Center };
             closeVersion.Click += (s, e) => VersionCloseRequested?.Invoke();
             DockPanel.SetDock(closeVersion, Dock.Right);
             bannerRow.Children.Add(closeVersion);
@@ -397,7 +398,7 @@ namespace ClaudeCAD.Plugin.UI
             _busyLine.FontSize = 11;
             _busyLine.Margin = new Thickness(0, 0, 0, 3);
             _busyLine.Visibility = Visibility.Collapsed;
-            _busyLine.ToolTip = "Lượt đang chạy: thời gian đã trôi qua và số thao tác Claude đã làm trên bản vẽ. Esc trong ô nhập hoặc nút Dừng để dừng";
+            _busyLine.ToolTip = Tr("Lượt đang chạy: thời gian đã trôi qua và số thao tác Claude đã làm trên bản vẽ. Esc trong ô nhập hoặc nút Dừng để dừng");
             DockPanel.SetDock(_busyLine, Dock.Top);
             bottom.Children.Add(_busyLine);
             _busyTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(1) };
@@ -405,7 +406,7 @@ namespace ClaudeCAD.Plugin.UI
 
             // ---- queued message ("gửi thêm ý" while Claude works)
             _queuedRow = new DockPanel { Margin = new Thickness(0, 0, 0, 4), Visibility = Visibility.Collapsed };
-            var dropQueued = SmallButton("Bỏ", "Không gửi tin đang chờ này nữa");
+            var dropQueued = SmallButton(Tr("Bỏ"), Tr("Không gửi tin đang chờ này nữa"));
             dropQueued.Click += (s, e) => QueueCancelRequested?.Invoke();
             DockPanel.SetDock(dropQueued, Dock.Right);
             _queuedRow.Children.Add(dropQueued);
@@ -420,16 +421,16 @@ namespace ClaudeCAD.Plugin.UI
             bottom.Children.Add(_chips);
 
             var actions = new DockPanel { Margin = new Thickness(0, 4, 0, 0) };
-            _send = MakeButton("Gửi", "Gửi (Enter). Shift+Enter xuống dòng, / để chọn mẫu lệnh, ↑↓ gọi lại tin đã gửi");
+            _send = MakeButton(Tr("Gửi"), Tr("Gửi (Enter). Shift+Enter xuống dòng, / để chọn mẫu lệnh, ↑↓ gọi lại tin đã gửi"));
             DockPanel.SetDock(_send, Dock.Right);
             actions.Children.Add(_send);
             var left = new StackPanel { Orientation = Orientation.Horizontal };
             _leftActions = left;
             // Same icon row as the toolbar (screen A1): glyph + "Tên — giải thích ngắn" tooltip.
-            _pickSel = IconButton("select", "Chọn đối tượng — quét chọn trên bản vẽ để gửi kèm tin nhắn");
-            _pickPt = IconButton("point", "Lấy điểm — bấm điểm trên bản vẽ để chèn tọa độ vào tin nhắn (Enter để xong)");
-            _addImg = IconButton("image", "Ảnh — đính kèm ảnh phác thảo / ảnh scan (hoặc dán Ctrl+V, kéo thả vào khung chat)");
-            _capture = IconButton("capture", "Chụp — chụp vùng bản vẽ đang xem gửi kèm, để chỉ cho Claude \"chỗ này sai\"");
+            _pickSel = IconButton("select", Tr("Chọn đối tượng — quét chọn trên bản vẽ để gửi kèm tin nhắn"));
+            _pickPt = IconButton("point", Tr("Lấy điểm — bấm điểm trên bản vẽ để chèn tọa độ vào tin nhắn (Enter để xong)"));
+            _addImg = IconButton("image", Tr("Ảnh — đính kèm ảnh phác thảo / ảnh scan (hoặc dán Ctrl+V, kéo thả vào khung chat)"));
+            _capture = IconButton("capture", Tr("Chụp — chụp vùng bản vẽ đang xem gửi kèm, để chỉ cho Claude \"chỗ này sai\""));
             _capture.Click += (s, e) => CaptureScreenRequested?.Invoke();
             foreach (var b in new[] { _pickSel, _pickPt, _addImg, _capture }) { b.Margin = new Thickness(0, 0, 2, 0); left.Children.Add(b); }
             actions.Children.Add(left);
@@ -491,7 +492,7 @@ namespace ClaudeCAD.Plugin.UI
             _skillsHeader = new TextBlock { FontWeight = FontWeights.SemiBold, VerticalAlignment = VerticalAlignment.Center };
             Theme.Ref(_skillsHeader, TextBlock.ForegroundProperty, Theme.Fg);
             var skillsHead = new DockPanel { Margin = new Thickness(0, 0, 0, 6) };
-            var addInPanel = SmallButton("+ Add skill", "Thêm skill từ file .md (chọn được nhiều file): vào thư viện và dùng luôn trong đoạn chat này");
+            var addInPanel = SmallButton("+ Add skill", Tr("Thêm skill từ file .md (chọn được nhiều file): vào thư viện và dùng luôn trong đoạn chat này"));
             addInPanel.Margin = new Thickness(0);
             addInPanel.Click += (s, e) => AddSkillRequested?.Invoke();
             DockPanel.SetDock(addInPanel, Dock.Right);
@@ -507,12 +508,12 @@ namespace ClaudeCAD.Plugin.UI
 
             // ---- macros popup
             var macrosHead = new DockPanel { Margin = new Thickness(0, 0, 0, 6) };
-            var macrosFolder = SmallButton("Mở thư mục", "Mở thư mục macro trong Explorer");
+            var macrosFolder = SmallButton(Tr("Mở thư mục"), Tr("Mở thư mục macro trong Explorer"));
             macrosFolder.Margin = new Thickness(0);
             macrosFolder.Click += (s, e) => OpenMacrosFolderRequested?.Invoke();
             DockPanel.SetDock(macrosFolder, Dock.Right);
             macrosHead.Children.Add(macrosFolder);
-            var macrosTitle = new TextBlock { Text = "Macro — chạy lại không cần Claude", FontWeight = FontWeights.SemiBold, VerticalAlignment = VerticalAlignment.Center };
+            var macrosTitle = new TextBlock { Text = Tr("Macro — chạy lại không cần Claude"), FontWeight = FontWeights.SemiBold, VerticalAlignment = VerticalAlignment.Center };
             Theme.Ref(macrosTitle, TextBlock.ForegroundProperty, Theme.Fg);
             macrosHead.Children.Add(macrosTitle);
             var macrosStack = new StackPanel { Margin = new Thickness(10), Width = 340 };
@@ -526,15 +527,15 @@ namespace ClaudeCAD.Plugin.UI
 
             // ---- versions popup
             var versionsHead = new DockPanel { Margin = new Thickness(0, 0, 0, 4) };
-            var versionsFolder = SmallButton("Mở thư mục", "Mở thư mục chứa các bản sao trong Explorer");
+            var versionsFolder = SmallButton(Tr("Mở thư mục"), Tr("Mở thư mục chứa các bản sao trong Explorer"));
             versionsFolder.Margin = new Thickness(0);
             versionsFolder.Click += (s, e) => OpenVersionsFolderRequested?.Invoke();
             DockPanel.SetDock(versionsFolder, Dock.Right);
             versionsHead.Children.Add(versionsFolder);
-            var versionsTitle = new TextBlock { Text = "Phiên bản của bản vẽ này", FontWeight = FontWeights.SemiBold, VerticalAlignment = VerticalAlignment.Center };
+            var versionsTitle = new TextBlock { Text = Tr("Phiên bản của bản vẽ này"), FontWeight = FontWeights.SemiBold, VerticalAlignment = VerticalAlignment.Center };
             Theme.Ref(versionsTitle, TextBlock.ForegroundProperty, Theme.Fg);
             versionsHead.Children.Add(versionsTitle);
-            var versionsHint = MutedText("Tự lưu bản sao ngay trước khi chat sửa bản vẽ, tối đa 30 phút một lần, giữ 10 bản gần nhất. Mở ra là một tab chỉ xem.");
+            var versionsHint = MutedText(Tr("Tự lưu bản sao ngay trước khi chat sửa bản vẽ, tối đa 30 phút một lần, giữ 10 bản gần nhất. Mở ra là một tab chỉ xem."));
             versionsHint.FontSize = 11;
             versionsHint.TextWrapping = TextWrapping.Wrap;
             versionsHint.Margin = new Thickness(0, 0, 0, 6);
@@ -612,7 +613,7 @@ namespace ClaudeCAD.Plugin.UI
             {
                 var item = new MenuItem
                 {
-                    Header = m == WorkModeLogic.Both ? "Cả hai (2D và 3D)" : m == WorkModeLogic.TwoD ? "2D — chỉ lệnh 2D" : "3D — chỉ lệnh 3D",
+                    Header = m == WorkModeLogic.Both ? Tr("Cả hai (2D và 3D)") : m == WorkModeLogic.TwoD ? Tr("2D — chỉ lệnh 2D") : Tr("3D — chỉ lệnh 3D"),
                     IsCheckable = true,
                     Tag = m,
                 };
@@ -722,7 +723,7 @@ namespace ClaudeCAD.Plugin.UI
                     Padding = new Thickness(6, 2, 6, 2),
                     BorderThickness = new Thickness(0, 0, 0, 1),
                     Focusable = false,
-                    ToolTip = "Bấm để mở / thu gọn",
+                    ToolTip = Tr("Bấm để mở / thu gọn"),
                 };
                 Theme.Ref(header, Control.BackgroundProperty, Theme.HeaderBg);
                 Theme.Ref(header, Control.BorderBrushProperty, Theme.Border);
@@ -810,7 +811,7 @@ namespace ClaudeCAD.Plugin.UI
                 FontSize = 12,
                 TextWrapping = TextWrapping.Wrap, // the name of the bản thử nội bộ is long
                 Margin = new Thickness(8, 6, 8, 2),
-                ToolTip = "Tên bản cài và phiên bản (lệnh trong AutoCAD vẫn là CLAUDECHAT / CC)",
+                ToolTip = Tr("Tên bản cài và phiên bản (lệnh trong AutoCAD vẫn là CLAUDECHAT / CC)"),
             };
             Theme.Ref(product, TextBlock.ForegroundProperty, Theme.Fg);
             p.Children.Add(product);
@@ -864,41 +865,44 @@ namespace ClaudeCAD.Plugin.UI
 
             // ---- Chung: giao diện
             var look = NewGrid();
-            _theme = MakeCombo(new[] { "Theo AutoCAD", "Tối", "Sáng" }, double.NaN);
-            Row(look, "Giao diện", _theme, "Màu khung chat: theo theme AutoCAD (khuyên dùng), hoặc ép tối / sáng");
+            // nâng cấp đợt H9: the language list shows each language in its own words (never translated)
+            _language = MakeCombo(L.Languages.Select(L.Label).ToArray(), double.NaN);
+            Row(look, "Ngôn ngữ / Language", _language, Tr("Ngôn ngữ của khung chat và câu trả lời của Claude (từ tin nhắn tiếp theo). Chữ vẽ vào bản vẽ vẫn là tiếng Việt.")); // vi: always both languages
+            _theme = MakeCombo(new[] { Tr("Theo AutoCAD"), Tr("Tối"), Tr("Sáng") }, double.NaN);
+            Row(look, Tr("Giao diện"), _theme, Tr("Màu khung chat: theo theme AutoCAD (khuyên dùng), hoặc ép tối / sáng"));
             var fonts = new StackPanel { Orientation = Orientation.Horizontal };
-            var minus = SmallButton("A−", "Chữ nhỏ hơn (Ctrl + lăn chuột xuống)");
-            var plus = SmallButton("A+", "Chữ to hơn (Ctrl + lăn chuột lên)");
+            var minus = SmallButton("A−", Tr("Chữ nhỏ hơn (Ctrl + lăn chuột xuống)"));
+            var plus = SmallButton("A+", Tr("Chữ to hơn (Ctrl + lăn chuột lên)"));
             minus.Click += (s, e) => ChangeFont(-1);
             plus.Click += (s, e) => ChangeFont(+1);
             fonts.Children.Add(minus);
             fonts.Children.Add(plus);
-            Row(look, "Cỡ chữ", fonts, "Mặc định theo cỡ chữ palette của AutoCAD; chọn cỡ ở đây thì giữ cỡ của cậu");
-            _notify = CheckRow(look, "Báo khi lượt xong", "Bong bóng ở icon " + ProductInfo.DisplayName + " trên thanh trạng thái khi khung chat đang đóng / tự ẩn; và thông báo Windows khi AutoCAD không phải cửa sổ trước mặt");
-            _hotkey = CheckRow(look, "Phím tắt Ctrl+Shift+Space", "Mở palette và đặt con trỏ vào ô nhập (lệnh tắt: CC)");
-            p.Children.Add(new Category("CHUNG — GIAO DIỆN", look).Root);
+            Row(look, Tr("Cỡ chữ"), fonts, Tr("Mặc định theo cỡ chữ palette của AutoCAD; chọn cỡ ở đây thì giữ cỡ của cậu"));
+            _notify = CheckRow(look, Tr("Báo khi lượt xong"), Tr("Bong bóng ở icon {0} trên thanh trạng thái khi khung chat đang đóng / tự ẩn; và thông báo Windows khi AutoCAD không phải cửa sổ trước mặt", ProductInfo.DisplayName));
+            _hotkey = CheckRow(look, Tr("Phím tắt Ctrl+Shift+Space"), Tr("Mở palette và đặt con trỏ vào ô nhập (lệnh tắt: CC)"));
+            p.Children.Add(new Category(Tr("CHUNG — GIAO DIỆN"), look).Root);
 
             // ---- Cách Claude làm việc
             var work = NewGrid();
             _model = MakeCombo(PaletteSettings.Models.Select(PaletteSettings.ModelLabel).ToArray(), double.NaN);
-            Row(work, "Model", _model, "Model Claude dùng cho các lượt sau; mặc định là model của trợ lý");
-            _effort = MakeCombo(new[] { "Mặc định", "low — nhanh", "medium", "high", "xhigh — kỹ nhất" }, double.NaN);
-            Row(work, "Mức suy nghĩ", _effort, "Càng cao Claude càng cân nhắc kỹ nhưng chậm và tốn token hơn");
-            _visualCheck = CheckRow(work, "Tự kiểm tra bằng ảnh", "Claude chụp vùng vừa vẽ (capture_view) để tự soát lỗi; tốn thêm ít token cho mỗi ảnh");
-            _planFirst = CheckRow(work, "Kế hoạch trước việc lớn", "Thẻ kế hoạch có nút Làm / Sửa kế hoạch trước khi Claude vẽ việc nhiều bước");
-            _suggestCheck = CheckRow(work, "Gợi ý bước tiếp theo", "2–3 nút gợi ý dưới câu trả lời; bấm là gửi");
-            _deferTools = CheckRow(work, F5Numbers.DeferToolsLabel, F5Numbers.DeferToolsTip); // nâng cấp đợt F5
-            p.Children.Add(new Category("CÁCH CLAUDE LÀM VIỆC", work).Root);
+            Row(work, "Model", _model, Tr("Model Claude dùng cho các lượt sau; mặc định là model của trợ lý"));
+            _effort = MakeCombo(new[] { Tr("Mặc định"), Tr("low — nhanh"), "medium", "high", Tr("xhigh — kỹ nhất") }, double.NaN);
+            Row(work, Tr("Mức suy nghĩ"), _effort, Tr("Càng cao Claude càng cân nhắc kỹ nhưng chậm và tốn token hơn"));
+            _visualCheck = CheckRow(work, Tr("Tự kiểm tra bằng ảnh"), Tr("Claude chụp vùng vừa vẽ (capture_view) để tự soát lỗi; tốn thêm ít token cho mỗi ảnh"));
+            _planFirst = CheckRow(work, Tr("Kế hoạch trước việc lớn"), Tr("Thẻ kế hoạch có nút Làm / Sửa kế hoạch trước khi Claude vẽ việc nhiều bước"));
+            _suggestCheck = CheckRow(work, Tr("Gợi ý bước tiếp theo"), Tr("2–3 nút gợi ý dưới câu trả lời; bấm là gửi"));
+            _deferTools = CheckRow(work, Tr(F5Numbers.DeferToolsLabel), Tr(F5Numbers.DeferToolsTip)); // nâng cấp đợt F5
+            p.Children.Add(new Category(Tr("CÁCH CLAUDE LÀM VIỆC"), work).Root);
 
             // ---- An toàn bản vẽ
             var safety = NewGrid();
-            _versionsCheck = CheckRow(safety, "Lưu phiên bản trước khi sửa", "Bản sao DWG trong %LocalAppData%\\ClaudeCAD\\versions (30 phút/lần, giữ 10 bản); mở xem bằng nút ⟲");
-            _sideSnapshot = CheckRow(safety, "Biên bản cạnh bản vẽ", "Biên bản thay đổi lưu thêm trong thư mục ẩn .claudecad cạnh file DWG, để máy khác có cài plugin cũng biết bản vẽ đã được sửa tay", on: false);
-            p.Children.Add(new Category("AN TOÀN BẢN VẼ", safety).Root);
+            _versionsCheck = CheckRow(safety, Tr("Lưu phiên bản trước khi sửa"), Tr("Bản sao DWG trong %LocalAppData%\\ClaudeCAD\\versions (30 phút/lần, giữ 10 bản); mở xem bằng nút ⟲"));
+            _sideSnapshot = CheckRow(safety, Tr("Biên bản cạnh bản vẽ"), Tr("Biên bản thay đổi lưu thêm trong thư mục ẩn .claudecad cạnh file DWG, để máy khác có cài plugin cũng biết bản vẽ đã được sửa tay"), on: false);
+            p.Children.Add(new Category(Tr("AN TOÀN BẢN VẼ"), safety).Root);
 
             // ---- Tài khoản AI (thu gọn)
             var account = new StackPanel { Margin = new Thickness(6, 4, 6, 6) };
-            _accountStatus = MutedText("Đang kiểm tra...");
+            _accountStatus = MutedText(Tr("Đang kiểm tra..."));
             _accountStatus.TextWrapping = TextWrapping.Wrap;
             _accountStatus.TextTrimming = TextTrimming.None;
             _accountStatus.FontSize = 11;
@@ -921,28 +925,29 @@ namespace ClaudeCAD.Plugin.UI
             }
             // KT-41: shown with the plan line (activated machine): ask the device list now, or paste the owner's codes
             _planButtons = new WrapPanel { Margin = new Thickness(0, 4, 0, 0), Visibility = Visibility.Collapsed };
-            Act(_planButtons, "Kiểm tra lại", "Hỏi lại chủ plugin ngay (trạng thái máy, gói) thay cho chờ lượt tự kiểm tra ~6 giờ/lần", () => ActivationCheckRequested?.Invoke());
-            Act(_planButtons, "Dán mã của chủ plugin", "Máy không có mạng: dán dòng gói / mã miễn kiểm tra chủ plugin gửi qua email", () => AddCodePasteCard());
+            Act(_planButtons, Tr("Kiểm tra lại"), Tr("Hỏi lại chủ plugin ngay (trạng thái máy, gói) thay cho chờ lượt tự kiểm tra ~6 giờ/lần"), () => ActivationCheckRequested?.Invoke());
+            Act(_planButtons, Tr("Dán mã của chủ plugin"), Tr("Máy không có mạng: dán dòng gói / mã miễn kiểm tra chủ plugin gửi qua email"), () => AddCodePasteCard());
             account.Children.Add(_planButtons);
-            Act(accButtons, "Đăng nhập Claude", "Đăng nhập tài khoản Claude Pro/Max trên trình duyệt (dùng Claude Code có sẵn trong plugin)", () => LoginRequested?.Invoke());
-            Act(accButtons, "Đổi tài khoản", "Đăng xuất tài khoản hiện tại rồi đăng nhập tài khoản Claude khác", () => SwitchAccountRequested?.Invoke());
-            Act(accButtons, "Đăng xuất", "Đăng xuất tài khoản Claude trên máy này (cả Claude Code nếu có)", () => LogoutRequested?.Invoke());
-            Act(accButtons, "Dùng API key", "Dán API key Anthropic (trả theo lượng dùng) thay cho tài khoản Pro/Max", () => ShowApiKeyPanel(ApiKeyMask?.Invoke()));
+            Act(accButtons, Tr("Đăng nhập Claude"), Tr("Đăng nhập tài khoản Claude Pro/Max trên trình duyệt (dùng Claude Code có sẵn trong plugin)"), () => LoginRequested?.Invoke());
+            Act(accButtons, Tr("Đổi tài khoản"), Tr("Đăng xuất tài khoản hiện tại rồi đăng nhập tài khoản Claude khác"), () => SwitchAccountRequested?.Invoke());
+            Act(accButtons, Tr("Đăng xuất"), Tr("Đăng xuất tài khoản Claude trên máy này (cả Claude Code nếu có)"), () => LogoutRequested?.Invoke());
+            Act(accButtons, Tr("Dùng API key"), Tr("Dán API key Anthropic (trả theo lượng dùng) thay cho tài khoản Pro/Max"), () => ShowApiKeyPanel(ApiKeyMask?.Invoke()));
             account.Children.Add(accButtons);
-            _accountCat = new Category("TÀI KHOẢN AI", account, expanded: false);
+            _accountCat = new Category(Tr("TÀI KHOẢN AI"), account, expanded: false);
             p.Children.Add(_accountCat.Root);
 
             // ---- Trợ giúp (thu gọn)
             var help = new StackPanel { Margin = new Thickness(6, 4, 6, 6) };
             var helpButtons = new WrapPanel();
-            Act(helpButtons, "Gửi báo cáo lỗi", "Gom thông tin máy, log, kết quả tự kiểm tra thành một file .zip trên Desktop để gửi cho người hỗ trợ", () => ReportRequested?.Invoke());
-            Act(helpButtons, "Hướng dẫn bắt đầu", "Kiểm tra cài đặt, đăng nhập, tự kiểm tra", () => WelcomeRequested?.Invoke());
+            Act(helpButtons, Tr("Gửi báo cáo lỗi"), Tr("Gom thông tin máy, log, kết quả tự kiểm tra thành một file .zip trên Desktop để gửi cho người hỗ trợ"), () => ReportRequested?.Invoke());
+            Act(helpButtons, Tr("Hướng dẫn bắt đầu"), Tr("Kiểm tra cài đặt, đăng nhập, tự kiểm tra"), () => WelcomeRequested?.Invoke());
             help.Children.Add(helpButtons);
-            p.Children.Add(new Category("TRỢ GIÚP", help, expanded: false).Root);
+            p.Children.Add(new Category(Tr("TRỢ GIÚP"), help, expanded: false).Root);
 
             _model.SelectionChanged += (s, e) => OnSettingsUi();
             _effort.SelectionChanged += (s, e) => OnSettingsUi();
             _theme.SelectionChanged += (s, e) => OnSettingsUi();
+            _language.SelectionChanged += (s, e) => OnSettingsUi(); // KTP: the language list reaches the controller (it did not before)
             _notify.Checked += (s, e) => OnSettingsUi();
             _notify.Unchecked += (s, e) => OnSettingsUi();
             return border;
@@ -1071,6 +1076,7 @@ namespace ClaudeCAD.Plugin.UI
                 _model.SelectedIndex = Math.Max(0, Array.IndexOf(PaletteSettings.Models, s.Model));
                 _effort.SelectedIndex = Math.Max(0, Array.IndexOf(PaletteSettings.Efforts, s.Effort));
                 _theme.SelectedIndex = s.Theme == "dark" ? 1 : s.Theme == "light" ? 2 : 0;
+                _language.SelectedIndex = Math.Max(0, Array.IndexOf(L.Languages, L.Normalize(s.Language)));
                 _notify.IsChecked = s.Notify;
                 _visualCheck.IsChecked = s.VisualCheck;
                 _deferTools.IsChecked = s.DeferTools;
@@ -1095,6 +1101,7 @@ namespace ClaudeCAD.Plugin.UI
             _settings.Model = PaletteSettings.Models[Math.Max(0, _model.SelectedIndex)];
             _settings.Effort = PaletteSettings.Efforts[Math.Max(0, _effort.SelectedIndex)];
             _settings.Theme = _theme.SelectedIndex == 1 ? "dark" : _theme.SelectedIndex == 2 ? "light" : "auto";
+            _settings.Language = L.Languages[Math.Max(0, _language.SelectedIndex)];
             _settings.Notify = _notify.IsChecked == true;
             _settings.VisualCheck = _visualCheck.IsChecked == true;
             _settings.DeferTools = _deferTools.IsChecked == true;
@@ -1239,7 +1246,7 @@ namespace ClaudeCAD.Plugin.UI
                 catch (Exception ex)
                 {
                     e.Handled = true;
-                    AddNote("Không dán được ảnh: " + ex.Message, true);
+                    AddNote(Tr("Không dán được ảnh: ") + ex.Message, true);
                 }
             }
         }
@@ -1253,18 +1260,18 @@ namespace ClaudeCAD.Plugin.UI
             if (table == null) return;
             e.CancelCommand();
             InsertAtCaret("\n" + table + "\n");
-            _toolStatus.Text = $"Đã dán bảng {rows} hàng × {cols} cột (dạng bảng Markdown).";
+            _toolStatus.Text = Tr("Đã dán bảng {0} hàng × {1} cột (dạng bảng Markdown).", rows, cols);
         }
 
         private void SubmitInput()
         {
             // While Claude is working the message is not lost and not blocked: the controller queues it
             // and sends it when the turn ends (the row above the input shows it, with "Bỏ").
-            if (_viewingVersion) { _toolStatus.Text = "Đang xem phiên bản cũ (chỉ xem) — bấm \"Đóng — về bản hiện tại\" rồi chat."; return; }
+            if (_viewingVersion) { _toolStatus.Text = Tr("Đang xem phiên bản cũ (chỉ xem) — bấm \"Đóng — về bản hiện tại\" rồi chat."); return; }
             _slashPopup.IsOpen = false;
             var text = _input.Text.Trim();
             if (text.Length == 0 && _images.Count == 0) return;
-            if (text.Length == 0) text = "Vẽ theo ảnh đính kèm.";
+            if (text.Length == 0) text = Tr("Vẽ theo ảnh đính kèm.");
             var msg = new ComposedMessage
             {
                 Text = text,
@@ -1336,15 +1343,15 @@ namespace ClaudeCAD.Plugin.UI
         {
             var dlg = new Microsoft.Win32.OpenFileDialog
             {
-                Title = "Chọn ảnh phác thảo / ảnh scan",
-                Filter = "Ảnh (*.png;*.jpg;*.jpeg;*.bmp;*.gif;*.tif)|*.png;*.jpg;*.jpeg;*.bmp;*.gif;*.tif;*.tiff",
+                Title = Tr("Chọn ảnh phác thảo / ảnh scan"),
+                Filter = Tr("Ảnh (*.png;*.jpg;*.jpeg;*.bmp;*.gif;*.tif)|*.png;*.jpg;*.jpeg;*.bmp;*.gif;*.tif;*.tiff"),
                 Multiselect = true,
             };
             if (dlg.ShowDialog() != true) return;
             foreach (var f in dlg.FileNames)
             {
                 try { AddImage(ImageAttachment.FromFile(f)); }
-                catch (Exception ex) { AddNote($"Không đọc được ảnh {System.IO.Path.GetFileName(f)}: {ex.Message}", true); }
+                catch (Exception ex) { AddNote(Tr("Không đọc được ảnh {0}: {1}", System.IO.Path.GetFileName(f), ex.Message), true); }
             }
         }
 
@@ -1355,13 +1362,13 @@ namespace ClaudeCAD.Plugin.UI
             {
                 if (!ImageAttachment.IsImageFile(f)) continue;
                 try { AddImage(ImageAttachment.FromFile(f)); }
-                catch (Exception ex) { AddNote($"Không đọc được ảnh {System.IO.Path.GetFileName(f)}: {ex.Message}", true); }
+                catch (Exception ex) { AddNote(Tr("Không đọc được ảnh {0}: {1}", System.IO.Path.GetFileName(f), ex.Message), true); }
             }
         }
 
         private void AddImage(ImageAttachment img)
         {
-            if (_images.Count >= 5) { AddNote("Tối đa 5 ảnh mỗi tin nhắn.", true); return; }
+            if (_images.Count >= 5) { AddNote(Tr("Tối đa 5 ảnh mỗi tin nhắn."), true); return; }
             _images.Add(img);
             RefreshChips();
         }
@@ -1373,12 +1380,12 @@ namespace ClaudeCAD.Plugin.UI
             {
                 var layers = _selection.Layers;
                 int kept = LayerSelection.Filter(_selection.Handles, _selection.HandleLayers, _excludedLayers).Count;
-                string onLayers = layers.Count > 0 ? $" trên {layers.Count} layer" : "";
+                string onLayers = layers.Count > 0 ? Tr(" trên {0} layer", layers.Count) : "";
                 var label = _selectionIncluded
                     ? (kept == _selection.Count
-                        ? $"Kèm {_selection.Count} đối tượng đang chọn{onLayers} ({_selection.Summary})"
-                        : $"Kèm {kept}/{_selection.Count} đối tượng đang chọn (bỏ {_excludedLayers.Count} layer)")
-                    : $"Không kèm {_selection.Count} đối tượng đang chọn";
+                        ? Tr("Kèm {0} đối tượng đang chọn{1} ({2})", _selection.Count, onLayers, _selection.Summary)
+                        : Tr("Kèm {0}/{1} đối tượng đang chọn (bỏ {2} layer)", kept, _selection.Count, _excludedLayers.Count))
+                    : Tr("Không kèm {0} đối tượng đang chọn", _selection.Count);
                 _chips.Children.Add(Chip(label, () => { _selectionIncluded = !_selectionIncluded; RefreshChips(); },
                     _selectionIncluded ? "✕" : "+", () => ZoomRequested?.Invoke(_selection.Handles)));
                 if (_selectionIncluded && layers.Count > 0) _chips.Children.Add(SelectionLayerRow(layers));
@@ -1386,12 +1393,12 @@ namespace ClaudeCAD.Plugin.UI
             if (_layerScope.Count > 0)
             {
                 int total = _layerScope.Sum(l => _layerScopeCounts.TryGetValue(l, out var n) ? n : 0);
-                var label = $"Layer: {LayerSelection.Label(_layerScope)} · {total} đối tượng";
+                var label = Tr("Layer: {0} · {1} đối tượng", LayerSelection.Label(_layerScope), total);
                 _chips.Children.Add(Chip(label, () => { ClearLayerScope(); RefreshChips(); }, "✕", () => OpenLayerPanel()));
             }
             foreach (var img in _images.ToList())
             {
-                var chip = Chip($"Ảnh {img.Width}×{img.Height}", () => { _images.Remove(img); RefreshChips(); }, "✕", null, img.Thumbnail);
+                var chip = Chip(Tr("Ảnh {0}×{1}", img.Width, img.Height), () => { _images.Remove(img); RefreshChips(); }, "✕", null, img.Thumbnail);
                 _chips.Children.Add(chip);
             }
             _chips.Visibility = _chips.Children.Count > 0 ? Visibility.Visible : Visibility.Collapsed;
@@ -1415,7 +1422,7 @@ namespace ClaudeCAD.Plugin.UI
                     FontSize = 11,
                     Padding = new Thickness(6, 0, 6, 1),
                     Margin = new Thickness(0, 0, 4, 2),
-                    ToolTip = on ? $"Bỏ tick: không gửi {kv.Value} đối tượng trên {name}" : $"Tick: gửi kèm {kv.Value} đối tượng trên {name}",
+                    ToolTip = on ? Tr("Bỏ tick: không gửi {0} đối tượng trên {1}", kv.Value, name) : Tr("Tick: gửi kèm {0} đối tượng trên {1}", kv.Value, name),
                     Cursor = Cursors.Hand,
                 };
                 b.Click += (s, e) =>
@@ -1432,7 +1439,7 @@ namespace ClaudeCAD.Plugin.UI
                 more.FontSize = 11;
                 row.Children.Add(more);
             }
-            var whole = SmallButton("→ Cả layer", "Dùng toàn bộ các layer đã tick (mọi đối tượng trên chúng), không chỉ phần đang chọn");
+            var whole = SmallButton(Tr("→ Cả layer"), Tr("Dùng toàn bộ các layer đã tick (mọi đối tượng trên chúng), không chỉ phần đang chọn"));
             whole.Click += (s, e) =>
             {
                 SetLayerScope(layers.Keys.Where(l => !_excludedLayers.Contains(l)).ToList(), null);
@@ -1449,18 +1456,18 @@ namespace ClaudeCAD.Plugin.UI
         {
             var p = new StackPanel { Margin = new Thickness(8) };
             // title on its own line (it was cut off when it shared the line with the buttons)
-            var title = new TextBlock { Text = "Chọn layer để chat chỉnh sửa", FontWeight = FontWeights.SemiBold, TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 0, 0, 4) };
+            var title = new TextBlock { Text = Tr("Chọn layer để chat chỉnh sửa"), FontWeight = FontWeights.SemiBold, TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 0, 0, 4) };
             Theme.Ref(title, TextBlock.ForegroundProperty, Theme.Fg);
             p.Children.Add(title);
             var head = new WrapPanel { Margin = new Thickness(0, 0, 0, 4) };
-            var apply = SmallButton("Dùng layer đã chọn", "Gửi kèm các layer đã tick với tin nhắn tiếp theo");
-            var none = SmallButton("Bỏ chọn", "Bỏ tick tất cả");
-            var close = SmallButton("Đóng", "Đóng danh sách layer");
+            var apply = SmallButton(Tr("Dùng layer đã chọn"), Tr("Gửi kèm các layer đã tick với tin nhắn tiếp theo"));
+            var none = SmallButton(Tr("Bỏ chọn"), Tr("Bỏ tick tất cả"));
+            var close = SmallButton(Tr("Đóng"), Tr("Đóng danh sách layer"));
             foreach (var b in new[] { apply, none, close }) head.Children.Add(b);
             p.Children.Add(head);
             _layerSearch = InputBox();
             _layerSearch.Margin = new Thickness(0, 2, 0, 4);
-            _layerSearch.ToolTip = "Lọc theo tên layer (gõ vài chữ, ví dụ: wall, A-D)";
+            _layerSearch.ToolTip = Tr("Lọc theo tên layer (gõ vài chữ, ví dụ: wall, A-D)");
             _layerSearch.TextChanged += (s, e) => RenderLayerRows();
             p.Children.Add(_layerSearch);
             _layerPanelInfo = MutedText("");
@@ -1480,7 +1487,7 @@ namespace ClaudeCAD.Plugin.UI
                 SetLayerScope(_layerRows.Where(r => _layerPicked.Contains(r.Name)).Select(r => r.Name).ToList(), _layerRows);
                 RefreshChips();
                 _input.Focus();
-                if (_layerScope.Count > 0) _toolStatus.Text = $"Đã chọn {_layerScope.Count} layer — gõ yêu cầu, ví dụ \"đổi màu sang đỏ\" hoặc \"tăng chiều cao chữ lên 300\".";
+                if (_layerScope.Count > 0) _toolStatus.Text = Tr("Đã chọn {0} layer — gõ yêu cầu, ví dụ \"đổi màu sang đỏ\" hoặc \"tăng chiều cao chữ lên 300\".", _layerScope.Count);
             };
             return border;
         }
@@ -1512,8 +1519,8 @@ namespace ClaudeCAD.Plugin.UI
             var rows = LayerSelection.Search(_layerRows, _layerSearch.Text);
             int pickedObjects = _layerRows.Where(r => _layerPicked.Contains(r.Name)).Sum(r => r.Count);
             _layerPanelInfo.Text = _layerRows.Count == 0
-                ? "Không đọc được layer của bản vẽ đang mở."
-                : $"{_layerRows.Count} layer · đã tick {_layerPicked.Count} layer ({pickedObjects} đối tượng). Đang hiện {rows.Count}.";
+                ? Tr("Không đọc được layer của bản vẽ đang mở.")
+                : Tr("{0} layer · đã tick {1} layer ({2} đối tượng). Đang hiện {3}.", _layerRows.Count, _layerPicked.Count, pickedObjects, rows.Count);
             foreach (var r in rows.Take(300))
             {
                 var name = r.Name;
@@ -1533,7 +1540,7 @@ namespace ClaudeCAD.Plugin.UI
                 var content = new StackPanel { Orientation = Orientation.Horizontal };
                 content.Children.Add(swatch);
                 content.Children.Add(label);
-                var check = new CheckBox { Content = content, ToolTip = "Chọn layer này để gửi kèm tin nhắn (Claude chỉ sửa trong phạm vi layer đã chọn)", IsChecked = _layerPicked.Contains(name), VerticalAlignment = VerticalAlignment.Center };
+                var check = new CheckBox { Content = content, ToolTip = Tr("Chọn layer này để gửi kèm tin nhắn (Claude chỉ sửa trong phạm vi layer đã chọn)"), IsChecked = _layerPicked.Contains(name), VerticalAlignment = VerticalAlignment.Center };
                 check.Checked += (s, e) => { _layerPicked.Add(name); UpdateLayerInfo(); };
                 check.Unchecked += (s, e) => { _layerPicked.Remove(name); UpdateLayerInfo(); };
                 line.Children.Add(check);
@@ -1541,7 +1548,7 @@ namespace ClaudeCAD.Plugin.UI
             }
             if (rows.Count > 300)
             {
-                var more = MutedText($"… còn {rows.Count - 300} layer — gõ để lọc.");
+                var more = MutedText(Tr("… còn {0} layer — gõ để lọc.", rows.Count - 300));
                 more.FontSize = 11;
                 _layerList.Children.Add(more);
             }
@@ -1550,7 +1557,7 @@ namespace ClaudeCAD.Plugin.UI
         private void UpdateLayerInfo()
         {
             int pickedObjects = _layerRows.Where(r => _layerPicked.Contains(r.Name)).Sum(r => r.Count);
-            _layerPanelInfo.Text = $"{_layerRows.Count} layer · đã tick {_layerPicked.Count} layer ({pickedObjects} đối tượng).";
+            _layerPanelInfo.Text = Tr("{0} layer · đã tick {1} layer ({2} đối tượng).", _layerRows.Count, _layerPicked.Count, pickedObjects);
         }
 
         /// <summary>Layers sent with the next message; counts from the picker rows (or the selection when converting).</summary>
@@ -1590,7 +1597,7 @@ namespace ClaudeCAD.Plugin.UI
             if (thumb != null) sp.Children.Add(new Image { Source = thumb, Height = 28, Margin = new Thickness(0, 0, 4, 0) });
             var t = new TextBlock { Text = text, VerticalAlignment = VerticalAlignment.Center, FontSize = 11, MaxWidth = 260, TextTrimming = TextTrimming.CharacterEllipsis };
             Theme.Ref(t, TextBlock.ForegroundProperty, Theme.Fg);
-            if (click != null) { t.Cursor = Cursors.Hand; t.ToolTip = "Bấm để xem trên bản vẽ"; t.MouseLeftButtonUp += (s, e) => click(); }
+            if (click != null) { t.Cursor = Cursors.Hand; t.ToolTip = Tr("Bấm để xem trên bản vẽ"); t.MouseLeftButtonUp += (s, e) => click(); }
             sp.Children.Add(t);
             var x = new Button { Content = Icons.Make(toggleText == "+" ? "add" : "close", null, 10), Padding = new Thickness(4, 0, 4, 0), Margin = new Thickness(4, 0, 0, 0), FontSize = 10, BorderThickness = new Thickness(0), Background = Brushes.Transparent, Cursor = Cursors.Hand };
             Theme.Ref(x, ForegroundProperty, Theme.MutedFg);
@@ -1609,8 +1616,8 @@ namespace ClaudeCAD.Plugin.UI
             _skills = library ?? new List<SkillInfo>();
             _chatSkills = new HashSet<string>(chatSkills ?? Enumerable.Empty<string>(), StringComparer.Ordinal);
             int used = _skills.Count(k => k.Error == null && _chatSkills.Contains(k.Name));
-            MarkIcon(_skillsBtn, used > 0 ? $"đang dùng {used}" : null,
-                "Skill — skill đang dùng ở đoạn chat này (− bỏ, + dùng) và thư viện skill đã thêm");
+            MarkIcon(_skillsBtn, used > 0 ? Tr("đang dùng {0}", used) : null,
+                Tr("Skill — skill đang dùng ở đoạn chat này (− bỏ, + dùng) và thư viện skill đã thêm"));
             RefreshSkillsPanel();
         });
 
@@ -1618,17 +1625,17 @@ namespace ClaudeCAD.Plugin.UI
         {
             var used = _skills.Where(k => k.Error == null && _chatSkills.Contains(k.Name)).ToList();
             var rest = _skills.Where(k => !used.Contains(k)).ToList();
-            _skillsHeader.Text = $"Skill — {used.Count} đang dùng · thư viện {_skills.Count}";
+            _skillsHeader.Text = Tr("Skill — {0} đang dùng · thư viện {1}", used.Count, _skills.Count);
             _skillRows.Children.Clear();
             if (_skills.Count == 0)
             {
-                _skillRows.Children.Add(Wrapped("Thư viện chưa có skill nào. Bấm + Add skill để thêm file .md (chọn được nhiều file)."));
+                _skillRows.Children.Add(Wrapped(Tr("Thư viện chưa có skill nào. Bấm + Add skill để thêm file .md (chọn được nhiều file).")));
                 return;
             }
-            _skillRows.Children.Add(SectionTitle("ĐANG DÙNG TRONG ĐOẠN CHAT NÀY"));
+            _skillRows.Children.Add(SectionTitle(Tr("ĐANG DÙNG TRONG ĐOẠN CHAT NÀY")));
             if (used.Count == 0)
             {
-                var none = MutedText("Chưa dùng skill nào — bấm + ở skill bên dưới, hoặc + Add skill.");
+                var none = MutedText(Tr("Chưa dùng skill nào — bấm + ở skill bên dưới, hoặc + Add skill."));
                 none.FontSize = 11;
                 none.TextWrapping = TextWrapping.Wrap;
                 none.Margin = new Thickness(0, 0, 0, 8);
@@ -1637,7 +1644,7 @@ namespace ClaudeCAD.Plugin.UI
             foreach (var k in used) _skillRows.Children.Add(SkillRow(k, true));
             if (rest.Count > 0)
             {
-                _skillRows.Children.Add(SectionTitle("THƯ VIỆN (chưa dùng trong đoạn chat này)"));
+                _skillRows.Children.Add(SectionTitle(Tr("THƯ VIỆN (chưa dùng trong đoạn chat này)")));
                 foreach (var k in rest) _skillRows.Children.Add(SkillRow(k, false));
             }
         }
@@ -1657,12 +1664,12 @@ namespace ClaudeCAD.Plugin.UI
             var row = new DockPanel { Margin = new Thickness(0, 0, 0, 8) };
             var name = k.Name;
             var buttons = new StackPanel { Orientation = Orientation.Horizontal, VerticalAlignment = VerticalAlignment.Top };
-            var edit = SmallButton("Sửa", "Mở SKILL.md để sửa; lưu file là Claude dùng bản mới từ tin nhắn tiếp theo");
+            var edit = SmallButton(Tr("Sửa"), Tr("Mở SKILL.md để sửa; lưu file là Claude dùng bản mới từ tin nhắn tiếp theo"));
             edit.Click += (s, e) => SkillEditRequested?.Invoke(name);
             buttons.Children.Add(edit);
             var toggle = SmallButton(inUse ? "−" : "+", inUse
-                ? "Không dùng skill này trong đoạn chat hiện tại (vẫn giữ trong thư viện)"
-                : "Dùng skill này trong đoạn chat hiện tại");
+                ? Tr("Không dùng skill này trong đoạn chat hiện tại (vẫn giữ trong thư viện)")
+                : Tr("Dùng skill này trong đoạn chat hiện tại"));
             toggle.MinWidth = 24;
             toggle.FontWeight = FontWeights.Bold;
             toggle.Margin = new Thickness(0);
@@ -1677,7 +1684,7 @@ namespace ClaudeCAD.Plugin.UI
             Theme.Ref(title, TextBlock.ForegroundProperty, Theme.Fg);
             info.Children.Add(title);
             string status = k.Error != null ? "⚠ " + k.Error
-                : k.Builtin ? "Skill mẫu đi kèm plugin" : "Đã thêm" + (k.Added.HasValue ? " " + k.Added.Value.ToString("dd/MM/yyyy") : "");
+                : k.Builtin ? Tr("Skill mẫu đi kèm plugin") : Tr("Đã thêm") + (k.Added.HasValue ? " " + k.Added.Value.ToString("dd/MM/yyyy") : "");
             var st = new TextBlock { Text = status, FontSize = 11, TextWrapping = TextWrapping.Wrap };
             Theme.Ref(st, TextBlock.ForegroundProperty, k.Error != null ? Theme.ErrorFg : Theme.MutedFg);
             info.Children.Add(st);
@@ -1687,7 +1694,7 @@ namespace ClaudeCAD.Plugin.UI
                 d.FontSize = 11;
                 d.TextWrapping = TextWrapping.Wrap;
                 d.MaxHeight = 30;
-                d.ToolTip = k.Description + (string.IsNullOrEmpty(k.Source) ? "" : "\n\nNguồn: " + k.Source);
+                d.ToolTip = k.Description + (string.IsNullOrEmpty(k.Source) ? "" : Tr("\n\nNguồn: ") + k.Source);
                 info.Children.Add(d);
             }
             row.Children.Add(info);
@@ -1719,10 +1726,10 @@ namespace ClaudeCAD.Plugin.UI
             ClearHistory();
             if (t.Entries.Count == 0)
             {
-                AddNote("Chào cậu! Gõ yêu cầu bằng tiếng Việt, ví dụ \"vẽ lưới trục 5x4 bước 4000\". Gõ / để chọn mẫu lệnh, Enter để gửi.");
+                AddNote(Tr("Chào cậu! Gõ yêu cầu bằng tiếng Việt, ví dụ \"vẽ lưới trục 5x4 bước 4000\". Gõ / để chọn mẫu lệnh, Enter để gửi."));
                 return;
             }
-            AddNote($"Lịch sử chat của {(string.IsNullOrEmpty(t.DrawingName) ? "bản vẽ này" : t.DrawingName)} — {t.Entries.Count} mục. Claude vẫn nhớ ngữ cảnh cuộc chat.");
+            AddNote(Tr("Lịch sử chat của {0} — {1} mục. Claude vẫn nhớ ngữ cảnh cuộc chat.", (string.IsNullOrEmpty(t.DrawingName) ? Tr("bản vẽ này") : t.DrawingName), t.Entries.Count));
             if (from > 0) AppendMessage(MoreButton(t, from));
             foreach (var e in t.Entries.Skip(from)) RenderEntry(e);
             if (_lastAssistant != null) _lastAssistant.SetUndo(canUndoLast);
@@ -1746,7 +1753,7 @@ namespace ClaudeCAD.Plugin.UI
 
         private Button MoreButton(ChatTranscript t, int from)
         {
-            var more = new Button { Content = $"Xem thêm {Math.Min(from, TranscriptWindow)} tin cũ hơn ({from} tin chưa hiện)", ToolTip = "Hiện thêm tin cũ của đoạn chat này; các thẻ và nút đang mở vẫn giữ nguyên", Padding = new Thickness(10, 2, 10, 2), Margin = new Thickness(0, 2, 0, 6), HorizontalAlignment = HorizontalAlignment.Center };
+            var more = new Button { Content = Tr("Xem thêm {0} tin cũ hơn ({1} tin chưa hiện)", Math.Min(from, TranscriptWindow), from), ToolTip = Tr("Hiện thêm tin cũ của đoạn chat này; các thẻ và nút đang mở vẫn giữ nguyên"), Padding = new Thickness(10, 2, 10, 2), Margin = new Thickness(0, 2, 0, 6), HorizontalAlignment = HorizontalAlignment.Center };
             more.Click += (s, e) => ShowOlder(t, more, from);
             return more;
         }
@@ -1803,28 +1810,28 @@ namespace ClaudeCAD.Plugin.UI
             Theme.Ref(tb, ForegroundProperty, Theme.Fg);
             ForwardWheel(tb);
             var stack = new StackPanel();
-            stack.Children.Add(SpeakerLabel("CẬU"));
+            stack.Children.Add(SpeakerLabel(Tr("CẬU")));
             stack.Children.Add(tb);
             var extras = new List<string>();
-            if (e.SelectionCount > 0) extras.Add($"kèm {e.SelectionCount} đối tượng");
-            if (e.ImageCount > 0) extras.Add($"kèm {e.ImageCount} ảnh");
+            if (e.SelectionCount > 0) extras.Add(Tr("kèm {0} đối tượng", e.SelectionCount));
+            if (e.ImageCount > 0) extras.Add(Tr("kèm {0} ảnh", e.ImageCount));
             if (e.Layers.Count > 0) extras.Add($"layer {LayerSelection.Label(e.Layers, 2)}");
             var footer = new StackPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Right, Margin = new Thickness(0, 3, 0, 0) };
             if (extras.Count > 0) { var x = MutedText(string.Join(" · ", extras) + "  "); x.FontSize = 11; footer.Children.Add(x); }
-            var copy = SmallButton("Copy", "Copy tin nhắn");
+            var copy = SmallButton("Copy", Tr("Copy tin nhắn"));
             copy.Click += (s, a) => SafeCopy(e.Text);
             footer.Children.Add(copy);
-            var saveTpl = SmallButton("Lưu mẫu", "Lưu tin nhắn này thành mẫu lệnh (gõ / để dùng lại)");
+            var saveTpl = SmallButton(Tr("Lưu mẫu"), Tr("Lưu tin nhắn này thành mẫu lệnh (gõ / để dùng lại)"));
             saveTpl.Click += (s, a) =>
             {
                 saveTpl.IsEnabled = false;
                 var first = (e.Text ?? "").Replace("\r", " ").Replace("\n", " ").Trim();
-                var editor = InlinePrompt("Tên mẫu:", first.Length > 40 ? first.Substring(0, 40).TrimEnd() : first, "Lưu",
+                var editor = InlinePrompt(Tr("Tên mẫu:"), first.Length > 40 ? first.Substring(0, 40).TrimEnd() : first, Tr("Lưu"),
                     title => TemplateSaveRequested?.Invoke(title, e.Text), () => saveTpl.IsEnabled = true);
                 stack.Children.Add(editor);
             };
             footer.Children.Add(saveTpl);
-            var edit = SmallButton("Sửa", "Sửa và gửi lại (hoàn tác lượt trước nếu nó đã thay đổi bản vẽ)");
+            var edit = SmallButton(Tr("Sửa"), Tr("Sửa và gửi lại (hoàn tác lượt trước nếu nó đã thay đổi bản vẽ)"));
             edit.Click += (s, a) => EditLastRequested?.Invoke();
             footer.Children.Add(edit);
             if (_lastEditButton != null) _lastEditButton.Visibility = Visibility.Collapsed; // only the last request can be edited
@@ -1879,7 +1886,7 @@ namespace ClaudeCAD.Plugin.UI
             step = Math.Max(1, Math.Min(step, steps.Count));
             if (_current == null) _current = NewAssistant();
             _current.SetProgress(steps, step, note);
-            _progressLabel = $"Bước {step}/{steps.Count}: {FirstLine(steps[step - 1], 40)}";
+            _progressLabel = Tr("Bước {0}/{1}: {2}", step, steps.Count, FirstLine(steps[step - 1], 40));
             if (_busy) UpdateBusyLine();
         });
 
@@ -1901,7 +1908,7 @@ namespace ClaudeCAD.Plugin.UI
             if (_compact)
             {
                 var line = FirstLine(e?.Text);
-                SetCompactNote(line.Length > 0 ? "✓ Đã xong: " + line : "✓ Đã xong");
+                SetCompactNote(line.Length > 0 ? Tr("✓ Đã xong: ") + line : Tr("✓ Đã xong"));
             }
             ScrollToEnd();
         });
@@ -1975,15 +1982,15 @@ namespace ClaudeCAD.Plugin.UI
         {
             var stack = new StackPanel();
             stack.Children.Add(IconLine("error", Theme.ErrorFg, text));
-            SetCompactNote("⊗ Lượt chưa xong: " + FirstLine(text, 40));
+            SetCompactNote(Tr("⊗ Lượt chưa xong: ") + FirstLine(text, 40));
             var row = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(0, 6, 0, 0) };
             if (canRetry)
             {
-                var retry = SmallButton("Thử lại", "Gửi lại yêu cầu vừa rồi");
+                var retry = SmallButton(Tr("Thử lại"), Tr("Gửi lại yêu cầu vừa rồi"));
                 retry.Click += (s, e) => { retry.IsEnabled = false; RetryRequested?.Invoke(); };
                 row.Children.Add(retry);
             }
-            var report = SmallButton("Gửi báo cáo lỗi", "Gom thông tin máy và log thành một file .zip trên Desktop để gửi cho người hỗ trợ");
+            var report = SmallButton(Tr("Gửi báo cáo lỗi"), Tr("Gom thông tin máy và log thành một file .zip trên Desktop để gửi cho người hỗ trợ"));
             report.Click += (s, e) => ReportRequested?.Invoke();
             row.Children.Add(report);
             stack.Children.Add(row);
@@ -2001,7 +2008,7 @@ namespace ClaudeCAD.Plugin.UI
             var warn = Icons.Make("warning", Theme.WarnFg);
             warn.Margin = new Thickness(0, 0, 6, 0);
             head.Children.Add(warn);
-            var title = new TextBlock { Text = "Xác nhận thay đổi", FontWeight = FontWeights.SemiBold, VerticalAlignment = VerticalAlignment.Center };
+            var title = new TextBlock { Text = Tr("Xác nhận thay đổi"), FontWeight = FontWeights.SemiBold, VerticalAlignment = VerticalAlignment.Center };
             Theme.Ref(title, TextBlock.ForegroundProperty, Theme.Fg);
             head.Children.Add(title);
             var headBorder = new Border { Child = head, Padding = new Thickness(8, 4, 8, 4), BorderThickness = new Thickness(0, 0, 0, 1) };
@@ -2016,7 +2023,7 @@ namespace ClaudeCAD.Plugin.UI
                 var n = new TextBlock { Text = affected.ToString(CultureInfo.InvariantCulture), FontSize = 20, FontWeight = FontWeights.Bold, Margin = new Thickness(0, 0, 6, 0) };
                 Theme.Ref(n, TextBlock.ForegroundProperty, Theme.Fg);
                 figure.Children.Add(n);
-                var unit = MutedText("đối tượng bị ảnh hưởng");
+                var unit = MutedText(Tr("đối tượng bị ảnh hưởng"));
                 unit.FontSize = 11;
                 unit.VerticalAlignment = VerticalAlignment.Bottom;
                 unit.Margin = new Thickness(0, 0, 0, 3);
@@ -2031,8 +2038,8 @@ namespace ClaudeCAD.Plugin.UI
             {
                 var preview = new Button
                 {
-                    Content = $"Xem trên bản vẽ — tô sáng {handles.Count} đối tượng",
-                    ToolTip = "Zoom tới các đối tượng này và chọn sẵn chúng bằng đúng kiểu chọn của AutoCAD (Esc trong bản vẽ để bỏ chọn)",
+                    Content = Tr("Xem trên bản vẽ — tô sáng {0} đối tượng", handles.Count),
+                    ToolTip = Tr("Zoom tới các đối tượng này và chọn sẵn chúng bằng đúng kiểu chọn của AutoCAD (Esc trong bản vẽ để bỏ chọn)"),
                     Padding = new Thickness(8, 3, 8, 3),
                     Margin = new Thickness(0, 6, 0, 0),
                     HorizontalContentAlignment = HorizontalAlignment.Left,
@@ -2042,11 +2049,11 @@ namespace ClaudeCAD.Plugin.UI
             }
 
             var row = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(0, 6, 0, 0) };
-            var yes = new Button { Content = "Đồng ý", ToolTip = "Cho Claude làm việc vừa nêu; trước khi sửa plugin lưu một phiên bản (hoàn tác được bằng 1 lần U)", Padding = new Thickness(14, 3, 14, 3), Margin = new Thickness(0, 0, 6, 0), FontWeight = FontWeights.SemiBold };
+            var yes = new Button { Content = Tr("Đồng ý"), ToolTip = Tr("Cho Claude làm việc vừa nêu; trước khi sửa plugin lưu một phiên bản (hoàn tác được bằng 1 lần U)"), Padding = new Thickness(14, 3, 14, 3), Margin = new Thickness(0, 0, 6, 0), FontWeight = FontWeights.SemiBold };
             Theme.Ref(yes, BackgroundProperty, Theme.PressBg);
             Theme.Ref(yes, ForegroundProperty, Theme.AccentFg);
             Theme.Ref(yes, BorderBrushProperty, Theme.Accent);
-            var no = new Button { Content = "Không", ToolTip = "Không làm việc này; bản vẽ không bị đụng tới", Padding = new Thickness(14, 3, 14, 3), Margin = new Thickness(0, 0, 6, 0) };
+            var no = new Button { Content = Tr("Không"), ToolTip = Tr("Không làm việc này; bản vẽ không bị đụng tới"), Padding = new Thickness(14, 3, 14, 3), Margin = new Thickness(0, 0, 6, 0) };
             row.Children.Add(yes);
             row.Children.Add(no);
             var answer = MutedText("");
@@ -2055,7 +2062,7 @@ namespace ClaudeCAD.Plugin.UI
                 yes.IsEnabled = no.IsEnabled = false;
                 _openConfirmButtons.Remove(yes);
                 _openConfirmButtons.Remove(no);
-                answer.Text = ok ? "  → đã đồng ý" : "  → đã hủy";
+                answer.Text = ok ? Tr("  → đã đồng ý") : Tr("  → đã hủy");
                 ConfirmAnswered?.Invoke(id, ok);
             }
             yes.Click += (s, e) => Done(true);
@@ -2065,7 +2072,7 @@ namespace ClaudeCAD.Plugin.UI
             row.Children.Add(answer);
             body.Children.Add(row);
 
-            var note = MutedText("Trước khi sửa, plugin lưu một phiên bản của bản vẽ. Sau đó vẫn hoàn tác được — tương đương 1 lần U.");
+            var note = MutedText(Tr("Trước khi sửa, plugin lưu một phiên bản của bản vẽ. Sau đó vẫn hoàn tác được — tương đương 1 lần U."));
             note.FontSize = 11;
             note.TextWrapping = TextWrapping.Wrap;
             note.TextTrimming = TextTrimming.None;
@@ -2097,8 +2104,8 @@ namespace ClaudeCAD.Plugin.UI
         // ================================================================= compact mode
 
         private static string CompactTip(bool compact) => compact
-            ? "Mở rộng — hiện lại đoạn chat của phiên này"
-            : "Thu gọn — palette co lại chỉ còn ô nhập, Enter gửi nhanh; bấm lại để mở rộng";
+            ? Tr("Mở rộng — hiện lại đoạn chat của phiên này")
+            : Tr("Thu gọn — palette co lại chỉ còn ô nhập, Enter gửi nhanh; bấm lại để mở rộng");
 
         public bool IsCompact => _compact;
 
@@ -2177,7 +2184,7 @@ namespace ClaudeCAD.Plugin.UI
                 _compactLineText.Text = "";
                 return;
             }
-            _compactLineText.Text = text + " · bấm để xem";
+            _compactLineText.Text = text + Tr(" · bấm để xem");
             _compactLine.Visibility = Visibility.Visible;
         }
 
@@ -2201,15 +2208,15 @@ namespace ClaudeCAD.Plugin.UI
         private void UpdateBusyLine()
         {
             int tools = _current?.ToolCount ?? 0;
-            _busyLine.Text = "● " + (_progressLabel ?? "Đang làm") + " · " + Elapsed(DateTime.UtcNow - _busySince)
-                + (tools > 0 ? $" · {tools} thao tác" : "") + " — Esc để dừng";
+            _busyLine.Text = "● " + (_progressLabel ?? Tr("Đang làm")) + " · " + Elapsed(DateTime.UtcNow - _busySince)
+                + (tools > 0 ? Tr(" · {0} thao tác", tools) : "") + Tr(" — Esc để dừng");
         }
 
         /// <summary>"12 giây", "1 phút 12 giây".</summary>
         internal static string Elapsed(TimeSpan t)
         {
             int total = Math.Max(0, (int)t.TotalSeconds);
-            return total < 60 ? $"{total} giây" : $"{total / 60} phút {total % 60} giây";
+            return total < 60 ? Tr("{0} giây", total) : Tr("{0} phút {1} giây", total / 60, total % 60);
         }
 
         public void SetUsage(string text) => Ui(() => _usage.Text = text ?? "");
@@ -2226,8 +2233,8 @@ namespace ClaudeCAD.Plugin.UI
                 return;
             }
             var oneLine = text.Replace("\r", " ").Replace("\n", " ").Trim();
-            _queuedText.Text = "Chờ gửi khi Claude xong lượt này: " + oneLine;
-            _queuedRow.ToolTip = "Tin này tự gửi ngay khi lượt đang chạy kết thúc:\n" + text;
+            _queuedText.Text = Tr("Chờ gửi khi Claude xong lượt này: ") + oneLine;
+            _queuedRow.ToolTip = Tr("Tin này tự gửi ngay khi lượt đang chạy kết thúc:\n") + text;
             _queuedRow.Visibility = Visibility.Visible;
         });
 
@@ -2245,10 +2252,10 @@ namespace ClaudeCAD.Plugin.UI
             double f = Math.Max(0, Math.Min(1, fraction));
             _usageFill.Width = new GridLength(f, GridUnitType.Star);
             _usageRest.Width = new GridLength(1 - f, GridUnitType.Star);
-            _usageLabel.Text = $"{label} · đã dùng {f * 100:0}%";
-            _usageReset.Text = string.IsNullOrEmpty(resetAt) ? "" : "làm mới " + resetAt;
-            _usageMeter.ToolTip = $"Hạn mức tài khoản Claude: đã dùng {f * 100:0}%"
-                + (string.IsNullOrEmpty(resetAt) ? "" : $", làm mới lúc {resetAt}");
+            _usageLabel.Text = Tr("{0} · đã dùng {1:0}%", label, f * 100);
+            _usageReset.Text = string.IsNullOrEmpty(resetAt) ? "" : Tr("làm mới ") + resetAt;
+            _usageMeter.ToolTip = Tr("Hạn mức tài khoản Claude: đã dùng {0:0}%", f * 100)
+                + (string.IsNullOrEmpty(resetAt) ? "" : Tr(", làm mới lúc {0}", resetAt));
             _usageMeter.Visibility = Visibility.Visible;
         });
 
@@ -2256,10 +2263,10 @@ namespace ClaudeCAD.Plugin.UI
         {
             _busy = busy;
             _send.IsEnabled = !_viewingVersion;
-            _send.Content = busy ? "Gửi thêm" : "Gửi";
+            _send.Content = busy ? Tr("Gửi thêm") : Tr("Gửi");
             _send.ToolTip = busy
-                ? "Gửi thêm ý — xếp hàng, tự gửi ngay khi Claude xong lượt này (Enter). Bấm ■ để dừng lượt đang chạy"
-                : "Gửi (Enter). Shift+Enter xuống dòng, / để chọn mẫu lệnh, ↑↓ gọi lại tin đã gửi";
+                ? Tr("Gửi thêm ý — xếp hàng, tự gửi ngay khi Claude xong lượt này (Enter). Bấm ■ để dừng lượt đang chạy")
+                : Tr("Gửi (Enter). Shift+Enter xuống dòng, / để chọn mẫu lệnh, ↑↓ gọi lại tin đã gửi");
             _stop.IsEnabled = busy;
             if (busy)
             {
@@ -2315,7 +2322,7 @@ namespace ClaudeCAD.Plugin.UI
             DockPanel.SetDock(l, Dock.Left);
             row.Children.Add(l);
             var okB = SmallButton(okText, okText);
-            var cancel = SmallButton("Hủy", "Hủy");
+            var cancel = SmallButton(Tr("Hủy"), Tr("Hủy"));
             cancel.Margin = new Thickness(0);
             DockPanel.SetDock(cancel, Dock.Right);
             DockPanel.SetDock(okB, Dock.Right);
@@ -2361,7 +2368,7 @@ namespace ClaudeCAD.Plugin.UI
                 existing.Add(text);
                 var label = new TextBlock { Text = "→ " + text, TextTrimming = TextTrimming.CharacterEllipsis, MaxWidth = 300, FontSize = 12 };
                 Theme.Ref(label, TextBlock.ForegroundProperty, Theme.Fg);
-                var b = new Button { Content = label, Tag = text, ToolTip = "Bấm để gửi: " + text + "\nChuột phải: đưa vào ô nhập để sửa trước khi gửi", Padding = new Thickness(8, 1, 8, 2), Margin = new Thickness(0, 0, 4, 4), BorderThickness = new Thickness(1), Cursor = Cursors.Hand };
+                var b = new Button { Content = label, Tag = text, ToolTip = Tr("Bấm để gửi: ") + text + Tr("\nChuột phải: đưa vào ô nhập để sửa trước khi gửi"), Padding = new Thickness(8, 1, 8, 2), Margin = new Thickness(0, 0, 4, 4), BorderThickness = new Thickness(1), Cursor = Cursors.Hand };
                 Theme.Ref(b, BackgroundProperty, Theme.ChipBg);
                 Theme.Ref(b, BorderBrushProperty, Theme.Border);
                 b.Click += (s, e) =>
@@ -2397,11 +2404,11 @@ namespace ClaudeCAD.Plugin.UI
         private void PaintReadOnly()
         {
             bool on = _readOnlyBtn.IsChecked == true;
-            _readOnlyBtn.Content = on ? Icons.WithText("lock", "Chỉ xem") : Icons.WithText("unlock", "Sửa được");
+            _readOnlyBtn.Content = on ? Icons.WithText("lock", Tr("Chỉ xem")) : Icons.WithText("unlock", Tr("Sửa được"));
             _readOnlyBtn.FontWeight = on ? FontWeights.SemiBold : FontWeights.Normal;
             _readOnlyBtn.ToolTip = on
-                ? "Đang bật Chỉ xem: Claude chỉ đọc, đo, hỏi đáp — không sửa bản vẽ này. Bấm để cho phép sửa."
-                : "Bấm để bật Chỉ xem: Claude chỉ được đọc, đo, hỏi đáp — không sửa bản vẽ này";
+                ? Tr("Đang bật Chỉ xem: Claude chỉ đọc, đo, hỏi đáp — không sửa bản vẽ này. Bấm để cho phép sửa.")
+                : Tr("Bấm để bật Chỉ xem: Claude chỉ được đọc, đo, hỏi đáp — không sửa bản vẽ này");
             if (on)
             {
                 Theme.Ref(_readOnlyBtn, ForegroundProperty, Theme.ErrorFg);
@@ -2422,18 +2429,18 @@ namespace ClaudeCAD.Plugin.UI
         {
             var p = new StackPanel { Margin = new Thickness(8) };
             var head = new DockPanel { Margin = new Thickness(0, 0, 0, 4) };
-            var close = SmallButton("Đóng", "Đóng (không lưu)");
+            var close = SmallButton(Tr("Đóng"), Tr("Đóng (không lưu)"));
             close.Margin = new Thickness(0);
-            var save = SmallButton("Lưu", "Lưu ghi chú — gửi kèm từ tin nhắn tiếp theo");
+            var save = SmallButton(Tr("Lưu"), Tr("Lưu ghi chú — gửi kèm từ tin nhắn tiếp theo"));
             DockPanel.SetDock(close, Dock.Right);
             DockPanel.SetDock(save, Dock.Right);
             head.Children.Add(close);
             head.Children.Add(save);
-            var title = new TextBlock { Text = "Ghi chú gửi kèm mọi tin nhắn", FontWeight = FontWeights.SemiBold, VerticalAlignment = VerticalAlignment.Center };
+            var title = new TextBlock { Text = Tr("Ghi chú gửi kèm mọi tin nhắn"), FontWeight = FontWeights.SemiBold, VerticalAlignment = VerticalAlignment.Center };
             Theme.Ref(title, TextBlock.ForegroundProperty, Theme.Fg);
             head.Children.Add(title);
             p.Children.Add(head);
-            var hint = MutedText("Ví dụ: cao độ ±0.000 = +3.200; tường bao 220, tường ngăn 110; khung tên công ty X ở layout A3.");
+            var hint = MutedText(Tr("Ví dụ: cao độ ±0.000 = +3.200; tường bao 220, tường ngăn 110; khung tên công ty X ở layout A3."));
             hint.FontSize = 11;
             hint.TextWrapping = TextWrapping.Wrap;
             p.Children.Add(hint);
@@ -2455,7 +2462,7 @@ namespace ClaudeCAD.Plugin.UI
             p.Children.Add(_notesFolderLabel);
             _notesFolder = Box();
             p.Children.Add(_notesFolder);
-            var dl = MutedText("Riêng bản vẽ này");
+            var dl = MutedText(Tr("Riêng bản vẽ này"));
             dl.FontSize = 11;
             p.Children.Add(dl);
             _notesDrawing = Box();
@@ -2490,16 +2497,16 @@ namespace ClaudeCAD.Plugin.UI
             _notesDrawing.Text = drawingText ?? "";
             _notesFolder.IsEnabled = folderFile != null;
             _notesFolderLabel.Text = folderFile != null
-                ? "Dự án — dùng chung cho mọi bản vẽ trong thư mục (file " + System.IO.Path.GetFileName(folderFile) + " cạnh bản vẽ)"
-                : "Dự án — lưu bản vẽ trước để có ghi chú chung cho cả thư mục";
+                ? Tr("Dự án — dùng chung cho mọi bản vẽ trong thư mục (file {0} cạnh bản vẽ)", System.IO.Path.GetFileName(folderFile))
+                : Tr("Dự án — lưu bản vẽ trước để có ghi chú chung cho cả thư mục");
             _notesPanel.Visibility = Visibility.Visible;
             (folderFile != null ? _notesFolder : _notesDrawing).Focus();
         });
 
         public void SetNotesIndicator(bool any) => Ui(() =>
         {
-            MarkIcon(_notesBtn, any ? "đang có ghi chú" : null,
-                "Ghi chú dự án — gửi kèm mọi tin nhắn (cao độ, chiều dày tường, khung tên…)");
+            MarkIcon(_notesBtn, any ? Tr("đang có ghi chú") : null,
+                Tr("Ghi chú dự án — gửi kèm mọi tin nhắn (cao độ, chiều dày tường, khung tên…)"));
         });
 
         // ---------------------------------------------------------------- @ names
@@ -2548,8 +2555,8 @@ namespace ClaudeCAD.Plugin.UI
         public void SetMacros(List<Macro> macros) => Ui(() =>
         {
             _macros = macros ?? new List<Macro>();
-            MarkIcon(_macrosBtn, _macros.Count > 0 ? $"đã lưu {_macros.Count}" : null,
-                "Macro — chạy lại các lượt vẽ đã lưu, không cần Claude (không tốn token)");
+            MarkIcon(_macrosBtn, _macros.Count > 0 ? Tr("đã lưu {0}", _macros.Count) : null,
+                Tr("Macro — chạy lại các lượt vẽ đã lưu, không cần Claude (không tốn token)"));
             RefreshMacrosPanel();
         });
 
@@ -2558,7 +2565,7 @@ namespace ClaudeCAD.Plugin.UI
             _macroRows.Children.Clear();
             if (_macros.Count == 0)
             {
-                var t = MutedText("Chưa có macro. Sau một lượt vẽ ưng ý, bấm \"Lưu macro\" dưới câu trả lời của Claude.");
+                var t = MutedText(Tr("Chưa có macro. Sau một lượt vẽ ưng ý, bấm \"Lưu macro\" dưới câu trả lời của Claude."));
                 t.TextWrapping = TextWrapping.Wrap;
                 _macroRows.Children.Add(t);
                 return;
@@ -2568,15 +2575,15 @@ namespace ClaudeCAD.Plugin.UI
                 var row = new DockPanel { Margin = new Thickness(0, 0, 0, 8) };
                 var buttons = new StackPanel { Orientation = Orientation.Horizontal, VerticalAlignment = VerticalAlignment.Top };
                 var name = m.Name;
-                var run = SmallButton("Chạy", "Vẽ lại đúng như lúc lưu (cùng tọa độ)");
+                var run = SmallButton(Tr("Chạy"), Tr("Vẽ lại đúng như lúc lưu (cùng tọa độ)"));
                 run.Tag = "run";
                 run.IsEnabled = !_busy;
                 run.Click += (s, e) => { _macrosPopup.IsOpen = false; MacroRunRequested?.Invoke(name, false); };
-                var at = SmallButton("Tại điểm", m.BasePoint != null ? "Chọn điểm chèn trên bản vẽ: macro được dời tới đó" : "Macro này không có điểm gốc (không tạo đối tượng mới)");
+                var at = SmallButton(Tr("Tại điểm"), m.BasePoint != null ? Tr("Chọn điểm chèn trên bản vẽ: macro được dời tới đó") : Tr("Macro này không có điểm gốc (không tạo đối tượng mới)"));
                 at.Tag = m.BasePoint != null ? "run" : null; // SetBusy must not enable it for macros without a base point
                 at.IsEnabled = !_busy && m.BasePoint != null;
                 at.Click += (s, e) => { _macrosPopup.IsOpen = false; MacroRunRequested?.Invoke(name, true); };
-                var del = SmallButton("Xóa", "Xóa macro");
+                var del = SmallButton(Tr("Xóa"), Tr("Xóa macro"));
                 del.Margin = new Thickness(0);
                 del.Click += (s, e) => MacroDeleteRequested?.Invoke(name);
                 buttons.Children.Add(run);
@@ -2602,8 +2609,8 @@ namespace ClaudeCAD.Plugin.UI
         public void SetVersions(List<VersionInfo> versions) => Ui(() =>
         {
             _versions = versions ?? new List<VersionInfo>();
-            MarkIcon(_versionsBtn, _versions.Count > 0 ? $"có {_versions.Count} bản" : null,
-                "Phiên bản — bản sao bản vẽ trước khi chat sửa (30 phút/lần, giữ 10 bản): mở ra xem, Đóng để về bản hiện tại");
+            MarkIcon(_versionsBtn, _versions.Count > 0 ? Tr("có {0} bản", _versions.Count) : null,
+                Tr("Phiên bản — bản sao bản vẽ trước khi chat sửa (30 phút/lần, giữ 10 bản): mở ra xem, Đóng để về bản hiện tại"));
             RefreshVersionsPanel();
         });
 
@@ -2612,7 +2619,7 @@ namespace ClaudeCAD.Plugin.UI
             _versionRows.Children.Clear();
             if (_versions.Count == 0)
             {
-                var t = MutedText("Chưa có phiên bản nào. Lần đầu chat sửa bản vẽ này, plugin sẽ lưu một bản sao trước khi sửa.");
+                var t = MutedText(Tr("Chưa có phiên bản nào. Lần đầu chat sửa bản vẽ này, plugin sẽ lưu một bản sao trước khi sửa."));
                 t.TextWrapping = TextWrapping.Wrap;
                 _versionRows.Children.Add(t);
                 return;
@@ -2621,7 +2628,7 @@ namespace ClaudeCAD.Plugin.UI
             {
                 var row = new DockPanel { Margin = new Thickness(0, 0, 0, 6) };
                 var id = v.Id;
-                var open = SmallButton("Xem", "Mở bản sao này trong một tab chỉ xem; bản vẽ hiện tại không bị đụng tới");
+                var open = SmallButton("Xem", Tr("Mở bản sao này trong một tab chỉ xem; bản vẽ hiện tại không bị đụng tới"));
                 open.Margin = new Thickness(0);
                 open.VerticalAlignment = VerticalAlignment.Top;
                 open.Click += (s, e) => { _versionsPopup.IsOpen = false; VersionOpenRequested?.Invoke(id); };
@@ -2631,7 +2638,7 @@ namespace ClaudeCAD.Plugin.UI
                 var title = new TextBlock { Text = v.Time.ToString("HH:mm  dd/MM/yyyy"), FontWeight = FontWeights.SemiBold };
                 Theme.Ref(title, TextBlock.ForegroundProperty, Theme.Fg);
                 info.Children.Add(title);
-                var label = MutedText("Trước lượt: " + (string.IsNullOrEmpty(v.Label) ? "(không rõ)" : v.Label) + (v.Bytes > 0 ? $" · {v.Bytes / 1048576.0:0.0} MB" : ""));
+                var label = MutedText(Tr("Trước lượt: ") + (string.IsNullOrEmpty(v.Label) ? Tr("(không rõ)") : v.Label) + (v.Bytes > 0 ? $" · {v.Bytes / 1048576.0:0.0} MB" : ""));
                 label.FontSize = 11;
                 label.TextWrapping = TextWrapping.Wrap;
                 info.Children.Add(label);
@@ -2672,7 +2679,7 @@ namespace ClaudeCAD.Plugin.UI
             }
             bmp.Freeze();
             AddImage(ImageAttachment.FromBitmap(bmp));
-            _toolStatus.Text = "Đã chụp vùng đang xem — gõ yêu cầu (ví dụ \"chỗ này sai, sửa lại\") rồi gửi.";
+            _toolStatus.Text = Tr("Đã chụp vùng đang xem — gõ yêu cầu (ví dụ \"chỗ này sai, sửa lại\") rồi gửi.");
             _input.Focus();
         });
 
@@ -2713,7 +2720,7 @@ namespace ClaudeCAD.Plugin.UI
             {
                 Child = row, Tag = text, BorderThickness = new Thickness(1, 1, 1, 1), CornerRadius = Theme.Corner,
                 Padding = new Thickness(10, 6, 10, 6), Margin = new Thickness(0, 0, 0, 6), Opacity = 0, Cursor = Cursors.Hand,
-                ToolTip = "Bấm để đóng",
+                ToolTip = Tr("Bấm để đóng"),
                 Effect = new System.Windows.Media.Effects.DropShadowEffect { BlurRadius = 8, ShadowDepth = 1, Opacity = 0.35 },
             };
             Theme.Ref(toast, Border.BackgroundProperty, Theme.CardBg);
@@ -2762,7 +2769,7 @@ namespace ClaudeCAD.Plugin.UI
                 void Tick()
                 {
                     var left = resetsAt.Value - DateTime.Now;
-                    countdown.Text = left <= TimeSpan.Zero ? "Đã có thể dùng lại." : $"Còn khoảng {(left.TotalHours >= 1 ? $"{(int)left.TotalHours} giờ {left.Minutes} phút" : $"{Math.Max(1, (int)Math.Ceiling(left.TotalMinutes))} phút")}.";
+                    countdown.Text = left <= TimeSpan.Zero ? Tr("Đã có thể dùng lại.") : Tr("Còn khoảng {0}.", (left.TotalHours >= 1 ? Tr("{0} giờ {1} phút", (int)left.TotalHours, left.Minutes) : Tr("{0} phút", Math.Max(1, (int)Math.Ceiling(left.TotalMinutes)))));
                 }
                 Tick();
                 var timer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(30) };
@@ -2779,15 +2786,15 @@ namespace ClaudeCAD.Plugin.UI
             {
                 var auto = new ToggleButton
                 {
-                    Content = autoRetryOn ? $"✓ Sẽ tự gửi lại lúc {resetsAt.Value:HH:mm}" : $"Tự gửi lại lúc {resetsAt.Value:HH:mm}",
+                    Content = autoRetryOn ? Tr("✓ Sẽ tự gửi lại lúc {0:HH:mm}", resetsAt.Value) : Tr("Tự gửi lại lúc {0:HH:mm}", resetsAt.Value),
                     IsChecked = autoRetryOn, Padding = new Thickness(10, 2, 10, 2), Margin = new Thickness(0, 0, 6, 4),
-                    ToolTip = "Khi hạn mức được làm mới, plugin tự gửi lại yêu cầu vừa rồi (cứ để AutoCAD mở)",
+                    ToolTip = Tr("Khi hạn mức được làm mới, plugin tự gửi lại yêu cầu vừa rồi (cứ để AutoCAD mở)"),
                 };
-                auto.Checked += (s, e) => { auto.Content = $"✓ Sẽ tự gửi lại lúc {resetsAt.Value:HH:mm}"; LimitAutoRetryToggled?.Invoke(true); };
-                auto.Unchecked += (s, e) => { auto.Content = $"Tự gửi lại lúc {resetsAt.Value:HH:mm}"; LimitAutoRetryToggled?.Invoke(false); };
+                auto.Checked += (s, e) => { auto.Content = Tr("✓ Sẽ tự gửi lại lúc {0:HH:mm}", resetsAt.Value); LimitAutoRetryToggled?.Invoke(true); };
+                auto.Unchecked += (s, e) => { auto.Content = Tr("Tự gửi lại lúc {0:HH:mm}", resetsAt.Value); LimitAutoRetryToggled?.Invoke(false); };
                 row.Children.Add(auto);
             }
-            var key = new Button { Content = "Dùng API key", Padding = new Thickness(10, 2, 10, 2), Margin = new Thickness(0, 0, 6, 4), ToolTip = "API key Anthropic trả theo lượng dùng, không phụ thuộc hạn mức gói" };
+            var key = new Button { Content = Tr("Dùng API key"), Padding = new Thickness(10, 2, 10, 2), Margin = new Thickness(0, 0, 6, 4), ToolTip = Tr("API key Anthropic trả theo lượng dùng, không phụ thuộc hạn mức gói") };
             key.Click += (s, e) => ShowApiKeyPanel(ApiKeyMask?.Invoke());
             row.Children.Add(key);
             stack.Children.Add(row);
@@ -2803,12 +2810,12 @@ namespace ClaudeCAD.Plugin.UI
         {
             bool show = !string.IsNullOrWhiteSpace(label);
             var vis = show ? Visibility.Visible : Visibility.Collapsed;
-            _planBadge.Text = show ? "Gói: " + label : "";
-            _planBadge.ToolTip = show ? $"Gói dịch vụ của máy này: {label}. Chủ plugin đổi gói trong danh sách thiết bị; plugin cập nhật sau lượt kiểm tra trạng thái." : null;
+            _planBadge.Text = show ? Tr("Gói: ") + label : "";
+            _planBadge.ToolTip = show ? Tr("Gói dịch vụ của máy này: {0}. Chủ plugin đổi gói trong danh sách thiết bị; plugin cập nhật sau lượt kiểm tra trạng thái.", label) : null;
             _planBadge.Visibility = vis;
             if (_planLine != null)
             {
-                _planLine.Text = show ? "Gói dịch vụ của máy này: " + label : "";
+                _planLine.Text = show ? Tr("Gói dịch vụ của máy này: ") + label : "";
                 _planLine.Visibility = vis;
             }
             if (_planButtons != null) _planButtons.Visibility = vis;
@@ -2819,23 +2826,24 @@ namespace ClaudeCAD.Plugin.UI
             if (_accountStatus == null) return;
             _accountStatus.Text = text ?? "";
             // Not signed in is the one time the account group matters: open it so the buttons are in view.
-            if ((text ?? "").IndexOf("chưa đăng nhập", StringComparison.OrdinalIgnoreCase) >= 0) _accountCat?.Expand();
+            if ((text ?? "").IndexOf("chưa đăng nhập", StringComparison.OrdinalIgnoreCase) >= 0 // vi
+                || (text ?? "").IndexOf(Core.L.English("chưa đăng nhập") ?? "not signed in", StringComparison.OrdinalIgnoreCase) >= 0) _accountCat?.Expand(); // vi: the key of the English text
         });
 
         private Border BuildApiKeyPanel()
         {
             var p = new StackPanel { Margin = new Thickness(8) };
             var head = new DockPanel { Margin = new Thickness(0, 0, 0, 4) };
-            var close = SmallButton("Đóng", "Đóng");
+            var close = SmallButton(Tr("Đóng"), Tr("Đóng"));
             close.Margin = new Thickness(0);
-            var clear = SmallButton("Xóa key đã lưu", "Bỏ API key đã lưu: quay lại dùng tài khoản Claude đã đăng nhập");
-            var save = SmallButton("Lưu", "Lưu key (mã hóa theo tài khoản Windows) và khởi động lại trợ lý");
+            var clear = SmallButton(Tr("Xóa key đã lưu"), Tr("Bỏ API key đã lưu: quay lại dùng tài khoản Claude đã đăng nhập"));
+            var save = SmallButton(Tr("Lưu"), Tr("Lưu key (mã hóa theo tài khoản Windows) và khởi động lại trợ lý"));
             foreach (var b in new[] { close, clear, save }) { DockPanel.SetDock(b, Dock.Right); head.Children.Add(b); }
-            var title = new TextBlock { Text = "Dùng API key Anthropic", FontWeight = FontWeights.SemiBold, VerticalAlignment = VerticalAlignment.Center };
+            var title = new TextBlock { Text = Tr("Dùng API key Anthropic"), FontWeight = FontWeights.SemiBold, VerticalAlignment = VerticalAlignment.Center };
             Theme.Ref(title, TextBlock.ForegroundProperty, Theme.Fg);
             head.Children.Add(title);
             p.Children.Add(head);
-            var hint = MutedText("Tạo key ở console.anthropic.com (trả theo lượng dùng, không dùng hạn mức gói Pro/Max). Key được lưu mã hóa cho riêng tài khoản Windows này và được ưu tiên hơn tài khoản Claude đã đăng nhập.");
+            var hint = MutedText(Tr("Tạo key ở console.anthropic.com (trả theo lượng dùng, không dùng hạn mức gói Pro/Max). Key được lưu mã hóa cho riêng tài khoản Windows này và được ưu tiên hơn tài khoản Claude đã đăng nhập."));
             hint.TextWrapping = TextWrapping.Wrap;
             hint.FontSize = 11;
             p.Children.Add(hint);
@@ -2856,7 +2864,7 @@ namespace ClaudeCAD.Plugin.UI
             save.Click += (s, e) =>
             {
                 var key = _apiKeyBox.Password.Trim();
-                if (key.Length < 20) { _apiKeyInfo.Text = "Key chưa đúng (thường bắt đầu bằng sk-ant-)."; return; }
+                if (key.Length < 20) { _apiKeyInfo.Text = Tr("Key chưa đúng (thường bắt đầu bằng sk-ant-)."); return; }
                 Close();
                 ApiKeySaveRequested?.Invoke(key);
             };
@@ -2867,7 +2875,7 @@ namespace ClaudeCAD.Plugin.UI
         /// <summary>Opens the API key editor; savedMask = "sk-ant-…AbCd" when a key is already saved.</summary>
         public void ShowApiKeyPanel(string savedMask = null) => Ui(() =>
         {
-            _apiKeyInfo.Text = string.IsNullOrEmpty(savedMask) ? "Chưa có key nào được lưu." : "Đang dùng key đã lưu: " + savedMask;
+            _apiKeyInfo.Text = string.IsNullOrEmpty(savedMask) ? Tr("Chưa có key nào được lưu.") : Tr("Đang dùng key đã lưu: ") + savedMask;
             _apiKeyPanel.Visibility = Visibility.Visible;
             _apiKeyBox.Focus();
         });
@@ -2880,7 +2888,7 @@ namespace ClaudeCAD.Plugin.UI
             var stack = new StackPanel();
             ExpandForDecision();
             stack.Children.Add(IconLine("warning", Theme.WarnFg, text));
-            var b = new Button { Content = "Đăng nhập Claude", ToolTip = "Mở trình duyệt để đăng nhập tài khoản Claude Pro / Max; xong là gửi tin nhắn được ngay", Padding = new Thickness(12, 2, 12, 2), Margin = new Thickness(0, 6, 0, 0), FontWeight = FontWeights.SemiBold, HorizontalAlignment = HorizontalAlignment.Left };
+            var b = new Button { Content = Tr("Đăng nhập Claude"), ToolTip = Tr("Mở trình duyệt để đăng nhập tài khoản Claude Pro / Max; xong là gửi tin nhắn được ngay"), Padding = new Thickness(12, 2, 12, 2), Margin = new Thickness(0, 6, 0, 0), FontWeight = FontWeights.SemiBold, HorizontalAlignment = HorizontalAlignment.Left };
             b.Click += (s, e) => LoginRequested?.Invoke();
             stack.Children.Add(b);
             AppendMessage(NoticeCard(stack));
@@ -2888,7 +2896,7 @@ namespace ClaudeCAD.Plugin.UI
         });
 
         /// <summary>Example request of step 3 of the "Bắt đầu" card: drawn on a scratch drawing by the self-test too.</summary>
-        public const string WelcomeExample = "Vẽ lưới trục 5x4 bước 4000";
+        public const string WelcomeExample = "Vẽ lưới trục 5x4 bước 4000"; // vi: key (shown and typed through Tr)
 
         /// <summary>
         /// First start after installing (screen C): "Bắt đầu với ClaudeCAD — 3 bước" with numbered steps
@@ -2899,15 +2907,15 @@ namespace ClaudeCAD.Plugin.UI
         public void AddWelcomeCard(List<(string name, bool? ok, string detail)> checks, bool needLogin) => Ui(() =>
         {
             (string name, bool? ok, string detail) Find(string name) => checks.FirstOrDefault(c => c.name == name);
-            var act = Find("Kích hoạt");
-            var acc = Find("Tài khoản Claude");
+            var act = Find("Kích hoạt"); // vi: the check name is an id (shown through Tr)
+            var acc = Find("Tài khoản Claude"); // vi: id
             bool activated = act.name == null || act.ok != false;
             bool signedIn = !needLogin;
 
             var stack = new StackPanel();
             var head = new TextBlock { TextWrapping = TextWrapping.Wrap };
-            head.Inlines.Add(new System.Windows.Documents.Run("Bắt đầu với " + ProductInfo.DisplayName) { FontWeight = FontWeights.SemiBold });
-            var sub = new System.Windows.Documents.Run(" — 3 bước, khoảng 2 phút") { FontSize = 11 };
+            head.Inlines.Add(new System.Windows.Documents.Run(Tr("Bắt đầu với ") + ProductInfo.DisplayName) { FontWeight = FontWeights.SemiBold });
+            var sub = new System.Windows.Documents.Run(Tr(" — 3 bước, khoảng 2 phút")) { FontSize = 11 };
             sub.SetResourceReference(System.Windows.Documents.TextElement.ForegroundProperty, Theme.MutedFg);
             head.Inlines.Add(sub);
             Theme.Ref(head, TextBlock.ForegroundProperty, Theme.Fg);
@@ -2917,30 +2925,30 @@ namespace ClaudeCAD.Plugin.UI
             stack.Children.Add(headBar);
 
             // a missing part of the plugin comes first: nothing below works without it
-            var others = checks.Where(c => c.name != "Kích hoạt" && c.name != "Tài khoản Claude").ToList();
+            var others = checks.Where(c => c.name != "Kích hoạt" && c.name != "Tài khoản Claude").ToList(); // vi: ids
             foreach (var (name, ok, detail) in others.Where(c => c.ok == false))
             {
-                var bad = IconLine("error", Theme.ErrorFg, name + (string.IsNullOrEmpty(detail) ? "" : " — " + detail));
+                var bad = IconLine("error", Theme.ErrorFg, Tr(name) + (string.IsNullOrEmpty(detail) ? "" : " — " + detail));
                 bad.Margin = new Thickness(8, 6, 8, 0);
                 stack.Children.Add(bad);
             }
 
             // 1. activation
-            var s1 = WelcomeStep(1, activated ? "done" : "now", "Kích hoạt máy này",
-                activated ? (string.IsNullOrEmpty(act.detail) ? "Đã kích hoạt" : "Đã kích hoạt · " + act.detail) : "Máy này chưa có key kích hoạt.", true);
+            var s1 = WelcomeStep(1, activated ? "done" : "now", Tr("Kích hoạt máy này"),
+                activated ? (string.IsNullOrEmpty(act.detail) ? Tr("Đã kích hoạt") : Tr("Đã kích hoạt · ") + act.detail) : Tr("Máy này chưa có key kích hoạt."), true);
             stack.Children.Add(s1.root);
 
             // 2. sign-in
-            var s2 = WelcomeStep(2, signedIn ? "done" : activated ? "now" : "later", "Đăng nhập Claude",
-                signedIn ? (string.IsNullOrEmpty(acc.detail) ? "Đã đăng nhập" : acc.detail)
-                         : "Trình duyệt mở trang cấp quyền, bấm đồng ý bằng tài khoản Pro / Max.", true);
+            var s2 = WelcomeStep(2, signedIn ? "done" : activated ? "now" : "later", Tr("Đăng nhập Claude"),
+                signedIn ? (string.IsNullOrEmpty(acc.detail) ? Tr("Đã đăng nhập") : acc.detail)
+                         : Tr("Trình duyệt mở trang cấp quyền, bấm đồng ý bằng tài khoản Pro / Max."), true);
             if (!signedIn && activated)
             {
                 var row = new WrapPanel { Margin = new Thickness(0, 4, 0, 0) };
-                var login = AccentButton("Đăng nhập Claude", "Mở trình duyệt để đăng nhập tài khoản Claude Pro / Max; xong là gửi tin nhắn được ngay");
+                var login = AccentButton(Tr("Đăng nhập Claude"), Tr("Mở trình duyệt để đăng nhập tài khoản Claude Pro / Max; xong là gửi tin nhắn được ngay"));
                 login.Click += (s, e) => LoginRequested?.Invoke();
                 row.Children.Add(login);
-                var key = SmallButton("Dùng API key", "Dán API key Anthropic (trả theo lượng dùng) thay cho tài khoản Pro/Max");
+                var key = SmallButton(Tr("Dùng API key"), Tr("Dán API key Anthropic (trả theo lượng dùng) thay cho tài khoản Pro/Max"));
                 key.Click += (s, e) => ShowApiKeyPanel(ApiKeyMask?.Invoke());
                 row.Children.Add(key);
                 s2.body.Children.Add(row);
@@ -2949,24 +2957,24 @@ namespace ClaudeCAD.Plugin.UI
 
             // 3. first request
             bool ready = activated && signedIn;
-            var s3 = WelcomeStep(3, ready ? "now" : "later", "Thử một yêu cầu mẫu",
-                $"\"{WelcomeExample}\" — Claude vẽ ngay trên bản vẽ đang mở; hoàn tác bằng 1 lần U.", false);
+            var s3 = WelcomeStep(3, ready ? "now" : "later", Tr("Thử một yêu cầu mẫu"),
+                Tr("\"{0}\" — Claude vẽ ngay trên bản vẽ đang mở; hoàn tác bằng 1 lần U.", Tr(WelcomeExample)), false);
             var row3 = new WrapPanel { Margin = new Thickness(0, 4, 0, 0) };
             if (ready)
             {
-                var tryIt = AccentButton("Điền vào ô nhập", "Đưa câu mẫu vào ô nhập để cậu xem lại rồi bấm Enter");
-                tryIt.Click += (s, e) => SetInputText(WelcomeExample);
+                var tryIt = AccentButton(Tr("Điền vào ô nhập"), Tr("Đưa câu mẫu vào ô nhập để cậu xem lại rồi bấm Enter"));
+                tryIt.Click += (s, e) => SetInputText(Tr(WelcomeExample));
                 row3.Children.Add(tryIt);
             }
-            var test = SmallButton("Chạy tự kiểm tra", "CLAUDECHATSELFTEST: thử trên một bản vẽ tạm, mở báo cáo ✓/✗");
+            var test = SmallButton(Tr("Chạy tự kiểm tra"), Tr("CLAUDECHATSELFTEST: thử trên một bản vẽ tạm, mở báo cáo ✓/✗"));
             test.Click += (s, e) => SelfTestRequested?.Invoke();
             row3.Children.Add(test);
             s3.body.Children.Add(row3);
             stack.Children.Add(s3.root);
 
-            var okParts = others.Where(c => c.ok != false).Select(c => string.IsNullOrEmpty(c.detail) ? c.name : c.name + " " + c.detail);
+            var okParts = others.Where(c => c.ok != false).Select(c => string.IsNullOrEmpty(c.detail) ? Tr(c.name) : Tr(c.name) + " " + c.detail);
             var hint = MutedText((okParts.Any() ? "Plugin: " + string.Join(" · ", okParts) + ". " : "")
-                + "Mở nhanh khung chat: Ctrl+Shift+Space hoặc lệnh CC. Xem lại: Cài đặt ▸ Hướng dẫn bắt đầu.");
+                + Tr("Mở nhanh khung chat: Ctrl+Shift+Space hoặc lệnh CC. Xem lại: Cài đặt ▸ Hướng dẫn bắt đầu."));
             hint.TextWrapping = TextWrapping.Wrap;
             hint.TextTrimming = TextTrimming.None;
             hint.FontSize = 10;
@@ -3072,18 +3080,18 @@ namespace ClaudeCAD.Plugin.UI
             h.Margin = new Thickness(0, 4, 0, 0);
             stack.Children.Add(h);
             var row = new DockPanel { Margin = new Thickness(0, 4, 0, 4), LastChildFill = true };
-            var use = new Button { Content = "Dùng mã", ToolTip = "Kiểm tra mã cho máy này rồi lưu (không cần mạng)", Padding = new Thickness(12, 2, 12, 2), Margin = new Thickness(6, 0, 0, 0), VerticalAlignment = VerticalAlignment.Top, FontWeight = FontWeights.SemiBold };
+            var use = new Button { Content = Tr("Dùng mã"), ToolTip = Tr("Kiểm tra mã cho máy này rồi lưu (không cần mạng)"), Padding = new Thickness(12, 2, 12, 2), Margin = new Thickness(6, 0, 0, 0), VerticalAlignment = VerticalAlignment.Top, FontWeight = FontWeights.SemiBold };
             DockPanel.SetDock(use, Dock.Right);
             row.Children.Add(use);
-            var box = CodeBox("Mã không cần mạng của chủ plugin: dòng CCS1… (mã miễn kiểm tra), CCF1… (gói), hoặc cả 3 dòng trong email");
+            var box = CodeBox(Tr("Mã không cần mạng của chủ plugin: dòng CCS1… (mã miễn kiểm tra), CCF1… (gói), hoặc cả 3 dòng trong email"));
             row.Children.Add(box);
             stack.Children.Add(row);
             void Submit()
             {
                 _codeStatus = status;
                 var k = box.Text.Trim();
-                if (k.Length == 0) { SetCodeStatus("Dán mã chủ plugin gửi vào ô trên.", true); return; }
-                SetCodeStatus("Đang kiểm tra mã...", false);
+                if (k.Length == 0) { SetCodeStatus(Tr("Dán mã chủ plugin gửi vào ô trên."), true); return; }
+                SetCodeStatus(Tr("Đang kiểm tra mã..."), false);
                 OfflineCodeSubmitted?.Invoke(k);
             }
             use.Click += (s, e) => Submit();
@@ -3129,14 +3137,14 @@ namespace ClaudeCAD.Plugin.UI
                 return;
             }
             var stack = new StackPanel();
-            var title = new TextBlock { Text = "Dán mã của chủ plugin", FontWeight = FontWeights.SemiBold, FontSize = FontSize + 1 };
+            var title = new TextBlock { Text = Tr("Dán mã của chủ plugin"), FontWeight = FontWeights.SemiBold, FontSize = FontSize + 1 };
             Theme.Ref(title, TextBlock.ForegroundProperty, Theme.Fg);
             stack.Children.Add(title);
             var st = MutedText("");
             st.TextWrapping = TextWrapping.Wrap;
             st.TextTrimming = TextTrimming.None;
             st.FontSize = 11;
-            AddCodeRow(stack, st, "Máy không có mạng: dán mã chủ plugin gửi qua email (dòng gói CCF1…, mã miễn kiểm tra CCS1…, hoặc cả 3 dòng) rồi bấm \"Dùng mã\". Máy có mạng không cần: gói tự cập nhật, hoặc bấm \"Kiểm tra lại\" trong Cài đặt.");
+            AddCodeRow(stack, st, Tr("Máy không có mạng: dán mã chủ plugin gửi qua email (dòng gói CCF1…, mã miễn kiểm tra CCS1…, hoặc cả 3 dòng) rồi bấm \"Dùng mã\". Máy có mạng không cần: gói tự cập nhật, hoặc bấm \"Kiểm tra lại\" trong Cài đặt."));
             stack.Children.Add(st);
             _codeStatus = st;
             var card = Card(stack, "offline-code");
@@ -3170,14 +3178,14 @@ namespace ClaudeCAD.Plugin.UI
             }
             _activationDone = false;
             var stack = new StackPanel();
-            var title = new TextBlock { Text = "Kích hoạt " + ProductInfo.DisplayName, FontWeight = FontWeights.SemiBold, FontSize = FontSize + 1 };
+            var title = new TextBlock { Text = Tr("Kích hoạt ") + ProductInfo.DisplayName, FontWeight = FontWeights.SemiBold, FontSize = FontSize + 1 };
             Theme.Ref(title, TextBlock.ForegroundProperty, Theme.Fg);
             stack.Children.Add(TitleWithIcon("lock", title));
             var intro = new TextBlock
             {
                 Text = canCheck
-                    ? "Máy này cần được chủ plugin cho phép mới dùng được plugin. " + contact + " để được duyệt. Được duyệt rồi thì lần mở AutoCAD sau là tự dùng được, hoặc bấm \"Kiểm tra lại\" để dùng ngay. Nếu nhận được key thì dán key vào ô dưới."
-                    : "Máy này cần key kích hoạt để dùng plugin. " + contact + " để nhận key, rồi dán key vào ô dưới.",
+                    ? Tr("Máy này cần được chủ plugin cho phép mới dùng được plugin. ") + contact + Tr(" để được duyệt. Được duyệt rồi thì lần mở AutoCAD sau là tự dùng được, hoặc bấm \"Kiểm tra lại\" để dùng ngay. Nếu nhận được key thì dán key vào ô dưới.")
+                    : Tr("Máy này cần key kích hoạt để dùng plugin. ") + contact + Tr(" để nhận key, rồi dán key vào ô dưới."),
                 TextWrapping = TextWrapping.Wrap,
                 Margin = new Thickness(0, 3, 0, 0)
             };
@@ -3185,42 +3193,42 @@ namespace ClaudeCAD.Plugin.UI
             stack.Children.Add(intro);
 
             var codeRow = new WrapPanel { Margin = new Thickness(0, 6, 0, 0) };
-            var code = new TextBox { Text = machine, IsReadOnly = true, Focusable = true, FontFamily = new FontFamily("Consolas"), FontWeight = FontWeights.SemiBold, Padding = new Thickness(4, 1, 4, 1), BorderThickness = new Thickness(1), VerticalAlignment = VerticalAlignment.Center, ToolTip = "Mã máy: gửi mã này cho chủ plugin" };
+            var code = new TextBox { Text = machine, IsReadOnly = true, Focusable = true, FontFamily = new FontFamily("Consolas"), FontWeight = FontWeights.SemiBold, Padding = new Thickness(4, 1, 4, 1), BorderThickness = new Thickness(1), VerticalAlignment = VerticalAlignment.Center, ToolTip = Tr("Mã máy: gửi mã này cho chủ plugin") };
             Theme.Ref(code, BackgroundProperty, Theme.InputBg);
             Theme.Ref(code, ForegroundProperty, Theme.Fg);
             Theme.Ref(code, BorderBrushProperty, Theme.Border);
-            var copy = SmallButton("Sao chép", "Sao chép mã máy");
+            var copy = SmallButton(Tr("Sao chép"), Tr("Sao chép mã máy"));
             copy.Margin = new Thickness(6, 0, 0, 0);
             copy.VerticalAlignment = VerticalAlignment.Center;
             copy.Click += (s, e) =>
             {
-                try { Clipboard.SetText($"Mã máy ClaudeCAD: {machine} ({device})"); copy.Content = "✓ Đã chép"; }
+                try { Clipboard.SetText(Tr("Mã máy ClaudeCAD: {0} ({1})", machine, device)); copy.Content = Tr("✓ Đã chép"); }
                 catch { code.SelectAll(); code.Focus(); }
             };
-            var label = MutedText("Mã máy: ");
+            var label = MutedText(Tr("Mã máy: "));
             codeRow.Children.Add(label);
             codeRow.Children.Add(code);
             codeRow.Children.Add(copy);
             stack.Children.Add(codeRow);
-            var dev = MutedText("Thiết bị: " + device);
+            var dev = MutedText(Tr("Thiết bị: ") + device);
             dev.FontSize = 11;
             stack.Children.Add(dev);
 
             var keyRow = new DockPanel { Margin = new Thickness(0, 8, 0, 0), LastChildFill = true };
-            var go = new Button { Content = "Kích hoạt", ToolTip = "Kiểm tra key cho máy này rồi mở khung chat (key vĩnh viễn, cập nhật không hỏi lại)", Padding = new Thickness(12, 2, 12, 2), Margin = new Thickness(6, 0, 0, 0), FontWeight = FontWeights.SemiBold };
+            var go = new Button { Content = Tr("Kích hoạt"), ToolTip = Tr("Kiểm tra key cho máy này rồi mở khung chat (key vĩnh viễn, cập nhật không hỏi lại)"), Padding = new Thickness(12, 2, 12, 2), Margin = new Thickness(6, 0, 0, 0), FontWeight = FontWeights.SemiBold };
             DockPanel.SetDock(go, Dock.Right);
             keyRow.Children.Add(go);
-            var key = CodeBox("Key dạng XXXX-XXXX-XXXX-XXXX, hoặc mã không cần mạng: dán đủ các dòng trong email (CCL1…, CCS1…, CCF1…)");
+            var key = CodeBox(Tr("Key dạng XXXX-XXXX-XXXX-XXXX, hoặc mã không cần mạng: dán đủ các dòng trong email (CCL1…, CCS1…, CCF1…)"));
             keyRow.Children.Add(key);
             stack.Children.Add(keyRow);
 
             var buttons = new WrapPanel { Margin = new Thickness(0, 6, 0, 0) };
-            var ask = new Button { Content = "Gửi yêu cầu kích hoạt", Padding = new Thickness(10, 2, 10, 2), Margin = new Thickness(0, 0, 6, 4), ToolTip = "Gửi mã máy và tên thiết bị tới email của chủ plugin" };
+            var ask = new Button { Content = Tr("Gửi yêu cầu kích hoạt"), Padding = new Thickness(10, 2, 10, 2), Margin = new Thickness(0, 0, 6, 4), ToolTip = Tr("Gửi mã máy và tên thiết bị tới email của chủ plugin") };
             buttons.Children.Add(ask);
             if (canCheck)
             {
-                var check = new Button { Content = "Kiểm tra lại", Padding = new Thickness(10, 2, 10, 2), Margin = new Thickness(0, 0, 6, 4), ToolTip = "Khi chủ plugin đã duyệt máy này trong danh sách thiết bị, bấm để kích hoạt (không cần key)" };
-                check.Click += (s, e) => { SetActivationStatus("Đang kiểm tra với chủ plugin...", false); ActivationCheckRequested?.Invoke(); };
+                var check = new Button { Content = Tr("Kiểm tra lại"), Padding = new Thickness(10, 2, 10, 2), Margin = new Thickness(0, 0, 6, 4), ToolTip = Tr("Khi chủ plugin đã duyệt máy này trong danh sách thiết bị, bấm để kích hoạt (không cần key)") };
+                check.Click += (s, e) => { SetActivationStatus(Tr("Đang kiểm tra với chủ plugin..."), false); ActivationCheckRequested?.Invoke(); };
                 buttons.Children.Add(check);
             }
             stack.Children.Add(buttons);
@@ -3233,14 +3241,14 @@ namespace ClaudeCAD.Plugin.UI
             void Submit()
             {
                 var k = key.Text.Trim();
-                if (k.Length == 0) { SetActivationStatus("Dán key chủ plugin gửi cho cậu vào ô trên.", true); return; }
+                if (k.Length == 0) { SetActivationStatus(Tr("Dán key chủ plugin gửi cho cậu vào ô trên."), true); return; }
                 go.IsEnabled = false;
-                SetActivationStatus("Đang kích hoạt...", false);
+                SetActivationStatus(Tr("Đang kích hoạt..."), false);
                 ActivationKeySubmitted?.Invoke(k);
             }
             go.Click += (s, e) => Submit();
             SubmitOnEnter(key, Submit);
-            ask.Click += (s, e) => { ask.IsEnabled = false; SetActivationStatus("Đang gửi yêu cầu...", false); ActivationRequestRequested?.Invoke(); };
+            ask.Click += (s, e) => { ask.IsEnabled = false; SetActivationStatus(Tr("Đang gửi yêu cầu..."), false); ActivationRequestRequested?.Invoke(); };
 
             ForwardWheel(code);
             ForwardWheel(key);
@@ -3288,15 +3296,15 @@ namespace ClaudeCAD.Plugin.UI
                 return;
             }
             var stack = new StackPanel();
-            var title = new TextBlock { Text = ProductInfo.DisplayName + " tạm khóa", FontWeight = FontWeights.SemiBold, FontSize = FontSize + 1 };
+            var title = new TextBlock { Text = ProductInfo.DisplayName + Tr(" tạm khóa"), FontWeight = FontWeights.SemiBold, FontSize = FontSize + 1 };
             Theme.Ref(title, TextBlock.ForegroundProperty, Theme.Fg);
             stack.Children.Add(TitleWithIcon("lock", title));
             var msg = new TextBlock { Text = message ?? "", TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 3, 0, 0) };
             Theme.Ref(msg, TextBlock.ForegroundProperty, Theme.Fg);
             stack.Children.Add(msg);
             var buttons = new WrapPanel { Margin = new Thickness(0, 8, 0, 0) };
-            var check = new Button { Content = "Kiểm tra lại", Padding = new Thickness(10, 2, 10, 2), Margin = new Thickness(0, 0, 6, 4), ToolTip = "Hỏi lại chủ plugin xem máy này đã được cho phép dùng chưa" };
-            check.Click += (s, e) => { SetLockedStatus("Đang kiểm tra với chủ plugin...", false); ActivationCheckRequested?.Invoke(); };
+            var check = new Button { Content = Tr("Kiểm tra lại"), Padding = new Thickness(10, 2, 10, 2), Margin = new Thickness(0, 0, 6, 4), ToolTip = Tr("Hỏi lại chủ plugin xem máy này đã được cho phép dùng chưa") };
+            check.Click += (s, e) => { SetLockedStatus(Tr("Đang kiểm tra với chủ plugin..."), false); ActivationCheckRequested?.Invoke(); };
             buttons.Children.Add(check);
             stack.Children.Add(buttons);
             var st = MutedText("");
@@ -3304,7 +3312,7 @@ namespace ClaudeCAD.Plugin.UI
             st.TextTrimming = TextTrimming.None;
             st.FontSize = 11;
             // KT-41: a machine without network cannot use "Kiểm tra lại": it pastes the codes the owner emailed instead
-            AddCodeRow(stack, st, "Máy không có mạng: dán mã chủ plugin gửi qua email (dòng CCS1…, CCF1…, hoặc cả 3 dòng) rồi bấm \"Dùng mã\".");
+            AddCodeRow(stack, st, Tr("Máy không có mạng: dán mã chủ plugin gửi qua email (dòng CCS1…, CCF1…, hoặc cả 3 dòng) rồi bấm \"Dùng mã\"."));
             stack.Children.Add(st);
             _lockedMsg = msg;
             _lockedStatus = st;
@@ -3357,7 +3365,7 @@ namespace ClaudeCAD.Plugin.UI
         public void AddSkillDraftCard(string name, string description, string file) => Ui(() =>
         {
             var stack = new StackPanel();
-            var t = new TextBlock { Text = "Bản nháp skill: " + name, FontWeight = FontWeights.SemiBold, TextWrapping = TextWrapping.Wrap };
+            var t = new TextBlock { Text = Tr("Bản nháp skill: ") + name, FontWeight = FontWeights.SemiBold, TextWrapping = TextWrapping.Wrap };
             Theme.Ref(t, TextBlock.ForegroundProperty, Theme.Fg);
             stack.Children.Add(t);
             if (!string.IsNullOrEmpty(description))
@@ -3368,11 +3376,11 @@ namespace ClaudeCAD.Plugin.UI
                 stack.Children.Add(d);
             }
             var row = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(0, 6, 0, 0) };
-            var open = new Button { Content = "Xem / sửa", Padding = new Thickness(10, 2, 10, 2), Margin = new Thickness(0, 0, 6, 0), ToolTip = "Mở SKILL.md bản nháp để xem và sửa trước khi thêm" };
-            var add = new Button { Content = "Thêm vào plugin", Padding = new Thickness(10, 2, 10, 2), FontWeight = FontWeights.SemiBold, ToolTip = "Thêm skill này (như + Add skill)" };
+            var open = new Button { Content = Tr("Xem / sửa"), Padding = new Thickness(10, 2, 10, 2), Margin = new Thickness(0, 0, 6, 0), ToolTip = Tr("Mở SKILL.md bản nháp để xem và sửa trước khi thêm") };
+            var add = new Button { Content = Tr("Thêm vào plugin"), Padding = new Thickness(10, 2, 10, 2), FontWeight = FontWeights.SemiBold, ToolTip = Tr("Thêm skill này (như + Add skill)") };
             var status = MutedText("");
             open.Click += (s, e) => SkillDraftOpenRequested?.Invoke(file);
-            add.Click += (s, e) => { add.IsEnabled = false; status.Text = "  → đã gửi yêu cầu thêm"; SkillDraftAddRequested?.Invoke(file); };
+            add.Click += (s, e) => { add.IsEnabled = false; status.Text = Tr("  → đã gửi yêu cầu thêm"); SkillDraftAddRequested?.Invoke(file); };
             row.Children.Add(open);
             row.Children.Add(add);
             row.Children.Add(status);
@@ -3385,7 +3393,7 @@ namespace ClaudeCAD.Plugin.UI
         {
             ExpandForDecision();
             var stack = new StackPanel();
-            var t = new TextBlock { Text = "Kế hoạch: " + summary, FontWeight = FontWeights.SemiBold, TextWrapping = TextWrapping.Wrap };
+            var t = new TextBlock { Text = Tr("Kế hoạch: ") + summary, FontWeight = FontWeights.SemiBold, TextWrapping = TextWrapping.Wrap };
             Theme.Ref(t, TextBlock.ForegroundProperty, Theme.Fg);
             stack.Children.Add(t);
             int i = 0;
@@ -3396,9 +3404,9 @@ namespace ClaudeCAD.Plugin.UI
                 stack.Children.Add(st);
             }
             var row = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(0, 6, 0, 0) };
-            var go = new Button { Content = "Làm", Padding = new Thickness(14, 2, 14, 2), Margin = new Thickness(0, 0, 6, 0), FontWeight = FontWeights.SemiBold, ToolTip = "Claude thực hiện đúng kế hoạch này" };
-            var edit = new Button { Content = "Sửa kế hoạch", Padding = new Thickness(10, 2, 10, 2), Margin = new Thickness(0, 0, 6, 0), ToolTip = "Gõ điều cần đổi, Claude lập lại kế hoạch" };
-            var drop = new Button { Content = "Bỏ", Padding = new Thickness(10, 2, 10, 2), ToolTip = "Không làm" };
+            var go = new Button { Content = Tr("Làm"), Padding = new Thickness(14, 2, 14, 2), Margin = new Thickness(0, 0, 6, 0), FontWeight = FontWeights.SemiBold, ToolTip = Tr("Claude thực hiện đúng kế hoạch này") };
+            var edit = new Button { Content = Tr("Sửa kế hoạch"), Padding = new Thickness(10, 2, 10, 2), Margin = new Thickness(0, 0, 6, 0), ToolTip = Tr("Gõ điều cần đổi, Claude lập lại kế hoạch") };
+            var drop = new Button { Content = Tr("Bỏ"), Padding = new Thickness(10, 2, 10, 2), ToolTip = Tr("Không làm") };
             var answer = MutedText("");
             void Done(string kind, string label)
             {
@@ -3409,9 +3417,9 @@ namespace ClaudeCAD.Plugin.UI
                 answer.Text = "  → " + label;
                 PlanAnswered?.Invoke(id, kind);
             }
-            go.Click += (s, e) => Done("go", "làm theo kế hoạch");
-            edit.Click += (s, e) => Done("edit", "sửa kế hoạch");
-            drop.Click += (s, e) => Done("cancel", "đã bỏ");
+            go.Click += (s, e) => Done("go", Tr("làm theo kế hoạch"));
+            edit.Click += (s, e) => Done("edit", Tr("sửa kế hoạch"));
+            drop.Click += (s, e) => Done("cancel", Tr("đã bỏ"));
             _openConfirmButtons.Add(go);
             _openConfirmButtons.Add(edit);
             _openConfirmButtons.Add(drop);
@@ -3450,7 +3458,7 @@ namespace ClaudeCAD.Plugin.UI
                 _userText = owner._lastUserText ?? "";
                 _md.FontSize = owner.FontSize;
                 _md.HandleLinkClicked += h => owner.ZoomRequested?.Invoke(h);
-                _toolsCat = new Category("Thao tác", _toolRows, expanded: false) { Visibility = Visibility.Collapsed };
+                _toolsCat = new Category(Tr("Thao tác"), _toolRows, expanded: false) { Visibility = Visibility.Collapsed };
                 var stack = new StackPanel();
                 stack.Children.Add(SpeakerLabel("CLAUDE"));
                 _planRows = new StackPanel();
@@ -3467,7 +3475,7 @@ namespace ClaudeCAD.Plugin.UI
                 var planBody = new StackPanel();
                 planBody.Children.Add(_planBar);
                 planBody.Children.Add(_planRows);
-                _planCat = new Category("Bước", planBody, expanded: true) { Visibility = Visibility.Collapsed };
+                _planCat = new Category(Tr("Bước"), planBody, expanded: true) { Visibility = Visibility.Collapsed };
                 stack.Children.Add(_planCat.Root);
                 stack.Children.Add(_toolsCat.Root);
                 stack.Children.Add(_md);
@@ -3562,7 +3570,7 @@ namespace ClaudeCAD.Plugin.UI
                     string name = _planSteps[i - 1];
                     string state, text, color;
                     if (i < _planStep || (i == _planStep && _planClean == true)) { state = "done"; text = "✓ " + name; color = Theme.OkFg; }
-                    else if (i == _planStep && _planClean == false) { state = "stopped"; text = "○ " + name + " — dừng giữa chừng"; color = Theme.WarnFg; }
+                    else if (i == _planStep && _planClean == false) { state = "stopped"; text = "○ " + name + Tr(" — dừng giữa chừng"); color = Theme.WarnFg; }
                     else if (i == _planStep) { state = "now"; text = "● " + name + (_planNote != null ? " — " + _planNote : ""); color = Theme.Fg; }
                     else { state = "later"; text = "○ " + name; color = Theme.MutedFg; }
                     var row = new TextBlock { Text = text, TextWrapping = TextWrapping.Wrap, FontSize = 11, Margin = new Thickness(14, 0, 0, 1), Tag = "plan-" + state };
@@ -3573,11 +3581,11 @@ namespace ClaudeCAD.Plugin.UI
                 int done = _planStep - 1 + (_planClean == true ? 1 : 0);
                 _planBar.ColumnDefinitions[0].Width = new GridLength(done, GridUnitType.Star);
                 _planBar.ColumnDefinitions[1].Width = new GridLength(n - done, GridUnitType.Star);
-                _planBar.ToolTip = $"{done}/{n} bước đã xong";
+                _planBar.ToolTip = Tr("{0}/{1} bước đã xong", done, n);
                 string cur = n > 0 ? _planSteps[_planStep - 1] : "";
-                _planCat.SetTitle(_planClean == null ? $"Bước {_planStep}/{n}: {cur}"
-                    : _planClean == true ? $"Đã làm {done}/{n} bước" + (done < n ? $" · dừng sau bước {_planStep}" : "")
-                    : $"Dừng ở bước {_planStep}/{n}: {cur}");
+                _planCat.SetTitle(_planClean == null ? Tr("Bước {0}/{1}: {2}", _planStep, n, cur)
+                    : _planClean == true ? Tr("Đã làm {0}/{1} bước", done, n) + (done < n ? Tr(" · dừng sau bước {0}", _planStep) : "")
+                    : Tr("Dừng ở bước {0}/{1}: {2}", _planStep, n, cur));
             }
 
             /// <summary>
@@ -3628,7 +3636,7 @@ namespace ClaudeCAD.Plugin.UI
                 long ms = group.Sum(g => g.Ms);
                 if (group.Any(g => g.State == "running"))
                 {
-                    row.Text = _settled ? $"○ {label}{times} — chưa xong" : $"● {label}{times} — đang chạy";
+                    row.Text = _settled ? Tr("○ {0}{1} — chưa xong", label, times) : Tr("● {0}{1} — đang chạy", label, times);
                     row.Tag = "running";
                     Theme.Ref(row, TextBlock.ForegroundProperty, _settled ? Theme.MutedFg : Theme.Fg);
                 }
@@ -3651,12 +3659,12 @@ namespace ClaudeCAD.Plugin.UI
                 if (_live)
                 {
                     var cur = _tools.Count > 0 ? ToolLabels.Describe(_tools[_tools.Count - 1].entry.Tool) : "";
-                    _toolsCat.SetTitle($"Đang làm · bước {StepCount}: {cur}");
+                    _toolsCat.SetTitle(Tr("Đang làm · bước {0}: {1}", StepCount, cur));
                     return;
                 }
                 int errors = _tools.Count(t => t.entry.State == "error");
                 long ms = _tools.Sum(t => t.entry.Ms);
-                _toolsCat.SetTitle($"Thao tác ({_tools.Count}{(errors > 0 ? $", {errors} lỗi" : "")}) · {ms / 1000.0:0.0} s");
+                _toolsCat.SetTitle(Tr("Thao tác ({0}{1}) · {2:0.0} s", _tools.Count, (errors > 0 ? Tr(", {0} lỗi", errors) : ""), ms / 1000.0));
             }
 
             /// <summary>The turn is over (finished, stopped or failed): back to the folded "Thao tác (N)" summary.</summary>
@@ -3682,26 +3690,26 @@ namespace ClaudeCAD.Plugin.UI
                 ShowChanges(e.Changes);
                 if (e.Handles.Count > 0)
                 {
-                    var view = SmallButton($"Xem kết quả ({e.Handles.Count})", "Zoom tới và tô sáng các đối tượng vừa vẽ / sửa");
+                    var view = SmallButton(Tr("Xem kết quả ({0})", e.Handles.Count), Tr("Zoom tới và tô sáng các đối tượng vừa vẽ / sửa"));
                     view.Click += (s, a) => _owner.ZoomRequested?.Invoke(e.Handles);
                     _actions.Children.Add(view);
                 }
-                _undo = SmallButton("Hoàn tác lượt này", "Hoàn tác toàn bộ thay đổi của lượt này (một lệnh U)");
+                _undo = SmallButton(Tr("Hoàn tác lượt này"), Tr("Hoàn tác toàn bộ thay đổi của lượt này (một lệnh U)"));
                 _undo.Click += (s, a) => { _undo.IsEnabled = false; _owner.UndoTurnRequested?.Invoke(); };
                 _actions.Children.Add(_undo);
                 SetUndo(canUndo);
-                var copy = SmallButton("Copy", "Copy câu trả lời");
+                var copy = SmallButton("Copy", Tr("Copy câu trả lời"));
                 copy.Click += (s, a) => SafeCopy(MarkdownLite.ToPlainText(e.Text ?? ""));
                 _actions.Children.Add(copy);
                 if (canSaveMacro)
                 {
-                    var save = SmallButton("Lưu macro", "Lưu các thao tác vẽ của lượt này để chạy lại sau mà không cần Claude (không tốn token)");
+                    var save = SmallButton(Tr("Lưu macro"), Tr("Lưu các thao tác vẽ của lượt này để chạy lại sau mà không cần Claude (không tốn token)"));
                     save.Click += (s, a) =>
                     {
                         save.IsEnabled = false;
                         var first = _userText.Replace("\r", " ").Replace("\n", " ").Trim();
-                        _prompts.Children.Add(_owner.InlinePrompt("Tên macro:", first.Length > 40 ? first.Substring(0, 40).TrimEnd() : first, "Lưu",
-                            name => { save.Content = "✓ Đã lưu macro"; _owner.MacroSaveRequested?.Invoke(e, name); },
+                        _prompts.Children.Add(_owner.InlinePrompt(Tr("Tên macro:"), first.Length > 40 ? first.Substring(0, 40).TrimEnd() : first, Tr("Lưu"),
+                            name => { save.Content = Tr("✓ Đã lưu macro"); _owner.MacroSaveRequested?.Invoke(e, name); },
                             () => save.IsEnabled = true));
                     };
                     _actions.Children.Add(save);
@@ -3714,17 +3722,17 @@ namespace ClaudeCAD.Plugin.UI
                 _changes.Children.Clear();
                 if (c == null || c.IsEmpty) return;
                 var box = new StackPanel();
-                var head = new TextBlock { Text = "Thay đổi: " + c.Headline, FontWeight = FontWeights.SemiBold, FontSize = 11 };
+                var head = new TextBlock { Text = Tr("Thay đổi: ") + c.Headline, FontWeight = FontWeights.SemiBold, FontSize = 11 };
                 Theme.Ref(head, TextBlock.ForegroundProperty, Theme.Fg);
                 box.Children.Add(head);
                 foreach (var r in c.Rows.Take(8))
                 {
-                    var row = new TextBlock { Text = $"• {ChangeSummary.KindLabel(r.Kind)} {r.Count} trên {r.Layer}", FontSize = 11, Margin = new Thickness(6, 1, 0, 0) };
+                    var row = new TextBlock { Text = Tr("• {0} {1} trên {2}", ChangeSummary.KindLabel(r.Kind), r.Count, r.Layer), FontSize = 11, Margin = new Thickness(6, 1, 0, 0) };
                     if (r.Kind != "erased" && r.Handles.Count > 0)
                     {
                         Theme.Ref(row, TextBlock.ForegroundProperty, Theme.LinkFg);
                         row.Cursor = Cursors.Hand;
-                        row.ToolTip = "Bấm để xem trên bản vẽ";
+                        row.ToolTip = Tr("Bấm để xem trên bản vẽ");
                         var hs = r.Handles;
                         row.MouseLeftButtonUp += (s, a) => _owner.ZoomRequested?.Invoke(hs);
                     }
@@ -3733,7 +3741,7 @@ namespace ClaudeCAD.Plugin.UI
                 }
                 if (c.Rows.Count > 8)
                 {
-                    var more = MutedText($"… và {c.Rows.Count - 8} dòng nữa");
+                    var more = MutedText(Tr("… và {0} dòng nữa", c.Rows.Count - 8));
                     more.FontSize = 11;
                     more.Margin = new Thickness(6, 1, 0, 0);
                     box.Children.Add(more);

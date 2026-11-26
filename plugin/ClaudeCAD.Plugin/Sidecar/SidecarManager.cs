@@ -87,19 +87,19 @@ namespace ClaudeCAD.Plugin.Sidecar
             catch (Exception ex)
             {
                 Logger.Error("resolving sidecar paths failed", ex);
-                SetState(SidecarState.Failed, "Không xác định được đường dẫn node/agent: " + ex.Message);
+                SetState(SidecarState.Failed, L.Tr("Không xác định được đường dẫn node/agent: ") + ex.Message);
                 return;
             }
             if (node == null)
             {
                 SetState(SidecarState.Failed,
-                    "Không tìm thấy node.exe. Cài Node.js >= 18 (https://nodejs.org) hoặc đặt biến môi trường CLAUDECAD_NODE.");
+                    L.Tr("Không tìm thấy node.exe. Cài Node.js >= 18 (https://nodejs.org) hoặc đặt biến môi trường CLAUDECAD_NODE."));
                 return;
             }
             if (entry == null)
             {
                 SetState(SidecarState.Failed,
-                    "Không tìm thấy agent\\dist\\index.js. Chạy 'npm install' và 'npm run build' trong thư mục agent, hoặc đặt CLAUDECAD_AGENT_DIR.");
+                    L.Tr("Không tìm thấy agent\\dist\\index.js. Chạy 'npm install' và 'npm run build' trong thư mục agent, hoặc đặt CLAUDECAD_AGENT_DIR."));
                 return;
             }
 
@@ -128,8 +128,8 @@ namespace ClaudeCAD.Plugin.Sidecar
             try
             {
                 SetState(state, state == SidecarState.Restarting
-                    ? $"Đang khởi động lại trợ lý (lần {_restarts}/{MaxRestarts})..."
-                    : "Đang khởi động trợ lý...");
+                    ? L.Tr("Đang khởi động lại trợ lý (lần {0}/{1})...", _restarts, MaxRestarts)
+                    : L.Tr("Đang khởi động trợ lý..."));
                 var p = new Process { StartInfo = psi, EnableRaisingEvents = true };
                 p.OutputDataReceived += (s, e) => { if (e.Data != null) Logger.Info("[sidecar] " + e.Data); };
                 p.ErrorDataReceived += (s, e) => { if (e.Data != null) Logger.Warn("[sidecar:err] " + e.Data); };
@@ -141,12 +141,12 @@ namespace ClaudeCAD.Plugin.Sidecar
                 _proc = p;
                 _startedAt = DateTime.UtcNow;
                 Logger.Info($"Sidecar started pid={p.Id}: {node} {args}");
-                SetState(SidecarState.Running, "Trợ lý đã chạy, đang kết nối...");
+                SetState(SidecarState.Running, L.Tr("Trợ lý đã chạy, đang kết nối..."));
             }
             catch (Exception ex)
             {
                 Logger.Error("Sidecar start failed", ex);
-                SetState(SidecarState.Failed, "Không khởi động được trợ lý: " + ex.Message);
+                SetState(SidecarState.Failed, L.Tr("Không khởi động được trợ lý: ") + ex.Message);
             }
         }
 
@@ -162,7 +162,7 @@ namespace ClaudeCAD.Plugin.Sidecar
                 _proc = null;
                 if (_stopping)
                 {
-                    SetState(SidecarState.Stopped, "Trợ lý đã dừng.");
+                    SetState(SidecarState.Stopped, L.Tr("Trợ lý đã dừng."));
                     return;
                 }
 
@@ -175,7 +175,7 @@ namespace ClaudeCAD.Plugin.Sidecar
                     return;
                 }
                 _restarts++;
-                SetState(SidecarState.Restarting, $"Mất kết nối với trợ lý (mã {code}). Đang tự khôi phục...");
+                SetState(SidecarState.Restarting, L.Tr("Mất kết nối với trợ lý (mã {0}). Đang tự khôi phục...", code));
             }
 
             // brief back-off, then start again outside the Exited callback
@@ -230,7 +230,7 @@ namespace ClaudeCAD.Plugin.Sidecar
             {
                 _stopping = true;
                 KillLocked();
-                SetState(SidecarState.Stopped, "Trợ lý đã dừng.");
+                SetState(SidecarState.Stopped, L.Tr("Trợ lý đã dừng."));
             }
         }
 

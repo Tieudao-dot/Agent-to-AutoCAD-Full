@@ -476,7 +476,7 @@ namespace ClaudeCAD.Plugin.Drawing
                 }
                 if (objs.Count == 0) res["note"] = lockedPreview.Count > 0 ? "Every match is on a locked layer. Nothing to replace." : "Nothing matches. Nothing to replace.";
                 else
-                    res["next"] = "Nothing was changed. Call request_confirmation with match_handles and one Vietnamese sentence (count, find → replace, one example), end the turn; after Đồng ý call find_replace_text again with handles = match_handles.";
+                    res["next"] = "Nothing was changed. Call request_confirmation with match_handles and one sentence in the user's language (count, find → replace, one example), end the turn; after Đồng ý call find_replace_text again with handles = match_handles.";
                 if (!Util2DLogic.SafeForMText(find)) res["mtext_skipped"] = "find contains \\ { or }: MTEXT / multileader / multi-line attributes were not searched (formatting codes).";
                 if (objs.Count > Util2DLogic.MaxReplaceHandles) res["note"] = $"More than {Util2DLogic.MaxReplaceHandles} objects match: narrow with layers or types.";
                 return res;

@@ -126,3 +126,19 @@ Báo cáo nghiên cứu: giao diện lấy màu, font và các điểm vào từ
 | 51 | Nút chế độ **Cả hai / 2D / 3D** | Chỉ máy gói Full: nút icon khối + chữ ở hàng trên cùng (cạnh "Gói: Full"), bấm → chọn. Vẫn thấy khi thu gọn | 2D / 3D: Claude chỉ nạp lệnh + hướng dẫn của nhóm đó (đúng bộ lệnh gói 2D / 3D), mở chat bớt ~1/3 token. Lưu `work_mode` trong `settings.json`. Đổi giữa lượt: lượt đang chạy giữ chế độ cũ, tin sau dùng chế độ mới (cùng cuộc chat), có dòng báo. Việc ngoài chế độ: Claude nhắc đổi chế độ, không nói gói / nâng cấp. Macro không bị giới hạn. `WorkModeLogic` (`Core/Plans.cs`), `ChatControl.BuildModeButton` |
 | 52 | Điểm bấm chọn theo UCS | Nút **Chọn điểm** | Số chèn vào ô nhập theo UCS hiện hành của model space (World: WCS như cũ), cùng hệ với mọi lệnh từ đợt F1 |
 
+
+## Nâng cấp đợt H9 — giao diện tiếng Anh (26/11/2026)
+
+- ⚙ ▸ **Chung — Giao diện ▸ Ngôn ngữ / Language**: **Tiếng Việt** (mặc định) hoặc **English**. Tên hai lựa chọn luôn viết bằng
+  chính ngôn ngữ đó.
+- Đổi là thấy ngay: nút, gợi ý khi rê chuột, ⚙, các bảng Skill / Layer / Macro / Phiên bản / Ghi chú, thẻ xác nhận và thẻ kế
+  hoạch, dòng trạng thái, nhãn lệnh đang chạy, lời báo lỗi, thẻ "Bắt đầu", thẻ kích hoạt, báo cáo `CLAUDECHATSELFTEST` (tên
+  bước và dòng tổng; chi tiết kỹ thuật từng bước vẫn tiếng Việt). Đoạn chat đang mở được vẽ lại với nút theo ngôn ngữ mới; chữ
+  cậu đã gõ và câu trả lời cũ của Claude giữ nguyên.
+- Claude trả lời bằng ngôn ngữ mới **từ tin nhắn tiếp theo** (cùng cuộc chat, vẫn nhớ ngữ cảnh). Ở English, Claude xưng "I" /
+  "you", thẻ và gợi ý viết tiếng Anh, khách xác nhận được bằng "yes", "ok", "go ahead" (vẫn nhận "đồng ý").
+- **English chỉ đổi giao diện và câu trả lời, chữ trên bản vẽ giữ tiếng Việt** (cả bảng xuất Excel): tên phòng, tiêu đề bảng, khung tên, tên tờ,
+  tên cọc, mô tả layer, tiêu đề cột Excel… theo chuẩn bản vẽ Việt Nam (chủ dự án chốt 26/11/2026). Muốn chữ nào trên bản vẽ
+  bằng tiếng Anh thì nhờ Claude đổi.
+- Bộ cài hỏi ngôn ngữ ở hộp đầu tiên; lựa chọn đó là ngôn ngữ của plugin ở lần mở đầu tiên (máy đã dùng plugin trước đó giữ
+  ngôn ngữ đang đặt).

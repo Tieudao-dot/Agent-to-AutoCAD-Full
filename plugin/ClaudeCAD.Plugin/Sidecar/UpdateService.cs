@@ -140,16 +140,16 @@ namespace ClaudeCAD.Plugin.Sidecar
                         {
                             _available = m;
                             Logger.Info($"update available: {m.Version}");
-                            notify?.Invoke($"Có bản cập nhật ClaudeCAD {m.Version} (đang dùng {CurrentVersion}). Gõ CLAUDECHATUPDATE để tải; bản mới được cài khi đóng AutoCAD." +
+                            notify?.Invoke(L.Tr("Có bản cập nhật ClaudeCAD {0} (đang dùng {1}). Gõ CLAUDECHATUPDATE để tải; bản mới được cài khi đóng AutoCAD.", m.Version, CurrentVersion) +
                                 (string.IsNullOrEmpty(m.Notes) ? "" : "\n" + m.Notes));
                         }
-                        else if (force) notify?.Invoke($"ClaudeCAD {CurrentVersion} là bản mới nhất.");
+                        else if (force) notify?.Invoke(L.Tr("ClaudeCAD {0} là bản mới nhất.", CurrentVersion));
                     }
                 }
                 catch (Exception ex)
                 {
                     Logger.Warn("update check failed: " + ex.Message);
-                    if (force) notify?.Invoke("Không kiểm tra được cập nhật: " + ex.Message);
+                    if (force) notify?.Invoke(L.Tr("Không kiểm tra được cập nhật: ") + ex.Message);
                 }
             });
         }
@@ -159,17 +159,17 @@ namespace ClaudeCAD.Plugin.Sidecar
         {
 #if BAN_THU_NOI_BO
             await Task.CompletedTask.ConfigureAwait(false);
-            return "Bản thử nội bộ không tự cập nhật. Khi có bản chính thức, chạy bộ cài của bản đó (cài đè lên, giữ lịch sử chat và cài đặt).";
+            return L.Tr("Bản thử nội bộ không tự cập nhật. Khi có bản chính thức, chạy bộ cài của bản đó (cài đè lên, giữ lịch sử chat và cài đặt).");
 #else
             var bundle = InstalledBundle;
-            if (bundle == null) return "Plugin đang chạy từ bản build dev (NETLOAD), không có bundle để cập nhật. Dùng git pull + build lại.";
+            if (bundle == null) return L.Tr("Plugin đang chạy từ bản build dev (NETLOAD), không có bundle để cập nhật. Dùng git pull + build lại.");
             var url = ManifestUrl;
-            if (string.IsNullOrEmpty(url)) return "Chưa cấu hình nguồn cập nhật (CLAUDECAD_UPDATE_URL hoặc Contents\\update-config.json).";
+            if (string.IsNullOrEmpty(url)) return L.Tr("Chưa cấu hình nguồn cập nhật (CLAUDECAD_UPDATE_URL hoặc Contents\\update-config.json).");
 
             using (var c = NewClient())
             {
                 var m = _available ?? UpdateLogic.ParseManifest(await c.GetStringAsync(url).ConfigureAwait(false));
-                if (!UpdateLogic.IsNewer(CurrentVersion, m.Version)) return $"ClaudeCAD {CurrentVersion} là bản mới nhất.";
+                if (!UpdateLogic.IsNewer(CurrentVersion, m.Version)) return L.Tr("ClaudeCAD {0} là bản mới nhất.", CurrentVersion);
 
                 var zip = Path.Combine(StateDir, $"ClaudeCAD-{m.Version}.zip");
                 using (var resp = await c.GetAsync(m.Url, HttpCompletionOption.ResponseHeadersRead).ConfigureAwait(false))
@@ -182,7 +182,7 @@ namespace ClaudeCAD.Plugin.Sidecar
                 if (!hash.Equals(m.Sha256, StringComparison.OrdinalIgnoreCase))
                 {
                     File.Delete(zip);
-                    return $"Tải bản cập nhật bị sai checksum (SHA-256 {hash} ≠ {m.Sha256}); đã hủy.";
+                    return L.Tr("Tải bản cập nhật bị sai checksum (SHA-256 {0} ≠ {1}); đã hủy.", hash, m.Sha256);
                 }
 
                 var stageRoot = Path.Combine(StateDir, "stage");
@@ -190,7 +190,7 @@ namespace ClaudeCAD.Plugin.Sidecar
                 ZipFile.ExtractToDirectory(zip, stageRoot);
                 var staged = Directory.GetFiles(stageRoot, "PackageContents.xml", SearchOption.AllDirectories)
                     .Select(Path.GetDirectoryName).OrderBy(p => p.Length).FirstOrDefault();
-                if (staged == null) return "Gói cập nhật không chứa PackageContents.xml; đã hủy.";
+                if (staged == null) return L.Tr("Gói cập nhật không chứa PackageContents.xml; đã hủy.");
 
                 var script = Path.Combine(StateDir, "apply-update.cmd");
                 File.WriteAllText(script, UpdateLogic.ApplyScript(Process.GetCurrentProcess().Id, staged, bundle, Path.Combine(StateDir, "apply-update.log")), Encoding.ASCII);
@@ -201,7 +201,7 @@ namespace ClaudeCAD.Plugin.Sidecar
                     WindowStyle = ProcessWindowStyle.Hidden,
                 });
                 Logger.Info($"update {m.Version} staged at {staged}; applier waiting for AutoCAD to exit");
-                return $"Đã tải ClaudeCAD {m.Version}. Đóng AutoCAD để cài; lần mở sau sẽ dùng bản mới (skill cậu đã sửa được giữ nguyên).";
+                return L.Tr("Đã tải ClaudeCAD {0}. Đóng AutoCAD để cài; lần mở sau sẽ dùng bản mới (skill cậu đã sửa được giữ nguyên).", m.Version);
             }
 #endif
         }

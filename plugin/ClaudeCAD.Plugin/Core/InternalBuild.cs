@@ -14,7 +14,7 @@ namespace ClaudeCAD.Plugin.Core
     public static class InternalBuild
     {
         /// <summary>The name people see everywhere in this build (palette title, ⚙, self-test, Windows app list).</summary>
-        public const string Label = "Agent to AutoCAD Full: BẢN THỬ NỘI BỘ nâng cấp 6 (hết hạn 10/12/2026)";
+        public const string Label = "Agent to AutoCAD Full: BẢN THỬ NỘI BỘ nâng cấp 7 (hết hạn 10/12/2026)";
 
         /// <summary>The last day the build works (Vietnam date, dd/MM/yyyy).</summary>
         public const string LastDayText = "10/12/2026";
@@ -25,7 +25,7 @@ namespace ClaudeCAD.Plugin.Core
         /// <summary>00:00 on 11/12/2026 Vietnam time = 17:00 on 10/12/2026 UTC: from then on the build has expired.</summary>
         public static readonly DateTime ExpiresUtc = new DateTime(2026, 12, 11, 0, 0, 0, DateTimeKind.Utc) - VietnamOffset;
 
-        public const string ExpiredMessage = "Bản thử nội bộ đã hết hạn ngày " + LastDayText + ". Cài bản chính thức để dùng tiếp.";
+        public const string ExpiredMessage = "Bản thử nội bộ đã hết hạn ngày 10/12/2026. Cài bản chính thức để dùng tiếp."; // one literal: the English table key (Core/LangEn.cs)
 
         /// <summary>
         /// The time the expiry is judged by. A clock set back (LicenseLogic.ClockRolledBack: more than a day earlier
@@ -60,6 +60,12 @@ namespace ClaudeCAD.Plugin.Core
             IsExpired(utcNow, latestSeenUtc)
                 ? "bản thử nội bộ — đã hết hạn (" + LastDayText + ")"
                 : "bản thử nội bộ — bỏ qua kích hoạt, gói Full, dùng được tới hết ngày " + LastDayText + " (còn " + DaysLeft(utcNow, latestSeenUtc) + " ngày)";
+
+        /// <summary>StatusText in English (the palette in English, nâng cấp đợt H9).</summary>
+        public static string StatusTextEn(DateTime utcNow, DateTime? latestSeenUtc) =>
+            IsExpired(utcNow, latestSeenUtc)
+                ? "internal test build — expired (" + LastDayText + ")"
+                : "internal test build — no activation, Full plan, works until the end of " + LastDayText + " (" + DaysLeft(utcNow, latestSeenUtc) + " days left)";
 
         private static DateTime AsUtc(DateTime t) =>
             t.Kind == DateTimeKind.Utc ? t : t.Kind == DateTimeKind.Local ? t.ToUniversalTime() : DateTime.SpecifyKind(t, DateTimeKind.Utc);

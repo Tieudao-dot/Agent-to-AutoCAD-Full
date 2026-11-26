@@ -12,7 +12,7 @@
 ; sent anywhere, plan Full, expires after 10/12/2026 (the plugin is built with BAN_THU_NOI_BO). Same AppId / folders.
 #define BanThuNoiBo
 #ifdef BanThuNoiBo
-  #define AppDisplayName "Agent to AutoCAD Full: BẢN THỬ NỘI BỘ nâng cấp 6 (hết hạn 10/12/2026)"
+  #define AppDisplayName "Agent to AutoCAD Full: BẢN THỬ NỘI BỘ nâng cấp 7 (hết hạn 10/12/2026)"
 #else
 #define AppDisplayName "Agent to AutoCAD Full"
 #endif
@@ -41,6 +41,14 @@
 #endif
 #ifndef ActivationContact
   #define ActivationContact "Liên hệ Zalo owner: 0344644415"
+#endif
+; nâng cấp đợt H9: the English pages show the default contact in English; a contact the owner set stays as written
+#ifndef ActivationContactEn
+  #if ActivationContact == "Liên hệ Zalo owner: 0344644415"
+    #define ActivationContactEn "Contact the owner on Zalo: 0344644415"
+  #else
+    #define ActivationContactEn ActivationContact
+  #endif
 #endif
 ; the contact text goes into Pascal string literals: double any '
 #define ContactPas StringChange(ActivationContact, "'", "''")
@@ -76,9 +84,19 @@ CloseApplications=no
 ; always write %TEMP%\Setup Log yyyy-mm-dd #nnn.txt — "Gửi báo cáo lỗi" in the palette attaches it
 SetupLogging=yes
 UninstallDisplayName={#AppDisplayName}
+; nâng cấp đợt H9: always ask the language (Tiếng Việt is the first entry and the default)
+ShowLanguageDialog=yes
+LanguageDetectionMethod=none
 
 [Languages]
+; nâng cấp đợt H9: two languages, Vietnamese first (the default of the language dialog). Inno Setup ships no Vietnamese
+; messages file: the standard wizard texts come from Default.isl, the ones people get stuck on are Vietnamese below
+Name: "vietnamese"; MessagesFile: "compiler:Default.isl"
 Name: "english"; MessagesFile: "compiler:Default.isl"
+
+[LangOptions]
+vietnamese.LanguageName=Tiếng Việt
+english.LanguageName=English
 
 [InstallDelete]
 ; KT-38 (12/11/2026): replacing the original ClaudeCAD, its update link (to the original repository) must not stay: a
@@ -102,20 +120,209 @@ Source: "{#BundleDir}\Contents\skills\*"; DestDir: "{app}\Contents\skills-ban-mo
 ; Sign in now (no AutoCAD needed): the Claude Code bundled with the plugin opens the browser; the user only
 ; confirms. runasoriginaluser: the credentials must land in the profile of the person using the PC, not of an
 ; admin account typed into UAC. skipifsilent: /VERYSILENT installs never open a browser. Hidden when signed in.
-Filename: "{#ClaudeExe}"; Parameters: "auth login --claudeai"; Description: "Đăng nhập Claude ngay (trình duyệt mở ra, bấm đồng ý một lần — không cần mở AutoCAD)"; Flags: postinstall runasoriginaluser skipifsilent nowait; Check: NeedsLogin
+Filename: "{#ClaudeExe}"; Parameters: "auth login --claudeai"; Description: "{cm:H9LoginNow}"; Flags: postinstall runasoriginaluser skipifsilent nowait; Check: NeedsLogin
 
 [Messages]
 #ifdef BanThuNoiBo
-WelcomeLabel2=ĐÂY LÀ BẢN THỬ NỘI BỘ (nâng cấp 6: đợt F + G + H phần 1), chỉ dành cho chủ dự án, không gửi cho ai.%n%n- Không cần kích hoạt, mở sẵn đủ 2D + 3D (gói Full).%n- Dùng được tới hết ngày 10/12/2026; từ 11/12/2026 khung chat không mở trợ lý nữa.%n- Không tự cập nhật.%n- Nếu máy đang có ClaudeCAD, bản này sẽ thay nó (giữ lịch sử chat, cài đặt và đăng nhập Claude). Bộ cài chính thức sau này cài đè lên được.%n%nBấm Next để cài tiếp.
+vietnamese.WelcomeLabel2=ĐÂY LÀ BẢN THỬ NỘI BỘ (nâng cấp 7: đợt F + G + H phần 1 + H phần 2), chỉ dành cho chủ dự án, không gửi cho ai.%n%n- Không cần kích hoạt, mở sẵn đủ 2D + 3D (gói Full).%n- Dùng được tới hết ngày 10/12/2026; từ 11/12/2026 khung chat không mở trợ lý nữa.%n- Không tự cập nhật.%n- Nếu máy đang có ClaudeCAD, bản này sẽ thay nó (giữ lịch sử chat, cài đặt và đăng nhập Claude). Bộ cài chính thức sau này cài đè lên được.%n%nBấm Next để cài tiếp.
+english.WelcomeLabel2=THIS IS AN INTERNAL TEST BUILD (upgrade 7: rounds F + G + H part 1 + H part 2), for the project owner only, do not share it.%n%n- No activation needed, 2D + 3D open (Full plan).%n- Works until the end of 10/12/2026; from 11/12/2026 the chat palette no longer starts the assistant.%n- No automatic update.%n- If this PC has ClaudeCAD, this build replaces it (chats, settings and the Claude sign-in are kept). The official installer can later install over it.%n%nPress Next to continue.
 #endif
 ; TT-01: should a file still be in use while copying, the retry box is Vietnamese too
-AbortRetryIgnoreSelectAction=Chọn cách xử lý
-AbortRetryIgnoreRetry=&Thử lại (sau khi đóng AutoCAD)
-AbortRetryIgnoreIgnore=&Bỏ qua lỗi và cài tiếp (không nên)
-AbortRetryIgnoreCancel=Hủy cài đặt (khởi động lại máy rồi chạy lại bộ cài)
-FinishedLabel={#AppDisplayName} đã được cài (lệnh mở khung chat: CLAUDECHAT).%n%nĐể dùng ngay: giữ ô "Đăng nhập Claude ngay" rồi bấm Finish — trình duyệt mở trang cấp quyền, cậu bấm đồng ý bằng tài khoản Claude Pro/Max (một cửa sổ đen hiện lên trong lúc đăng nhập và tự đóng khi xong). Sau đó mở AutoCAD 2022–2027 là dùng được.%n%nNếu bỏ qua bước này, lần đầu mở AutoCAD plugin sẽ tự mở trang đăng nhập.
+vietnamese.AbortRetryIgnoreSelectAction=Chọn cách xử lý
+vietnamese.AbortRetryIgnoreRetry=&Thử lại (sau khi đóng AutoCAD)
+vietnamese.AbortRetryIgnoreIgnore=&Bỏ qua lỗi và cài tiếp (không nên)
+vietnamese.AbortRetryIgnoreCancel=Hủy cài đặt (khởi động lại máy rồi chạy lại bộ cài)
+english.FinishedLabel={#AppDisplayName} is installed (command to open the chat palette: CLAUDECHAT).%n%nTo use it now: keep "Sign in to Claude now" ticked and press Finish — the browser opens the permission page, agree with your Claude Pro/Max account (a black window shows during the sign-in and closes by itself). Then open AutoCAD 2022–2027 and it is ready.%n%nIf you skip this step, the plugin opens the sign-in page the first time AutoCAD starts.
+vietnamese.FinishedLabel={#AppDisplayName} đã được cài (lệnh mở khung chat: CLAUDECHAT).%n%nĐể dùng ngay: giữ ô "Đăng nhập Claude ngay" rồi bấm Finish — trình duyệt mở trang cấp quyền, cậu bấm đồng ý bằng tài khoản Claude Pro/Max (một cửa sổ đen hiện lên trong lúc đăng nhập và tự đóng khi xong). Sau đó mở AutoCAD 2022–2027 là dùng được.%n%nNếu bỏ qua bước này, lần đầu mở AutoCAD plugin sẽ tự mở trang đăng nhập.
+
+[CustomMessages]
+; nâng cấp đợt H9: the installer speaks the language picked in its first dialog (Tiếng Việt / English);
+; the same choice is the plugin's first language (Contents\language.txt, read when there are no palette settings yet)
+vietnamese.H9Msg01=Máy này có AutoCAD bản mới hơn 2027 (
+vietnamese.H9Msg02=). {#AppDisplayName} bản này chỉ chạy trên AutoCAD 2022–2027 nên sẽ không tự nạp vào bản đó.
+vietnamese.H9Msg03=Vẫn cài tiếp?
+vietnamese.H9Msg04=Không tìm thấy AutoCAD 2022–2027 bản đầy đủ trên máy này. {#AppDisplayName} chỉ chạy trên AutoCAD bản đầy đủ (và các bản chuyên ngành như Civil 3D), không chạy trên AutoCAD LT.
+vietnamese.H9Msg05=Vẫn cài tiếp? (Cài AutoCAD sau cũng được, {#AppDisplayName} tự nạp khi mở AutoCAD.)
+vietnamese.H9Msg06=ClaudeCAD (bản gốc, chỉ 2D)
+vietnamese.H9Msg07=một bản ClaudeCAD chưa rõ loại (có thể là bản gốc, chỉ 2D)
+vietnamese.H9Msg08=, phiên bản
+vietnamese.H9Msg09=Máy này đang có
+vietnamese.H9Msg10=Cài {#AppDisplayName} sẽ thay bản này. Lịch sử chat, cài đặt và đăng nhập Claude được giữ.
+vietnamese.BtnbMsg01=Bản thử nội bộ không cần kích hoạt và hết hạn sau ngày 10/12/2026.
+english.BtnbMsg01=The internal test build needs no activation and expires after 10/12/2026.
+vietnamese.H9Msg11=Key cũ không dùng được: máy sẽ xin kích hoạt lại, chủ plugin duyệt và chọn gói cho máy.
+vietnamese.H9Msg12=Bấm Tiếp tục để cài, Hủy để thoát (máy giữ nguyên bản đang có).
+vietnamese.H9Msg13=Tiếp tục
+vietnamese.H9Msg14=Hủy
+vietnamese.H9Msg15=AutoCAD đang mở nên không cài được. Hãy lưu bản vẽ, đóng hết AutoCAD rồi chạy lại bộ cài.
+vietnamese.H9Msg16=AutoCAD đang mở.
+vietnamese.H9Msg17=Hãy lưu bản vẽ và đóng hết AutoCAD, rồi bấm Thử lại.
+vietnamese.H9Msg18=Bộ cài không tự tắt AutoCAD để cậu không mất bản vẽ chưa lưu.
+vietnamese.H9Msg19=Thử lại
+vietnamese.H9Msg20=Đã hủy cài: AutoCAD vẫn đang mở. Máy chưa bị thay đổi gì. Đóng AutoCAD rồi chạy lại bộ cài.
+vietnamese.H9Msg21=Một file của plugin vẫn đang được dùng (
+vietnamese.H9Msg22=), nên chưa cài được.
+vietnamese.H9Msg23=Máy chưa bị thay đổi gì.
+vietnamese.H9Msg24=Hãy khởi động lại máy rồi chạy lại bộ cài, trước khi mở AutoCAD.
+vietnamese.H9Msg25=Nhắn mã máy ở trên cho chủ plugin để nhận key.
+vietnamese.H9Msg26=Đang gửi yêu cầu kích hoạt cho chủ plugin (có thể mất tới 20 giây, cửa sổ sẽ đứng yên)...
+vietnamese.H9Msg27=Không gửi được yêu cầu tự động (máy chưa có mạng?). Nhắn mã máy ở trên cho chủ plugin qua Zalo.
+vietnamese.H9Msg28=Nhắn mã máy ở trên cho chủ plugin qua Zalo.
+vietnamese.H9Msg29=Máy chủ kích hoạt chưa sẵn sàng. Nhắn mã máy ở trên cho chủ plugin qua Zalo.
+vietnamese.H9Msg30=Yêu cầu của máy này đã được gửi cho chủ plugin trước đó. Dán key vào ô trên, hoặc chờ duyệt rồi bấm Next cài tiếp.
+vietnamese.H9Msg31=Đã gửi yêu cầu kích hoạt (mã máy + tên thiết bị) cho chủ plugin. Dán key vào ô trên, hoặc chờ duyệt rồi bấm Next cài tiếp.
+vietnamese.H9Msg32=Đã sao chép mã máy — dán vào Zalo gửi cho chủ plugin.
+vietnamese.H9Msg33=Thiếu dòng giấy phép CCL1| — dán đủ các dòng trong email của chủ plugin.
+vietnamese.H9Msg34=Mã kích hoạt offline này của máy khác.
+vietnamese.H9Msg35=Không lưu được giấy phép.
+vietnamese.H9Msg36=Key gồm 16 ký tự dạng XXXX-XXXX-XXXX-XXXX.
+vietnamese.H9Msg37=Bộ cài này chưa có máy chủ kích hoạt — xin chủ plugin mã kích hoạt offline (dòng dài bắt đầu bằng CCL1|).
+vietnamese.H9Msg38=Không kết nối được máy chủ kích hoạt. Kiểm tra mạng rồi bấm Next lại.
+vietnamese.H9Msg39=Key không đúng với máy này.
+vietnamese.H9Msg40=Kích hoạt {#AppDisplayName}
+vietnamese.H9Msg41=Chủ plugin cấp quyền dùng cho từng máy.
+vietnamese.H9Msg42={#AppDisplayName} chỉ dùng được khi máy này được chủ plugin cho phép. Yêu cầu được gửi tự động;
+vietnamese.H9Msg43={#ActivationContact} để được duyệt nhanh.
+vietnamese.H9Msg44=Có key thì dán vào ô dưới. Chưa có key vẫn bấm Next cài tiếp được — sau khi được duyệt,
+vietnamese.H9Msg45=mở AutoCAD là tự dùng được (hoặc bấm "Kiểm tra lại" trong khung chat Claude).
+vietnamese.H9Msg46={#AppDisplayName} chỉ cài được khi có mã kích hoạt do chủ plugin cấp, riêng cho từng máy.
+vietnamese.H9Msg47={#ActivationContact}, gửi mã máy bên dưới để nhận mã kích hoạt (dòng dài bắt đầu bằng CCL1|).
+vietnamese.H9Msg48=Mã máy (gửi mã này cho chủ plugin):
+vietnamese.H9Msg49=Sao chép
+vietnamese.H9Msg50=Gửi lại yêu cầu
+vietnamese.H9Msg51=Key kích hoạt (XXXX-XXXX-XXXX-XXXX), hoặc mã không cần mạng (dán đủ các dòng trong email):
+vietnamese.H9Msg52=Chưa nhập key. Cài tiếp và chờ chủ plugin duyệt máy này?
+vietnamese.H9Msg53=Sau khi được duyệt: mở AutoCAD là tự dùng được (hoặc bấm "Kiểm tra lại" trong khung chat Claude).
+vietnamese.H9Msg54=Đang kiểm tra key...
+vietnamese.H9Msg55=Đã kích hoạt máy này.
+english.H9Msg01=This PC has an AutoCAD newer than 2027 (
+english.H9Msg02=). This {#AppDisplayName} build only runs on AutoCAD 2022–2027, so it will not load into that version.
+english.H9Msg03=Install anyway?
+english.H9Msg04=No full AutoCAD 2022–2027 was found on this PC. {#AppDisplayName} only runs on full AutoCAD (and the vertical products such as Civil 3D), not on AutoCAD LT.
+english.H9Msg05=Install anyway? (AutoCAD can be installed later, {#AppDisplayName} loads by itself when AutoCAD opens.)
+english.H9Msg06=ClaudeCAD (the original, 2D only)
+english.H9Msg07=a ClaudeCAD of unknown kind (maybe the original, 2D only)
+english.H9Msg08=, version
+english.H9Msg09=This PC has
+english.H9Msg10=Installing {#AppDisplayName} replaces it. Chat history, settings and the Claude sign-in are kept.
+english.H9Msg11=The old key does not work: the PC asks for activation again, the plugin owner approves it and picks its plan.
+english.H9Msg12=Press Continue to install, Cancel to quit (the PC keeps what it has).
+english.H9Msg13=Continue
+english.H9Msg14=Cancel
+english.H9Msg15=AutoCAD is open, so Setup cannot install. Save your drawings, close every AutoCAD, then run Setup again.
+english.H9Msg16=AutoCAD is open.
+english.H9Msg17=Save your drawings and close every AutoCAD, then press Retry.
+english.H9Msg18=Setup does not close AutoCAD itself, so you do not lose unsaved drawings.
+english.H9Msg19=Retry
+english.H9Msg20=Setup cancelled: AutoCAD is still open. Nothing on the PC was changed. Close AutoCAD and run Setup again.
+english.H9Msg21=A plugin file is still in use (
+english.H9Msg22=), so Setup cannot install yet.
+english.H9Msg23=Nothing on the PC was changed.
+english.H9Msg24=Restart the PC and run Setup again, before opening AutoCAD.
+english.H9Msg25=Send the machine code above to the plugin owner to get a key.
+english.H9Msg26=Sending the activation request to the plugin owner (may take up to 20 seconds, the window stays still)...
+english.H9Msg27=Could not send the request automatically (no internet?). Send the machine code above to the plugin owner on Zalo.
+english.H9Msg28=Send the machine code above to the plugin owner on Zalo.
+english.H9Msg29=The activation server is not ready. Send the machine code above to the plugin owner on Zalo.
+english.H9Msg30=This PC's request was already sent to the plugin owner. Paste the key in the box above, or wait for approval and press Next to continue.
+english.H9Msg31=Activation request (machine code + device name) sent to the plugin owner. Paste the key in the box above, or wait for approval and press Next to continue.
+english.H9Msg32=Machine code copied — paste it in Zalo to send it to the plugin owner.
+english.H9Msg33=The license line CCL1| is missing — paste all the lines of the plugin owner's email.
+english.H9Msg34=This offline activation code belongs to another PC.
+english.H9Msg35=Could not save the license.
+english.H9Msg36=A key has 16 characters like XXXX-XXXX-XXXX-XXXX.
+english.H9Msg37=This Setup has no activation server — ask the plugin owner for an offline activation code (a long line starting with CCL1|).
+english.H9Msg38=Could not reach the activation server. Check the internet connection and press Next again.
+english.H9Msg39=The key does not match this PC.
+english.H9Msg40=Activate {#AppDisplayName}
+english.H9Msg41=The plugin owner grants use for each PC.
+english.H9Msg42={#AppDisplayName} only works once the plugin owner allows this PC. The request is sent automatically;
+english.H9Msg43={#ActivationContactEn} to get approved quickly.
+english.H9Msg44=If you have a key, paste it below. Without a key you can still press Next to install — once approved,
+english.H9Msg45=opening AutoCAD is enough (or press "Check again" in the Claude chat palette).
+english.H9Msg46={#AppDisplayName} installs only with an activation code from the plugin owner, one per PC.
+english.H9Msg47={#ActivationContactEn}, send the machine code below to get the activation code (a long line starting with CCL1|).
+english.H9Msg48=Machine code (send it to the plugin owner):
+english.H9Msg49=Copy
+english.H9Msg50=Send the request again
+english.H9Msg51=Activation key (XXXX-XXXX-XXXX-XXXX), or the offline code (paste all the lines of the email):
+english.H9Msg52=No key entered. Install anyway and wait for the plugin owner to approve this PC?
+english.H9Msg53=Once approved: opening AutoCAD is enough (or press "Check again" in the Claude chat palette).
+english.H9Msg54=Checking the key...
+english.H9Msg55=This PC is activated.
+vietnamese.H9LoginNow=Đăng nhập Claude ngay (trình duyệt mở ra, bấm đồng ý một lần — không cần mở AutoCAD)
+english.H9LoginNow=Sign in to Claude now (the browser opens, agree once — AutoCAD is not needed)
+; KTP-07: the fixed error texts of the activation server (Code.gs.template, unchanged): the key (both languages) and its text
+vietnamese.H9SrvKey01=Yêu cầu không hợp lệ.
+english.H9SrvKey01=Yêu cầu không hợp lệ.
+vietnamese.H9Srv01=Yêu cầu không hợp lệ.
+english.H9Srv01=Invalid request.
+vietnamese.H9SrvKey02=Mã máy không hợp lệ.
+english.H9SrvKey02=Mã máy không hợp lệ.
+vietnamese.H9Srv02=Mã máy không hợp lệ.
+english.H9Srv02=Invalid machine code.
+vietnamese.H9SrvKey03=Máy chủ kích hoạt đang bận, thử lại sau ít phút.
+english.H9SrvKey03=Máy chủ kích hoạt đang bận, thử lại sau ít phút.
+vietnamese.H9Srv03=Máy chủ kích hoạt đang bận, thử lại sau ít phút.
+english.H9Srv03=The activation server is busy, try again in a few minutes.
+vietnamese.H9SrvKey04=Có quá nhiều máy mới xin kích hoạt trong giờ này, thử lại sau.
+english.H9SrvKey04=Có quá nhiều máy mới xin kích hoạt trong giờ này, thử lại sau.
+vietnamese.H9Srv04=Có quá nhiều máy mới xin kích hoạt trong giờ này, thử lại sau.
+english.H9Srv04=Too many new PCs asked for activation this hour, try again later.
+vietnamese.H9SrvKey05=Có quá nhiều yêu cầu kích hoạt trong giờ này, thử lại sau.
+english.H9SrvKey05=Có quá nhiều yêu cầu kích hoạt trong giờ này, thử lại sau.
+vietnamese.H9Srv05=Có quá nhiều yêu cầu kích hoạt trong giờ này, thử lại sau.
+english.H9Srv05=Too many activation requests this hour, try again later.
+vietnamese.H9SrvKey06=Máy chủ kích hoạt đã hết lượt gửi email hôm nay.
+english.H9SrvKey06=Máy chủ kích hoạt đã hết lượt gửi email hôm nay.
+vietnamese.H9Srv06=Máy chủ kích hoạt đã hết lượt gửi email hôm nay.
+english.H9Srv06=The activation server has used up today's emails.
+vietnamese.H9SrvKey07=Lỗi máy chủ kích hoạt:
+english.H9SrvKey07=Lỗi máy chủ kích hoạt:
+vietnamese.H9Srv07=Lỗi máy chủ kích hoạt:
+english.H9Srv07=Activation server error:
+vietnamese.H9SrvKey08=Key không đúng với máy này (mã máy
+english.H9SrvKey08=Key không đúng với máy này (mã máy
+vietnamese.H9Srv08=Key không đúng với máy này (mã máy
+english.H9Srv08=The key does not match this PC (machine code
+vietnamese.H9SrvKey09=). Kiểm tra lại key, hoặc xin key mới.
+english.H9SrvKey09=). Kiểm tra lại key, hoặc xin key mới.
+vietnamese.H9Srv09=). Kiểm tra lại key, hoặc xin key mới.
+english.H9Srv09=). Check the key, or ask for a new one.
+vietnamese.H9SrvKey10=Máy này đã bị chủ plugin tạm khóa.
+english.H9SrvKey10=Máy này đã bị chủ plugin tạm khóa.
+vietnamese.H9Srv10=Máy này đã bị chủ plugin tạm khóa.
+english.H9Srv10=The plugin owner has locked this PC.
 
 [Code]
+
+{ KTP-07: an activation server's error in the language of Setup (an unknown text stays as it came) }
+function TrServer(S: String): String;
+var
+  I: Integer;
+  K: String;
+begin
+  Result := S;
+  if ActiveLanguage() <> 'english' then exit;
+  for I := 1 to 10 do
+    if ((I <= 6) or (I = 10)) and (S = CustomMessage(Format('H9SrvKey%.2d', [I]))) then
+    begin
+      Result := CustomMessage(Format('H9Srv%.2d', [I]));
+      exit;
+    end;
+  K := CustomMessage('H9SrvKey07');
+  if Pos(K, S) = 1 then
+  begin
+    Result := CustomMessage('H9Srv07') + ' ' + Trim(Copy(S, Length(K) + 1, Length(S)));
+    exit;
+  end;
+  K := CustomMessage('H9SrvKey08');
+  if Pos(K, S) = 1 then
+  begin
+    StringChangeEx(Result, K, CustomMessage('H9Srv08'), True);
+    StringChangeEx(Result, CustomMessage('H9SrvKey09'), CustomMessage('H9Srv09'), True);
+  end;
+end;
 #if FileExists(AddBackslash(SourcePath) + BundleDir + "\Contents\node\node.exe")
   #define BundledNode
 #endif
@@ -270,11 +477,11 @@ begin
   Log('AutoCAD releases found: supported [' + Trim(Supported) + '] newer [' + Trim(Newer) + ']');
   if Supported <> '' then exit;
   if Newer <> '' then
-    Result := SuppressibleMsgBox('Máy này có AutoCAD bản mới hơn 2027 (' + Trim(Newer) + '). {#AppDisplayName} bản này chỉ chạy trên AutoCAD 2022–2027 nên sẽ không tự nạp vào bản đó.' + #13#10#13#10 +
-              'Vẫn cài tiếp?', mbConfirmation, MB_YESNO, IDYES) = IDYES
+    Result := SuppressibleMsgBox(CustomMessage('H9Msg01') + Trim(Newer) + CustomMessage('H9Msg02') + #13#10#13#10 +
+              CustomMessage('H9Msg03'), mbConfirmation, MB_YESNO, IDYES) = IDYES
   else
-    Result := SuppressibleMsgBox('Không tìm thấy AutoCAD 2022–2027 bản đầy đủ trên máy này. {#AppDisplayName} chỉ chạy trên AutoCAD bản đầy đủ (và các bản chuyên ngành như Civil 3D), không chạy trên AutoCAD LT.' + #13#10#13#10 +
-              'Vẫn cài tiếp? (Cài AutoCAD sau cũng được, {#AppDisplayName} tự nạp khi mở AutoCAD.)', mbConfirmation, MB_YESNO, IDYES) = IDYES;
+    Result := SuppressibleMsgBox(CustomMessage('H9Msg04') + #13#10#13#10 +
+              CustomMessage('H9Msg05'), mbConfirmation, MB_YESNO, IDYES) = IDYES;
 end;
 
 { ======================================================================= the Full edition over the original ClaudeCAD
@@ -382,10 +589,10 @@ begin
   Log('existing install: ' + ExistingEdition + ' ' + ExistingVersion + ' (' + BundlePath() + ')');
   if not ReplacesOriginal() then exit;
   if ExistingEdition = 'original' then
-    What := 'ClaudeCAD (bản gốc, chỉ 2D)'
+    What := CustomMessage('H9Msg06')
   else
-    What := 'một bản ClaudeCAD chưa rõ loại (có thể là bản gốc, chỉ 2D)';
-  if ExistingVersion <> '' then What := What + ', phiên bản ' + ExistingVersion;
+    What := CustomMessage('H9Msg07');
+  if ExistingVersion <> '' then What := What + CustomMessage('H9Msg08') + ' ' + ExistingVersion;
   if WizardSilent() then
   begin
     Log('silent install: replacing ' + What + ' with {#AppDisplayName} {#AppVersion} without asking');
@@ -393,15 +600,15 @@ begin
   end;
   { a task dialog, so the two buttons read "Tiếp tục" / "Hủy" (decided 12/11/2026); this setup has only the English
     language, whose MsgBox buttons are OK / Cancel. Hủy (or closing the dialog) leaves Setup before anything changed. }
-  Result := TaskDialogMsgBox('Máy này đang có ' + What + '.',
-                             'Cài {#AppDisplayName} sẽ thay bản này. Lịch sử chat, cài đặt và đăng nhập Claude được giữ.' + #13#10 +
+  Result := TaskDialogMsgBox(CustomMessage('H9Msg09') + ' ' + What + '.',
+                             CustomMessage('H9Msg10') + #13#10 +
 #ifdef BanThuNoiBo
-                             'Bản thử nội bộ không cần kích hoạt và hết hạn sau ngày 10/12/2026.' + #13#10#13#10 +
+                             CustomMessage('BtnbMsg01') + #13#10#13#10 +
 #else
-                             'Key cũ không dùng được: máy sẽ xin kích hoạt lại, chủ plugin duyệt và chọn gói cho máy.' + #13#10#13#10 +
+                             CustomMessage('H9Msg11') + #13#10#13#10 +
 #endif
-                             'Bấm Tiếp tục để cài, Hủy để thoát (máy giữ nguyên bản đang có).',
-                             mbConfirmation, MB_OKCANCEL, ['Tiếp tục', 'Hủy'], 0) = IDOK;
+                             CustomMessage('H9Msg12'),
+                             mbConfirmation, MB_OKCANCEL, [CustomMessage('H9Msg13'), CustomMessage('H9Msg14')], 0) = IDOK;
   if Result then Log('the user agreed to replace ' + What)
   else Log('the user cancelled: ' + What + ' is kept');
 end;
@@ -475,16 +682,16 @@ begin
     Log('AutoCAD is running: the plugin files are in use');
     if WizardSilent() then
     begin
-      Result := 'AutoCAD đang mở nên không cài được. Hãy lưu bản vẽ, đóng hết AutoCAD rồi chạy lại bộ cài.';
+      Result := CustomMessage('H9Msg15');
       exit;
     end;
-    if TaskDialogMsgBox('AutoCAD đang mở.',
-                        'Hãy lưu bản vẽ và đóng hết AutoCAD, rồi bấm Thử lại.' + #13#10 +
-                        'Bộ cài không tự tắt AutoCAD để cậu không mất bản vẽ chưa lưu.',
-                        mbInformation, MB_OKCANCEL, ['Thử lại', 'Hủy'], 0) <> IDOK then
+    if TaskDialogMsgBox(CustomMessage('H9Msg16'),
+                        CustomMessage('H9Msg17') + #13#10 +
+                        CustomMessage('H9Msg18'),
+                        mbInformation, MB_OKCANCEL, [CustomMessage('H9Msg19'), CustomMessage('H9Msg14')], 0) <> IDOK then
     begin
       Log('the user cancelled while AutoCAD was running');
-      Result := 'Đã hủy cài: AutoCAD vẫn đang mở. Máy chưa bị thay đổi gì. Đóng AutoCAD rồi chạy lại bộ cài.';
+      Result := CustomMessage('H9Msg20');
       exit;
     end;
   end;
@@ -552,9 +759,9 @@ begin
   if Busy <> '' then
   begin
     Log('a plugin file is still in use: ' + Busy);
-    Result := 'Một file của plugin vẫn đang được dùng (' + ExtractFileName(Busy) + '), nên chưa cài được. ' +
-              'Máy chưa bị thay đổi gì.' + #13#10#13#10 +
-              'Hãy khởi động lại máy rồi chạy lại bộ cài, trước khi mở AutoCAD.';
+    Result := CustomMessage('H9Msg21') + ExtractFileName(Busy) + CustomMessage('H9Msg22') + ' ' +
+              CustomMessage('H9Msg23') + #13#10#13#10 +
+              CustomMessage('H9Msg24');
   end;
 end;
 
@@ -716,25 +923,25 @@ var
 begin
   if '{#ActivationUrl}' = '' then
   begin
-    SetStatus('Nhắn mã máy ở trên cho chủ plugin để nhận key.');
+    SetStatus(CustomMessage('H9Msg25'));
     exit;
   end;
-  SetStatus('Đang gửi yêu cầu kích hoạt cho chủ plugin (có thể mất tới 20 giây, cửa sổ sẽ đứng yên)...');
+  SetStatus(CustomMessage('H9Msg26'));
   if not HttpGet('{#ActivationUrl}?action=request&machine=' + MachineCode() + '&device=' + UrlEncode(GetComputerNameString()) +
                  '&user=' + UrlEncode(GetUserNameString()) + '&from=' + UrlEncode('setup {#AppVersion}'), Body) then
-    SetStatus('Không gửi được yêu cầu tự động (máy chưa có mạng?). Nhắn mã máy ở trên cho chủ plugin qua Zalo.')
+    SetStatus(CustomMessage('H9Msg27'))
   else if not JsonOk(Body) then
   begin
-    if JsonValue(Body, 'error') <> '' then SetStatus(JsonValue(Body, 'error') + ' Nhắn mã máy ở trên cho chủ plugin qua Zalo.')
-    else SetStatus('Máy chủ kích hoạt chưa sẵn sàng. Nhắn mã máy ở trên cho chủ plugin qua Zalo.');
+    if JsonValue(Body, 'error') <> '' then SetStatus(TrServer(JsonValue(Body, 'error')) + ' ' + CustomMessage('H9Msg28'))
+    else SetStatus(CustomMessage('H9Msg29'));
   end
   else
   begin
     Requested := True;
     if Pos('"sent":false', Body) > 0 then
-      SetStatus('Yêu cầu của máy này đã được gửi cho chủ plugin trước đó. Dán key vào ô trên, hoặc chờ duyệt rồi bấm Next cài tiếp.')
+      SetStatus(CustomMessage('H9Msg30'))
     else
-      SetStatus('Đã gửi yêu cầu kích hoạt (mã máy + tên thiết bị) cho chủ plugin. Dán key vào ô trên, hoặc chờ duyệt rồi bấm Next cài tiếp.');
+      SetStatus(CustomMessage('H9Msg31'));
   end;
 end;
 
@@ -748,7 +955,7 @@ var
   ResultCode: Integer;
 begin
   if Exec(ExpandConstant('{cmd}'), '/C echo Ma may {#AppDisplayName}: ' + MachineCode() + ' (' + GetComputerNameString() + ')| clip', '', SW_HIDE, ewWaitUntilTerminated, ResultCode) then
-    SetStatus('Đã sao chép mã máy — dán vào Zalo gửi cho chủ plugin.');
+    SetStatus(CustomMessage('H9Msg32'));
 end;
 
 function SaveLicense(const License: String): Boolean;
@@ -831,35 +1038,35 @@ begin
       else if Pos('CCS1|', Tok) = 1 then St := Tok
       else if Pos('CCF1|', Tok) = 1 then Pl := Tok;
     end;
-    if Lic = '' then begin Err := 'Thiếu dòng giấy phép CCL1| — dán đủ các dòng trong email của chủ plugin.'; exit; end;
-    if Pos('CCL1|' + MachineCode() + '|', Lic) <> 1 then begin Err := 'Mã kích hoạt offline này của máy khác.'; exit; end;
+    if Lic = '' then begin Err := CustomMessage('H9Msg33'); exit; end;
+    if Pos('CCL1|' + MachineCode() + '|', Lic) <> 1 then begin Err := CustomMessage('H9Msg34'); exit; end;
     if Pos('CCS1|' + MachineCode() + '|', St) = 1 then SaveStatusLine(St)
     else if St <> '' then Log('activation: the CCS1 line is for another machine, not saved');
     if Pos('CCF1|' + MachineCode() + '|', Pl) = 1 then SavePlanLine(Pl)
     else if Pl <> '' then Log('activation: the CCF1 line is for another machine, not saved');
     Result := SaveLicense(Lic);
-    if not Result then Err := 'Không lưu được giấy phép.';
+    if not Result then Err := CustomMessage('H9Msg35');
     exit;
   end;
   StringChangeEx(K, ' ', '', True);
   StringChangeEx(K, '-', '', True);
   K := Uppercase(K);
-  if Length(K) <> 16 then begin Err := 'Key gồm 16 ký tự dạng XXXX-XXXX-XXXX-XXXX.'; exit; end;
-  if '{#ActivationUrl}' = '' then begin Err := 'Bộ cài này chưa có máy chủ kích hoạt — xin chủ plugin mã kích hoạt offline (dòng dài bắt đầu bằng CCL1|).'; exit; end;
+  if Length(K) <> 16 then begin Err := CustomMessage('H9Msg36'); exit; end;
+  if '{#ActivationUrl}' = '' then begin Err := CustomMessage('H9Msg37'); exit; end;
   if not HttpGet('{#ActivationUrl}?action=activate&machine=' + MachineCode() + '&key=' + UrlEncode(K), Body) then
   begin
-    Err := 'Không kết nối được máy chủ kích hoạt. Kiểm tra mạng rồi bấm Next lại.';
+    Err := CustomMessage('H9Msg38');
     exit;
   end;
   Lic := JsonValue(Body, 'license');
   if (not JsonOk(Body)) or (Pos('CCL1|' + MachineCode() + '|', Lic) <> 1) then
   begin
-    Err := JsonValue(Body, 'error');
-    if Err = '' then Err := 'Key không đúng với máy này.';
+    Err := TrServer(JsonValue(Body, 'error'));
+    if Err = '' then Err := CustomMessage('H9Msg39');
     exit;
   end;
   Result := SaveLicense(Lic);
-  if not Result then Err := 'Không lưu được giấy phép.';
+  if not Result then Err := CustomMessage('H9Msg35');
   { the service marks the machine Active with the key and signs that too }
   St := JsonValue(Body, 'status');
   if Pos('CCS1|' + MachineCode() + '|', St) = 1 then SaveStatusLine(St);
@@ -873,25 +1080,25 @@ var
   Intro, CodeLabel, KeyLabel: TNewStaticText;
   CopyButton: TNewButton;
 begin
-  KeyPage := CreateCustomPage(wpWelcome, 'Kích hoạt {#AppDisplayName}', 'Chủ plugin cấp quyền dùng cho từng máy.');
+  KeyPage := CreateCustomPage(wpWelcome, CustomMessage('H9Msg40'), CustomMessage('H9Msg41'));
 
   Intro := TNewStaticText.Create(KeyPage);
   Intro.Parent := KeyPage.Surface;
   Intro.WordWrap := True;
   Intro.Width := KeyPage.SurfaceWidth;
   if '{#ActivationUrl}' <> '' then
-    Intro.Caption := '{#AppDisplayName} chỉ dùng được khi máy này được chủ plugin cho phép. Yêu cầu được gửi tự động;' + #13#10 +
-                     '{#ContactPas} để được duyệt nhanh.' + #13#10 +
-                     'Có key thì dán vào ô dưới. Chưa có key vẫn bấm Next cài tiếp được — sau khi được duyệt,' + #13#10 +
-                     'mở AutoCAD là tự dùng được (hoặc bấm "Kiểm tra lại" trong khung chat Claude).'
+    Intro.Caption := CustomMessage('H9Msg42') + #13#10 +
+                     CustomMessage('H9Msg43') + #13#10 +
+                     CustomMessage('H9Msg44') + #13#10 +
+                     CustomMessage('H9Msg45')
   else
-    Intro.Caption := '{#AppDisplayName} chỉ cài được khi có mã kích hoạt do chủ plugin cấp, riêng cho từng máy.' + #13#10 +
-                     '{#ContactPas}, gửi mã máy bên dưới để nhận mã kích hoạt (dòng dài bắt đầu bằng CCL1|).';
+    Intro.Caption := CustomMessage('H9Msg46') + #13#10 +
+                     CustomMessage('H9Msg47');
 
   CodeLabel := TNewStaticText.Create(KeyPage);
   CodeLabel.Parent := KeyPage.Surface;
   CodeLabel.Top := Intro.Top + Intro.Height + ScaleY(14);
-  CodeLabel.Caption := 'Mã máy (gửi mã này cho chủ plugin):';
+  CodeLabel.Caption := CustomMessage('H9Msg48');
 
   CodeEdit := TNewEdit.Create(KeyPage);
   CodeEdit.Parent := KeyPage.Surface;
@@ -907,7 +1114,7 @@ begin
   CopyButton.Top := CodeEdit.Top - ScaleY(1);
   CopyButton.Width := ScaleX(90);
   CopyButton.Height := ScaleY(23);
-  CopyButton.Caption := 'Sao chép';
+  CopyButton.Caption := CustomMessage('H9Msg49');
   CopyButton.OnClick := @CopyClick;
 
   AskButton := TNewButton.Create(KeyPage);
@@ -916,7 +1123,7 @@ begin
   AskButton.Top := CopyButton.Top;
   AskButton.Width := ScaleX(140);
   AskButton.Height := ScaleY(23);
-  AskButton.Caption := 'Gửi lại yêu cầu';
+  AskButton.Caption := CustomMessage('H9Msg50');
   AskButton.OnClick := @AskClick;
   AskButton.Visible := '{#ActivationUrl}' <> ''; { nothing to send to in a build without the activation service }
 
@@ -925,7 +1132,7 @@ begin
   KeyLabel.Top := CodeEdit.Top + CodeEdit.Height + ScaleY(16);
   KeyLabel.Width := KeyPage.SurfaceWidth;
   KeyLabel.WordWrap := True;
-  KeyLabel.Caption := 'Key kích hoạt (XXXX-XXXX-XXXX-XXXX), hoặc mã không cần mạng (dán đủ các dòng trong email):';
+  KeyLabel.Caption := CustomMessage('H9Msg51');
 
   { several lines: the no-network code is 2-3 lines (CCL1 / CCS1 / CCF1); a one-line box keeps only the first (KT-01) }
   KeyEdit := TNewMemo.Create(KeyPage);
@@ -976,15 +1183,15 @@ begin
   if (Trim(KeyEdit.Text) = '') and ('{#ActivationUrl}' <> '') then
   begin
     { the sheet way: install without a key; the plugin unlocks once the owner sets the machine Active }
-    Result := MsgBox('Chưa nhập key. Cài tiếp và chờ chủ plugin duyệt máy này?' + #13#10 +
-                     'Sau khi được duyệt: mở AutoCAD là tự dùng được (hoặc bấm "Kiểm tra lại" trong khung chat Claude).',
+    Result := MsgBox(CustomMessage('H9Msg52') + #13#10 +
+                     CustomMessage('H9Msg53'),
                      mbConfirmation, MB_YESNO) = IDYES;
     if Result then Log('activation: continuing without a key (the owner approves via the device sheet)');
     exit;
   end;
-  SetStatus('Đang kiểm tra key...');
+  SetStatus(CustomMessage('H9Msg54'));
   Result := Activate(KeyEdit.Text, Err);
-  if Result then SetStatus('Đã kích hoạt máy này.')
+  if Result then SetStatus(CustomMessage('H9Msg55'))
   else
   begin
     SetStatus(Err);
@@ -994,7 +1201,7 @@ end;
 
 procedure CurStepChanged(CurStep: TSetupStep);
 var
-  Err: String;
+  Err, Lang: String;
 begin
   { silent installs: /KEY=... (without it the plugin asks for the key inside AutoCAD) }
 #ifndef BanThuNoiBo
@@ -1006,5 +1213,11 @@ begin
     else Log('activation: silent install without /KEY= — the plugin will ask for the key');
 #endif
   { sign-in now happens inside AutoCAD ("Đăng nhập Claude" button) — nothing to type in a terminal }
-  if CurStep = ssPostInstall then TrustBundle();
+  if CurStep = ssPostInstall then
+  begin
+    TrustBundle();
+    { nâng cấp đợt H9: the language picked in Setup is the plugin's first language (used while there are no palette settings) }
+    if ActiveLanguage() = 'english' then Lang := 'en' else Lang := 'vi';
+    if not SaveStringToFile(ExpandConstant('{app}\Contents\language.txt'), Lang, False) then Log('language: not written');
+  end;
 end;

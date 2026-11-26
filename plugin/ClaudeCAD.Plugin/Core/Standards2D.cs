@@ -231,7 +231,7 @@ namespace ClaudeCAD.Plugin.Core
     {
         public static string CardMessage(string tool, string what, IEnumerable<string> handles) =>
             $"Confirmation required: {tool} would {what} (handles {string.Join(", ", handles)}), which is not on a confirmation card the user approved. " +
-            "Nothing was changed. Call request_confirmation with exactly these handles and one Vietnamese sentence saying what will be overwritten or deleted, " +
+            "Nothing was changed. Call request_confirmation with exactly these handles and one sentence in the user's language saying what will be overwritten or deleted, " +
             $"and end your turn. After the user presses Đồng ý, call {tool} again with the same parameters and handles = those handles. A typed \"ok\" does not count.";
     }
 

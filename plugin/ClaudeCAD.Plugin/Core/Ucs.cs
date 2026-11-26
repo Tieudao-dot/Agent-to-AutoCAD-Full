@@ -330,6 +330,8 @@ namespace ClaudeCAD.Plugin.Core
             "build_railing", "build_beam", "build_stair", "build_roof",
             // nâng cấp đợt F2
             "insert_library_block",
+            // nâng cấp đợt H8: built from coordinates (they read no geometry of existing objects)
+            "build_footing", "draw_rebar",
         };
 
         /// <summary>Keep WCS on purpose: the UCS itself, views, layouts / paper space, files, settings.</summary>
@@ -351,6 +353,8 @@ namespace ClaudeCAD.Plugin.Core
             "compare_drawings",
             // test tổng thể đợt H: file tools without coordinates (another file's numbers are never turned into this UCS)
             "export_drawing", "company_standard", "batch_files",
+            // nâng cấp đợt H6: survey coordinates are real (VN-2000) ones, never turned into a UCS
+            "terrain",
         };
 
         /// <summary>Params that are directions / displacements (turned, not moved) in Ref mode, any tool.</summary>
@@ -381,6 +385,8 @@ namespace ClaudeCAD.Plugin.Core
             ["build_railing"] = new[] { "base_z" },
             ["build_stair"] = new[] { "base_z" },
             ["build_beam"] = new[] { "top_z" },
+            // nâng cấp đợt H7: the centre line height of a route given in plan
+            ["draw_mep"] = new[] { "elevation" },
         };
 
         /// <summary>The mode of one call (a few tools depend on their params: from existing objects → Ref).</summary>

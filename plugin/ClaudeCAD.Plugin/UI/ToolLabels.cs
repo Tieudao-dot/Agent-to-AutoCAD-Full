@@ -2,7 +2,10 @@ using System.Collections.Generic;
 
 namespace ClaudeCAD.Plugin.UI
 {
-    /// <summary>Vietnamese labels for the tool status line of the palette.</summary>
+    /// <summary>
+    /// Vietnamese labels for the tool status line of the palette. Nâng cấp đợt H9: each label is a key of the
+    /// English table (L.Tr at the lookup, so a changed language shows at once); a test checks every label has English.
+    /// </summary>
     public static class ToolLabels
     {
         private static readonly Dictionary<string, string> Labels = new Dictionary<string, string>
@@ -149,6 +152,12 @@ namespace ClaudeCAD.Plugin.UI
             ["export_drawing"] = "Xuất DXF / DWG / FBX",
             ["company_standard"] = "Chuẩn công ty", // nâng cấp đợt H4
             ["batch_files"] = "Làm nhiều file", // nâng cấp đợt H5
+            ["terrain"] = "Hạ tầng: điểm đo, đồng mức, trắc", // nâng cấp đợt H6
+            ["draw_mep"] = "Vẽ ống MEP 3D", // nâng cấp đợt H7
+            ["mep_report"] = "Thống kê / soát ống MEP", // nâng cấp đợt H7
+            ["build_footing"] = "Dựng móng", // nâng cấp đợt H8
+            ["draw_rebar"] = "Vẽ thép", // nâng cấp đợt H8
+            ["rebar_schedule"] = "Bảng thống kê thép", // nâng cấp đợt H8
             ["volume_schedule"] = "Bảng khối lượng",
             ["setup_standards"] = "Thiết lập style chuẩn",
             ["create_sheet"] = "Tạo trang in có khung tên",
@@ -166,7 +175,7 @@ namespace ClaudeCAD.Plugin.UI
         public static string Describe(string tool)
         {
             if (string.IsNullOrEmpty(tool)) return "";
-            return Labels.TryGetValue(tool, out var l) ? l + " (" + tool + ")" : tool;
+            return Labels.TryGetValue(tool, out var l) ? Core.L.Tr(l) + " (" + tool + ")" : tool;
         }
     }
 }

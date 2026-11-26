@@ -63,7 +63,7 @@ export function utility2dTools(b: ToolBridge): AnyTool[] {
     cadTool(b, 'find_replace_text',
       'Find and replace text in TEXT, MTEXT, block attributes, dimension text overrides, multileaders and table cells. ALWAYS two steps: ' +
         '(1) call without handles = preview, nothing changes: returns the count, examples (before / after) and match_handles; (2) call ' +
-        'request_confirmation with match_handles and one Vietnamese sentence (count, find → replace, an example) and end the turn; after the ' +
+        'request_confirmation with match_handles and one sentence in the language of the user (count, find → replace, an example) and end the turn; after the ' +
         'user presses Đồng ý call again with handles = match_handles. Without the card the plugin refuses. replace "" deletes the found text.',
       {
         find: z.string().min(1),

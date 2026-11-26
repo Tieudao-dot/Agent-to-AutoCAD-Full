@@ -72,7 +72,7 @@ namespace ClaudeCAD.Plugin.Core
         /// </summary>
         public static QuickTemplate SaveUser(string userFile, string title, string text, bool replace = false, IEnumerable<string> reserved = null)
         {
-            if (string.IsNullOrWhiteSpace(text)) throw new ArgumentException("Mẫu lệnh trống.");
+            if (string.IsNullOrWhiteSpace(text)) throw new ArgumentException(L.Tr("Mẫu lệnh trống."));
             var list = new List<QuickTemplate>();
             if (File.Exists(userFile))
             {

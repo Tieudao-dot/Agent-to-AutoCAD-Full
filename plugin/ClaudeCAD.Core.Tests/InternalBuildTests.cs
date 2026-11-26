@@ -22,7 +22,7 @@ namespace ClaudeCAD.Core.Tests
         [Fact]
         public void Label_and_messages_read_as_decided()
         {
-            Assert.Equal("Agent to AutoCAD Full: BẢN THỬ NỘI BỘ nâng cấp 6 (hết hạn 10/12/2026)", InternalBuild.Label);
+            Assert.Equal("Agent to AutoCAD Full: BẢN THỬ NỘI BỘ nâng cấp 7 (hết hạn 10/12/2026)", InternalBuild.Label);
             Assert.Equal("Bản thử nội bộ đã hết hạn ngày 10/12/2026. Cài bản chính thức để dùng tiếp.", InternalBuild.ExpiredMessage);
             Assert.StartsWith("Agent to AutoCAD Full", InternalBuild.Label);
         }
@@ -90,7 +90,7 @@ namespace ClaudeCAD.Core.Tests
             Assert.Contains("public static string ServiceUrl => null;", act);
             Assert.Contains("public static bool IsActivated => true;", act);
             Assert.Contains("return !InternalExpired;", act);
-            Assert.Contains("return InternalBuild.ExpiredMessage;", act);
+            Assert.Contains("return L.Tr(InternalBuild.ExpiredMessage);", act);
             Assert.Contains("var expired = InternalBuild.IsExpired(now, seen);", act);
             // the internal path of Activation reads no environment variable (CLAUDECAD_ACTIVATION_URL is never used)
             var internalPart = act.Substring(act.IndexOf("#if BAN_THU_NOI_BO", StringComparison.Ordinal));

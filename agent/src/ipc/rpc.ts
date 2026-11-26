@@ -84,7 +84,7 @@ export function errorResponse(id: string, code: string, message: string): ToolRe
 }
 
 /** Calls that legitimately take long on a big drawing (render, plot, save, purge). */
-const SLOW_TOOLS = new Set(['plot_pdf', 'save_drawing', 'purge_unused', 'regen', 'attach_xref', 'reload_xref', 'bind_xref', 'zoom_extents']);
+const SLOW_TOOLS = new Set(['plot_pdf', 'save_drawing', 'purge_unused', 'regen', 'attach_xref', 'reload_xref', 'bind_xref', 'zoom_extents', 'terrain']); // terrain: nâng cấp đợt H6 (10 000 points, contours)
 const CAPTURE_TOOLS = new Set(['capture_view']);
 /**
  * 3D builds that unite many boxes in one call (the walls of a plan, several storeys, a railing; nâng cấp đợt A): a

@@ -822,7 +822,7 @@ này ghi một trong hai câu: "AutoCAD có vẽ ảnh nền khi chụp", hoặc
 *Lỗi nhẹ đã biết, chấp nhận (KFG-43): "soát bản vẽ" có thể mất khoảng 6 giây với bản vẽ có khoảng 20 000 điểm / block chồng thẳng
 đứng (cùng vị trí mặt bằng, khác cao độ). Gặp thì ghi lại thời gian, không tính là "không đạt".*
 
-# Đợt H phần 1 (H1 → H5): thử với bộ cài thử bản 5 (gộp 26/11/2026)
+# Đợt H phần 1 (H1 → H5): thử với bộ cài thử bản 6 (gộp 26/11/2026)
 
 *Test tổng thể đợt H phần 1, nhánh `full/nang-cap-h-tong-the`. Chi tiết: `docs/ban-giao/nang-cap-h1.md` … `-h5-test.md`,
 `docs/ban-giao/test-tong-the-dot-h-phan-1.md`. Gộp từ `checklist-dot-h1.md` … `-h5.md` (các file đó giờ trỏ về đây). Cần máy
@@ -1154,3 +1154,282 @@ AutoCAD thứ hai). Khoảng 30 phút. "Đạt" là thấy đúng như cột ph�
 | H6-4 | "Soát cả thư mục theo chuẩn ABC" (H5 + H4) | Mỗi file soát theo layer / kiểu ABC (không theo VN); "sửa kiểu chữ sai" thì Claude không dùng fix_drawing áp kiểu VN |
 | H6-5 | Máy gói 3D: "so với bản cũ", "xuất FBX", "học chuẩn công ty", "soát cả thư mục" | So (chỉ khối 3D) và xuất FBX được; học chuẩn / làm nhiều file: Claude nói là phần 2D |
 
+
+# Đợt H phần 2 (H6 → H9): thử với bộ cài thử bản 7 (gộp 26/11/2026)
+
+*Gộp từ `checklist-dot-h6.md` … `checklist-dot-h9.md` (cả các mục "Test & sửa"). Số tiêu chuẩn của H6 / H7 / H8 cậu đã duyệt 26/11
+(`docs/dot-h-so-tieu-chuan.md`); chỗ ghi "kỹ sư đối chiếu TCVN hiện hành" là số mặc định. Số thường và quyết định tự chọn: `docs/dot-h-cho-duyet.md` phần 2.*
+
+## P2-0. Làm trước: rủi ro nhất, chưa kiểm được ở đâu (~45 phút)
+
+| # | Làm gì | Thấy gì là đạt |
+| --- | --- | --- |
+| P2-0-1 | Nhập **file điểm khảo sát thật** (máy toàn đạc / Excel của công ty, có tọa độ VN-2000 thật) bằng `terrain`: Claude hỏi gốc tọa độ; chọn gốc cục bộ | Điểm đúng chỗ so với bản đồ / hồ sơ cũ (X là hướng Bắc → trục y); đo `DIST` hai mốc khớp tọa độ; có dòng "Gốc tọa độ: …". Bản vẽ đặt đơn vị **mét** cũng đúng cỡ (H6T-3) |
+| P2-0-2 | Đồng mức + trắc dọc + trắc ngang trên khu đo đó | Kỹ sư xem: đường đồng mức, cao độ cọc, MSS hợp lý; chữ đọc được khi in |
+| P2-0-3 | **Soát va chạm ống**: một mô hình có dầm / cột thật, đi vài tuyến ống (có ống chéo, ống gió lên đứng), `mep_report` clash | Chỗ chạm / sát đúng (đo bằng `DIST`); ống chéo xa cột không bị báo; ống gió đi X → đứng → Y giữ mặt rộng nằm ngang ở cả hai đoạn |
+| P2-0-4 | **Bảng thống kê thép** một dầm + một cột + một ô sàn, đưa kỹ sư **tính tay** | Chiều dài từng thanh, số thanh, kg theo đường kính khớp tính tay (neo 30d, bẻ L 10d thép gân, móc 180° thép trơn, nối chồng khi > 11,7 m); không cộng hao hụt |
+| P2-0-5 | **Bộ cài chọn English**, cài xong mở khung chat; rồi **cài lại** (cài đè) | Khung chat tiếng Anh ngay lần đầu; cài lại vẫn giữ ngôn ngữ đang dùng (không đổi về tiếng Việt) |
+| P2-0-6 | Chọn English, nhờ việc có thẻ xác nhận, **gõ tay** "yes" / "go ahead"; rồi "yes but don’t delete the walls", "ok, except the doors", "yes if you keep the walls", "yes later" | Hai câu đầu: làm; các câu sau (có điều kiện, để sau, có dấu nháy cong): **không** làm, Claude hỏi lại |
+| P2-0-6b | *(KTP-02 → 04, 44, 47)* Tiếng Việt, cùng việc đó, gõ tay "ko đồng ý", "đồng ý nếu giữ tường", "dạ thôi", "ok đợi đã", "ok à", "không sao"; rồi "Vâng, tớ đồng ý", "Thôi được, xóa đi", "ok xoá đi" | Sáu câu đầu: **không** xóa, Claude hỏi lại; ba câu sau: xóa |
+| P2-0-7 | Chọn English, vẽ trắc dọc, ống, bảng thép, xuất Excel | Chữ trên bản vẽ và Excel **giữ tiếng Việt**; Claude trả lời tiếng Anh |
+
+## P2-H6. Hạ tầng: điểm khảo sát, đồng mức, trắc dọc, trắc ngang (~40 phút); mục của `checklist-dot-h6.md`
+
+### A. Nhập điểm (~8 phút)
+
+| # | Làm gì | Thấy gì là đạt |
+| --- | --- | --- |
+| A1 | Gõ `CLAUDECHATSELFTEST` | Dòng "Nâng cấp đợt H6: hạ tầng…" **đạt** |
+| A2 | Kéo file điểm vào chat: "nhập điểm khảo sát từ file này" | Claude hỏi một câu: vẽ theo tọa độ thật hay từ gốc cục bộ. Chưa vẽ gì |
+| A3 | Trả lời "gốc cục bộ" | Mỗi điểm một dấu chấm (layer `C-SURVEY-PT`) kèm cao độ `+12.350` (`C-LEVEL`) và tên điểm (`C-COORD`); dòng "Gốc tọa độ: X = …, Y = … (VN-2000)" dưới đám điểm. Claude nói rõ đã đổi trục (X là hướng Bắc) |
+| A4 | Đo khoảng cách hai điểm (lệnh `DIST`) so với tính tay từ tọa độ | Khớp (đơn vị mm: 1 m = 1 000) |
+| A5 | File có cột X / Y đảo (X là hướng Đông) | Claude cảnh báo cột có vẻ bị đảo, hỏi lại |
+| A6 | File Excel (.xlsx) cùng nội dung | Nhập được như CSV |
+| A7 | File có vài dòng hỏng (chữ trong cột X) | Các dòng đó bị bỏ qua, Claude kể số dòng bỏ qua |
+
+### B. Đồng mức (~6 phút)
+
+| # | Làm gì | Thấy gì là đạt |
+| --- | --- | --- |
+| B1 | "Vẽ đường đồng mức" | Đường con `C-TOPO-MINR`, đường cái nét đậm `C-TOPO-MAJR` có ghi số cao độ; Claude nói khoảng cao đều đã dùng |
+| B2 | Chọn một đường đồng mức, xem Properties | Elevation = cao độ của đường (mm) |
+| B3 | So vài đường với cao độ điểm đo bên cạnh | Đường nằm giữa hai điểm có cao độ hai bên đúng |
+| B4 | "Vẽ lại đồng mức khoảng cao đều 0,5 m" | Đường mới thêm (Claude nhắc xóa đường cũ trước nếu không muốn trùng) |
+| B5 | Khu đo hình chữ L (có vùng trống) | Không có đường đồng mức cắt ngang vùng trống |
+
+### C. Tuyến, trắc dọc, trắc ngang (~12 phút)
+
+| # | Làm gì | Thấy gì là đạt |
+| --- | --- | --- |
+| C1 | Vẽ một polyline tim tuyến qua khu đo, "ghi lý trình cho tuyến này" | Vạch vuông góc tuyến kèm chữ `Km0+050.00`… (`C-STATION`), có cọc ở đỉnh tuyến (Đ1…) và cuối tuyến |
+| C2 | "Vẽ trắc dọc tuyến này" | Khung trắc dọc đặt dưới bản vẽ: đường tự nhiên, đường MSS, bảng các dòng Cao độ tự nhiên / Khoảng cách lẻ / Khoảng cách cộng dồn / Tên cọc; tiêu đề có tỉ lệ ngang / đứng |
+| C3 | So cao độ tự nhiên một cọc với cao độ điểm đo gần đó | Hợp lý (nội suy trên lưới tam giác) |
+| C4 | "Thêm đường thiết kế từ +10.50 ở đầu tuyến đến +11.00 ở cuối" | Có thêm đường thiết kế (đỏ), dòng Cao độ thiết kế, Chênh cao TK − TN, độ dốc `i = …%` |
+| C5 | "Vẽ trắc ngang tại các cọc" | Các trắc ngang xếp thành cột, mỗi cái có tim tuyến, đường tự nhiên, MSS, bảng cao độ / khoảng cách, tiêu đề "Cọc C3  Km0+060.00" |
+| C6 | "Chỉ vẽ trắc ngang ở cọc H1 và H2" | Chỉ hai trắc ngang |
+| C7 | Tuyến chạy ra ngoài khu đo | Cọc ngoài khu đo ghi "-" ở trắc dọc; Claude kể các cọc ngoài khu đo |
+| C8 | Gõ `U` một lần | Mất cả phần vừa vẽ của lượt đó |
+
+### D. Giới hạn, gói (~4 phút)
+
+| # | Làm gì | Thấy gì là đạt |
+| --- | --- | --- |
+| D1 | "Tính khối lượng đào đắp" | Claude nói lệnh này không tính khối lượng; bản vẽ là hỗ trợ, kỹ sư kiểm |
+| D2 | *(máy khác)* Máy gói 3D | Không có lệnh này; Claude nói việc này thuộc phần 2D |
+| D3 | Bật **Chỉ xem**, "nhập điểm" | Claude nói Chỉ xem đang bật, không vẽ gì |
+
+### E. Thêm ở Test & sửa H6 (~10 phút)
+
+| # | Làm gì | Thấy gì là đạt |
+| --- | --- | --- |
+| E1 | *(H6T-3)* Bản vẽ mới đặt đơn vị **mét** (`INSUNITS` = 6), nhập cùng file điểm, vẽ đồng mức, trắc dọc | Điểm, đồng mức, trắc đúng kích thước (đo `DIST` hai điểm cách 10 m ra 10, không ra 10 000); chữ cao độ đọc được như ở bản vẽ mm |
+| E2 | *(H6T-1)* File CSV lưu từ Excel tiếng Việt cũ (mã Windows-1258) có tiêu đề "Tên điểm; Cao độ" | Tên điểm có dấu đúng; Claude nhận cột cao độ theo tiêu đề |
+| E3 | *(H6T-1)* Trong Excel: File › Save As › **Unicode Text (.txt)**, rồi nhập file .txt đó | Đọc đủ điểm như file .xlsx |
+| E4 | *(H6T-2)* File không có dòng tiêu đề, 4 cột: X, Y, Z, mã (vd `1234012.5,567045.25,12.35,TN`) | X / Y / Z đúng cột (không lấy X làm tên điểm) |
+| E5 | *(H6T-4)* Bản vẽ đã chạy "thiết lập style chuẩn", nhập điểm + đồng mức, rồi "soát bản vẽ" | Không báo các layer `C-…` của hạ tầng là layer ngoài chuẩn |
+| E6 | *(H6T-5)* Ghi lý trình mặt bằng (50 m) rồi vẽ trắc dọc | Trên mặt bằng vạch 50 m chỉ ghi lý trình (vd `Km0+050.00`), không có tên `C…`; tên `C1, C2…` chỉ ở trắc dọc / trắc ngang (cọc 20 m); cọc H, Km, đỉnh vẫn có tên |
+| E7 | *(Sửa KTP-10 / 11)* File Excel có số dạng `1.234.012,500` (dấu nghìn) và ô chữ `567 045,25` | Đọc đúng 1234012,5 / 567045,25 |
+| E8 | *(Sửa KTP-12 / 39)* File `.txt` cách bằng dấu cách, số phẩy thập phân (`P1 1234012,5 567045,25 12,35`), dòng đầu chỉ một chữ (`SODIEM`) | Đủ điểm, X / Y / Z đúng (không lấy phẩy làm dấu tách) |
+| E9 | *(Sửa KTP-08 / 09 / 48)* File không tiêu đề "số thứ tự, X, Y, Z" (`1;1234012.5;567045.25;12.35`); rồi file `.txt` có tiêu đề `Tên điểm  X  Y  Z` | Cột 1 là tên điểm; file `.txt` đọc đủ điểm theo tiêu đề |
+| E10 | *(Sửa KTP-37)* Excel có tên bảng ở hàng 1, vài hàng trống, tiêu đề `STT; Tên; X; Y; Z` ở hàng 12 | Claude nhận cột theo tiêu đề, tên điểm lấy cột "Tên" (không lấy STT) |
+| E11 | *(Sửa KTP-26)* Tuyến có đỉnh trùng điểm cuối (trong 1 cm) | Cọc cuối ghi `Cuối/Đ…`, không phải `C…/Đ…` |
+| E12 | *(Sửa lỗi `Alignment.At`)* Bản vẽ **mm**, tuyến dài vài trăm mét, ghi lý trình rồi vẽ trắc dọc / trắc ngang | Cọc rải đủ dọc tuyến (không dồn ở mét đầu); cọc cuối đúng điểm cuối polyline |
+| E13 | *(Sửa KTP-24)* Bản vẽ **mét**, vẽ trắc dọc | Claude báo trục "metres × 1" (bản vẽ mm: "× 1000"); khung trắc đặt đúng chỗ |
+| E14 | *(Sửa KTP-50 / 52 / 53)* File `.txt` dòng đầu "DANH SACH DIEM" rồi các dòng `P1 X Y Z`; rồi file tiêu đề `So hieu diem X Y Z`; rồi file tiêu đề `Tên điểm X Y Z Mã` mà dòng đầu không có mã | Cả ba đọc đủ điểm, có cao độ, đúng cột; dòng tên bảng được kể là bỏ qua |
+
+
+## P2-H7. Ống MEP 3D (~25 phút); mục của `checklist-dot-h7.md`
+
+### A. Đi ống tròn (~8 phút)
+
+1. Gõ `CLAUDECAD_SELFTEST`. Dòng "Nâng cấp đợt H7: ống MEP 3D …" phải **đạt**: có 1 co, nhánh có tê, thống kê, ít nhất 1
+   chỗ chạm dầm.
+2. "Đi ống thoát nước xí từ (0,0) tới (4000,0) rồi tới (4000,3000), cao độ tim ống 2800". Cần thấy:
+   - ống tròn 3D trên layer `P-DRAIN-3D` (xanh lá), có **một co** ở góc;
+   - ống D110, dốc 2 % về điểm cuối (đầu cuối thấp hơn đầu đầu khoảng 140 mm); Claude nói độ dốc và cao độ hai đầu;
+   - xoay góc nhìn (`3DORBIT` hoặc "xem phối cảnh tây nam") thấy co nối liền hai đoạn, không hở, không chồng.
+3. *(sửa KTP-16)* "Đi ống thoát nước D60 từ (1000,0) tới (1000,-2000), cao độ 2780, nối vào ống vừa vẽ" (2780 = tim ống
+   chính tại x = 1000, vì ống chính dốc 2 % từ 2800): Claude vẽ **tê** ở chỗ nối (khối hơi to hơn ống chính). Cho cao độ
+   3000: Claude báo điểm đầu không nằm trên ống và nói tim ống chính ở đó cao bao nhiêu. "Đi ống **cấp** nước D25 … nối vào
+   ống thoát đó": Claude báo **khác hệ**, không vẽ.
+4. "Đi ống thoát nước độ dốc 0,5%": Claude **cảnh báo** độ dốc thấp hơn mức tối thiểu của cỡ ống. Ống thoát sàn D60 không nói
+   độ dốc: dốc 2,5 %, **không** có cảnh báo.
+5. "Đi ống PCCC từ … tới …" mà **không nói cỡ**: Claude hỏi cỡ ống (không tự chọn).
+
+### B. Ống gió (~5 phút)
+
+1. "Đi ống gió cấp 400x300 từ (0,5000) tới (6000,5000) rồi lên tới (6000,5000,4000), cao độ 3200": ống hộp chữ nhật trên
+   `M-DUCT-3D`, mặt rộng nằm ngang, co hộp ở chỗ rẽ lên; đoạn đứng **không xoắn** so với co (mặt rộng liền mạch).
+2. "Đi ống gió hồi" mà không nói cỡ: Claude hỏi cỡ.
+3. *(Test & sửa H7)* Ống gió 600x300 đi theo trục X, lên đứng, rồi đi theo trục **Y** ở trên: cả hai đoạn ngang đều có mặt rộng
+   600 **nằm ngang** (đo chiều cao 300); Claude nói tiết diện phải xoay ở đầu ống đứng (thực tế cần đoạn chuyển tiếp).
+
+### C. Đi dưới dầm, UCS (~4 phút)
+
+1. "Đi ống cấp nước D32 dưới dầm từ … tới …" (tuyến đi dưới một dầm 3D): đỉnh ống cách đáy dầm 100 mm (đo bằng `DIST`), không chạm dầm.
+2. Đặt UCS xoay 30° và cao +3000 (`UCS` → Z → 30, rồi dời gốc lên 3000), đi một ống theo tọa độ UCS: ống nằm đúng chỗ theo UCS.
+3. *(Test & sửa H7)* Bản vẽ có dầm hai tầng chồng nhau, "đi ống dưới dầm" ở tầng trên: Claude báo có dầm ở nhiều cao độ, đã dùng
+   dầm thấp nhất, nhờ cho cao độ nếu ống ở tầng khác.
+4. *(Test & sửa H7)* UCS nghiêng (`UCS` → X → 90), đi ống theo mặt bằng kèm cao độ: Claude nói UCS đang nghiêng, nhờ cho điểm
+   x, y, z hoặc đặt lại UCS; không vẽ gì sai chỗ.
+5. *(Test & sửa H7)* "Đi ống thoát D110 qua các điểm (0,0,3000) (4000,0,2960) (4000,3000,2900)": Claude báo đoạn **phẳng nhất** mức 1 %
+   thấp hơn 1,2 %.
+
+### D. Thống kê, Excel, va chạm (~6 phút)
+
+1. "Thống kê ống": bảng theo hệ + cỡ ống, chiều dài (m), số đoạn, số co, số tê; dòng Tổng.
+2. "Xuất thống kê ống ra Excel": file `.xlsx` cạnh bản vẽ; gọi lại lần hai thì Claude hỏi **thẻ ghi đè**.
+3. "Thống kê ống có cộng hao hụt 5%": thêm cột "Chiều dài + hao hụt 5%".
+4. "Soát ống va chạm với dầm cột": Claude kể chỗ **chạm** và chỗ **sát** (dưới khoảng hở), có handle hai bên; ống của cùng
+   một tuyến, hay nhánh với ống chính của nó, không bị báo. Một ống đi chéo qua phòng, xa cột: **không** bị báo "sát".
+5. *(Test & sửa H7)* Sau khi đi vài tuyến ống, "soát bản vẽ": layer `P-…-3D`, `M-DUCT-3D`, `F-SPRK-3D` **không** bị báo "ngoài chuẩn".
+6. Máy gói 2D: hỏi "đi ống cấp nước 3D" → Claude nói gói này không có lệnh 3D.
+7. *(sửa KTP-13, 14)* Ống gió 600x300 "đi dưới dầm" rồi "soát va chạm": **không** bị báo "sát" chính dầm đó (đỉnh ống cách
+   đáy dầm 100 mm). Hai tuyến nối đầu nhau (vd D110 rồi đi tiếp D90 từ điểm cuối): **không** bị báo "sát 0 mm".
+8. *(sửa KTP-27, 28)* Xuất Excel: thống kê ống ra file `…-ong-mep.xlsx` (sheet "Thống kê ống MEP"), va chạm ra file riêng
+   `…-va-cham-ong-mep.xlsx`; cột "Hệ" ghi tên tiếng Việt ("Cấp nước", "Ống gió cấp"…).
+9. *(sửa KTP-17)* Ống gió 200x500 rẽ lên đứng: co dùng bán kính 500 (cạnh cao) và Claude nói vì sao. Ống D110 với
+   "bán kính co 20": Claude báo bán kính phải lớn hơn 55.
+10. *(sửa lượt 2: KTP-38)* Vẽ cùng một ống hai lần (hoặc ống thứ hai chồng lên một đoạn ống thứ nhất): "soát va chạm" báo
+   **chạm**. Hai tuyến nối đầu nhau vẫn **không** bị báo, kể cả nối **gấp góc** *(sửa lượt 3: KTP-51)*: vẽ (0,0)→(4000,0)
+   rồi tuyến thứ hai (4000,0)→(4000,3000) (90°), hoặc đi chéo 45° từ điểm cuối: "soát va chạm" không báo "chạm" ở mối nối.
+11. *(KTP-45)* Dầm 3D xoay 45° trên layer `S-BEAM`, ống đứng D110 đặt cách mép dầm khoảng 500: **không** bị báo "sát 0 mm".
+   "Đi ống dưới dầm" theo tuyến chạy song song cạnh dầm chéo (không đi qua dưới dầm): Claude không lấy cao độ dầm đó.
+12. *(KTP-46)* Hai nhánh cùng nối vào một điểm của ống chính: "soát va chạm" **không** báo chạm giữa hai tê.
+
+### E. Giới hạn nói rõ với khách
+
+- Claude nói rõ chỉ vẽ theo cỡ ống khách đưa (hoặc cỡ mặc định của loại ống), **không tính thủy lực / lưu lượng**.
+- Hỏi "độ dốc tối thiểu ống D100 là bao nhiêu": Claude nói 1,2 % là số mặc định, kỹ sư đối chiếu TCVN hiện hành.
+- U một lần xóa hết ống vừa vẽ của lượt.
+
+## P2-H8. Kết cấu: thép dầm / cột / sàn, bảng thép, móng (~25 phút); mục của `checklist-dot-h8.md`
+
+### A. Thép dầm, cột, sàn (~12 phút)
+
+1. Gõ `CLAUDECAD_SELFTEST`. Dòng "Nâng cấp đợt H8: kết cấu …" phải **đạt**.
+2. "Vẽ thép dầm 220x400 nhịp 5 m", **không nói thép**: Claude **hỏi** thép chủ (không tự chọn).
+3. "Vẽ thép dầm 220x400 nhịp 5 m, 2Ø18 dưới, 2Ø16 trên". Cần thấy:
+   - triển khai dầm: hai thanh dọc chạy vào gối mỗi bên 30d (Ø18: 540 mm) rồi bẻ L 10d (Ø18: 180 mm; thanh dưới bẻ lên,
+     thanh trên bẻ xuống), đai dày ở 1/4 nhịp hai đầu, thưa ở giữa;
+   - mặt cắt bên cạnh: 2 chấm dưới, 2 chấm trên, đai trong lớp bảo vệ 25 mm;
+   - số hiệu trong vòng tròn, chữ "2Ø18 L=6440" (5000 + 2 × 540 + 2 × 180), "Ø6a150/a200 …"; layer `S-CONC`, `S-REBAR`, `S-REBAR-TEXT`;
+   - Claude nói đai là **thép mẫu**, và nhắc kỹ sư kiểm lại neo / nối.
+4. "Neo 150 mm": Claude **cảnh báo** neo dưới mức tối thiểu.
+5. "Mặt cắt cột 300x300 cao 3,3 m, 8Ø20": 8 chấm (4 góc + 4 giữa cạnh), đai; chiều dài thanh = 3300 + 35d.
+6. "Thép sàn ô 4x3 m" (không nói thép): dùng Ø8 a200 hai phương, có móc 180° (thép trơn), Claude nói là thép mẫu.
+   *(sửa KTP-21)* Thanh dài 4000 − 2 × 20 + 2 × 6,25 × 8 = **4060**, thanh ngắn **3060** (mỗi móc cộng 6,25d).
+7. "6Ø25 trong dầm rộng 200": Claude báo **không đủ chỗ** một hàng, không tự dồn.
+
+### B. Bảng thống kê thép (~6 phút)
+
+1. "Thống kê thép": mỗi số hiệu một dòng (cấu kiện, hình dạng, Ø, CB240-T / CB400-V, dài 1 thanh làm tròn 10 mm, số thanh,
+   tổng dài, kg), dòng "Cộng Ø…" cho từng đường kính, dòng "Cộng CB240-T" / "Cộng CB400-V" cho từng loại thép
+   *(sửa KTP)*, dòng Tổng. Kiểm tay một dòng: kg = 0,00617 × d² × tổng dài (m).
+2. "Chèn bảng thống kê thép vào bản vẽ tại …": bảng trong bản vẽ.
+3. "Xuất bảng thép ra Excel": file `.xlsx`; gọi lại thì Claude hỏi thẻ ghi đè.
+4. "Có cộng hao hụt 3%": thêm cột "Khối lượng + hao hụt 3%". Không nói thì **không** có cột này.
+5. Cột dài 12,5 m (8Ø20): cột "Số mối nối" đếm 1 mối mỗi thanh (cây 11,7 m); dài 1 thanh cộng thêm nối chồng 35d = 700 mm,
+   hình dạng ghi "gồm 1 nối chồng 35d = 700"; kg tính theo chiều dài đã cộng.
+6. Vẽ hai dầm cùng `start_mark` 901 nhưng thép khác (2Ø18 và 2Ø20): Claude báo số hiệu trùng; bảng có hai dòng 901
+   riêng (không gộp), Claude đề nghị đánh số lại.
+
+### Test & sửa H8 (~3 phút)
+
+1. "Vẽ thép dầm 220x400 nhịp 5000, 2Ø18 dưới, 2Ø16 trên": in khung nhìn tỉ lệ 1:50 thì mặt cắt bên cạnh đọc đúng **1:20** (đo
+   bằng thước: bề rộng 220 mm ra 11 mm trên giấy); chữ đai ghi "a150/a200"; thanh Ø18 L=6440.
+2. "Vẽ mặt cắt cột 300x300 20Ø25": Claude báo không đủ chỗ, nhờ bớt thanh hoặc tăng cỡ cột.
+3. *(số chủ dự án chốt 27/11)* "Mặt cắt cột 300x300, 12Ø25": Claude báo **không đủ chỗ** (khe hở giữa hai thanh 46 mm, cần ≥
+   max(d, 50 mm)), gợi ý bớt thanh hoặc tăng cạnh cột. "8Ø20" thì vẽ được. **Nhờ kỹ sư xác nhận số 50 mm theo TCVN 5574 bản
+   đang dùng.**
+
+### Sửa KTP (sau kiểm tra độc lập phần 2, ~3 phút)
+
+1. *(KTP-19)* Dầm nhịp 5000, đai Ø6a150/a200: đai đầu tiên và đai cuối cùng đều cách gối **50**; hai đầu dầm có số đai a150
+   bằng nhau; đoạn giữa chia đều (khoảng cách không quá 200).
+2. *(KTP-20, số chủ dự án chốt 27/11)* "Vẽ thép dầm 200x400 nhịp 5 m, 4Ø16 dưới, 2Ø12 trên": Claude báo **không đủ chỗ** (khe hở
+   giữa hai thanh thép dưới phải ≥ max(d, 25 mm), thép trên ≥ max(d, 30 mm)), gợi ý bớt thanh hoặc tăng bề rộng dầm. "3Ø16
+   dưới" thì vẽ được.
+3. *(KTP-31)* "Vẽ thép dầm nhịp 50": Claude báo nhịp quá ngắn (ít nhất 100 mm), không ra lỗi lạ của AutoCAD.
+   *(lượt 2: KTP-40)* "Vẽ thép dầm nhịp 150": vẽ được, 2 đai cách mỗi gối 50, không lỗi.
+4. *(KTP-18)* "Dựng móng băng theo trục (0,0) → (6000,0) **không sườn**": móng băng phẳng, không lỗi.
+
+### C. Móng 3D (~5 phút, gói 3D / Full)
+
+1. "Dựng móng đơn tại (0,0) và (4000,0)" (không nói cỡ): móng 1200 × 1200 đế 350 trên `S-FOOT-3D`, bê tông lót dày 100,
+   rộng hơn 100 mỗi bên trên `S-LEAN-3D`; Claude nói "cỡ mẫu, kỹ sư quyết".
+2. "Móng đơn 1500x1500 cổ móng 300x300 cao 700": có cổ móng liền đế.
+3. "Móng băng theo trục (0,0) → (6000,0) → (6000,4000)": móng băng rộng 1000 cao 300, sườn 300 × 600, góc khép kín.
+4. "Bảng khối lượng bê tông theo layer" (`volume_schedule`): có dòng `S-FOOT-3D` và `S-LEAN-3D`.
+5. "Soát bản vẽ" (`check_drawing`): các layer `S-…` **không** bị báo "ngoài chuẩn".
+
+### D. Giới hạn nói rõ với khách
+
+- Claude nói rõ: bản vẽ hỗ trợ, không tính kết cấu; không tự chọn số thanh / đường kính thép chủ; kỹ sư vẫn kiểm.
+- U một lần xóa hết phần vừa vẽ của lượt.
+
+## P2-H9. Giao diện tiếng Anh (~30 phút); mục của `checklist-dot-h9.md`
+
+### A. Bộ cài
+
+- [ ] A1. Chạy bộ cài: hộp đầu tiên hỏi **Tiếng Việt / English**, Tiếng Việt chọn sẵn.
+- [ ] A2. Chọn English: trang kích hoạt, các hộp "AutoCAD đang mở", "file đang được dùng", "máy đang có ClaudeCAD bản gốc" và
+  trang cuối ("Sign in to Claude now") là tiếng Anh.
+- [ ] A3. Chọn Tiếng Việt: các trang trên là tiếng Việt như bản trước (các chữ chuẩn của Inno như nút Next / Back vẫn tiếng
+  Anh như trước đây).
+- [ ] A4. Máy chưa từng dùng plugin, cài bằng English: mở AutoCAD, khung chat là tiếng Anh ngay.
+- [ ] A5. Máy đã dùng plugin (có cài đặt cũ), cài đè bằng English: khung chat giữ ngôn ngữ đang đặt (tiếng Việt), đổi trong ⚙.
+- [ ] A6. Cài ngầm `/VERYSILENT /LANG=english`: không hỏi gì, lần đầu mở khung chat là tiếng Anh.
+
+### B. Đổi ngôn ngữ trong ⚙
+
+- [ ] B1. ⚙ ▸ **Ngôn ngữ / Language** ▸ English: nút trên cùng (gợi ý khi rê chuột), hàng Tỷ lệ / Skill / Layer…, nút Gửi,
+  ⚙ (tên các nhóm, các ô), nút chế độ Cả hai / 2D / 3D (máy Full) đổi sang tiếng Anh **ngay**, không cần đóng mở khung chat.
+- [ ] B2. Mở các bảng Skill, Layer, Macro, Phiên bản, Ghi chú dự án: chữ tiếng Anh.
+- [ ] B3. Chữ đang gõ dở trong ô nhập và chữ trong ghi chú dự án không bị đổi.
+- [ ] B4. Đổi về Tiếng Việt: mọi chữ trên về lại tiếng Việt.
+- [ ] B5. Đóng mở AutoCAD: ngôn ngữ đã chọn được giữ.
+- [ ] B6. (Test & sửa H9) Máy đang dùng bản trước H9 (chưa từng có ô Ngôn ngữ), cài bản H9 và chọn English ở bộ cài:
+  khung chat mở bằng English. Sau đó chọn Tiếng Việt trong ⚙, cài lại và chọn English: khung chat **vẫn** Tiếng Việt.
+
+### C. Claude trả lời
+
+- [ ] C1. Chọn English rồi gõ "draw a 5x4 axis grid with 4000 spacing": Claude trả lời tiếng Anh, không xưng "tớ / cậu";
+  bước tiến độ, nút gợi ý, thẻ kế hoạch tiếng Anh.
+- [ ] C2. Đang chat dở bằng tiếng Việt, đổi sang English, gửi tin tiếp: Claude trả lời tiếng Anh và vẫn nhớ cuộc chat.
+- [ ] C3. Xóa > 20 đối tượng: thẻ xác nhận tiếng Anh (Yes / No); gõ "yes" là làm, gõ "no" là không làm.
+- [ ] C3b. (Test & sửa H9) Cũng việc xóa đó, gõ câu có điều kiện: "yes but don’t delete the walls" (dấu nháy cong của
+  điện thoại / Mac), "đồng ý nhưng giữ tường", "ok xóa hết trừ cửa": Claude **không** xóa, hỏi lại.
+- [ ] C3c. (Sửa KTP-A) Cũng việc xóa đó, gõ "ko đồng ý", "đồng ý nếu giữ tường", "dạ thôi", "ok đợi đã": **không** xóa;
+  "Vâng, tớ đồng ý", "Thôi được, xóa đi": xóa. Câu đồng ý dài có chữ lạ ("ok xóa hết mấy cái tường đó") là **không chắc**: Claude hỏi lại.
+- [ ] C3d. (Sửa KTP lượt 3) Cũng việc xóa đó, gõ "ok à", "đồng ý rồi à", "không sao": **không** xóa, Claude hỏi lại; gõ "ok xoá đi"
+  (dấu kiểu cũ), "được thôi", "yes overwrite", "yeah": xóa.
+- [ ] C4. "Vẽ bảng thống kê block", "tạo tờ A3 có khung tên", "ra bộ hồ sơ" khi đang English: **chữ trên bản vẽ vẫn tiếng
+  Việt** (tiêu đề bảng, khung tên, tên tờ); câu trả lời tiếng Anh.
+- [ ] C5. Xuất Excel khi đang English: tiêu đề cột trong file vẫn tiếng Việt.
+- [ ] C6. Máy gói 2D, English, hỏi việc 3D: Claude báo bằng tiếng Anh máy dùng gói 2D, liên hệ chủ plugin.
+
+### D. Thông báo và lỗi
+
+- [ ] D1. English, rút mạng / dừng trợ lý (CLAUDECHATRESTART): dòng trạng thái "Starting the assistant...", "Connected".
+- [ ] D2. English, chưa đăng nhập: thẻ đăng nhập và lời báo tiếng Anh, nhóm Tài khoản AI trong ⚙ tự mở.
+- [ ] D3. English, đóng khung chat rồi để Claude làm xong: bong bóng ở thanh trạng thái tiếng Anh.
+- [ ] D4. English, `CLAUDECHATSELFTEST`: tên bước và dòng tổng tiếng Anh (chi tiết kỹ thuật từng bước có thể vẫn tiếng Việt).
+- [ ] D5. English, ⚙ ▸ Xuất cuộc chat: file Markdown có "User", "Error"…
+- [ ] D6. Máy chưa kích hoạt, English: thẻ kích hoạt, mã máy, nút "Send activation request" tiếng Anh.
+
+### E. Không đổi gì khi không chọn English
+
+- [ ] E1. Máy đang dùng (không đụng ⚙): mọi chữ, câu trả lời, thẻ như bản trước.
+
+
+## P2-X. Chéo giữa các đợt (test tổng thể đợt H phần 2, ~10 phút)
+
+| # | Làm gì | Thấy gì là đạt |
+| --- | --- | --- |
+| P2-X-1 | Một bản vẽ có điểm khảo sát, ống, thép (layer `C-…`, `P-…`, `M-…`, `F-…`, `S-…`), "soát bản vẽ" | Các layer đó **không** bị báo "ngoài chuẩn" |
+| P2-X-2 | Cùng bản vẽ, "soát theo chuẩn ABC" (H4) | Layer của lệnh mới không có trong bộ ABC thì bị báo khác chuẩn ABC (như layer `A-…`): đúng ý, không phải lỗi |
+| P2-X-3 | Máy gói 2D: "đi ống cấp nước 3D", "dựng móng" / máy gói 3D: "vẽ trắc dọc", "vẽ thép dầm" | Claude nói lệnh thuộc gói khác, không vẽ gì |
+| P2-X-4 | Bật **Chỉ xem**: nhập điểm, đi ống, vẽ thép, dựng móng; rồi "thống kê thép", "thống kê ống" | Bốn lệnh vẽ bị từ chối; hai bảng thống kê đọc được |
+| P2-X-5 | Máy gói 3D: "đi ống thoát D60", hỏi "độ dốc tối thiểu bao nhiêu" | Ống dốc 2,5 %; Claude nói mức tối thiểu là số mặc định, kỹ sư đối chiếu TCVN hiện hành (máy 3D không có skill MEP 2D, mô tả lệnh có câu này) |
+| P2-X-6 | Tắt "Nạp gọn lệnh" trong ⚙ rồi dùng lại các lệnh mới | Chạy như khi bật |

@@ -174,7 +174,7 @@ namespace ClaudeCAD.Plugin.Core
                 parts.Add($"{Label(kind)} {ofKind.Count} ({layers})");
             }
             if (counts.Count > 0)
-                parts.Add("số đối tượng theo layer: " + string.Join(", ", counts.Take(10).Select(c => $"{c.layer} {c.before}→{c.after}")) + (counts.Count > 10 ? ", …" : ""));
+                parts.Add(L.Tr("số đối tượng theo layer: ") + string.Join(", ", counts.Take(10).Select(c => $"{c.layer} {c.before}→{c.after}")) + (counts.Count > 10 ? ", …" : ""));
             var r = new Dictionary<string, object> { ["text"] = string.Join("; ", parts), ["since"] = since };
             int budget = MaxHandles, more = 0;
             foreach (var kind in new[] { "modified", "erased", "added" })
@@ -190,7 +190,7 @@ namespace ClaudeCAD.Plugin.Core
             return r;
         }
 
-        public static string Label(string kind) => kind == "added" ? "thêm" : kind == "modified" ? "sửa" : "xóa";
+        public static string Label(string kind) => kind == "added" ? L.Tr("thêm") : kind == "modified" ? L.Tr("sửa") : L.Tr("xóa");
 
         /// <summary>One-line note for the palette, e.g. "sửa 12, xóa 3, thêm 40".</summary>
         public static string Short(IEnumerable<(string kind, string layer, string handle)> items, int layerChanges)
@@ -198,7 +198,7 @@ namespace ClaudeCAD.Plugin.Core
             var list = items.ToList();
             var parts = new[] { "modified", "erased", "added" }
                 .Select(k => (k, n: list.Count(i => i.kind == k))).Where(x => x.n > 0).Select(x => $"{Label(x.k)} {x.n}").ToList();
-            if (layerChanges > 0) parts.Add($"{layerChanges} layer đổi số lượng");
+            if (layerChanges > 0) parts.Add(L.Tr("{0} layer đổi số lượng", layerChanges));
             return string.Join(", ", parts);
         }
     }

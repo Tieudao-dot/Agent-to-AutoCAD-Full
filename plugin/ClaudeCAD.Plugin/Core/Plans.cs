@@ -107,12 +107,16 @@ namespace ClaudeCAD.Plugin.Core
             Add(ToolGroup.TwoD, "trace_image");
             // nâng cấp đợt H4 (Drawing/CompanyStandardTools.cs): learn a company standard from a template (2D / Full, like setup_standards)
             Add(ToolGroup.TwoD, "company_standard");
+            // nâng cấp đợt H8 (Drawing/StructureTools.cs): rebar details and their schedule (2D / Full); footings are 3D
+            Add(ToolGroup.TwoD, "draw_rebar rebar_schedule");
             // nâng cấp đợt H2 (Drawing/ExportTools.cs): DXF / older DWG on every plan, FBX 3D / Full (ThreeDValues)
             Add(ToolGroup.Common, "export_drawing");
             // nâng cấp đợt H3 (Drawing/CompareTools.cs): compare with another file; 2D objects on 2D / Full, 3D solids on 3D / Full
             Add(ToolGroup.Common, "compare_drawings");
             // nâng cấp đợt H5 (Drawing/BatchFilesTools.cs): its four tasks are 2D tools (2D / Full; each also checked inside)
             Add(ToolGroup.TwoD, "batch_files");
+            // nâng cấp đợt H6 (Drawing/TerrainTools.cs): survey points, contours, long / cross sections (2D / Full)
+            Add(ToolGroup.TwoD, "terrain");
             // 3D phases 1, 2 and 3 (Drawing/SolidTools.cs, Solid2Tools.cs, PlanTo3dTools.cs, SectionTools.cs): only the 3D and Full plans
             Add(ToolGroup.ThreeD,
                 // draw_solid (nâng cấp đợt A) replaces the six primitives for Claude; their old names stay for recorded macros
@@ -129,7 +133,11 @@ namespace ClaudeCAD.Plugin.Core
                 // nâng cấp đợt E (Drawing/StairRoofTools.cs): stairs, roofs
                 "build_stair build_roof " +
                 // nâng cấp đợt F3 (Drawing/RenderTools.cs): materials, named views (+ a PNG with the materials)
-                "set_material named_view");
+                "set_material named_view " +
+                // nâng cấp đợt H7 (Drawing/MepTools.cs): MEP pipes / ducts in 3D, their schedule and clash check
+                "draw_mep mep_report " +
+                // nâng cấp đợt H8 (Drawing/StructureTools.cs): pad / strip footings
+                "build_footing");
             return d;
         }
 
@@ -237,23 +245,23 @@ namespace ClaudeCAD.Plugin.Core
             TextValues.TryGetValue(tool ?? "", out var tv) && tv.param == param
                 ? $"{tool}: this machine's plan is \"{Label(plan)}\", which has no text or dimensions, and '{param}' asks for " +
                   $"{string.Join(" / ", tv.values)} properties from the 2D group. Leave them out (layer, color, linetype... are copied on every plan), " +
-                  $"or tell the user in Vietnamese that this machine uses the \"{Label(plan)}\" plan and that the plugin owner can open the 2D group" +
+                  $"or tell the user in the user\'s language that this machine uses the \"{Label(plan)}\" plan and that the plugin owner can open the 2D group" +
                   (string.IsNullOrWhiteSpace(contact) ? "." : $" ({contact}).")
             : ThreeDValues.TryGetValue(tool ?? "", out var v3) && v3.param == param
                 // Test & sửa H2: FBX on a plan without 3D (before: the block-attribute text)
                 ? $"{tool}: this machine's plan is \"{Label(plan)}\", which has no 3D, and {param} {string.Join(" / ", v3.values)} (the 3D solids as meshes) belongs to the 3D group. " +
-                  "Offer dwg or dxf instead (3ds Max opens DWG too), or tell the user in Vietnamese that this machine uses the " +
+                  "Offer dwg or dxf instead (3ds Max opens DWG too), or tell the user in the user\'s language that this machine uses the " +
                   $"\"{Label(plan)}\" plan and that the plugin owner can open the 3D group" + (string.IsNullOrWhiteSpace(contact) ? "." : $" ({contact}).")
             : ThreeDParams.TryGetValue(tool ?? "", out var p3) && p3 == param
                 ? $"{tool}: this machine's plan is \"{Label(plan)}\", which has no 3D, and '{param}' (copies stacked along Z) belongs to the 3D group. " +
-                  "Leave levels out (one level), or tell the user in Vietnamese that this machine uses the " +
+                  "Leave levels out (one level), or tell the user in the user\'s language that this machine uses the " +
                   $"\"{Label(plan)}\" plan and that the plugin owner can open the 3D group" + (string.IsNullOrWhiteSpace(contact) ? "." : $" ({contact}).")
                 : param == "table_position"
                 ? $"{tool}: this machine's plan is \"{Label(plan)}\", which has no text, and '{param}' inserts a table (text, 2D group) into the drawing. " +
-                  "Call it without table_position (the numbers come back to you) and show them to the user in the chat, or tell the user in Vietnamese that a table in the drawing needs the " +
+                  "Call it without table_position (the numbers come back to you) and show them to the user in the chat, or tell the user in the user\'s language that a table in the drawing needs the " +
                   $"\"Full\" plan and that the plugin owner can open the 2D group" + (string.IsNullOrWhiteSpace(contact) ? "." : $" ({contact}).")
                 : $"{tool}: this machine's plan is \"{Label(plan)}\", which has no text, and '{param}' (block attributes) is text from the 2D group. " +
-            "Define or insert the block without attributes, or tell the user in Vietnamese that this machine uses the " +
+            "Define or insert the block without attributes, or tell the user in the user\'s language that this machine uses the " +
             $"\"{Label(plan)}\" plan and that the plugin owner can open the 2D group" +
             (string.IsNullOrWhiteSpace(contact) ? "." : $" ({contact}).");
 
@@ -265,8 +273,8 @@ namespace ClaudeCAD.Plugin.Core
             {
                 var bp = Allowed(plan, tool) ? BlockedParam(plan, tool, p) : null;
                 string what = !Allowed(plan, tool) ? tool : bp == null ? null
-                    : tool + (Blocked3dParam(plan, tool, p) != null ? (ThreeDValues.ContainsKey(tool) ? " (FBX, phần 3D)" : " (số tầng)") : BlockedTextValue(plan, tool, p) != null ? " (thuộc tính chữ / kích thước)"
-                        : TextParams.TryGetValue(tool, out var tp) && tp == "table_position" ? " (bảng trong bản vẽ)" : " (thuộc tính block)");
+                    : tool + (Blocked3dParam(plan, tool, p) != null ? (ThreeDValues.ContainsKey(tool) ? L.Tr(" (FBX, phần 3D)") : L.Tr(" (số tầng)")) : BlockedTextValue(plan, tool, p) != null ? L.Tr(" (thuộc tính chữ / kích thước)")
+                        : TextParams.TryGetValue(tool, out var tp) && tp == "table_position" ? L.Tr(" (bảng trong bản vẽ)") : L.Tr(" (thuộc tính block)"));
                 if (what != null && !list.Contains(what)) list.Add(what);
             }
             return list;
@@ -276,9 +284,9 @@ namespace ClaudeCAD.Plugin.Core
         public static string MacroBlockedText(string macro, string plan, IList<string> blocked, string contact)
         {
             var shown = blocked.Take(5).ToList();
-            var more = blocked.Count > shown.Count ? $" và {blocked.Count - shown.Count} lệnh khác" : "";
-            return $"Không chạy macro \"{macro}\": máy này dùng gói {Label(plan)}, mà macro có lệnh ngoài gói ({string.Join(", ", shown)}{more}). " +
-                   "Bản vẽ không bị thay đổi. Liên hệ chủ plugin để mở thêm gói" + (string.IsNullOrWhiteSpace(contact) ? "." : $" ({contact}).");
+            var more = blocked.Count > shown.Count ? L.Tr(" và {0} lệnh khác", blocked.Count - shown.Count) : "";
+            return L.Tr("Không chạy macro \"{0}\": máy này dùng gói {1}, mà macro có lệnh ngoài gói ({2}{3}). ", macro, Label(plan), string.Join(", ", shown), more) +
+                   L.Tr("Bản vẽ không bị thay đổi. Liên hệ chủ plugin để mở thêm gói") + (string.IsNullOrWhiteSpace(contact) ? "." : $" ({contact}).");
         }
 
         public static List<string> AllowedTools(string plan) =>
@@ -290,7 +298,7 @@ namespace ClaudeCAD.Plugin.Core
             var g = GroupOf(tool);
             var need = g == ToolGroup.ThreeD ? "3D" : g == ToolGroup.TwoD ? "2D" : "Full";
             return $"{tool}: this machine's plan is \"{Label(plan)}\" and this tool belongs to the {need} group, which the plan does not include. " +
-                   "Do not try other tools to get the same result. Tell the user in Vietnamese that this machine uses the " +
+                   "Do not try other tools to get the same result. Tell the user in the user\'s language that this machine uses the " +
                    $"\"{Label(plan)}\" plan and that the plugin owner can open the {need} group" +
                    (string.IsNullOrWhiteSpace(contact) ? "." : $" ({contact}).");
         }
@@ -344,19 +352,25 @@ namespace ClaudeCAD.Plugin.Core
             {
                 case TwoD: return "2D";
                 case ThreeD: return "3D";
-                default: return "Cả hai";
+                default: return L.Tr("Cả hai");
             }
         }
 
         public static string Tip(string mode) =>
-            "Chế độ làm việc (máy gói Full): " + Label(mode) + ". \"Cả hai\" có đủ lệnh 2D và 3D; chọn \"2D\" hoặc \"3D\" để Claude chỉ nạp lệnh của nhóm đó " +
-            "(mỗi lần mở chat tốn ít token hơn). Đổi chế độ áp dụng từ tin nhắn sau, đoạn chat giữ nguyên.";
+            L.Tr("Chế độ làm việc (máy gói Full): ") + Label(mode) + L.Tr(". \"Cả hai\" có đủ lệnh 2D và 3D; chọn \"2D\" hoặc \"3D\" để Claude chỉ nạp lệnh của nhóm đó ") +
+            L.Tr("(mỗi lần mở chat tốn ít token hơn). Đổi chế độ áp dụng từ tin nhắn sau, đoạn chat giữ nguyên.");
 
         /// <summary>The line the palette adds when the mode changes (it applies from the next message).</summary>
         public static string ChangedNote(string mode, bool busy) =>
-            $"Đã chuyển sang chế độ {Label(mode)}" +
-            (Normalize(mode) == Both ? " (đủ lệnh 2D và 3D)" : $" (Claude chỉ dùng lệnh {Label(mode)})") +
-            (busy ? ": áp dụng từ tin nhắn sau, lượt đang chạy giữ chế độ cũ." : ": áp dụng từ tin nhắn tới, đoạn chat giữ nguyên.");
+            L.Tr("Đã chuyển sang chế độ {0}", Label(mode)) +
+            (Normalize(mode) == Both ? L.Tr(" (đủ lệnh 2D và 3D)") : L.Tr(" (Claude chỉ dùng lệnh {0})", Label(mode))) +
+            (busy ? L.Tr(": áp dụng từ tin nhắn sau, lượt đang chạy giữ chế độ cũ.") : L.Tr(": áp dụng từ tin nhắn tới, đoạn chat giữ nguyên."));
+
+        /// <summary>
+        /// KTP-35: the name of the "both" choice of the mode button as the palette shows it now ("Cả hai" / "Both"), for the
+        /// sentences Claude is told to say (the 2D / 3D names are the same in both languages).
+        /// </summary>
+        private static string BothButton => L.IsEnglish ? "Both" : "Cả hai"; // vi: the button name in each language
 
         /// <summary>The other mode that has the tool ("3D" for a 3D tool in the 2D mode).</summary>
         private static string OtherMode(string mode) => Normalize(mode) == TwoD ? "3D" : "2D";
@@ -370,8 +384,8 @@ namespace ClaudeCAD.Plugin.Core
             var label = Label(mode);
             var other = OtherMode(mode);
             return $"{tool}: the user set the palette to the {label} work mode, which leaves the {other} tools out (this machine's plan is Full: it has every tool). " +
-                   "Do not try other tools to get the same result and do not mention plans, buying or upgrading. Tell the user in Vietnamese: " +
-                   $"\"Đang ở chế độ {label}, đổi sang {other} hoặc Cả hai (nút chế độ trên khung chat) để {(other == "3D" ? "vẽ 3D" : "vẽ 2D")}.\" Then do what the {label} mode allows.";
+                   "Do not try other tools to get the same result and do not mention plans, buying or upgrading. Tell the user in the user\'s language: " +
+                   $"\"Đang ở chế độ {label}, đổi sang {other} hoặc {BothButton} (nút chế độ trên khung chat) để {(other == "3D" ? "vẽ 3D" : "vẽ 2D")}.\" Then do what the {label} mode allows."; // vi: for Claude
         }
 
         /// <summary>
@@ -380,12 +394,12 @@ namespace ClaudeCAD.Plugin.Core
         /// </summary>
         public static string NoTwoDReason(string workMode) =>
             Normalize(workMode) == ThreeD
-                ? " (outside the 3D work mode the user chose; the 2D or Cả hai mode has it: do not mention plans)"
+                ? " (outside the 3D work mode the user chose; the 2D or Cả hai mode has it: do not mention plans)" // vi: for Claude
                 : " (this machine's plan has no 2D)";
 
         /// <summary>A parameter outside the mode (block attributes in 3D, array levels in 2D…): the same wording.</summary>
         public static string BlockedParamMessage(string tool, string param, string mode) =>
             $"{tool}: '{param}' is outside the {Label(mode)} work mode the user chose (this machine's plan is Full). " +
-            $"Do not mention plans or upgrades; tell the user in Vietnamese: \"Đang ở chế độ {Label(mode)}, đổi sang {OtherMode(mode)} hoặc Cả hai (nút chế độ trên khung chat) để dùng phần này.\"";
+            $"Do not mention plans or upgrades; tell the user in the user\'s language: \"Đang ở chế độ {Label(mode)}, đổi sang {OtherMode(mode)} hoặc {BothButton} (nút chế độ trên khung chat) để dùng phần này.\""; // vi: for Claude
     }
 }

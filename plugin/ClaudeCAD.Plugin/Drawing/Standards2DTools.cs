@@ -243,7 +243,7 @@ namespace ClaudeCAD.Plugin.Drawing
             {
                 result["kept_handles"] = kept;
                 result["next"] = "Existing styles with these names differ and were kept (not overwritten, not made current). Ask the user: request_confirmation with kept_handles " +
-                    "and one Vietnamese sentence naming the styles and the differences, end the turn; after Đồng ý call setup_standards again with handles = kept_handles.";
+                    "and one sentence in the user's language naming the styles and the differences, end the turn; after Đồng ý call setup_standards again with handles = kept_handles.";
             }
             return result;
         }

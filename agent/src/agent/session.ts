@@ -14,6 +14,7 @@ import { MCP_SERVER_NAME, createCadServer } from '../tools/index.js';
 import { InputQueue } from './inputQueue.js';
 import { SKILLS_PLUGIN_NAME, enabledSkills, librarySkills, prepareSkillsPlugin, skillsForPlan } from './skills.js';
 import { systemPromptFor } from './systemPrompt.js';
+import { language, setLanguage, tr } from '../i18n.js';
 
 export type QueryFn = typeof sdkQuery;
 
@@ -283,7 +284,7 @@ export class AgentSession {
 
     const options: Options = {
       cwd: this.cfg.workDir,
-      systemPrompt: systemPromptFor(this.servicePlan, this.workMode, this.deferTools),
+      systemPrompt: systemPromptFor(this.servicePlan, this.workMode, this.deferTools, language()),
       model: this.cfg.model,
       fallbackModel: this.cfg.fallbackModel,
       ...(this.cfg.effort ? { effort: this.cfg.effort as Options['effort'] } : {}),
@@ -341,6 +342,10 @@ export class AgentSession {
   prewarm(msg: PrewarmMessage): void {
     this.prewarmWanted = true;
     if (this.turnActive) return;
+    // nâng cấp đợt H9: a waiting process with the other language is started again with the new instruction
+    const langChanged = language() !== (msg.context?.language === 'en' ? 'en' : 'vi');
+    setLanguage(msg.context?.language);
+    if (this.q && langChanged && this.prewarmOnly) this.closeQuery();
     if (this.q) {
       // nâng cấp đợt F5: only ⚙ "Nạp gọn lệnh" changed while a process waits: start it again with the new tool set
       if (!this.prewarmOnly || (msg.context?.defer_tools !== false) === this.paletteDefer) return;
@@ -408,6 +413,9 @@ export class AgentSession {
     // Service plan: the tools and the system prompt are fixed when a Claude process starts → a changed plan
     // restarts it, resuming the same conversation. A message without a plan (older plugin) keeps the last one.
     this.applyPaletteDefer(msg.context); // nâng cấp đợt F5
+    // nâng cấp đợt H9: no language key = Vietnamese (the palette sends "en" only); a change restarts the process below
+    setLanguage(msg.context?.language);
+    if (this.q && this.loadedPlanKey !== undefined && !this.loadedPlanKey.endsWith(`|${language()}`)) this.closeQuery();
     const plan = msg.context?.service_plan;
     if (plan) {
       const tools = msg.context?.plan_tools;
@@ -435,7 +443,7 @@ export class AgentSession {
     try {
       this.ensureStarted();
     } catch (err) {
-      this.cfg.emit({ type: 'turn_end', error: `Không khởi tạo được phiên Claude: ${(err as Error).message}` });
+      this.cfg.emit({ type: 'turn_end', error: tr('Không khởi tạo được phiên Claude: {0}', (err as Error).message) });
       return; // the list is remembered only once Claude really started with it (the note is not lost)
     }
     this.prewarmOnly = false;
@@ -605,7 +613,7 @@ export class AgentSession {
         if (this.resuming && !this.gotInit && this.pending && this.turnActive) {
           // The saved conversation could not be resumed (deleted / incompatible): start fresh and re-send.
           const msg = this.pending;
-          this.cfg.emit({ type: 'agent_error', message: 'Không khôi phục được cuộc chat cũ của bản vẽ này; tớ bắt đầu cuộc chat mới.' });
+          this.cfg.emit({ type: 'agent_error', message: tr('Không khôi phục được cuộc chat cũ của bản vẽ này; tớ bắt đầu cuộc chat mới.') });
           this.q = undefined;
           this.input?.close();
           this.input = undefined;
@@ -616,7 +624,7 @@ export class AgentSession {
         }
         // F4: a prewarmed process that fails before any message only goes to the log (it is started again)
         if (this.prewarmOnly && !this.turnActive) this.cfg.log('prewarmed Claude process failed before the first message');
-        else this.cfg.emit({ type: 'agent_error', message: `Phiên Claude bị lỗi: ${(err as Error).message}` });
+        else this.cfg.emit({ type: 'agent_error', message: tr('Phiên Claude bị lỗi: {0}', (err as Error).message) });
       }
     } finally {
       if (gen === this.generation) {
@@ -624,7 +632,7 @@ export class AgentSession {
         this.q = undefined;
         this.input?.close();
         this.input = undefined;
-        if (this.turnActive) this.finishTurn({ error: 'Tiến trình Claude kết thúc bất thường. Gửi lại yêu cầu để tiếp tục.' });
+        if (this.turnActive) this.finishTurn({ error: tr('Tiến trình Claude kết thúc bất thường. Gửi lại yêu cầu để tiếp tục.') });
         // F4: keep one waiting; a process that died before any turn counts towards the restart limit
         if (this.prewarmOnly) this.prewarmRestarts++;
         else this.prewarmRestarts = 0;
@@ -687,7 +695,7 @@ export class AgentSession {
       case 'assistant':
         if (msg.error && msg.parent_tool_use_id === null) {
           this.turnErrorCode = msg.error;
-          this.cfg.emit({ type: 'agent_error', message: ERROR_TEXT[msg.error] ?? `Lỗi từ Claude: ${msg.error}`, code: msg.error });
+          this.cfg.emit({ type: 'agent_error', message: ERROR_TEXT[msg.error] ? tr(ERROR_TEXT[msg.error]!) : tr('Lỗi từ Claude: {0}', msg.error), code: msg.error });
         }
         return;
 
@@ -727,16 +735,16 @@ export class AgentSession {
           this.finishTurn({ cancelled: true, usage });
         } else if (msg.subtype !== 'success') {
           const why =
-            msg.subtype === 'error_max_turns' ? 'Lượt quá dài (vượt số bước tối đa).' :
-            msg.subtype === 'error_max_budget_usd' ? 'Vượt ngân sách chi phí của lượt.' :
-            'Lỗi khi thực thi lượt.';
+            msg.subtype === 'error_max_turns' ? tr('Lượt quá dài (vượt số bước tối đa).') :
+            msg.subtype === 'error_max_budget_usd' ? tr('Vượt ngân sách chi phí của lượt.') :
+            tr('Lỗi khi thực thi lượt.');
           this.finishTurn({ error: why, usage });
         } else if (msg.is_error && this.turnErrorCode) {
           // the error was already reported (Vietnamese text, login / limit card): no second English card
           this.finishTurn({ usage });
         } else if (msg.is_error) {
           // "success" + is_error: the turn ended on an API error, its text is in result
-          const text = typeof msg.result === 'string' && msg.result.trim() ? msg.result.trim().slice(0, 300) : 'Claude trả về lỗi API.';
+          const text = typeof msg.result === 'string' && msg.result.trim() ? msg.result.trim().slice(0, 300) : tr('Claude trả về lỗi API.');
           this.finishTurn({ error: text, usage });
         } else {
           this.finishTurn({ usage });
@@ -756,6 +764,7 @@ function skillsKey(list: string[] | undefined): string {
 }
 
 /** Identity of a service plan + its tool list (order-free). */
-function planKey(plan?: string, tools?: readonly string[], mode?: string): string {
-  return `${plan ?? ''}|${tools ? [...tools].sort().join(',') : '*'}|${mode ?? ''}`;
+function planKey(plan?: string, tools?: readonly string[], mode?: string, lang: string = language()): string {
+  // nâng cấp đợt H9: the language is in the system prompt too, so a changed language restarts the process (resumed)
+  return `${plan ?? ''}|${tools ? [...tools].sort().join(',') : '*'}|${mode ?? ''}|${lang}`;
 }

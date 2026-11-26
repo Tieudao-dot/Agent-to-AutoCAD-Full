@@ -23,7 +23,7 @@ namespace ClaudeCAD.Plugin.Sidecar
         public static void Save(string key)
         {
             key = (key ?? "").Trim();
-            if (key.Length < 20) throw new ArgumentException("API key quá ngắn.");
+            if (key.Length < 20) throw new ArgumentException(L.Tr("API key quá ngắn."));
             var data = ProtectedData.Protect(Encoding.UTF8.GetBytes(key), Entropy, DataProtectionScope.CurrentUser);
             Directory.CreateDirectory(Path.GetDirectoryName(FilePath));
             File.WriteAllBytes(FilePath, data);

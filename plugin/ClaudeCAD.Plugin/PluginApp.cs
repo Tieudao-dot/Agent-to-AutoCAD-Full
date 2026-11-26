@@ -37,7 +37,11 @@ namespace ClaudeCAD.Plugin
                 MainThread.Initialize();
                 Logger.Info("loaded: " + DrawingService.BuildInfo);
                 AcApp.QuitWillStart += (s, e) => Shutdown();
+                var firstRun = !System.IO.File.Exists(PaletteSettings.DefaultPath);
                 var settings = PaletteSettings.Load();
+                // KTP-05: the language is known before any text is shown (the "loaded" line, the status bar icon), not only
+                // once the palette opens; the installer's language counts while there are no settings yet
+                L.Lang = firstRun || !settings.LanguageSaved ? ChatController.InstallerLanguage() : settings.Language; // KTP-42: as ChatController
                 HotkeyEnabled = settings.Hotkey;
                 // manual edits are tracked from AutoCAD start, palette open or not
                 DrawingHistory.Instance.NextToDrawing = settings.SnapshotNextToDrawing;
@@ -47,7 +51,7 @@ namespace ClaudeCAD.Plugin
                 ScheduleFirstStart();
                 AcApp.PreTranslateMessage += OnPreTranslateMessage;
                 var ed = AcApp.DocumentManager.MdiActiveDocument?.Editor;
-                ed?.WriteMessage("\n" + ProductInfo.DisplayName + " đã nạp. Gõ CLAUDECHAT để mở khung chat.\n");
+                ed?.WriteMessage("\n" + ProductInfo.DisplayName + L.Tr(" đã nạp. Gõ CLAUDECHAT để mở khung chat.\n"));
             }
             catch (System.Exception ex)
             {
@@ -189,7 +193,7 @@ namespace ClaudeCAD.Plugin
             catch (System.Exception ex)
             {
                 Logger.Error("CLAUDECHAT failed", ex);
-                AcApp.DocumentManager.MdiActiveDocument?.Editor.WriteMessage("\nClaudeCAD lỗi: " + ex.Message + "\n");
+                AcApp.DocumentManager.MdiActiveDocument?.Editor.WriteMessage(L.Tr("\nClaudeCAD lỗi: ") + ex.Message + "\n");
             }
         }
 
@@ -242,14 +246,14 @@ namespace ClaudeCAD.Plugin
             var ed = AcApp.DocumentManager.MdiActiveDocument?.Editor;
             try
             {
-                ed?.WriteMessage("\n" + ProductInfo.DisplayName + ": đang tự kiểm tra trên một bản vẽ tạm (bản vẽ của cậu không bị đụng tới)...\n");
+                ed?.WriteMessage("\n" + ProductInfo.DisplayName + L.Tr(": đang tự kiểm tra trên một bản vẽ tạm (bản vẽ của cậu không bị đụng tới)...\n"));
                 var summary = SelfTest.Run();
-                AcApp.DocumentManager.MdiActiveDocument?.Editor.WriteMessage("\n" + ProductInfo.DisplayName + " tự kiểm tra: " + summary + "\n");
+                AcApp.DocumentManager.MdiActiveDocument?.Editor.WriteMessage("\n" + ProductInfo.DisplayName + L.Tr(" tự kiểm tra: ") + summary + "\n");
             }
             catch (System.Exception ex)
             {
                 Logger.Error("CLAUDECHATSELFTEST failed", ex);
-                AcApp.DocumentManager.MdiActiveDocument?.Editor.WriteMessage("\nClaudeCAD tự kiểm tra lỗi: " + ex.Message + "\n");
+                AcApp.DocumentManager.MdiActiveDocument?.Editor.WriteMessage(L.Tr("\nClaudeCAD tự kiểm tra lỗi: ") + ex.Message + "\n");
             }
         }
 

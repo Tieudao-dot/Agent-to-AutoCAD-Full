@@ -6,7 +6,11 @@
 
 *13/11/2026 · thread "Bộ cài thử nội bộ" · xuất phát từ `full/test-tong-the` @ `19944df`. Chủ dự án chốt 13/11/2026.*
 
-> **Bản mới nhất (26/11/2026): bản 6, `AgentToAutoCADFull-ThuNoiBo-nang-cap-6-0.9.4`** (lượt CI #91, mục "Bản 6" ngay dưới). Đủ
+> **Bản mới nhất (27/11/2026): bản 7, `AgentToAutoCADFull-ThuNoiBo-nang-cap-7-0.9.4`** (mục "Bản 7" ngay dưới). Đủ
+> đợt F + G + H phần 1 + **H phần 2** (hạ tầng, MEP 3D, thép, tiếng Anh). Cài đè lên bản 6 / 5 là được, skill tự thay.
+> Bản 3 → 6 bỏ.
+>
+> **Bản 6 (26/11/2026), `AgentToAutoCADFull-ThuNoiBo-nang-cap-6-0.9.4`** (lượt CI #91, mục "Bản 6" ngay dưới). Đủ
 > đợt F + G + **đợt H phần 1**. Cài đè lên bản 5 (hoặc bản cũ hơn): **skill cũ tự được thay, không phải xóa tay.**
 > Bản 3, 4, 5 bỏ.
 >
@@ -30,6 +34,76 @@
 > - file còn bị giữ thì bảo khởi động lại máy rồi chạy lại.
 >
 > Các bộ cài cũ (`…-0.9.4` lượt #16, `…-nang-cap-0.9.4` lượt #32): **đừng dùng nữa**.
+
+## Bản 7 (27/11/2026): đợt F + G + H phần 1 + H phần 2
+
+**Gồm gì mới so với bản 6.** Gộp nhánh tích hợp đợt H phần 2 `full/nang-cap-h-tong-the-2` @ `f94e2e2` (code chốt, đã qua
+kiểm tra độc lập phần 2):
+- **H6 hạ tầng:** nhập điểm khảo sát (hỏi gốc tọa độ thật hay cục bộ), đồng mức, trắc dọc, trắc ngang;
+- **H7 MEP 3D:** đi ống / ống gió 3D, soát va chạm ống với dầm / cột, báo cáo;
+- **H8 kết cấu thép:** đặt thép dầm / cột / sàn, bảng thống kê thép;
+- **H9 tiếng Anh:**
+  - khung chat có tiếng Anh, chọn trong ⚙;
+  - bộ cài có trang chọn ngôn ngữ (Tiếng Việt / English) ngay đầu; ngôn ngữ chọn ở bộ cài là ngôn ngữ đầu tiên của
+    khung chat;
+  - chữ vẽ vào bản vẽ và Excel vẫn giữ tiếng Việt.
+
+Thiết lập bản thử giữ nguyên: không kích hoạt, luôn gói Full, **vẫn hết hạn sau 10/12/2026**, không tự cập nhật, không
+phát hành được. Tên bản ghi **"nâng cấp 7"**.
+
+**Riêng bản thử, có cả tiếng Anh:**
+- trang đầu bộ cài (lời dặn bản thử) có hai thứ tiếng theo ngôn ngữ chọn;
+- câu trong hộp thoại thay bản cũ có hai thứ tiếng;
+- dòng "Kích hoạt" trong ⚙ / tự kiểm, câu hết hạn, câu "không tự cập nhật" có hai thứ tiếng;
+- tên bản ("Agent to AutoCAD Full: BẢN THỬ NỘI BỘ nâng cấp 7 (hết hạn 10/12/2026)") giữ tiếng Việt ở cả hai ngôn ngữ.
+
+**Tải.** Mục "Bản 7 — lượt CI" ngay dưới.
+
+### Bản 7 › Cài đè lên bản 6 (hoặc bản cũ hơn)
+
+1. Đóng AutoCAD.
+2. Giải nén zip, chạy `AgentToAutoCADFull-ThuNoiBo-Setup.exe`.
+3. **Trang đầu tiên mới: chọn ngôn ngữ** (Tiếng Việt / English), bấm OK.
+4. Trang tiếp theo ghi "ĐÂY LÀ BẢN THỬ NỘI BỘ (nâng cấp 7 …)" (hoặc "THIS IS AN INTERNAL TEST BUILD …"). Bấm Next tới
+   hết.
+5. Không có trang Kích hoạt.
+6. Skill tự thay như bản 6 (không phải xóa tay).
+7. Mở AutoCAD, gõ `CLAUDECHAT`:
+   - thanh trên cùng ghi "… nâng cấp 7 …";
+   - bấm **Chat mới** một lần.
+8. Lịch sử chat, cài đặt, macro, đăng nhập Claude được giữ.
+
+### Bản 7 › Thử gì trước
+
+- Gõ `CLAUDECHATSELFTEST`: thêm các dòng "Nâng cấp đợt H6 … H9" đều ✓.
+- Theo `docs/checklist-tong-the.md`: làm khối **"Đợt H phần 2", mục P2-0** trước (~45 phút):
+  - nhập file điểm khảo sát thật;
+  - đồng mức + trắc dọc / ngang;
+  - soát va chạm ống;
+  - bảng thống kê thép đưa kỹ sư tính tay;
+  - bộ cài chọn English rồi cài lại;
+  - gõ tay "yes" / "đồng ý" ở thẻ xác nhận;
+  - chữ trên bản vẽ giữ tiếng Việt khi chọn English.
+- Rồi phần còn lại của khối H phần 2, sau đó các khối H phần 1 / G / F như bản 6.
+- Mục P2-0-5 (chọn English rồi cài lại) làm được ngay với bộ cài này.
+
+### Bản 7 › Kỹ thuật
+
+- **Xung đột gộp ở 2 file, giữ phần bản thử, lấy chữ đã dịch của H9:**
+  - `Sidecar/Activation.cs`: `BlockedMessage`, `StatusText`, `Contact`, `ActivateAsync`. Nhánh `#if BAN_THU_NOI_BO` giữ
+    nguyên; nhánh `#else` lấy bản `L.Tr(...)`.
+  - `installer/ClaudeCAD.iss`: hộp thoại thay bản cũ. Dòng bản thử thành `CustomMessage('BtnbMsg01')` (vi + en); dòng
+    xin kích hoạt lại `H9Msg11` chỉ dùng khi không phải bản thử.
+- **Thêm cho tiếng Anh của bản thử:**
+  - `vietnamese.` / `english.WelcomeLabel2`;
+  - 3 dòng trong `Core/LangEn.cs` (câu hết hạn, "không cần kích hoạt", "không tự cập nhật"), bọc `L.Tr`;
+  - `InternalBuild.StatusTextEn`;
+  - `ExpiredMessage` viết thành một chuỗi liền, cùng nội dung, để làm khóa bảng dịch.
+  - Lý do: test H9 `In_the_palette_files_no_vietnamese_text_is_shown_without_Tr` chặn chữ Việt chưa qua `Tr`.
+- Bộ cài vẫn ghi `Contents\language.txt` theo ngôn ngữ chọn (`CurStepChanged`, ngoài khối `#ifndef BanThuNoiBo`).
+- Test: lõi **1733/1733** (1723 + 10 test bản thử), trợ lý **467/467**, build 3 target xanh. Không loại trừ test nào.
+- Chưa kiểm được: chưa chạy bộ cài trên Windows thật / AutoCAD thật. Câu tiếng Anh riêng của bản thử chưa có ai đọc
+  soát.
 
 ## Bản 6 (26/11/2026): đợt F + G + H phần 1
 

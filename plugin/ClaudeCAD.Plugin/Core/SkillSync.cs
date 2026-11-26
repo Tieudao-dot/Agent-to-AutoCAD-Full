@@ -177,7 +177,7 @@ namespace ClaudeCAD.Plugin.Core
 
         /// <summary>The line of the chat naming the skills whose new version waits next to the user's own.</summary>
         public static string NoticeText(IList<string> skills) => skills == null || skills.Count == 0 ? null :
-            $"Skill {string.Join(", ", skills)} có bản mới. Bản cậu đã sửa được giữ nguyên; bản mới nằm cạnh nó (tên có \"{SideSuffix}\", vd SKILL{SideSuffix}.md) để cậu tự gộp khi muốn.";
+            L.Tr("Skill {0} có bản mới. Bản cậu đã sửa được giữ nguyên; bản mới nằm cạnh nó (tên có \"{1}\", vd SKILL{2}.md) để cậu tự gộp khi muốn.", string.Join(", ", skills), SideSuffix, SideSuffix);
 
         /// <summary>Hashes (Hash above) of every skill file version in the repository history (main = v0.9.3, test builds, the Full branches).</summary>
         public static readonly HashSet<string> KnownShipped = new HashSet<string>(StringComparer.Ordinal)

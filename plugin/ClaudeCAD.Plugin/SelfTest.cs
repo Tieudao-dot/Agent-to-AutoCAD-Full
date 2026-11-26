@@ -1338,6 +1338,126 @@ namespace ClaudeCAD.Plugin
                     : new SelfTestRules.Verdict(false, string.Join("; ", errs));
             });
 
+            // Nâng cấp đợt H8: a pad + a strip footing, a beam's bars (2Ø18 / 2Ø16), the schedule (weight = 0.00617·d²·L), all erased
+            Check("Nâng cấp đợt H8: kết cấu (móng đơn + móng băng, thép dầm 2Ø18 / 2Ø16, bảng thống kê thép)", () =>
+            {
+                var errs = new List<string>();
+                var made = new List<string>();
+                Dictionary<string, object> Run(Func<ToolContext, Params, object> h, string tool, Dictionary<string, object> d, bool write)
+                {
+                    using (doc.LockDocument())
+                    using (var tr = doc.TransactionManager.StartTransaction())
+                    {
+                        var r = (Dictionary<string, object>)h(new ToolContext(doc, tr, write, null), new Params(tool, d));
+                        tr.Commit();
+                        return r;
+                    }
+                }
+                List<object> Pt(double x, double y) => new List<object> { x, y };
+                try
+                {
+                    var pad = Run(DrawingService.BuildFooting, "build_footing", new Dictionary<string, object> { ["kind"] = "pad", ["positions"] = new List<object> { Pt(400000, 0) } }, true);
+                    made.AddRange(((List<object>)pad["handles"]).Cast<string>());
+                    var strip = Run(DrawingService.BuildFooting, "build_footing", new Dictionary<string, object> { ["kind"] = "strip", ["path_points"] = new List<object> { Pt(405000, 0), Pt(410000, 0), Pt(410000, 4000) } }, true);
+                    made.AddRange(((List<object>)strip["handles"]).Cast<string>());
+                    if (Convert.ToDouble(pad["volume_m3"]) <= 0 || Convert.ToDouble(strip["volume_m3"]) <= 0) errs.Add("móng không có thể tích");
+                    if (!pad.ContainsKey("sample_sizes")) errs.Add("không báo cỡ mẫu");
+                    var beam = Run(DrawingService.DrawRebar, "draw_rebar", new Dictionary<string, object>
+                        { ["element"] = "beam", ["position"] = Pt(400000, 10000), ["width"] = 220.0, ["height"] = 400.0, ["span"] = 5000.0, ["bottom"] = "2Ø18", ["top"] = "2Ø16", ["start_mark"] = 901 }, true);
+                    made.AddRange(((List<object>)beam["handles"]).Cast<string>());
+                    var s = Run(DrawingService.RebarSchedule, "rebar_schedule", new Dictionary<string, object> { ["handles"] = new List<object>(((List<object>)beam["handles"]).Cast<object>()) }, false);
+                    var rows = ((List<object>)s["rows"]).Cast<Dictionary<string, object>>().ToList();
+                    var b18 = rows.FirstOrDefault(r => Convert.ToInt32(r["mark"]) == 901);
+                    if (b18 == null) errs.Add("bảng thiếu thanh 901 (2Ø18)");
+                    else
+                    {
+                        double want = Math.Round(Convert.ToDouble(b18["length_mm"]) / 1000 * Convert.ToInt32(b18["count"]) * RebarLogic.KgPerM(18), 2);
+                        if (Math.Abs(Convert.ToDouble(b18["kg"]) - want) > 0.011) errs.Add($"khối lượng 2Ø18 {b18["kg"]} kg (cần {want})");
+                    }
+                    if (rows.Count != 3) errs.Add($"bảng có {rows.Count} dòng (cần 3: dưới, trên, đai)");
+                    return errs.Count == 0
+                        ? new SelfTestRules.Verdict(true, $"móng {pad["volume_m3"]} + {strip["volume_m3"]} m³; {rows.Count} loại thanh, {s["total_kg"]} kg")
+                        : new SelfTestRules.Verdict(false, string.Join("; ", errs));
+                }
+                finally
+                {
+                    using (doc.LockDocument())
+                    using (var tr = doc.TransactionManager.StartTransaction())
+                    {
+                        foreach (var h in made)
+                        {
+                            try { tr.GetObject(doc.Database.GetObjectId(false, new Handle(Convert.ToInt64(h, 16)), 0), OpenMode.ForWrite).Erase(); } catch (Exception) { }
+                        }
+                        tr.Commit();
+                    }
+                }
+            });
+
+            // Nâng cấp đợt H7: an L drain route (one elbow), a branch from it (a tee), the schedule, the check against a beam
+            Check("Nâng cấp đợt H7: ống MEP 3D (tuyến chữ L có co, nhánh có tê, thống kê, soát va chạm với dầm)", () =>
+            {
+                var errs = new List<string>();
+                var made = new List<string>();
+                Dictionary<string, object> Run(Func<ToolContext, Params, object> h, string tool, Dictionary<string, object> d, bool write)
+                {
+                    using (doc.LockDocument())
+                    using (var tr = doc.TransactionManager.StartTransaction())
+                    {
+                        var r = (Dictionary<string, object>)h(new ToolContext(doc, tr, write, null), new Params(tool, d));
+                        tr.Commit();
+                        return r;
+                    }
+                }
+                List<object> Pts(params double[] xy) { var l = new List<object>(); for (int i = 0; i + 1 < xy.Length; i += 2) l.Add(new List<object> { xy[i], xy[i + 1] }); return l; }
+                try
+                {
+                    // a beam across the route (300 wide, 500 deep, its centre at the pipe height)
+                    using (doc.LockDocument())
+                    using (var tr = doc.TransactionManager.StartTransaction())
+                    {
+                        var ms = (BlockTableRecord)tr.GetObject(SymbolUtilityServices.GetBlockModelSpaceId(doc.Database), OpenMode.ForWrite);
+                        var bm = new Solid3d();
+                        bm.SetDatabaseDefaults(doc.Database);
+                        bm.CreateBox(300, 4000, 500);
+                        bm.TransformBy(Matrix3d.Displacement(new Vector3d(302000, 0, 3000)));
+                        ms.AppendEntity(bm);
+                        tr.AddNewlyCreatedDBObject(bm, true);
+                        made.Add(bm.Handle.ToString());
+                        tr.Commit();
+                    }
+                    var a = Run(DrawingService.DrawMep, "draw_mep", new Dictionary<string, object>
+                        { ["system"] = "drain", ["use"] = "wc", ["points"] = Pts(300000, 0, 304000, 0, 304000, 2000), ["elevation"] = 3000.0 }, true);
+                    var ha = ((List<object>)a["handles"]).Cast<string>().ToList();
+                    made.AddRange(ha);
+                    if (Convert.ToInt32(a["elbows"]) != 1) errs.Add($"tuyến chữ L có {a["elbows"]} co (cần 1)");
+                    var b = Run(DrawingService.DrawMep, "draw_mep", new Dictionary<string, object>
+                        { ["system"] = "drain", ["use"] = "floor", ["points"] = Pts(300500, 0, 300500, -1500), ["elevation"] = 2990.0, ["connect_to"] = ha[0] }, true);
+                    made.AddRange(((List<object>)b["handles"]).Cast<string>());
+                    if (!b.ContainsKey("tee")) errs.Add("nhánh không có tê");
+                    var s = Run(DrawingService.MepReport, "mep_report", new Dictionary<string, object> { ["action"] = "schedule" }, false);
+                    var rows = ((List<object>)s["rows"]).Cast<Dictionary<string, object>>().ToList();
+                    if (!rows.Any(r => (string)r["size"] == "D" + MepLogic.Num(H7Numbers.DrainWcMm) && Convert.ToInt32(r["elbows"]) == 1)) errs.Add("thống kê thiếu dòng ống chính có 1 co");
+                    if (rows.Sum(r => Convert.ToInt32(r["tees"])) != 1) errs.Add("thống kê không đếm được 1 tê");
+                    var c = Run(DrawingService.MepReport, "mep_report", new Dictionary<string, object> { ["action"] = "clash", ["other_handles"] = new List<object> { made[0] } }, false);
+                    if (Convert.ToInt32(c["clashes"]) < 1) errs.Add("không thấy ống chạm dầm");
+                    return errs.Count == 0
+                        ? new SelfTestRules.Verdict(true, $"ống chính {a["length_m"]} m, {a["elbows"]} co; nhánh có tê; {rows.Count} dòng thống kê; {c["clashes"]} chỗ chạm dầm, {c["close"]} chỗ sát")
+                        : new SelfTestRules.Verdict(false, string.Join("; ", errs));
+                }
+                finally
+                {
+                    using (doc.LockDocument())
+                    using (var tr = doc.TransactionManager.StartTransaction())
+                    {
+                        foreach (var h in made)
+                        {
+                            try { tr.GetObject(doc.Database.GetObjectId(false, new Handle(Convert.ToInt64(h, 16)), 0), OpenMode.ForWrite).Erase(); } catch (Exception) { }
+                        }
+                        tr.Commit();
+                    }
+                }
+            });
+
             // Nâng cấp đợt H5: two copies of this drawing in a folder: plan, check both (read only), set up the standard in
             // both (a backup first, then the file written); the card token is needed; the open drawing is unchanged
             Check("Nâng cấp đợt H5: làm nhiều file (soát 2 file, áp chuẩn 2 file có sao lưu, cần thẻ)", () =>
@@ -1382,6 +1502,77 @@ namespace ClaudeCAD.Plugin
                 if (doc.Name != before) errs.Add("bản vẽ đang mở bị đổi tên");
                 try { Directory.Delete(folder, true); } catch (Exception ex) { errs.Add("thư mục còn bị khóa: " + ex.Message); }
                 return errs.Count == 0 ? new SelfTestRules.Verdict(true, "soát 2 file, áp chuẩn 2 file (có sao lưu), cần thẻ") : new SelfTestRules.Verdict(false, string.Join("; ", errs));
+            });
+
+            // Nâng cấp đợt H6: a survey sheet (CSV, VN-2000 axes, a sloping ground) → points, contours, an alignment,
+            // chainage ticks, a long section with a design line, cross sections (test drawing only)
+            Check("Nâng cấp đợt H6: hạ tầng (nhập điểm CSV, đồng mức, lý trình, trắc dọc, trắc ngang)", () =>
+            {
+                var errs = new List<string>();
+                string csv = Path.Combine(dir, "h6-diem.csv");
+                var sb = new System.Text.StringBuilder("Tên;X;Y;Cao độ\r\n");
+                int n = 0;
+                for (int i = 0; i <= 10; i++)
+                    for (int j = 0; j <= 10; j++)
+                        sb.Append($"P{++n};{(1000 + i * 10).ToString(CultureInfo.InvariantCulture)};{(2000 + j * 10).ToString(CultureInfo.InvariantCulture)};{(10 + j * 0.1 + i * 0.05).ToString("0.000", CultureInfo.InvariantCulture).Replace('.', ',')}\r\n");
+                File.WriteAllText(csv, sb.ToString());
+                Dictionary<string, object> T(Dictionary<string, object> q)
+                {
+                    using (doc.LockDocument())
+                    using (var tr = doc.TransactionManager.StartTransaction())
+                    {
+                        var r = (Dictionary<string, object>)DrawingService.TerrainTool(new ToolContext(doc, tr, true, null), new Params("terrain", q));
+                        tr.Commit();
+                        return r;
+                    }
+                }
+                var imp = T(new Dictionary<string, object> { ["action"] = "import_points", ["file"] = csv, ["origin"] = new List<object> { 1000.0, 2000.0 } });
+                if (Convert.ToInt32(imp["points"]) != 121) errs.Add($"nhập {imp["points"]} điểm (cần 121)");
+                var con = T(new Dictionary<string, object> { ["action"] = "contours", ["interval"] = 0.5 });
+                if (Convert.ToInt32(con["minor"]) + Convert.ToInt32(con["major"]) < 3) errs.Add($"đồng mức: {con["minor"]} + {con["major"]} đường");
+                string align;
+                using (doc.LockDocument())
+                using (var tr = doc.TransactionManager.StartTransaction())
+                {
+                    var ms = (BlockTableRecord)tr.GetObject(SymbolUtilityServices.GetBlockModelSpaceId(doc.Database), OpenMode.ForWrite);
+                    var pl = new Polyline();
+                    pl.AddVertexAt(0, new Point2d(5000, 50000), 0, 0, 0);
+                    pl.AddVertexAt(1, new Point2d(50000, 60000), 0, 0, 0);
+                    pl.AddVertexAt(2, new Point2d(95000, 50000), 0, 0, 0);
+                    pl.SetDatabaseDefaults(doc.Database);
+                    ms.AppendEntity(pl); tr.AddNewlyCreatedDBObject(pl, true);
+                    align = pl.Handle.ToString();
+                    tr.Commit();
+                }
+                var sta = T(new Dictionary<string, object> { ["action"] = "stations", ["alignment_handle"] = align });
+                if (Convert.ToInt32(sta["stakes"]) < 3) errs.Add($"lý trình: {sta["stakes"]} cọc");
+                // Sửa KTP lượt 2 (KTP-47b): in a mm drawing the stakes run the whole alignment and the last one sits on its end
+                using (doc.LockDocument())
+                using (var tr = doc.TransactionManager.StartTransaction())
+                {
+                    var ms = (BlockTableRecord)tr.GetObject(SymbolUtilityServices.GetBlockModelSpaceId(doc.Database), OpenMode.ForRead);
+                    var mids = new List<Point3d>();
+                    foreach (ObjectId id in ms)
+                        if (tr.GetObject(id, OpenMode.ForRead) is Line ln && ln.Layer == H6Numbers.LayerStation.name)
+                            mids.Add(new Point3d((ln.StartPoint.X + ln.EndPoint.X) / 2, (ln.StartPoint.Y + ln.EndPoint.Y) / 2, 0));
+                    var end = new Point3d(95000, 50000, 0);
+                    double toEnd = mids.Count == 0 ? double.MaxValue : mids.Min(m => m.DistanceTo(end));
+                    if (toEnd >= 1) errs.Add($"lý trình: cọc cuối cách điểm cuối tuyến {toEnd:0.###} mm (cần < 1 mm)");
+                    tr.Commit();
+                }
+                var pro = T(new Dictionary<string, object>
+                {
+                    ["action"] = "profile", ["alignment_handle"] = align, ["position"] = new List<object> { 0.0, -200000.0 },
+                    ["design"] = new List<object> { new List<object> { 0.0, 10.5 }, new List<object> { 92.0, 11.0 } },
+                });
+                if (Convert.ToInt32(pro["stakes"]) < 6) errs.Add($"trắc dọc: {pro["stakes"]} cọc");
+                if (pro.ContainsKey("off_surface")) errs.Add("trắc dọc: có cọc ngoài mặt địa hình");
+                var crs = T(new Dictionary<string, object> { ["action"] = "cross_sections", ["alignment_handle"] = align, ["half_width"] = 8.0, ["position"] = new List<object> { 0.0, -400000.0 } });
+                if (Convert.ToInt32(crs["sections"]) < 5) errs.Add($"trắc ngang: {crs["sections"]} mặt cắt");
+                try { File.Delete(csv); } catch (Exception) { }
+                return errs.Count == 0
+                    ? new SelfTestRules.Verdict(true, $"121 điểm, {Convert.ToInt32(con["minor"]) + Convert.ToInt32(con["major"])} đồng mức, {pro["stakes"]} cọc, {crs["sections"]} trắc ngang")
+                    : new SelfTestRules.Verdict(false, string.Join("; ", errs));
             });
 
             string versionFile = Path.Combine(dir, "version-copy.dwg");
@@ -1521,14 +1712,14 @@ namespace ClaudeCAD.Plugin
         private static string Report(List<Step> steps, string dir)
         {
             var sb = new StringBuilder();
-            sb.AppendLine(ProductInfo.DisplayName + " — tự kiểm tra " + DateTime.Now.ToString("yyyy-MM-dd HH:mm", CultureInfo.InvariantCulture));
+            sb.AppendLine(ProductInfo.DisplayName + L.Tr(" — tự kiểm tra ") + DateTime.Now.ToString("yyyy-MM-dd HH:mm", CultureInfo.InvariantCulture));
             sb.AppendLine(new string('=', 60));
             foreach (var s in steps)
-                sb.AppendLine($"{(s.Ok ? "✓" : "✗")} {s.Name}{(s.Ms > 0 ? $" ({s.Ms} ms)" : "")}: {s.Detail}");
+                sb.AppendLine($"{(s.Ok ? "✓" : "✗")} {L.Tr(s.Name)}{(s.Ms > 0 ? $" ({s.Ms} ms)" : "")}: {s.Detail}");
             int bad = steps.Count(s => !s.Ok);
             var stamp = DateTime.Now.ToString("yyyyMMdd-HHmmss", CultureInfo.InvariantCulture);
             sb.AppendLine(new string('=', 60));
-            sb.AppendLine(bad == 0 ? "Tất cả đều đạt." : $"{bad} mục chưa đạt — gửi file này (và log CLAUDECHATLOG) cho người phát triển.");
+            sb.AppendLine(bad == 0 ? L.Tr("Tất cả đều đạt.") : L.Tr("{0} mục chưa đạt — gửi file này (và log CLAUDECHATLOG) cho người phát triển.", bad));
             if (bad == 0)
             {
                 // nothing to investigate: keep only the picture (next to the report), drop the test drawings
@@ -1540,13 +1731,13 @@ namespace ClaudeCAD.Plugin
                         Directory.CreateDirectory(Logger.LogDirectory);
                         var keep = Path.Combine(Logger.LogDirectory, "selftest-" + stamp + ".png");
                         File.Copy(png, keep, true);
-                        sb.AppendLine("Ảnh chụp thử: " + keep);
+                        sb.AppendLine(L.Tr("Ảnh chụp thử: ") + keep);
                     }
                     Directory.Delete(dir, true);
                 }
-                catch (Exception ex) { Logger.Warn("selftest folder not removed: " + ex.Message); sb.AppendLine("Thư mục thử: " + dir); }
+                catch (Exception ex) { Logger.Warn("selftest folder not removed: " + ex.Message); sb.AppendLine(L.Tr("Thư mục thử: ") + dir); }
             }
-            else sb.AppendLine("Thư mục thử (giữ lại để kiểm tra): " + dir);
+            else sb.AppendLine(L.Tr("Thư mục thử (giữ lại để kiểm tra): ") + dir);
             var file = Path.Combine(Logger.LogDirectory, "selftest-" + stamp + ".txt");
             try
             {
@@ -1555,7 +1746,7 @@ namespace ClaudeCAD.Plugin
                 Process.Start("notepad.exe", "\"" + file + "\"");
             }
             catch (Exception ex) { Logger.Warn("selftest report not written: " + ex.Message); }
-            return $"{steps.Count - bad}/{steps.Count} mục đạt. Báo cáo: {file}";
+            return L.Tr("{0}/{1} mục đạt. Báo cáo: {2}", steps.Count - bad, steps.Count, file);
         }
     }
 }

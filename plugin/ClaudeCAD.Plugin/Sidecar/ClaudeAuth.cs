@@ -17,11 +17,11 @@ namespace ClaudeCAD.Plugin.Sidecar
         public string Email;
 
         public string Label =>
-            LoggedIn == true ? (Method == "api_key" ? "dùng ANTHROPIC_API_KEY (biến môi trường)"
-                : Method == "api_key_saved" ? "dùng API key đã lưu trong plugin"
-                : "đã đăng nhập Claude" + (string.IsNullOrEmpty(Email) ? "" : " · " + Email))
-            : LoggedIn == false ? "chưa đăng nhập Claude"
-            : "chưa kiểm tra được" + (string.IsNullOrEmpty(Error) ? "" : $" ({Error})");
+            LoggedIn == true ? (Method == "api_key" ? L.Tr("dùng ANTHROPIC_API_KEY (biến môi trường)")
+                : Method == "api_key_saved" ? L.Tr("dùng API key đã lưu trong plugin")
+                : L.Tr("đã đăng nhập Claude") + (string.IsNullOrEmpty(Email) ? "" : " · " + Email))
+            : LoggedIn == false ? L.Tr("chưa đăng nhập Claude")
+            : L.Tr("chưa kiểm tra được") + (string.IsNullOrEmpty(Error) ? "" : $" ({Error})");
     }
 
     /// <summary>
@@ -43,7 +43,7 @@ namespace ClaudeCAD.Plugin.Sidecar
             if (!accountOnly && !string.IsNullOrEmpty(Environment.GetEnvironmentVariable("ANTHROPIC_API_KEY")))
                 return new AuthStatus { LoggedIn = true, Method = "api_key" };
             var exe = PluginPaths.ClaudeExecutable;
-            if (exe == null) return new AuthStatus { Error = "không thấy Claude Code đi kèm plugin" };
+            if (exe == null) return new AuthStatus { Error = L.Tr("không thấy Claude Code đi kèm plugin") };
             try
             {
                 var psi = new ProcessStartInfo(exe, "auth status --json")
@@ -57,7 +57,7 @@ namespace ClaudeCAD.Plugin.Sidecar
                 {
                     var outTask = p.StandardOutput.ReadToEndAsync();
                     var errTask = p.StandardError.ReadToEndAsync(); // drained: a full stderr pipe would block claude
-                    if (!p.WaitForExit(20000)) { try { p.Kill(); } catch { } return new AuthStatus { Error = "hết thời gian chờ" }; }
+                    if (!p.WaitForExit(20000)) { try { p.Kill(); } catch { } return new AuthStatus { Error = L.Tr("hết thời gian chờ") }; }
                     return Parse(outTask.Result);
                 }
             }
@@ -74,7 +74,7 @@ namespace ClaudeCAD.Plugin.Sidecar
             try
             {
                 var start = json?.IndexOf('{') ?? -1;
-                if (start < 0) return new AuthStatus { Error = "kết quả không đọc được" };
+                if (start < 0) return new AuthStatus { Error = L.Tr("kết quả không đọc được") };
                 var d = JsonCodec.ParseObject(json.Substring(start));
                 return new AuthStatus
                 {

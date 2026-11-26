@@ -144,7 +144,7 @@ namespace ClaudeCAD.Plugin.UI
                 {
                     Title = string.IsNullOrEmpty(title) ? ProductInfo.DisplayName : title,
                     Text = text,
-                    HyperText = "Mở khung chat",
+                    HyperText = L.Tr("Mở khung chat"),
                     HyperLink = "",
                 };
                 bubble.Closed += OnBubbleClosed;
@@ -188,12 +188,12 @@ namespace ClaudeCAD.Plugin.UI
             string what;
             switch (state)
             {
-                case State.Busy: what = "Claude đang làm"; break;
-                case State.Attention: what = "cần cậu xem"; break;
-                case State.Ready: what = "sẵn sàng"; break;
-                default: what = "chưa kết nối"; break;
+                case State.Busy: what = L.Tr("Claude đang làm"); break;
+                case State.Attention: what = L.Tr("cần cậu xem"); break;
+                case State.Ready: what = L.Tr("sẵn sàng"); break;
+                default: what = L.Tr("chưa kết nối"); break;
             }
-            return ProductInfo.DisplayName + " — " + what + (string.IsNullOrWhiteSpace(detail) ? "" : ": " + detail.Trim()) + ". Bấm để mở khung chat";
+            return ProductInfo.DisplayName + " — " + what + (string.IsNullOrWhiteSpace(detail) ? "" : ": " + detail.Trim()) + L.Tr(". Bấm để mở khung chat");
         }
 
         private static void Apply()

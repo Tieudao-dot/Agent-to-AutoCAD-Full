@@ -33,7 +33,7 @@ export function interactionTools(emit: (msg: SidecarToPlugin) => void, plan?: st
     tool(
       'request_confirmation',
       'Show a confirmation card with "Đồng ý" / "Hủy" buttons (and "Xem trước" to highlight the objects) BEFORE any destructive operation that ' +
-        'needs confirmation (erase by filter, changing more than 20 objects, deleting layouts/xrefs). text: one short Vietnamese sentence ' +
+        'needs confirmation (erase by filter, changing more than 20 objects, deleting layouts/xrefs). text: one short sentence in the language of the user ' +
         'with the count and what will happen, e.g. "Xóa 57 đối tượng trên layer A-TEMP?". handles: the affected objects (for the preview). ' +
         'After calling it, END YOUR TURN without further tool calls; the answer arrives as the next user message.',
       {
@@ -52,8 +52,8 @@ export function interactionTools(emit: (msg: SidecarToPlugin) => void, plan?: st
     tool(
       'propose_plan',
       'Show a plan card with "Làm" / "Sửa kế hoạch" / "Bỏ" buttons BEFORE a big multi-step drawing task (a whole floor plan, a full MEP layout, ' +
-        'many sheets, roughly more than 50 new objects or several different drawing steps). summary: one Vietnamese sentence; steps: 2-12 short ' +
-        'Vietnamese steps with the key sizes, layers and assumptions. Look at the drawing first (get_drawing_info, list_layers) but do not change it. ' +
+        'many sheets, roughly more than 50 new objects or several different drawing steps). summary: one sentence in the language of the user; steps: 2-12 short ' +
+        'steps in the language of the user with the key sizes, layers and assumptions. Look at the drawing first (get_drawing_info, list_layers) but do not change it. ' +
         'After calling it, END YOUR TURN; "Làm" arrives as the next user message ("Làm theo kế hoạch."), or the user writes what to change. ' +
         'Not for small or clearly specified requests.',
       {
@@ -73,7 +73,7 @@ export function interactionTools(emit: (msg: SidecarToPlugin) => void, plan?: st
       'Tell the palette which step of a multi-step task you are starting, so the user sees "Bước 3/7: Vẽ tường" with ✓ / ● / ○. ' +
         'While carrying out an approved plan ("Làm theo kế hoạch."): call it with step = the plan step (1-based) right BEFORE you start that ' +
         'step; the steps are the ones of your propose_plan card, do not repeat them. For a big task without a plan card (plan cards turned off), ' +
-        'call it once at the start with steps = 2-12 short Vietnamese steps and step = 1, then with step only. note: optional short detail of ' +
+        'call it once at the start with steps = 2-12 short steps in the user\'s language and step = 1, then with step only. note: optional short detail of ' +
         'the current step, e.g. "46 đoạn LINE". It does not touch the drawing and works in read-only mode. Not for small tasks.',
       {
         step: z.number().int().min(1).max(15),
@@ -91,7 +91,7 @@ export function interactionTools(emit: (msg: SidecarToPlugin) => void, plan?: st
 
     tool(
       'suggest_next_steps',
-      'Show 1-3 buttons under your reply with the most useful NEXT requests the user is likely to make (Vietnamese, imperative, under 60 ' +
+      'Show 1-3 buttons under your reply with the most useful NEXT requests the user is likely to make (in the language of the user, imperative, under 60 ' +
         'characters, complete enough to send as-is), e.g. "Ghi kích thước các phòng", "Thêm tên phòng và diện tích", "Bố trí đèn trần". ' +
         'Call it once, as the last tool call of a turn that changed or analysed the drawing. Do not mention the buttons in your text.',
       {

@@ -422,4 +422,53 @@ Thread sửa:
 
 ## Kết quả sửa và soát lại
 
-*(Luồng chính ghi khi các thread sửa xong và thread kiểm tra độc lập soát lại.)*
+### Lượt sửa 1 (26/11 18h10 → 18h33)
+
+- Phần H5 (thread đợt F2): `full/nang-cap-h-sua-kth-c` @ `5ce5296`, bàn giao `nang-cap-h-sua-kth-c.md`.
+- Phần H1 / H2 / H3 (thread Test & sửa F1): `full/nang-cap-h-sua-kth-b` @ `bf21eee`, bàn giao `nang-cap-h-sua-kth-b.md`.
+- Phần H4 + prompt (thread đợt F1): `b2e7549`, bàn giao `nang-cap-h-sua-kth-a.md`.
+- Gộp: `full/nang-cap-h-tong-the` @ `b7e408f` (code `0275e38`), CI 45810078065 xanh, `# pass 441 / # fail 0`, lõi 1605.
+- Sửa thêm 5 mục nghi vấn, đều là lỗi thật:
+  - macro chạy `batch_files` không thẻ;
+  - thời gian chờ 30 s của `export_drawing` / `compare_drawings` / `company_standard learn`;
+  - `compare.ts` khai chỉ đọc;
+  - khung nhìn layout mẫu;
+  - chọn khung tên.
+
+### Soát lại lượt 1 (thread kiểm tra độc lập, 18h55, ~$3)
+
+Chạy lại: lõi 1605 / 1605, trợ lý 441 / 441.
+
+| Mã | Kết quả |
+| --- | --- |
+| KTH-01, 03 → 14, 16 → 27 | Sửa đúng |
+| KTH-02 | Đúng phần chính (chờ 2 phút khi soát / đếm, 5 phút khi áp chuẩn / in PDF). Còn lại (nhẹ): quá hạn vẫn đi tiếp, chưa nói "có thể đã làm xong" → giao thread đợt F2 sửa nốt |
+| KTH-15 | Sửa đúng ca đã báo, nhưng sinh KTH-28 |
+| 5 nghi vấn | Sửa đúng |
+| Lưu ý nhỏ KTH-11 | Ô khung tên còn giá trị mặc định của mẫu vẫn tính là "đã điền" (không sửa, ghi để chủ dự án biết) |
+
+**KTH-28 · vừa · H3 (mới, sinh từ bản sửa KTH-15):**
+- **Lỗi:** polyline kín có hai đỉnh gần bằng nhau về x vẫn bị báo "bớt + thêm".
+- **Chỗ lỗi:** `Core/DrawingCompare.cs`, `CanonicalLoop` chọn đỉnh đầu bằng phép so khít, không theo dung sai.
+- **Chứng minh:** `(0,0)(4000,0)(4000,3000)(0.3,3000)` so với `(0.3,0)(4000,0)(4000,3000)(0,3000)` cho kết quả `removed | added`.
+- **Thread sửa:** Test & sửa F1, nhánh `kth-b`.
+
+### Lượt sửa 2
+
+- KTH-28 (thread Test & sửa F1): `full/nang-cap-h-sua-kth-b` @ `815715a`. Polyline kín tra theo tâm + cao độ, so theo dung
+  sai từ mọi đỉnh đầu, cả hai chiều (`SameLoop`). Hạn chế còn lại: phòng vừa đổi hình vừa có hai đỉnh chênh x dưới dung sai
+  có thể ra "bớt + thêm" thay vì "đổi" (hiếm).
+- Nốt KTH-02 (thread đợt F2): `full/nang-cap-h-sua-kth-c` @ `c9bed1e`. Một file quá hạn thì dừng cả lượt, kể file đã xong,
+  ghi `timed_out_file` + `check_first`.
+- Gộp: `full/nang-cap-h-tong-the` @ `1ad6cec` (code `93096dc`), CI 45813679683 xanh, `# pass 443 / # fail 0`, lõi 1608.
+  Sau đó `76ecfae` chỉ sửa tài liệu.
+
+### Soát lại lượt 2 (thread kiểm tra độc lập, 19h01, ~$2)
+
+- Chạy lại: lõi 1608 / 1608, trợ lý 443 / 443.
+- **KTH-28 sửa đúng; phần còn lại của KTH-02 sửa đúng; không sinh lỗi mới.** Các lỗi đã đúng ở lượt 1 không bị hỏng.
+- Test thử: lệch 0,3 mm, ngược chiều, có cung đọc ngược từ góc khác, kéo giãn phòng, hai phòng cùng tâm. Đều đúng.
+  Phòng dời 100 mm ra "bớt + thêm", đúng thiết kế (`nang-cap-h3.md`).
+
+**Kết quả cuối: 28 lỗi KTH, 28 sửa đúng và đã soát lại, 0 lỗi mở. 5 nghi vấn đúng là lỗi, đã sửa và soát lại.**
+Tổng thread kiểm tra độc lập ~$18.

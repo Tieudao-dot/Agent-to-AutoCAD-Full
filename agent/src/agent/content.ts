@@ -1,5 +1,6 @@
 import type { SDKUserMessage } from '@anthropic-ai/claude-agent-sdk';
 import { servicePlanLabel, type UserMessage } from '../ipc/protocol.js';
+import { tr } from '../i18n.js';
 
 /** Skill names the palette's "Chuẩn" selector can choose. */
 export const STANDARD_LABELS: Record<string, string> = {
@@ -133,22 +134,22 @@ export function toSdkUserMessage(msg: UserMessage): SDKUserMessage {
   };
 }
 
-/** Short Vietnamese summary of a tool result for the palette's activity log. */
+/** Short summary (tr: the palette's language) of a tool result for the palette's activity log. */
 export function summarizeResult(tool: string, result: unknown): { summary?: string; handles?: string[] } {
   if (typeof result !== 'object' || result === null) return {};
   const r = result as Record<string, unknown>;
   const handles = Array.isArray(r.handles) ? (r.handles.filter((h) => typeof h === 'string') as string[]) : undefined;
   const parts: string[] = [];
   if (tool === 'batch_execute' && typeof r.ok_count === 'number') {
-    parts.push(`${r.ok_count} lệnh OK`);
-    if (typeof r.error_count === 'number' && r.error_count > 0) parts.push(`${r.error_count} lỗi`);
+    parts.push(tr('{0} lệnh OK', r.ok_count));
+    if (typeof r.error_count === 'number' && r.error_count > 0) parts.push(tr('{0} lỗi', r.error_count));
   }
-  if (typeof r.erased === 'number') parts.push(`xóa ${r.erased}`);
-  else if (handles && handles.length > 0) parts.push(`${handles.length} đối tượng`);
-  else if (typeof r.total === 'number') parts.push(`${r.total} kết quả`);
+  if (typeof r.erased === 'number') parts.push(tr('xóa {0}', r.erased));
+  else if (handles && handles.length > 0) parts.push(tr('{0} đối tượng', handles.length));
+  else if (typeof r.total === 'number') parts.push(tr('{0} kết quả', r.total));
   else if (typeof r.count === 'number') parts.push(`${r.count}`);
   if (typeof r.area_m2 === 'number') parts.push(`${r.area_m2} m²`);
-  if (typeof r.width === 'number' && typeof r.height === 'number' && tool === 'capture_view') parts.push(`ảnh ${r.width}×${r.height}`);
+  if (typeof r.width === 'number' && typeof r.height === 'number' && tool === 'capture_view') parts.push(tr('ảnh {0}×{1}', r.width, r.height));
   if (typeof r.distance === 'number') parts.push(`${r.distance} mm`);
   if (typeof r.volume_m3 === 'number') parts.push(`${r.volume_m3} m³`);
   else if (typeof r.total_volume_m3 === 'number') parts.push(`${r.total_volume_m3} m³`);

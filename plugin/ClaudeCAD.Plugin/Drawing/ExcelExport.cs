@@ -16,7 +16,7 @@ namespace ClaudeCAD.Plugin.Drawing
     public static partial class DrawingService
     {
         /// <summary>Writes the table when the call asks for it; adds "excel" (path, rows) to the result. Returns false when not asked.</summary>
-        internal static bool ExportExcel(ToolContext ctx, Params p, string tool, Func<List<List<object>>> table, Dictionary<string, object> result)
+        internal static bool ExportExcel(ToolContext ctx, Params p, string tool, Func<List<List<object>>> table, Dictionary<string, object> result, string key = null)
         {
             var requested = XlsxLogic.Requested(p.Get("excel"), tool);
             if (requested == null) return false;
@@ -27,11 +27,11 @@ namespace ClaudeCAD.Plugin.Drawing
             string docName = SafeString(() => ctx.Doc.Name);
             string drawingDir = SafeString(() => Path.GetDirectoryName(ctx.Doc.Name));
             if (string.IsNullOrEmpty(drawingDir) || !Directory.Exists(drawingDir)) drawingDir = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
-            var full = XlsxLogic.Resolve(requested, drawingDir, docName, tool, Directory.Exists, Directory.Exists);
+            var full = XlsxLogic.Resolve(requested, drawingDir, docName, tool, Directory.Exists, Directory.Exists, key); // KTP-27: key = the table's own file name
             // nâng cấp đợt F5: an existing file needs the card's Đồng ý (a macro replay: overwrite as before)
             RequireOverwriteCard(ctx, p, tool, full, File.Exists(full), XlsxLogic.ExistsMessage(tool, full), "overwrite");
             var rows = data.Select(r => (IList<object>)r).ToList();
-            try { XlsxWriter.Write(full, rows, F4Numbers.SheetName.TryGetValue(tool, out var sheet) ? sheet : tool); }
+            try { XlsxWriter.Write(full, rows, F4Numbers.SheetName.TryGetValue(key ?? tool, out var sheet) ? sheet : tool); }
             catch (IOException ex) { throw ToolException.Invalid($"{tool}: could not write '{full}' ({ex.Message}). If it is open in Excel, ask the user to close it, then call again."); }
             catch (UnauthorizedAccessException) { throw ToolException.Invalid($"{tool}: no permission to write '{full}'. Give another folder or file name in 'excel'."); }
             result["excel"] = new Dictionary<string, object> { ["path"] = full, ["rows"] = dataRows };

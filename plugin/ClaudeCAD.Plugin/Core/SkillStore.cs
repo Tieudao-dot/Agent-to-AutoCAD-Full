@@ -77,7 +77,7 @@ namespace ClaudeCAD.Plugin.Core
     {
         public const string RegistryFileName = "skills.json";
         public const int MaxDescription = 1024;
-        public static readonly string[] BuiltinNames = { "ve-kien-truc", "ve-mep", "ve-ha-tang", "ve-3d-kien-truc" };
+        public static readonly string[] BuiltinNames = { "ve-kien-truc", "ve-mep", "ve-ha-tang", "ve-3d-kien-truc", "ve-ket-cau" }; // ve-ket-cau: nâng cấp đợt H8
         private static readonly Regex NameRx = new Regex("^[a-z0-9][a-z0-9-]{0,63}$");
         private static readonly string[] CopyExtensions = { ".md", ".txt", ".csv", ".json" };
 
@@ -97,11 +97,11 @@ namespace ClaudeCAD.Plugin.Core
         /// </summary>
         public static (string name, string description, string error) ParseFrontmatter(string md)
         {
-            if (string.IsNullOrWhiteSpace(md)) return (null, null, "File trống.");
+            if (string.IsNullOrWhiteSpace(md)) return (null, null, L.Tr("File trống."));
             var text = md.TrimStart('﻿').Replace("\r\n", "\n");
-            if (!text.StartsWith("---\n")) return (null, null, "File chưa có phần đầu (frontmatter) với name và description.");
+            if (!text.StartsWith("---\n")) return (null, null, L.Tr("File chưa có phần đầu (frontmatter) với name và description."));
             int end = text.IndexOf("\n---", 4, StringComparison.Ordinal);
-            if (end < 0) return (null, null, "Phần đầu (frontmatter) chưa được đóng bằng dòng ---.");
+            if (end < 0) return (null, null, L.Tr("Phần đầu (frontmatter) chưa được đóng bằng dòng ---."));
             string name = null, desc = null;
             foreach (var raw in text.Substring(4, end - 4).Split('\n'))
             {
@@ -114,9 +114,9 @@ namespace ClaudeCAD.Plugin.Core
                 else if (key == "description") desc = value;
             }
             if (string.IsNullOrWhiteSpace(desc))
-                return (name, null, "Thiếu dòng description (mô tả khi nào dùng skill) — Claude dựa vào dòng này để biết lúc nào nạp skill.");
-            if (desc.Length < 20) return (name, desc, "Dòng description quá ngắn: hãy viết rõ khi nào dùng skill và các từ khóa (ít nhất 20 ký tự).");
-            if (desc.Length > MaxDescription) return (name, desc, $"Dòng description dài {desc.Length} ký tự, tối đa {MaxDescription}.");
+                return (name, null, L.Tr("Thiếu dòng description (mô tả khi nào dùng skill) — Claude dựa vào dòng này để biết lúc nào nạp skill."));
+            if (desc.Length < 20) return (name, desc, L.Tr("Dòng description quá ngắn: hãy viết rõ khi nào dùng skill và các từ khóa (ít nhất 20 ký tự)."));
+            if (desc.Length > MaxDescription) return (name, desc, L.Tr("Dòng description dài {0} ký tự, tối đa {1}.", desc.Length, MaxDescription));
             return (name, desc, null);
         }
 
@@ -187,7 +187,7 @@ namespace ClaudeCAD.Plugin.Core
             var d = new Dictionary<string, object>
             {
                 ["version"] = 1,
-                ["note"] = "Danh sách skill của ClaudeCAD (quản lý bằng nút Skill / + Add skill trên khung chat).",
+                ["note"] = "Danh sách skill của ClaudeCAD (quản lý bằng nút Skill / + Add skill trên khung chat).", // vi: for Claude
                 ["skills"] = entries.OrderBy(e => e.Name, StringComparer.Ordinal).Select(e => (object)new Dictionary<string, object>
                 {
                     ["name"] = e.Name,
@@ -225,11 +225,11 @@ namespace ClaudeCAD.Plugin.Core
                     info.Description = desc;
                     info.Title = TitleOf(md, folder);
                     if (error != null) info.Error = error;
-                    else if (name != folder) info.Error = $"name trong file là \"{name}\" nhưng thư mục là \"{folder}\"; hai tên phải giống nhau.";
+                    else if (name != folder) info.Error = L.Tr("name trong file là \"{0}\" nhưng thư mục là \"{1}\"; hai tên phải giống nhau.", name, folder);
                 }
                 catch (Exception ex)
                 {
-                    info.Error = "Không đọc được SKILL.md: " + ex.Message;
+                    info.Error = L.Tr("Không đọc được SKILL.md: ") + ex.Message;
                 }
                 if (!reg.TryGetValue(folder, out var e))
                 {
@@ -279,7 +279,7 @@ namespace ClaudeCAD.Plugin.Core
         {
             string md;
             try { md = System.IO.File.ReadAllText(mdPath, Encoding.UTF8); }
-            catch (Exception ex) { return Invalid(Path.GetFileName(mdPath), "Không đọc được file: " + ex.Message); }
+            catch (Exception ex) { return Invalid(Path.GetFileName(mdPath), L.Tr("Không đọc được file: ") + ex.Message); }
 
             var (fmName, desc, error) = ParseFrontmatter(md);
             if (error != null) return Invalid(Path.GetFileName(mdPath), error);
@@ -290,7 +290,7 @@ namespace ClaudeCAD.Plugin.Core
             if (!IsValidName(name))
             {
                 var slug = Slugify(name);
-                if (!IsValidName(slug)) return Invalid(Path.GetFileName(mdPath), $"Tên skill \"{name}\" không hợp lệ: chỉ dùng chữ thường không dấu, số và gạch nối, ví dụ ve-ket-cau.");
+                if (!IsValidName(slug)) return Invalid(Path.GetFileName(mdPath), L.Tr("Tên skill \"{0}\" không hợp lệ: chỉ dùng chữ thường không dấu, số và gạch nối, ví dụ ve-ket-cau.", name));
                 name = slug;
             }
 
@@ -300,10 +300,10 @@ namespace ClaudeCAD.Plugin.Core
             if (exists && SamePath(destFile, mdPath))
             {
                 SetEnabled(name, true);
-                return new SkillImportResult { Status = SkillImportStatus.AlreadyAdded, Name = name, Message = $"Skill \"{name}\" đã có trong plugin (đã bật)." };
+                return new SkillImportResult { Status = SkillImportStatus.AlreadyAdded, Name = name, Message = L.Tr("Skill \"{0}\" đã có trong plugin (đã bật).", name) };
             }
             if (exists && !overwrite)
-                return new SkillImportResult { Status = SkillImportStatus.Conflict, Name = name, Message = $"Plugin đã có skill \"{name}\"." };
+                return new SkillImportResult { Status = SkillImportStatus.Conflict, Name = name, Message = L.Tr("Plugin đã có skill \"{0}\".", name) };
 
             Directory.CreateDirectory(destDir);
             // frontmatter name must match the folder (Agent Skills format)
@@ -328,12 +328,12 @@ namespace ClaudeCAD.Plugin.Core
             {
                 Status = exists ? SkillImportStatus.Updated : SkillImportStatus.Added,
                 Name = name,
-                Message = exists ? $"Đã cập nhật skill \"{name}\"." : $"Đã thêm skill \"{name}\".",
+                Message = exists ? L.Tr("Đã cập nhật skill \"{0}\".", name) : L.Tr("Đã thêm skill \"{0}\".", name),
             };
         }
 
         private static SkillImportResult Invalid(string file, string why) =>
-            new SkillImportResult { Status = SkillImportStatus.Invalid, Name = file, Message = $"Không thêm được \"{file}\": {why}" };
+            new SkillImportResult { Status = SkillImportStatus.Invalid, Name = file, Message = L.Tr("Không thêm được \"{0}\": {1}", file, why) };
 
         private static bool SamePath(string a, string b)
         {

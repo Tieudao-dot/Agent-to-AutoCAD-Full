@@ -57,7 +57,7 @@ namespace ClaudeCAD.Plugin.Core
             "yony8l3I8ydAqJt3mEYhnHoRzi9udou/8YlRPTo9p8Wyv0DTp85FWlRcYWtqHUDDK7hJIe6oeE1GuX7qt9YwvNHlxFjUDLz0mwnNNg+2d+ve9G5HJYXD+brYhtYpKmfzsuE6fEsfo+nJEZEz1BFQ1QNw3n8pE6ABZMVtKf6/MwZhCVvgZ3VsOF0busb/LO6exE1cBJZfu8rUCFiaYuoFCzWK0tchPGDMy6T+nxcsO5mSGOrErp49cR2Q769TBVgghRA730F7uD84VE5OnE0rc5xBWK3vPopcU4H/VLf+hf5Ek2Bj4kDOjfj0bysMLcMbTXRhketDpsRaRnyY0rwXYQ==";
         public const string PublicExponent = "AQAB";
 
-        public const string DefaultContact = "Liên hệ Zalo owner: 0344644415";
+        public const string DefaultContact = "Liên hệ Zalo owner: 0344644415"; // vi: key (Activation.Contact shows it through L.Tr; a contact from update-config.json stays as written)
         public const string Prefix = "CCL1";
         public const string StatusPrefix = "CCS1";
         public const string PlanPrefix = "CCF1";
@@ -120,22 +120,22 @@ namespace ClaudeCAD.Plugin.Core
         {
             var r = new LicenseCheck();
             license = PickLine((license ?? "").Trim(), Prefix);
-            if (license.Length == 0) { r.Reason = "máy này chưa được kích hoạt"; return r; }
+            if (license.Length == 0) { r.Reason = L.Tr("máy này chưa được kích hoạt"); return r; }
             var parts = license.Split('|');
-            if (parts.Length != 4 || parts[0] != Prefix) { r.Reason = "giấy phép không đúng định dạng"; return r; }
+            if (parts.Length != 4 || parts[0] != Prefix) { r.Reason = L.Tr("giấy phép không đúng định dạng"); return r; }
             r.Machine = parts[1];
             r.Issued = parts[2];
             if (!string.Equals(parts[1], machine, StringComparison.OrdinalIgnoreCase))
             {
-                r.Reason = $"giấy phép của máy khác ({parts[1]}), máy này là {machine}";
+                r.Reason = L.Tr("giấy phép của máy khác ({0}), máy này là {1}", parts[1], machine);
                 return r;
             }
             byte[] sig;
             try { sig = FromBase64Url(parts[3]); }
-            catch { r.Reason = "chữ ký giấy phép hỏng"; return r; }
+            catch { r.Reason = L.Tr("chữ ký giấy phép hỏng"); return r; }
             var data = Encoding.UTF8.GetBytes(parts[0] + "|" + parts[1] + "|" + parts[2]);
             r.Ok = VerifyRsa(data, sig, modulusB64, exponentB64);
-            if (!r.Ok) r.Reason = "chữ ký giấy phép không hợp lệ";
+            if (!r.Ok) r.Reason = L.Tr("chữ ký giấy phép không hợp lệ");
             return r;
         }
 
@@ -162,37 +162,37 @@ namespace ClaudeCAD.Plugin.Core
         {
             var r = new StatusCheck();
             line = PickLine((line ?? "").Trim(), StatusPrefix);
-            if (line.Length == 0) { r.Reason = "chưa kiểm tra được trạng thái máy với máy chủ lần nào"; return r; }
+            if (line.Length == 0) { r.Reason = L.Tr("chưa kiểm tra được trạng thái máy với máy chủ lần nào"); return r; }
             var parts = line.Split('|');
-            if (parts.Length != 5 || parts[0] != StatusPrefix) { r.Reason = "xác nhận trạng thái không đúng định dạng"; return r; }
+            if (parts.Length != 5 || parts[0] != StatusPrefix) { r.Reason = L.Tr("xác nhận trạng thái không đúng định dạng"); return r; }
             r.Machine = parts[1];
             r.Status = parts[2].Trim().ToLowerInvariant();
             r.Date = parts[3];
             if (!string.Equals(parts[1], machine, StringComparison.OrdinalIgnoreCase))
             {
-                r.Reason = $"xác nhận trạng thái của máy khác ({parts[1]}), máy này là {machine}";
+                r.Reason = L.Tr("xác nhận trạng thái của máy khác ({0}), máy này là {1}", parts[1], machine);
                 return r;
             }
             byte[] sig;
             try { sig = FromBase64Url(parts[4]); }
-            catch { r.Reason = "chữ ký trạng thái hỏng"; return r; }
+            catch { r.Reason = L.Tr("chữ ký trạng thái hỏng"); return r; }
             var data = Encoding.UTF8.GetBytes(line.Substring(0, line.LastIndexOf('|')));
-            if (!VerifyRsa(data, sig, modulusB64, exponentB64)) { r.Reason = "chữ ký trạng thái không hợp lệ"; return r; }
+            if (!VerifyRsa(data, sig, modulusB64, exponentB64)) { r.Reason = L.Tr("chữ ký trạng thái không hợp lệ"); return r; }
             DateTime d;
             if (!DateTime.TryParseExact(r.Date, "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.AssumeUniversal | DateTimeStyles.AdjustToUniversal, out d))
-            { r.Reason = "ngày trong xác nhận trạng thái hỏng"; return r; }
+            { r.Reason = L.Tr("ngày trong xác nhận trạng thái hỏng"); return r; }
             r.Ok = true;
             r.AgeDays = (int)(utcNow.Date - d.Date).TotalDays;
             r.Fresh = r.Status == "offline" || (r.AgeDays >= -1 && r.AgeDays <= StatusMaxAgeDays); // -1: time zones around midnight
             if (!r.Fresh) r.Reason = r.AgeDays > StatusMaxAgeDays
-                ? $"lần kiểm tra trạng thái gần nhất đã {r.AgeDays} ngày trước (quá {StatusMaxAgeDays} ngày)"
-                : "ngày trong xác nhận trạng thái nằm ở tương lai (đồng hồ máy sai?)";
+                ? L.Tr("lần kiểm tra trạng thái gần nhất đã {0} ngày trước (quá {1} ngày)", r.AgeDays, StatusMaxAgeDays)
+                : L.Tr("ngày trong xác nhận trạng thái nằm ở tương lai (đồng hồ máy sai?)");
             else if (r.Status != "offline" && ClockRolledBack(utcNow, latestSeenUtc))
             {
                 // the owner's no-network pass never expires, so the clock does not matter for it
                 r.Fresh = false;
                 r.ClockBack = true;
-                r.Reason = "đồng hồ máy bị chỉnh lùi so với lần dùng trước";
+                r.Reason = L.Tr("đồng hồ máy bị chỉnh lùi so với lần dùng trước");
             }
             return r;
         }
@@ -211,26 +211,26 @@ namespace ClaudeCAD.Plugin.Core
         {
             var r = new PlanCheck();
             line = PickLine((line ?? "").Trim(), PlanPrefix);
-            if (line.Length == 0) { r.Reason = "máy chủ chưa gửi gói cho máy này"; return r; }
+            if (line.Length == 0) { r.Reason = L.Tr("máy chủ chưa gửi gói cho máy này"); return r; }
             var parts = line.Split('|');
-            if (parts.Length != 5 || parts[0] != PlanPrefix) { r.Reason = "dòng gói không đúng định dạng"; return r; }
+            if (parts.Length != 5 || parts[0] != PlanPrefix) { r.Reason = L.Tr("dòng gói không đúng định dạng"); return r; }
             r.Machine = parts[1];
             r.Plan = parts[2].Trim().ToLowerInvariant();
             r.Date = parts[3];
             if (!string.Equals(parts[1], machine, StringComparison.OrdinalIgnoreCase))
             {
-                r.Reason = $"dòng gói của máy khác ({parts[1]}), máy này là {machine}";
+                r.Reason = L.Tr("dòng gói của máy khác ({0}), máy này là {1}", parts[1], machine);
                 return r;
             }
             byte[] sig;
             try { sig = FromBase64Url(parts[4]); }
-            catch { r.Reason = "chữ ký dòng gói hỏng"; return r; }
+            catch { r.Reason = L.Tr("chữ ký dòng gói hỏng"); return r; }
             var data = Encoding.UTF8.GetBytes(line.Substring(0, line.LastIndexOf('|')));
-            if (!VerifyRsa(data, sig, modulusB64, exponentB64)) { r.Reason = "chữ ký dòng gói không hợp lệ"; return r; }
+            if (!VerifyRsa(data, sig, modulusB64, exponentB64)) { r.Reason = L.Tr("chữ ký dòng gói không hợp lệ"); return r; }
             DateTime d;
             if (!DateTime.TryParseExact(r.Date, "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.AssumeUniversal | DateTimeStyles.AdjustToUniversal, out d))
-            { r.Reason = "ngày trong dòng gói hỏng"; return r; }
-            if (!PlanLogic.IsKnown(r.Plan)) { r.Reason = $"gói \"{r.Plan}\" bản plugin này chưa biết (cần cập nhật plugin)"; return r; }
+            { r.Reason = L.Tr("ngày trong dòng gói hỏng"); return r; }
+            if (!PlanLogic.IsKnown(r.Plan)) { r.Reason = L.Tr("gói \"{0}\" bản plugin này chưa biết (cần cập nhật plugin)", r.Plan); return r; }
             r.Ok = true;
             return r;
         }
@@ -250,12 +250,12 @@ namespace ClaudeCAD.Plugin.Core
         /// </summary>
         public static string StatusRefusal(StatusCheck incoming, StatusCheck current, bool fromService)
         {
-            if (incoming == null || !incoming.Ok) return "mã trạng thái không hợp lệ";
+            if (incoming == null || !incoming.Ok) return L.Tr("mã trạng thái không hợp lệ");
             if (current == null || !current.Ok) return null;
             int c = string.CompareOrdinal(incoming.Date, current.Date);
-            if (c < 0) return $"Mã này (ngày {incoming.Date}) cũ hơn trạng thái máy đang có (ngày {current.Date}); liên hệ chủ plugin để nhận mã mới.";
+            if (c < 0) return L.Tr("Mã này (ngày {0}) cũ hơn trạng thái máy đang có (ngày {1}); liên hệ chủ plugin để nhận mã mới.", incoming.Date, current.Date);
             if (c == 0 && !fromService && current.Status == "disabled" && incoming.Status != "disabled")
-                return $"Máy này đã bị chủ plugin tạm khóa ngày {current.Date}, sau khi cấp mã này; liên hệ chủ plugin để nhận mã mới.";
+                return L.Tr("Máy này đã bị chủ plugin tạm khóa ngày {0}, sau khi cấp mã này; liên hệ chủ plugin để nhận mã mới.", current.Date);
             return null;
         }
 
@@ -338,7 +338,7 @@ namespace ClaudeCAD.Plugin.Core
             catch
             {
                 // Google's sign-in / error pages are HTML: the web app is not deployed for "Anyone"
-                return (false, null, "máy chủ kích hoạt trả về nội dung lạ (web app chưa được triển khai cho \"Anyone\"?)", false, null, null);
+                return (false, null, L.Tr("máy chủ kích hoạt trả về nội dung lạ (web app chưa được triển khai cho \"Anyone\"?)"), false, null, null);
             }
         }
     }

@@ -71,7 +71,7 @@ namespace ClaudeCAD.Plugin.Drawing
             {
                 // Ctrl+A on a big drawing: do not open thousands of objects on the UI thread
                 foreach (var id in all) if (!id.IsNull && !id.IsErased) sel.Handles.Add(id.Handle.ToString());
-                sel.Summary = sel.Handles.Count + " đối tượng";
+                sel.Summary = sel.Handles.Count + L.Tr(" đối tượng");
                 return sel;
             }
             using (var tr = doc.TransactionManager.StartOpenCloseTransaction())
@@ -97,12 +97,12 @@ namespace ClaudeCAD.Plugin.Drawing
             var doc = AcApp.DocumentManager.MdiActiveDocument;
             if (doc == null) return;
             var ed = doc.Editor;
-            var opts = new PromptSelectionOptions { MessageForAdding = "\nChọn đối tượng gửi cho Claude (Enter để xong): " };
+            var opts = new PromptSelectionOptions { MessageForAdding = L.Tr("\nChọn đối tượng gửi cho Claude (Enter để xong): ") };
             var res = ed.GetSelection(opts);
             if (res.Status != PromptStatus.OK || res.Value == null) return;
             var sel = Describe(doc, res.Value.GetObjectIds(), PickDescribeLimit);
             var layers = sel.Layers;
-            ed.WriteMessage($"\nClaudeCAD: đã chọn {sel.Count} đối tượng" + (layers.Count > 0 ? $" trên {layers.Count} layer ({string.Join(", ", layers.Keys.Take(5))}{(layers.Count > 5 ? ", …" : "")})" : "") + " để gửi kèm tin nhắn.\n");
+            ed.WriteMessage(L.Tr("\nClaudeCAD: đã chọn {0} đối tượng", sel.Count) + (layers.Count > 0 ? L.Tr(" trên {0} layer ({1}{2})", layers.Count, string.Join(", ", layers.Keys.Take(5)), (layers.Count > 5 ? ", …" : "")) : "") + L.Tr(" để gửi kèm tin nhắn.\n"));
             SelectionPicked?.Invoke(sel);
         }
 
@@ -117,7 +117,7 @@ namespace ClaudeCAD.Plugin.Drawing
             var frame = Acad.UcsOf(doc);
             while (true)
             {
-                var o = new PromptPointOptions(pts.Count == 0 ? "\nChọn điểm cho Claude: " : "\nĐiểm tiếp theo (Enter để xong): ") { AllowNone = true };
+                var o = new PromptPointOptions(pts.Count == 0 ? L.Tr("\nChọn điểm cho Claude: ") : L.Tr("\nĐiểm tiếp theo (Enter để xong): ")) { AllowNone = true };
                 if (lastUcs.HasValue) { o.UseBasePoint = true; o.BasePoint = lastUcs.Value; } // BasePoint is in UCS
                 var r = ed.GetPoint(o);
                 if (r.Status != PromptStatus.OK) break;
@@ -367,7 +367,7 @@ namespace ClaudeCAD.Plugin.Drawing
             _onePoint = null;
             var doc = AcApp.DocumentManager.MdiActiveDocument;
             if (doc == null || cb == null) return;
-            var r = doc.Editor.GetPoint(new PromptPointOptions("\nChọn điểm chèn cho macro (góc trái dưới): "));
+            var r = doc.Editor.GetPoint(new PromptPointOptions(L.Tr("\nChọn điểm chèn cho macro (góc trái dưới): ")));
             if (r.Status != PromptStatus.OK) return;
             cb(r.Value.TransformBy(doc.Editor.CurrentUserCoordinateSystem));
         }
@@ -381,9 +381,9 @@ namespace ClaudeCAD.Plugin.Drawing
         public static string UndoOnce()
         {
             var doc = AcApp.DocumentManager.MdiActiveDocument;
-            if (doc == null) return "Không có bản vẽ nào đang mở.";
+            if (doc == null) return L.Tr("Không có bản vẽ nào đang mở.");
             if (!string.IsNullOrEmpty(doc.CommandInProgress) || !doc.Editor.IsQuiescent)
-                return $"AutoCAD đang chạy lệnh {doc.CommandInProgress}; bấm Esc để thoát lệnh rồi thử lại.";
+                return L.Tr("AutoCAD đang chạy lệnh {0}; bấm Esc để thoát lệnh rồi thử lại.", doc.CommandInProgress);
             try { Autodesk.AutoCAD.Internal.Utils.SetFocusToDwgView(); } catch { }
             doc.SendStringToExecute("_.U ", true, false, false);
             return null;
