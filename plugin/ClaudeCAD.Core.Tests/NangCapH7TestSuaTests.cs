@@ -72,6 +72,18 @@ namespace ClaudeCAD.Core.Tests
         }
 
         [Fact]
+        public void H7T06_the_mep_layers_are_standard_layers_for_the_drawing_check()
+        {
+            foreach (var s in MepLogic.Systems)
+            {
+                Assert.True(DrawingCheckLogic.IsStandardLayer(s.Layer2d), s.Layer2d);
+                Assert.True(DrawingCheckLogic.IsStandardLayer(s.Layer3d), s.Layer3d);
+            }
+            Assert.True(DrawingCheckLogic.IsStandardLayer("C-ROAD-CL")); // as Test & sửa H6 (H6T-4)
+            Assert.False(DrawingCheckLogic.IsStandardLayer("tuong moi"));
+        }
+
+        [Fact]
         public void H7T05_the_fixes_of_the_writer_stand()
         {
             Assert.Equal(2.5, MepLogic.DefaultSlope(60));

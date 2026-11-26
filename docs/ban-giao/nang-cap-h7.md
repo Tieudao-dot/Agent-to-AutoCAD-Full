@@ -81,7 +81,7 @@ Thread `session_01D56HmFrL65iF9oJokvqXw5` (người viết). Nhánh `full/nang-c
 | Số | Dùng ở đâu | Khách thấy gì | Vì sao đề xuất |
 | --- | --- | --- | --- |
 | 200 điểm | `H7Numbers.MaxPoints`: số điểm một tuyến | Tuyến dài hơn: chia làm nhiều lần | Một tuyến trong một tầng hiếm khi quá vài chục góc |
-| 5 000 đối tượng | `MaxSolids`: số đối tượng đọc khi thống kê / soát / tìm dầm | Bản vẽ lớn hơn: chỉ đọc phần đầu, có ghi chú | Như các lệnh soát khác |
+| 5 000 khối 3D | `MaxSolids`: số khối 3D đọc khi thống kê / soát / tìm dầm (nét 2D, chữ không tính; *Test & sửa H7 soát lại*) | Bản vẽ nhiều khối hơn: chỉ đọc phần đầu, có ghi chú | Như các lệnh soát khác |
 | 1,15 lần | `FittingOversize`: tê to hơn ống chính | Tê thấy rõ trên mô hình | Giống ống nối thật (đầu nối to hơn ống) |
 | 2 lần đường kính nhánh | `TeeLengthFactor`: chiều dài thân tê dọc ống chính | Cỡ tê trên mô hình | Vừa ôm chỗ nối |
 | 300 dòng | `MaxClashRows`: số chỗ chạm / sát kể trong kết quả | Nhiều hơn: chỉ đếm | Kết quả ngắn cho Claude |

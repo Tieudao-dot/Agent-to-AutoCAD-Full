@@ -107,7 +107,12 @@ namespace ClaudeCAD.Plugin.Core
             if (string.IsNullOrEmpty(name)) return true;
             if (name.Contains("|")) return true;
             if (KnownLayers.Contains(name)) return true;
-            return name.StartsWith("A-", StringComparison.OrdinalIgnoreCase) || name.StartsWith(F2Numbers.FrameLayer + "-", StringComparison.OrdinalIgnoreCase);
+            // Test & sửa H6: C-… are the civil layers of the skill ve-ha-tang (terrain draws on them)
+            return name.StartsWith("A-", StringComparison.OrdinalIgnoreCase) || name.StartsWith("C-", StringComparison.OrdinalIgnoreCase)
+                || name.StartsWith(F2Numbers.FrameLayer + "-", StringComparison.OrdinalIgnoreCase)
+                // Test & sửa H7: P-… / M-… / F-… are the MEP layers of the skill ve-mep (draw_mep draws on P-SUPL-3D, M-DUCT-3D, F-SPRK-3D…)
+                || name.StartsWith("P-", StringComparison.OrdinalIgnoreCase) || name.StartsWith("M-", StringComparison.OrdinalIgnoreCase)
+                || name.StartsWith("F-", StringComparison.OrdinalIgnoreCase);
         }
 
         /// <summary>The prefix of the standard in use ("KT" first, then "VN"), from the text styles of the drawing; null = not used.</summary>
