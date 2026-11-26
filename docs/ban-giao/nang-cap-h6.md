@@ -127,4 +127,6 @@ Thời gian chờ lệnh (số kỹ thuật, không phải hỏi): `terrain` và
 
 ## 8. CI
 
-*(ghi sau khi chạy)*
+- Run 45819457171 trên `0198f2b` (code, số chưa đưa vào skill): **xanh**, log Windows `# pass 447 / # fail 0`, lõi 1627 / 1627.
+- Run 45820831569 trên `6d71e40` (số đã duyệt vào skill / mô tả lệnh, commit code cuối): **xanh**, log Windows `# pass 447 / # fail 0`,
+  lõi 1627 / 1627. Commit sau đó chỉ là tài liệu (mục này).
