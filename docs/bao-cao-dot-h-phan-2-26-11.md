@@ -148,6 +148,16 @@ cậu quay lại, tớ hỏi một câu.
 
 - **Lỗi nhẹ còn lại (KTP-55).** File `.txt` cách khoảng trắng, tiêu đề có cột "Mã" mà không dòng nào ghi mã: đọc ra 0 điểm, lời
   báo sai lý do. Cách tránh: xóa chữ "Mã" ở tiêu đề, hoặc lưu file dạng CSV / Excel.
+- **Khách có thể thấy lạ (không phải lỗi):**
+
+  | Điểm | Khách gặp | Tránh ra sao |
+  | --- | --- | --- |
+  | Xác nhận gõ tay | "I agree", "fine", "👍", "ok vẽ đi", "continue", "thôi xóa đi" bị hỏi lại | Bấm **Đồng ý** trên thẻ, hoặc gõ "đồng ý" / "ok" / "yes" |
+  | "ghi đè", "thay thế", "overwrite" gõ riêng | Là đồng ý, kể cả khi thẻ đang hỏi xóa | Đọc kỹ thẻ; muốn từ chối thì gõ "không" hoặc bấm **Không** |
+  | Ống gió đứng, co / tê cạnh dầm chéo, dầm dốc | "Sát" có thể bị báo thừa (khe báo nhỏ hơn thực) | Đo lại bằng `DIST` |
+  | File điểm không tiêu đề, cột 1 là số thứ tự nhảy bước, tọa độ cục bộ nhỏ | Cột số thứ tự có thể bị đọc thành X | Thêm dòng tiêu đề "Tên, X, Y, Z" |
+  | Số kiểu Mỹ "1,234,567.5"; Excel nhiều sheet | Không đọc được; chỉ đọc sheet đầu | Bỏ dấu nghìn; đưa sheet điểm lên đầu |
+  | Khe hở thép theo TCVN | 4Ø16 trong dầm 200, 12Ø25 trong cột 300 × 300 bị từ chối | Bớt thanh, giảm đường kính hoặc tăng kích thước |
 - **H6:** trong `.txt`, cột trống ở giữa bị mất khi lưu bằng dấu cách. Cách tránh: dùng CSV / Excel.
 - **H7:**
   - tê nhánh gần dọc trục ống chính vẫn vẽ, nhánh chồng vào lòng ống chính; chỉ là chuyện hình vẽ;
