@@ -63,4 +63,7 @@ bản vẽ đó vẫn coi là của lượt).
 
 ## 7. CI
 
-(điền sau khi chạy)
+- Lượt 1: run 45798656330 trên `46b93f2`, **xanh**.
+  - Log trợ lý: `# pass 436`, `# fail 0`.
+  - Lõi 1576 / 1576, UI test 38 / 38, build 3 target qua.
+- Commit này chỉ ghi kết quả CI vào tài liệu, code giữ nguyên như `46b93f2`.
