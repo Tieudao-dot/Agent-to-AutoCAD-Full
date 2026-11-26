@@ -160,8 +160,14 @@ Không có số mới khách thấy.
 - Trợ lý **464 / 464** (thêm 7 test H9).
 - UI test WPF: thêm 2 test English (chỉ chạy trên CI Windows); project build qua trên Linux.
 - Build `net48`, `net8.0-windows`, `net10.0-windows`: 0 lỗi; 1 cảnh báo cũ ở `TraceTools.cs`, không thuộc H9.
-- CI: ghi ở mục 9.
+- CI: xanh ở lượt 2 (mục 9).
 
 ## 9. CI
 
-(ghi sau khi chạy)
+- Lượt 1: run **45848503474** trên `f8a1018`, **đỏ**. Một test H9 của bộ cài không chịu xuống dòng CRLF trên Windows (`IndexOf` không thấy `\n[Code]\n`). Đã sửa: test đổi CRLF về `\n` trước khi tìm.
+- Lượt 2: run **45850823367** trên `60a2047`, **xanh**:
+  - lõi `Failed: 0, Passed: 1681`;
+  - trợ lý `# tests 464`, `# pass 464`, `# fail 0`;
+  - UI test WPF 40 / 40, có 2 test English;
+  - biên dịch bộ cài Inno Setup qua (bản hai thứ tiếng).
+- Dùng 2 lượt CI.
