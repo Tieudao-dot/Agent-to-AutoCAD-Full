@@ -75,6 +75,10 @@ Checklist: thêm E14 vào P2-H6 và `checklist-dot-h6.md`; `dot-h-cho-duyet.md` 
   lấy câu của A. Chép lại P2-H7 / P2-H8 từ `checklist-dot-h7.md` / `h8.md` (D10 → D12, "Sửa KTP"); thêm C3d (H9 lượt 3) và
   sửa P2-0-6b; `dot-h-cho-duyet.md` thêm KTP-44 và bảng "Con số đã duyệt sau kiểm tra độc lập" với KTP-20 **đã duyệt 27/11**.
 
+- **Lượt 3:** gộp `full/nang-cap-h-sua-ktp-b` @ `2cadc95` (KTP-51, 54d, khe thép cột 50 mm) và `full/nang-cap-h-sua-ktp-a`
+  @ `625d12f` (KTP-49, 54a / c): gộp sạch. Checklist P2-H7 / H8 đã khớp bản đợt (B chép sẵn); `dot-h-cho-duyet.md` thêm khe thép
+  cột ≥ max(d, 50 mm) **đã duyệt 27/11**, kèm ghi chú nhờ kỹ sư đối chiếu TCVN 5574 bản đang dùng.
+
 ## 3. Test / CI
 
 - Sau khi gộp A + B: lõi **1708 / 1708**, trợ lý **467 / 467** (`# fail 0`). Build `net48`, `net8.0-windows`,

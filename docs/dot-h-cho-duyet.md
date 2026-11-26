@@ -398,3 +398,4 @@ Không có số mới khách thấy (H9 và Test & sửa H9).
 | Số | Dùng ở đâu | Khách thấy gì | Trạng thái |
 | --- | --- | --- | --- |
 | Khe hở thông thủy giữa hai thanh thép dầm một hàng: thép dưới ≥ max(d, 25 mm), thép trên ≥ max(d, 30 mm) (KTP-20, TCVN 5574:2018) | `H8Numbers.BottomBarMinClearMm` / `TopBarMinClearMm` | Dầm không đủ chỗ: Claude từ chối, gợi ý bớt thanh hoặc tăng bề rộng dầm | **đã duyệt 27/11** (chủ dự án chốt) |
+| Khe hở thông thủy giữa hai thanh thép dọc cột ≥ max(d, 50 mm) | `H8Numbers.ColumnBarMinClearMm` | Cột không đủ chỗ: Claude từ chối, gợi ý bớt thanh hoặc tăng cạnh cột | **đã duyệt 27/11** (chủ dự án chốt); nên nhờ kỹ sư đối chiếu TCVN 5574 bản đang dùng |
