@@ -41,7 +41,7 @@ namespace ClaudeCAD.Plugin
                 var settings = PaletteSettings.Load();
                 // KTP-05: the language is known before any text is shown (the "loaded" line, the status bar icon), not only
                 // once the palette opens; the installer's language counts while there are no settings yet
-                L.Lang = firstRun ? ChatController.InstallerLanguage() : settings.Language;
+                L.Lang = firstRun || !settings.LanguageSaved ? ChatController.InstallerLanguage() : settings.Language; // KTP-42: as ChatController
                 HotkeyEnabled = settings.Hotkey;
                 // manual edits are tracked from AutoCAD start, palette open or not
                 DrawingHistory.Instance.NextToDrawing = settings.SnapshotNextToDrawing;

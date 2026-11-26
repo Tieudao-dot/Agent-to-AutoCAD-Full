@@ -1170,7 +1170,7 @@ AutoCAD thứ hai). Khoảng 30 phút. "Đạt" là thấy đúng như cột ph�
 | P2-0-4 | **Bảng thống kê thép** một dầm + một cột + một ô sàn, đưa kỹ sư **tính tay** | Chiều dài từng thanh, số thanh, kg theo đường kính khớp tính tay (neo 30d, bẻ L 10d thép gân, móc 180° thép trơn, nối chồng khi > 11,7 m); không cộng hao hụt |
 | P2-0-5 | **Bộ cài chọn English**, cài xong mở khung chat; rồi **cài lại** (cài đè) | Khung chat tiếng Anh ngay lần đầu; cài lại vẫn giữ ngôn ngữ đang dùng (không đổi về tiếng Việt) |
 | P2-0-6 | Chọn English, nhờ việc có thẻ xác nhận, **gõ tay** "yes" / "go ahead"; rồi "yes but don’t delete the walls", "ok, except the doors", "yes if you keep the walls", "yes later" | Hai câu đầu: làm; các câu sau (có điều kiện, để sau, có dấu nháy cong): **không** làm, Claude hỏi lại |
-| P2-0-6b | *(KTP-02 → 04)* Tiếng Việt, cùng việc đó, gõ tay "ko đồng ý", "đồng ý nếu giữ tường", "dạ thôi", "ok đợi đã"; rồi "Vâng, tớ đồng ý", "Thôi được, xóa đi" | Bốn câu đầu: **không** xóa, Claude hỏi lại; hai câu sau: xóa |
+| P2-0-6b | *(KTP-02 → 04, 44, 47)* Tiếng Việt, cùng việc đó, gõ tay "ko đồng ý", "đồng ý nếu giữ tường", "dạ thôi", "ok đợi đã", "ok à", "không sao"; rồi "Vâng, tớ đồng ý", "Thôi được, xóa đi", "ok xoá đi" | Sáu câu đầu: **không** xóa, Claude hỏi lại; ba câu sau: xóa |
 | P2-0-7 | Chọn English, vẽ trắc dọc, ống, bảng thép, xuất Excel | Chữ trên bản vẽ và Excel **giữ tiếng Việt**; Claude trả lời tiếng Anh |
 
 ## P2-H6. Hạ tầng: điểm khảo sát, đồng mức, trắc dọc, trắc ngang (~40 phút); mục của `checklist-dot-h6.md`
@@ -1289,6 +1289,11 @@ AutoCAD thứ hai). Khoảng 30 phút. "Đạt" là thấy đúng như cột ph�
    `…-va-cham-ong-mep.xlsx`; cột "Hệ" ghi tên tiếng Việt ("Cấp nước", "Ống gió cấp"…).
 9. *(sửa KTP-17)* Ống gió 200x500 rẽ lên đứng: co dùng bán kính 500 (cạnh cao) và Claude nói vì sao. Ống D110 với
    "bán kính co 20": Claude báo bán kính phải lớn hơn 55.
+10. *(sửa lượt 2: KTP-38)* Vẽ cùng một ống hai lần (hoặc ống thứ hai chồng lên một đoạn ống thứ nhất): "soát va chạm" báo
+   **chạm**. Hai tuyến nối đầu nhau vẫn **không** bị báo.
+11. *(KTP-45)* Dầm 3D xoay 45° trên layer `S-BEAM`, ống đứng D110 đặt cách mép dầm khoảng 500: **không** bị báo "sát 0 mm".
+   "Đi ống dưới dầm" theo tuyến chạy song song cạnh dầm chéo (không đi qua dưới dầm): Claude không lấy cao độ dầm đó.
+12. *(KTP-46)* Hai nhánh cùng nối vào một điểm của ống chính: "soát va chạm" **không** báo chạm giữa hai tê.
 
 ### E. Giới hạn nói rõ với khách
 
@@ -1337,8 +1342,11 @@ AutoCAD thứ hai). Khoảng 30 phút. "Đạt" là thấy đúng như cột ph�
 
 1. *(KTP-19)* Dầm nhịp 5000, đai Ø6a150/a200: đai đầu tiên và đai cuối cùng đều cách gối **50**; hai đầu dầm có số đai a150
    bằng nhau; đoạn giữa chia đều (khoảng cách không quá 200).
-2. *(KTP-20)* "5Ø20 trong dầm rộng 200": Claude báo **không đủ chỗ** (khe hở giữa hai thanh phải ít nhất bằng một thanh).
+2. *(KTP-20, số chủ dự án chốt 27/11)* "Vẽ thép dầm 200x400 nhịp 5 m, 4Ø16 dưới, 2Ø12 trên": Claude báo **không đủ chỗ** (khe hở
+   giữa hai thanh thép dưới phải ≥ max(d, 25 mm), thép trên ≥ max(d, 30 mm)), gợi ý bớt thanh hoặc tăng bề rộng dầm. "3Ø16
+   dưới" thì vẽ được.
 3. *(KTP-31)* "Vẽ thép dầm nhịp 50": Claude báo nhịp quá ngắn (ít nhất 100 mm), không ra lỗi lạ của AutoCAD.
+   *(lượt 2: KTP-40)* "Vẽ thép dầm nhịp 150": vẽ được, 2 đai cách mỗi gối 50, không lỗi.
 4. *(KTP-18)* "Dựng móng băng theo trục (0,0) → (6000,0) **không sườn**": móng băng phẳng, không lỗi.
 
 ### C. Móng 3D (~5 phút, gói 3D / Full)
@@ -1389,6 +1397,8 @@ AutoCAD thứ hai). Khoảng 30 phút. "Đạt" là thấy đúng như cột ph�
   điện thoại / Mac), "đồng ý nhưng giữ tường", "ok xóa hết trừ cửa": Claude **không** xóa, hỏi lại.
 - [ ] C3c. (Sửa KTP-A) Cũng việc xóa đó, gõ "ko đồng ý", "đồng ý nếu giữ tường", "dạ thôi", "ok đợi đã": **không** xóa;
   "Vâng, tớ đồng ý", "Thôi được, xóa đi": xóa. Câu đồng ý dài có chữ lạ ("ok xóa hết mấy cái tường đó") là **không chắc**: Claude hỏi lại.
+- [ ] C3d. (Sửa KTP lượt 3) Cũng việc xóa đó, gõ "ok à", "đồng ý rồi à", "không sao": **không** xóa, Claude hỏi lại; gõ "ok xoá đi"
+  (dấu kiểu cũ), "được thôi", "yes overwrite", "yeah": xóa.
 - [ ] C4. "Vẽ bảng thống kê block", "tạo tờ A3 có khung tên", "ra bộ hồ sơ" khi đang English: **chữ trên bản vẽ vẫn tiếng
   Việt** (tiêu đề bảng, khung tên, tên tờ); câu trả lời tiếng Anh.
 - [ ] C5. Xuất Excel khi đang English: tiêu đề cột trong file vẫn tiếng Việt.

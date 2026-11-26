@@ -350,7 +350,7 @@ Không có số mới khách thấy (H9 và Test & sửa H9).
 | 12 | **Xuất chat ra Markdown theo ngôn ngữ giao diện lúc xuất** (luồng chính chọn 26/11) | Đây là chữ giao diện, không phải chữ trên bản vẽ |
 | 13 | Câu dặn Claude "tell the user in Vietnamese" đổi thành "in the user's language" / "in the language of the user" | Prompt gốc nói ngôn ngữ của khách là tiếng Việt, trừ khi phần "# Language" ở cuối nói khác. Rẻ, không phải nhánh hai bản prompt |
 | 14 | `install.ps1` (cài bằng PowerShell cho người quản trị) giữ tiếng Việt | Dùng cho người cài hộ nhiều máy, không phải khách |
-| 11 | Claude nhận thêm "yes, ok, sure, proceed, go ahead, do it…" là đồng ý; "no, not, don't, stop, cancel, wait" là không. **Từ phủ định ở bất kỳ đâu trong câu là không đồng ý** (cả tiếng Việt: "ok, nhưng đừng xóa tường" = không; "không sao" vẫn là đồng ý) | Không chắc thì không đồng ý. Luật khối 3D vẫn chỉ nhận nút trên thẻ |
+| 11 | Claude nhận thêm "yes, ok, sure, proceed, go ahead, do it…" là đồng ý; "no, not, don't, stop, cancel, wait" là không. **Từ phủ định ở bất kỳ đâu trong câu là không đồng ý** (cả tiếng Việt: "ok, nhưng đừng xóa tường" = không; sửa KTP-47 26/11: "không sao" cũng là không, Claude hỏi lại) | Không chắc thì không đồng ý. Luật khối 3D vẫn chỉ nhận nút trên thẻ |
 
 ## Test tổng thể đợt H phần 2
 
@@ -378,7 +378,8 @@ Không có số mới khách thấy (H9 và Test & sửa H9).
 | *(H6, KTP-12 / 39)* File `.txt` cách bằng dấu cách, số phẩy thập phân | mọi dòng nhiều chữ có phẩy chỉ nằm trong số → tách theo khoảng trắng (tab nếu có), phẩy là dấu thập phân; dòng một chữ không tính | cho cột bằng `columns` |
 | *(H6, KTP-22)* Tiêu đề có cả "STT" và "Tên điểm" | tên lấy cột "Tên"; "STT / TT / ID / No" chỉ làm tên khi không có cột tên | |
 | *(H6, KTP-26)* Đỉnh tuyến trùng cọc đầu / cuối (trong 1 cm) | tên cọc "Đầu/Đ…", "Cuối/Đ…" | |
-| *(KTP-02 → 04, H9)* Xác nhận gõ tay | **danh sách đóng**: chỉ đồng ý khi mọi chữ trong câu là chữ đồng ý, chữ của cụm đồng ý ("xóa đi", "go ahead") hoặc chữ đệm (nhé, ạ, please…). Câu có chữ khác ("ko", "nếu", "if", "thôi", "chờ", "later", "❌"…) là không chắc = không đồng ý, Claude hỏi lại; "thôi được" là đồng ý, "không sao" là **không** (có chữ "không") | thêm chữ đệm vào `FILLERS` (`agent/src/agent/confirmation.ts`) khi thử thật thấy thiếu |
+| *(KTP-02 → 04, H9)* Xác nhận gõ tay | **danh sách đóng**: chỉ đồng ý khi mọi chữ trong câu là chữ đồng ý, chữ của cụm đồng ý ("xóa đi", "go ahead") hoặc chữ đệm (nhé, ạ, please…). Câu có chữ khác ("ko", "nếu", "if", "thôi", "chờ", "later", "❌"…) là không chắc = không đồng ý, Claude hỏi lại. "thôi được", "được thôi", "ok thôi" là đồng ý; "thôi" đứng riêng và "không sao" là không (sửa KTP-47, 26/11) | thêm chữ đệm vào `FILLERS` (`agent/src/agent/confirmation.ts`) khi thử thật thấy thiếu |
+| *(KTP-44, H9)* Thêm chữ đồng ý | "xoá" (dấu kiểu cũ), "ghi đè", "thay thế", "overwrite", "replace", "yeah", "alright", "ơi", "👍"; "được thôi", "ok thôi" là đồng ý; "ok à", "đồng ý rồi à" là câu hỏi lại = không (KTP-04) | `confirmation.ts` |
 | *(KTP-07, H9)* Câu lỗi từ máy chủ kích hoạt khi English | máy chủ không đổi; plugin và bộ cài dịch 8 câu lỗi cố định, câu lạ hiện nguyên văn | `L.ServerTexts` |
 | *(KTP-05, H9)* Ngôn ngữ lúc AutoCAD vừa nạp plugin | đặt theo cài đặt (máy mới: ngôn ngữ chọn ở bộ cài) trước dòng "đã nạp…" | |
 
@@ -389,3 +390,9 @@ Không có số mới khách thấy (H9 và Test & sửa H9).
 | 6,25d mỗi móc 180° thép trơn | `H8Numbers.PlainHookAddFactor` (KTP-21; luồng chính chọn) | Chiều dài thanh thép trơn trong bảng thép (sàn Ø8a200: L = 3060) | Cách tính móc 180° thường dùng (đo tới mép lớp bảo vệ rồi cộng 6,25d); kỹ sư đối chiếu TCVN hiện hành |
 | 100 mm | `H8Numbers.MinSpanMm`: nhịp dầm nhỏ nhất | Nhịp nhỏ hơn: báo lỗi, nhờ kiểm đơn vị | Chặn bản vẽ sai đơn vị (m vẽ thành mm) mà không chặn dầm thật |
 | 1 × cạnh | `MepLogic.BendRadius`: bán kính co ống gió khi rẽ theo cạnh lớn hơn bề rộng | Co rẽ đứng của ống gió dẹt to hơn trước, có câu báo | Co không tự cắt vào mình; như co ống gió thường gặp |
+
+### Con số đã duyệt sau kiểm tra độc lập
+
+| Số | Dùng ở đâu | Khách thấy gì | Trạng thái |
+| --- | --- | --- | --- |
+| Khe hở thông thủy giữa hai thanh thép dầm một hàng: thép dưới ≥ max(d, 25 mm), thép trên ≥ max(d, 30 mm) (KTP-20, TCVN 5574:2018) | `H8Numbers.BottomBarMinClearMm` / `TopBarMinClearMm` | Dầm không đủ chỗ: Claude từ chối, gợi ý bớt thanh hoặc tăng bề rộng dầm | **đã duyệt 27/11** (chủ dự án chốt) |

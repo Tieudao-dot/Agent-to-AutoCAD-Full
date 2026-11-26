@@ -97,7 +97,7 @@ namespace ClaudeCAD.Plugin.Core
         {
             "Yêu cầu không hợp lệ.", "Mã máy không hợp lệ.", "Máy chủ kích hoạt đang bận, thử lại sau ít phút.",
             "Có quá nhiều máy mới xin kích hoạt trong giờ này, thử lại sau.", "Có quá nhiều yêu cầu kích hoạt trong giờ này, thử lại sau.",
-            "Máy chủ kích hoạt đã hết lượt gửi email hôm nay.",
+            "Máy chủ kích hoạt đã hết lượt gửi email hôm nay.", "Máy này đã bị chủ plugin tạm khóa.", // KTP-41: LOCKED_MSG
             "Lỗi máy chủ kích hoạt: {0}", "Key không đúng với máy này (mã máy {0}). Kiểm tra lại key, hoặc xin key mới.",
         };
 

@@ -565,7 +565,7 @@ namespace ClaudeCAD.Plugin.Core
             ["Không dùng skill này trong đoạn chat hiện tại (vẫn giữ trong thư viện)"] = "Do not use this skill in the current chat (it stays in the library)",
             ["Dùng skill này trong đoạn chat hiện tại"] = "Use this skill in the current chat",
             ["Skill mẫu đi kèm plugin"] = "Sample skill shipped with the plugin",
-            ["Đã thêm"] = "Already added",
+            ["Đã thêm"] = "Added on",
             ["\n\nNguồn: "] = "\n\nSource: ",
             ["Chào cậu! Gõ yêu cầu bằng tiếng Việt, ví dụ \"vẽ lưới trục 5x4 bước 4000\". Gõ / để chọn mẫu lệnh, Enter để gửi."] = "Hello! Type your request, e.g. \"draw a 5x4 axis grid with 4000 spacing\". Type / to pick a command template, Enter to send.",
             ["Lịch sử chat của {0} — {1} mục. Claude vẫn nhớ ngữ cảnh cuộc chat."] = "Chat history of {0} — {1} items. Claude still remembers the context of the chat.",
@@ -937,6 +937,7 @@ namespace ClaudeCAD.Plugin.Core
             ["Lỗi máy chủ kích hoạt: {0}"] = "Activation server error: {0}",
             ["Key không đúng với máy này (mã máy {0}). Kiểm tra lại key, hoặc xin key mới."] = "The key does not match this PC (machine code {0}). Check the key, or ask for a new one.",
             ["sidecar sẵn sàng"] = "assistant ready",
+            ["Máy này đã bị chủ plugin tạm khóa."] = "The plugin owner has locked this PC.",
         };
     }
 }

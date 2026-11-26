@@ -234,12 +234,14 @@ const PHRASES = [
   'chắc chắn', 'chac chan', 'xóa đi', 'xoa di', 'xóa luôn', 'xoa luon', 'được rồi', 'duoc roi', 'go ahead', 'đổi đi', 'sửa đi',
   // nâng cấp đợt H9: English answers
   'do it', 'go on', 'yes please', 'delete it', 'erase it', 'replace it', 'that is fine', 'sounds good',
+  // KTP-44: the older spelling "xoá", overwrite / replace answers
+  'xoá đi', 'xoá luôn', 'ghi đè', 'thay thế',
 ].map((p) => p.split(' '));
 /** Accepted among the first words of a short reply. */
-const ANYWHERE = new Set(['ok', 'okay', 'oke', 'okie', 'yes', 'yep', 'confirm', 'confirmed', 'proceed', 'sure', 'agreed', 'approve', 'approved']);
+const ANYWHERE = new Set(['ok', 'okay', 'oke', 'okie', 'yes', 'yep', 'yeah', 'alright', 'confirm', 'confirmed', 'proceed', 'sure', 'agreed', 'approve', 'approved', 'overwrite']);
 /** Accepted only as the first word ("có, xóa đi" yes; "có bao nhiêu..." / "có thể xóa..." no). */
 const LEADING = new Set(['có', 'ừ', 'ừm', 'uh', 'y', 'đúng', 'được', 'duoc', 'chuẩn', 'vâng', 'dạ']);
-/** A refusal when among the first words ("Đừng tiếp tục", "Chưa đồng ý", "khỏi xóa"); "không sao" is not one. */
+/** A refusal anywhere in the reply ("Đừng tiếp tục", "Chưa đồng ý", "khỏi xóa", KTP-47: "không sao" too). */
 const NEGATIONS = new Set(['không', 'khong', 'đừng', 'dừng', 'chưa', 'chua', 'khỏi', 'khoi', 'hủy', 'huy', 'no', 'nope', 'not', 'don', 'dont', 'stop', 'cancel', 'wait',
   // Test & sửa H9: every "n't" ("can't", "won't", "isn't": the apostrophe splits off "t"), never / nevermind, and the words of a
   // condition or an exception ("yes but…", "đồng ý nhưng giữ tường", "ok trừ cửa"): an answer with a condition is unsure = no
@@ -251,8 +253,10 @@ const FIRST_WORDS = 3;
  * "unless", "giữ tường"…) makes the answer unsure, and unsure = no (Claude asks again or the card is used).
  */
 const FILLERS = new Set([
-  'đi', 'di', 'luôn', 'luon', 'nhé', 'nhe', 'nha', 'nhá', 'ạ', 'a', 'à', 'vậy', 'vay', 'thế', 'the', 'thì', 'rồi', 'roi', 'đó', 'do', 'này', 'nay',
-  'hết', 'het', 'tất', 'tat', 'cả', 'ca', 'em', 'anh', 'chị', 'chi', 'bạn', 'ban', 'cậu', 'cau', 'tớ', 'mình', 'minh', 'làm', 'lam', 'xóa', 'xoa',
+  // KTP-04: no "à" ("ok à", "đồng ý rồi à" ask back)
+  'đi', 'di', 'luôn', 'luon', 'nhé', 'nhe', 'nha', 'nhá', 'ạ', 'a', 'ơi', 'vậy', 'vay', 'thế', 'the', 'thì', 'rồi', 'roi', 'đó', 'do', 'này', 'nay',
+  'hết', 'het', 'tất', 'tat', 'cả', 'ca', 'em', 'anh', 'chị', 'chi', 'bạn', 'ban', 'cậu', 'cau', 'tớ', 'mình', 'minh', 'làm', 'lam', 'xóa', 'xoá', 'xoa',
+  'ghi', 'đè', 'de', 'thay', 'replace', '👍',
   'cũng', 'cung', 'please', 'pls', 'thanks', 'thank', 'you', 'all', 'them', 'it', 'and', 'go', 'ahead', 'on', 'fine', 'good',
   'great', 'right', 'now',
 ]);
@@ -271,23 +275,21 @@ export function isConfirmation(text: string | undefined): boolean {
   const tokens = t.split(/[\s,.!?;:()"'‘’“”…-]+/u).filter(Boolean);
   if (tokens.length === 0 || tokens.length > 12) return false; // confirmations are short replies
   // nâng cấp đợt H9: a refusal word anywhere makes it no ("yes but don't delete the walls", "ok, không xóa tường") — unsure = no
-  for (let i = 0; i < tokens.length; i++) {
-    if (NEGATIONS.has(tokens[i]!) && !(tokens[i] === 'không' && tokens[i + 1] === 'sao') && !(tokens[i] === 'khong' && tokens[i + 1] === 'sao')) return false;
-  }
-  // sửa KTP-A: "không sao" is the one refusal word allowed (it means "no problem"); then every word must be a yes / filler word
-  // KTP-04: "thôi" alone is a refusal ("dạ thôi", "ừ thôi" = no thanks); only "thôi được" (fine then) is a yes
-  const pair = (w: string, i: number, a: string[], b: string) =>
-    (a.includes(w) && tokens[i + 1] === b) || (w === b && a.includes(tokens[i - 1] ?? ''));
-  const plain = tokens.filter((w, i) => !pair(w, i, ['không', 'khong'], 'sao') && !((w === 'thôi' || w === 'thoi') && (tokens[i + 1] === 'được' || tokens[i + 1] === 'duoc')));
+  // KTP-47 (a): any refusal word makes it no, "không sao" too (safer: the user is asked again or presses the card)
+  if (tokens.some((w) => NEGATIONS.has(w))) return false;
+  // KTP-04 / 44: "thôi" alone is a refusal ("dạ thôi", "ừ thôi" = no thanks); "thôi được", "được thôi", "ok thôi" (fine then) are a yes
+  const thoi = (w: string) => w === 'thôi' || w === 'thoi';
+  const fine = (w: string | undefined) => w === 'được' || w === 'duoc' || w === 'ok' || w === 'oke' || w === 'okay';
+  const plain = tokens.filter((w, i) => !(thoi(w) && ((tokens[i + 1] === 'được' || tokens[i + 1] === 'duoc') || fine(tokens[i - 1]))));
   if (plain.length === 0 || plain.some((w) => !ALLOWED.has(w))) return false;
-  for (let i = 0; i < Math.min(tokens.length, FIRST_WORDS); i++) {
-    if (PHRASES.some((ph) => ph.every((w, k) => tokens[i + k] === w))) return true;
-    if (ANYWHERE.has(tokens[i]!)) return true;
+  for (let i = 0; i < Math.min(plain.length, FIRST_WORDS); i++) {
+    if (PHRASES.some((ph) => ph.every((w, k) => plain[i + k] === w))) return true;
+    if (ANYWHERE.has(plain[i]!)) return true;
   }
-  const first = tokens[0]!;
+  const first = plain[0]!;
   if (!LEADING.has(first)) return false;
   // "có thể ...?" / "có bao nhiêu ...?" are questions, not answers
-  return !(first === 'có' && /^(thể|the|bao|phải|nên|cần)$/u.test(tokens[1] ?? ''));
+  return !(first === 'có' && /^(thể|the|bao|phải|nên|cần)$/u.test(plain[1] ?? ''));
 }
 
 export interface GateState {

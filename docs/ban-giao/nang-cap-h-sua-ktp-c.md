@@ -58,9 +58,15 @@ Sửa luôn câu của tớ ở `dot-h-cho-duyet.md` (KTP-47a, theo quyết đ�
   100 mm, 1 × cạnh).
 - KTP-36: dòng H9 ở §1 `test-tong-the-dot-h-phan-2.md` sửa lại (câu "nếu / if", "ko đồng ý" lúc đó chưa chặn, đã sửa ở nhánh A).
 
+- **Lượt 2:** gộp `full/nang-cap-h-sua-ktp-b` @ `49701c1` (KTP-38, 40, 45, 46, 17, 29, KTP-20 25 / 30 mm) và
+  `full/nang-cap-h-sua-ktp-a` @ `997bfd8` (KTP-04, 41 → 44, 47a). Chồng một chỗ ở `dot-h-cho-duyet.md` (dòng xác nhận gõ tay):
+  lấy câu của A. Chép lại P2-H7 / P2-H8 từ `checklist-dot-h7.md` / `h8.md` (D10 → D12, "Sửa KTP"); thêm C3d (H9 lượt 3) và
+  sửa P2-0-6b; `dot-h-cho-duyet.md` thêm KTP-44 và bảng "Con số đã duyệt sau kiểm tra độc lập" với KTP-20 **đã duyệt 27/11**.
+
 ## 3. Test / CI
 
 - Sau khi gộp A + B: lõi **1708 / 1708**, trợ lý **467 / 467** (`# fail 0`). Build `net48`, `net8.0-windows`,
   `net10.0-windows`: 0 lỗi.
 - CI 45863381169 trên `0d5da4c`: xanh, log trợ lý `# fail 0` (467), lõi `Failed: 0` (1708).
 - Chưa thử trên AutoCAD thật.
+- Lượt 2 sau khi gộp A + B: lõi **1716 / 1716**, trợ lý **467 / 467**; build 3 target 0 lỗi. CI: xem tin báo cáo.

@@ -185,9 +185,49 @@ namespace ClaudeCAD.Core.Tests
             var iss = Src("installer", "ClaudeCAD.iss").Replace("\r\n", "\n");
             Assert.Contains("SetStatus(TrServer(JsonValue(Body, 'error'))", iss);
             Assert.Contains("Err := TrServer(JsonValue(Body, 'error'));", iss);
-            for (int i = 1; i <= 9; i++)
+            for (int i = 1; i <= 10; i++)
                 foreach (var pre in new[] { "vietnamese.H9SrvKey", "english.H9SrvKey", "vietnamese.H9Srv", "english.H9Srv" })
                     Assert.Contains("\n" + pre + i.ToString("00") + "=", iss);
+        }
+
+        [Fact]
+        public void Every_error_text_of_the_activation_server_template_has_its_english()
+        {
+            // KTP-41: read every error the server template returns (a literal, a constant like LOCKED_MSG, or 'A' + value + 'B');
+            // the template is only read (never a filled .gs)
+            var gs = Src("activation", "apps-script", "Code.gs.template");
+            var consts = Regex.Matches(gs, "var (?<n>[A-Z_]+_MSG) = '(?<v>(?:[^'\\\\]|\\\\.)*)';").Cast<Match>().ToDictionary(m => m.Groups["n"].Value, m => m.Groups["v"].Value);
+            var found = new List<string>();
+            foreach (Match m in Regex.Matches(gs, "error: (?<e>[^}\\n]+?)\\s*\\}"))
+            {
+                var parts = m.Groups["e"].Value.Split('+').Select(x => x.Trim()).ToList();
+                var sb = new StringBuilder();
+                bool hole = false;
+                foreach (var part in parts)
+                {
+                    if (part.StartsWith("'", StringComparison.Ordinal) && part.EndsWith("'", StringComparison.Ordinal)) sb.Append(part.Substring(1, part.Length - 2));
+                    else if (consts.TryGetValue(part, out var v)) sb.Append(v);
+                    else if (!hole) { sb.Append("{0}"); hole = true; }
+                }
+                var text = sb.ToString();
+                if (Vietnamese.IsMatch(text)) found.Add(text);
+            }
+            Assert.True(found.Count >= 10, string.Join("\n", found));
+            var missing = found.Distinct().Where(t => !L.ServerTexts.Contains(t) || !L.HasEnglish(t)).ToList();
+            Assert.True(missing.Count == 0, "Thêm vào L.ServerTexts + LangEn.cs + bộ cài (H9Srv…): \n" + string.Join("\n", missing));
+            var iss = Src("installer", "ClaudeCAD.iss").Replace("\r\n", "\n");
+            foreach (var t in found.Distinct().Where(t => !t.Contains("{0}")))
+                Assert.Matches("\\nvietnamese\\.H9SrvKey\\d\\d=" + Regex.Escape(t) + "\\n", iss);
+            try
+            {
+                L.Lang = L.En;
+                Assert.Equal("The plugin owner has locked this PC.", L.TrServer("Máy này đã bị chủ plugin tạm khóa."));
+                Assert.Equal("Added on", L.Tr("Đã thêm")); // KTP-43: "Đã thêm" (a skill added on …), not "Added" (Thêm)
+            }
+            finally
+            {
+                L.Lang = L.Vi;
+            }
         }
 
         [Fact]
@@ -195,7 +235,7 @@ namespace ClaudeCAD.Core.Tests
         {
             // KTP-05: before the "loaded" line and the status bar icon, not only when the palette opens
             var app = Src("plugin", "ClaudeCAD.Plugin", "PluginApp.cs");
-            int set = app.IndexOf("L.Lang = firstRun ? ChatController.InstallerLanguage() : settings.Language;", StringComparison.Ordinal);
+            int set = app.IndexOf("L.Lang = firstRun || !settings.LanguageSaved ? ChatController.InstallerLanguage() : settings.Language;", StringComparison.Ordinal); // KTP-42
             Assert.True(set > 0 && set < app.IndexOf("ScheduleStatusTray();", StringComparison.Ordinal) && set < app.IndexOf(" đã nạp. Gõ CLAUDECHAT", StringComparison.Ordinal));
             // KTP-35: the sentence Claude is told to say names the "both" choice as the palette shows it
             try

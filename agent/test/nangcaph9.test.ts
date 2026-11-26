@@ -116,7 +116,7 @@ describe('nâng cấp đợt H9: English', () => {
     // a refusal word anywhere makes it no: unsure = no (nâng cấp đợt H9, người rà nêu)
     for (const no of ["yes but don't delete the walls", 'ok, but not the doors', 'go ahead, stop after the first', 'đồng ý, nhưng đừng xóa tường', 'ok xóa đi, khoan, không'])
       assert.ok(!isConfirmation(no), no);
-    assert.ok(isConfirmation('ok, không sao')); // "không sao" (no problem) is not a refusal
+    assert.ok(!isConfirmation('ok, không sao')); // KTP-47 (a): "không" anywhere = no, "không sao" too (safer)
     // sửa KTP-A (kiểm tra độc lập phần 2): short forms of "không", "chẳng / chả", "… đâu", a condition: never a yes
     for (const no of ['ko đồng ý', 'k đồng ý', 'kg đồng ý', 'hok đồng ý', 'chẳng đồng ý', 'chả đồng ý', 'có đồng ý đâu', 'đồng ý nếu giữ tường',
       'yes if you keep the walls', 'ok unless doors', 'ok as long as the doors stay', 'đồng ý với điều kiện giữ cửa', 'ok xóa tường', 'thôi'])
@@ -127,10 +127,16 @@ describe('nâng cấp đợt H9: English', () => {
     for (const no of ['ai đồng ý', 'đồng ý đâu mà', 'miễn là giữ tường thì ok', 'đồng ý cái gì mà đồng ý', 'đồng ý cái con khỉ', 'dạ thôi', 'ừ thôi',
       'yes later', 'đồng ý sau', 'ok hold on', 'có, chờ đã', 'ok đợi đã', 'đồng ý hả', 'ok ko', 'ok ❌', 'không đồng ý', 'khong dong y', 'yes but no',
       'not yes', "I don't agree", 'I don’t agree', 'disagree', 'nope', 'never mind', 'ok, nhưng giữ lại', 'ok, stop', 'yes, wait', 'đồng ý không',
-      'được không', 'có thể', 'maybe', 'chờ đã', 'k', 'ko', 'n', 'u', 'co', '👍', '✅', 'I agree', 'yeah', 'of course', 'fine', 'ok👍'])
+      'được không', 'có thể', 'maybe', 'chờ đã', 'k', 'ko', 'n', 'u', 'co', '👍', '✅', 'I agree', 'of course', 'fine', 'ok👍', 'ok không sao', 'không sao, xóa đi', 'không sao'])
       assert.ok(!isConfirmation(no), no);
     for (const yes of ['Đồng ý', 'ĐỒNG Ý', 'dong y', 'có', 'Có, xóa đi', 'OK', 'oke', 'y', 'YES!', 'yes please', 'sure', 'proceed', 'approved', 'agreed',
-      'confirm', 'delete it', 'do it', 'sounds good', 'that is fine', '“ok”', '‘yes’', 'ok không sao', 'không sao, xóa đi', 'ừ', 'vâng', 'dạ', 'tiếp tục đi'])
+      'confirm', 'delete it', 'do it', 'sounds good', 'that is fine', '“ok”', '‘yes’', 'ừ', 'vâng', 'dạ', 'tiếp tục đi', 'yeah'])
+      assert.ok(isConfirmation(yes), yes);
+    // sửa KTP-A lượt 3: "à" asks back (KTP-04); the older spelling "xoá", overwrite / replace, "ơi", "được thôi" (KTP-44); "thôi được" alone (KTP-47)
+    for (const no of ['ok à', 'đồng ý à', 'đồng ý rồi à', 'ok xóa hết rồi à', 'thôi', 'không sao'])
+      assert.ok(!isConfirmation(no), no);
+    for (const yes of ['ok xoá đi', 'đồng ý xoá', 'xoá đi', 'được thôi', 'ok thôi', 'thôi được', 'ghi đè đi', 'ok ghi đè', 'thay thế đi', 'overwrite',
+      'yes, replace', 'alright', 'ok 👍', 'anh ơi đồng ý'])
       assert.ok(isConfirmation(yes), yes);
   });
 

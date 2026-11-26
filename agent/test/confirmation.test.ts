@@ -73,9 +73,10 @@ describe('confirmation gate', () => {
   });
 
   it('natural Vietnamese yes and no (review fixes)', () => {
-    for (const yes of ['Vâng, tớ đồng ý', 'Thôi được, xóa đi', 'Thế thì xóa đi', 'Không sao, xóa đi', 'Mình cũng đồng ý', 'Cậu cứ xóa đi', 'dạ được', 'ok xóa luôn'])
+    for (const yes of ['Vâng, tớ đồng ý', 'Thôi được, xóa đi', 'Thế thì xóa đi', 'Mình cũng đồng ý', 'Cậu cứ xóa đi', 'dạ được', 'ok xóa luôn'])
       assert.equal(isConfirmation(yes), true, yes);
-    for (const no of ['Đừng tiếp tục', 'đừng xóa đi', 'Chưa đồng ý', 'khỏi xóa', 'xóa điểm cao độ ở góc', 'làm điện chiếu sáng tầng 2', 'sửa điểm cuối đường trục A',
+    // KTP-47 (a, 26/11/2026): "không sao" has "không", so it is no (asked again) — safer than guessing
+    for (const no of ['Không sao, xóa đi', 'Đừng tiếp tục', 'đừng xóa đi', 'Chưa đồng ý', 'khỏi xóa', 'xóa điểm cao độ ở góc', 'làm điện chiếu sáng tầng 2', 'sửa điểm cuối đường trục A',
       'vẽ lại rồi xóa đi các đường cũ', 'xóa layer DIM thì ok không?'])
       assert.equal(isConfirmation(no), false, no);
   });

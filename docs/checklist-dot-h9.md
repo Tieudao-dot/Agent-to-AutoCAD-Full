@@ -34,6 +34,8 @@ Nhánh `full/nang-cap-h9`. Chưa thử trên AutoCAD thật. Bàn giao: [`docs/b
 - [ ] C3. Xóa > 20 đối tượng: thẻ xác nhận tiếng Anh (Yes / No); gõ "yes" là làm, gõ "no" là không làm.
 - [ ] C3b. (Test & sửa H9) Cũng việc xóa đó, gõ câu có điều kiện: "yes but don’t delete the walls" (dấu nháy cong của
   điện thoại / Mac), "đồng ý nhưng giữ tường", "ok xóa hết trừ cửa": Claude **không** xóa, hỏi lại.
+- [ ] C3d. (Sửa KTP lượt 3) Cũng việc xóa đó, gõ "ok à", "đồng ý rồi à", "không sao": **không** xóa, Claude hỏi lại; gõ "ok xoá đi"
+  (dấu kiểu cũ), "được thôi", "yes overwrite", "yeah": xóa.
 - [ ] C4. "Vẽ bảng thống kê block", "tạo tờ A3 có khung tên", "ra bộ hồ sơ" khi đang English: **chữ trên bản vẽ vẫn tiếng
   Việt** (tiêu đề bảng, khung tên, tên tờ); câu trả lời tiếng Anh.
 - [ ] C5. Xuất Excel khi đang English: tiêu đề cột trong file vẫn tiếng Việt.
