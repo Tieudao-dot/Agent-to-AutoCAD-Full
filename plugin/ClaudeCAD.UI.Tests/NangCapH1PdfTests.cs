@@ -35,6 +35,14 @@ namespace ClaudeCAD.UI.Tests
             // a page that is not there: no picture, a reason
             Assert.Null(PdfPageImage.Render(pdf, 5, 1024, out var why5));
             Assert.False(string.IsNullOrEmpty(why5));
+            // Test & sửa H1: the same page again is the same render; a broken PDF says why; no half render is left behind
+            Assert.Equal(png, PdfPageImage.Render(pdf, 1, 1024, out _));
+            var broken = Path.Combine(dir, "hỏng.pdf");
+            File.WriteAllBytes(broken, new byte[] { 0x25, 0x50, 0x44, 0x46, 0x2D, 0x31, 0x2E, 0x34, 0x0A, 0x31, 0x20 });
+            Assert.Null(PdfPageImage.Render(broken, 1, 1024, out var whyBroken));
+            _out.WriteLine("broken: " + whyBroken);
+            Assert.False(string.IsNullOrEmpty(whyBroken));
+            Assert.Empty(Directory.GetFiles(Path.GetDirectoryName(png), "*" + PdfRenderLogic.PartialMark + "*"));
         }
     }
 }

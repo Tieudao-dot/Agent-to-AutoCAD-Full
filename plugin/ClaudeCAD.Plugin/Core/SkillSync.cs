@@ -35,10 +35,31 @@ namespace ClaudeCAD.Plugin.Core
                 return string.Concat(sha.ComputeHash(Encoding.UTF8.GetBytes(s)).Select(b => b.ToString("x2", CultureInfo.InvariantCulture)));
         }
 
-        public static string SidePath(string path)
+        public static string SidePath(string path) => SidePath(path, 1);
+
+        /// <summary>Test & sửa H1: the n-th name for the new version (1: SKILL.ban-moi.md, 2: SKILL.ban-moi-2.md…).</summary>
+        public static string SidePath(string path, int n)
         {
             var dir = Path.GetDirectoryName(path) ?? "";
-            return Path.Combine(dir, Path.GetFileNameWithoutExtension(path) + SideSuffix + Path.GetExtension(path));
+            return Path.Combine(dir, Path.GetFileNameWithoutExtension(path) + SideSuffix + (n > 1 ? "-" + n.ToString(CultureInfo.InvariantCulture) : "") +
+                                     Path.GetExtension(path));
+        }
+
+        /// <summary>
+        /// Test & sửa H1: where the new version goes next to the user's file: the first side name that is free, already holds
+        /// it, or holds the version this plugin put there before (lastNew). A side file the user edited (merging in it) is never
+        /// written over: the new version takes the next name.
+        /// </summary>
+        public static string FreeSidePath(string dst, string newH, string lastNew)
+        {
+            for (int n = 1; n < 100; n++)
+            {
+                var side = SidePath(dst, n);
+                if (!File.Exists(side)) return side;
+                var h = Hash(File.ReadAllBytes(side));
+                if (h == newH || (lastNew != null && h == lastNew)) return side;
+            }
+            return null;
         }
 
         public sealed class Manifest
@@ -133,10 +154,12 @@ namespace ClaudeCAD.Plugin.Core
                     continue;
                 }
                 // the user's own version: kept as it is, the new one next to it, said once per new version
-                string side = SidePath(dst);
+                m.Noticed.TryGetValue(rel, out var said);
+                string side = FreeSidePath(dst, newH, said);
+                if (side == null) continue; // 99 side files the user edited: nothing more is written
                 if (!File.Exists(side) || Hash(File.ReadAllBytes(side)) != newH) File.WriteAllBytes(side, bytes);
                 r.KeptWithNew.Add(rel);
-                if (!(m.Noticed.TryGetValue(rel, out var said) && said == newH))
+                if (said != newH)
                 {
                     m.Noticed[rel] = newH;
                     m.Pending.Add(SkillOf(rel));

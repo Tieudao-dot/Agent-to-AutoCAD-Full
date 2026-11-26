@@ -19,6 +19,41 @@ namespace ClaudeCAD.Plugin.Core
         public const int TimeoutSeconds = 30;
         public const int MinWidthPx = 1024, MaxWidthPx = 6000;
 
+        /// <summary>
+        /// Test & sửa H1 (internal): a page render not used for this many days is removed from the temp folder; a render cut
+        /// off half way (its temporary name) after this many hours.
+        /// </summary>
+        public const int CacheKeepDays = 7, PartialKeepHours = 1;
+        /// <summary>The temporary name of a render being written (renamed to the cache name only once it is complete).</summary>
+        public const string PartialMark = ".dang-ve-";
+
+        public static string PartialName(string outPng, string tag) => outPng + PartialMark + tag + ".png";
+
+        /// <summary>
+        /// Test & sửa H1: removes old renders from the cache folder (pdf-*.png unused for CacheKeepDays, half renders older than
+        /// PartialKeepHours). Only files this code names are touched; errors (a file in use) are skipped.
+        /// </summary>
+        public static int CleanCache(string folder, DateTime nowUtc)
+        {
+            int removed = 0;
+            try
+            {
+                if (string.IsNullOrEmpty(folder) || !Directory.Exists(folder)) return 0;
+                foreach (var f in Directory.GetFiles(folder, "pdf-*.png"))
+                {
+                    try
+                    {
+                        bool partial = Path.GetFileName(f).IndexOf(PartialMark, StringComparison.Ordinal) >= 0;
+                        var age = nowUtc - File.GetLastWriteTimeUtc(f);
+                        if (partial ? age.TotalHours > PartialKeepHours : age.TotalDays > CacheKeepDays) { File.Delete(f); removed++; }
+                    }
+                    catch (Exception) { }
+                }
+            }
+            catch (Exception) { }
+            return removed;
+        }
+
         /// <summary>The script given to powershell.exe -File (Windows PowerShell 5.1, .NET Framework: WinRT types load there).</summary>
         public const string Script =
             "param([string]$Pdf, [int]$Page, [int]$Width, [string]$Out)\r\n" +

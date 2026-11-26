@@ -225,12 +225,14 @@ namespace ClaudeCAD.Plugin
                 Ui.ApplySettings(_settings);
                 ApplyTheme();
                 Ui.SetTemplates(QuickTemplates.LoadAll(PluginPaths.TemplatesFile, QuickTemplates.UserFile));
-                SyncShippedSkills(); // nâng cấp đợt H1: the new version's skills, the user's own kept
+                var skillNote = SyncShippedSkills(); // nâng cấp đợt H1: the new version's skills, the user's own kept
                 InitSkills();
                 _macroStore = new MacroStore(MacrosRoot);
                 Ui.SetMacros(_macroStore.List());
                 foreach (Document d in AcApp.DocumentManager) WatchDoc(d);
                 LoadTranscriptFor(AcApp.DocumentManager.MdiActiveDocument);
+                // Test & sửa H1: said after the drawing's chat is shown (loading it clears the chat, the note was never seen)
+                if (skillNote != null) Ui.AddNote(skillNote);
                 _ipc.Start();
                 UpdateService.CheckInBackground(msg => { Ui.AddNote(msg); Ui.ShowToast(msg, ChatControl.ToastKind.Info, 10); }); // phase 3: daily update check
             }
@@ -389,19 +391,18 @@ namespace ClaudeCAD.Plugin
         /// Nâng cấp đợt H1: on an upgraded machine, skills the user never changed get the new version; for the changed ones the new
         /// version is put next to them and the chat names them once (Core/SkillSync.cs).
         /// </summary>
-        private void SyncShippedSkills()
+        private string SyncShippedSkills()
         {
             try
             {
                 var parent = Path.GetDirectoryName(SkillsRoot.TrimEnd('\\', '/'));
-                if (string.IsNullOrEmpty(parent)) return;
+                if (string.IsNullOrEmpty(parent)) return null;
                 var r = SkillSync.Sync(Path.Combine(parent, SkillSync.StagedFolder), SkillsRoot, SkillSync.KnownShipped);
                 if (r.Added.Count + r.Replaced.Count + r.KeptWithNew.Count > 0)
                     Logger.Info($"skills: {r.Added.Count} added, {r.Replaced.Count} updated, {r.KeptWithNew.Count} kept (user's) with the new one next to them");
-                var note = SkillSync.NoticeText(r.Notice);
-                if (note != null) Ui.AddNote(note);
+                return SkillSync.NoticeText(r.Notice); // shown by the caller once the chat is loaded
             }
-            catch (Exception ex) { Logger.Warn("skills: sync failed: " + ex.Message); }
+            catch (Exception ex) { Logger.Warn("skills: sync failed: " + ex.Message); return null; }
         }
 
         private void InitSkills()
