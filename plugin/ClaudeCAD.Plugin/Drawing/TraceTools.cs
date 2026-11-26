@@ -242,7 +242,8 @@ namespace ClaudeCAD.Plugin.Drawing
         }
 
         /// <summary>Sửa KFG (nghi vấn G5, bảo mật): no file of another computer of the network (Windows may send the sign-in there).</summary>
-        private static void CheckPathAllowed(ToolContext ctx, string path, string chatDir, string tool)
+        /// <summary>Also used by Drawing/OtherDrawing.cs (nâng cấp đợt H3): the same rule for another drawing file.</summary>
+        internal static void CheckPathAllowed(ToolContext ctx, string path, string chatDir, string tool)
         {
             if (string.IsNullOrWhiteSpace(path) || (chatDir != null && TraceLogic.IsInside(path, chatDir))) return;
             string drawing = null;
@@ -281,7 +282,7 @@ namespace ClaudeCAD.Plugin.Drawing
             catch (Exception) { return false; }
         }
 
-        private static string AttachmentFolder()
+        internal static string AttachmentFolder()
         {
             try { return Path.GetFullPath(UI.ChatAttachments.Folder); } catch (Exception) { return null; }
         }
@@ -439,6 +440,8 @@ namespace ClaudeCAD.Plugin.Drawing
             string picFile = null;
             double[] po = null, pu = null, pv = null;
             double picW = 0, picH = 0;
+            string pdfFile = null, pdfWhy = null;
+            int pdfPage = 0;
             using (var tr = db.TransactionManager.StartOpenCloseTransaction())
             {
                 var id = TraceTarget(tr, db, p, tool);
@@ -454,6 +457,17 @@ namespace ClaudeCAD.Plugin.Drawing
                     picH = rdef.Size.Y;
                     picFile = SafeString(() => rdef.ActiveFileName);
                     if (string.IsNullOrEmpty(picFile) || !File.Exists(picFile)) picFile = SafeString(() => rdef.SourceFileName);
+                }
+                // nâng cấp đợt H1: a PDF page is drawn from its file too (rendered by Windows), where its frame says it lies
+                else if (e is PdfReference pref && ReadMark(tr, e) is TraceMark pm && pm.PdfFrame != null && pm.PdfFrame.Length >= 6)
+                {
+                    po = new[] { pm.PdfFrame[0], pm.PdfFrame[1] };
+                    pu = new[] { pm.PdfFrame[2], pm.PdfFrame[3] };
+                    pv = new[] { pm.PdfFrame[4], pm.PdfFrame[5] };
+                    pdfPage = Math.Max(1, pm.Page);
+                    pdfFile = pm.File;
+                    if ((string.IsNullOrEmpty(pdfFile) || !File.Exists(pdfFile)) && tr.GetObject(pref.DefinitionId, OpenMode.ForRead) is PdfDefinition pdef)
+                        pdfFile = SafeString(() => pdef.ActiveFileName) ?? SafeString(() => pdef.SourceFileName);
                 }
                 var ext = e.GeometricExtents;
                 handle = Acad.H(id);
@@ -479,8 +493,24 @@ namespace ClaudeCAD.Plugin.Drawing
             double step = p.Has("grid_step") ? p.Num("grid_step") : TraceLogic.GridStep(span, MmPerUnitOf(db));
             bool grid = p.Bool("grid", true);
             byte[] png = cap.Png;
+            // nâng cấp đợt H1: the PDF page as a PNG made by Windows from the file (else the old way: AutoCAD's view alone)
+            if (pdfFile != null && po != null)
+            {
+                double uLen = Math.Sqrt(pu[0] * pu[0] + pu[1] * pu[1]);
+                int width = PdfRenderLogic.RenderWidth((cap.Max.X - cap.Min.X) / Math.Max(1e-9, uLen), cap.Width);
+                var pagePng = PdfPageImage.Render(pdfFile, pdfPage, width, out pdfWhy);
+                if (pagePng != null)
+                {
+                    byte[] head = new byte[24];
+                    using (var fs = new FileStream(pagePng, FileMode.Open, FileAccess.Read, FileShare.ReadWrite)) fs.Read(head, 0, head.Length);
+                    var sz = PdfRenderLogic.PngSize(head);
+                    if (sz.HasValue) { picFile = pagePng; picW = sz.Value.w; picH = sz.Value.h; }
+                    else pdfWhy = "the page image Windows made is not a PNG";
+                }
+            }
             // Test & sửa G5: the picture comes from its file (AutoCAD's off-screen look may leave images out), what was drawn on top
             var look = ComposeLook(cap, picFile, po, pu, pv, picW, picH, min, max);
+            if (pdfFile != null && look.From == "file") look.From = "pdf_page";
             png = look.Png;
             int lines = 0;
             if (grid)
@@ -515,7 +545,8 @@ namespace ClaudeCAD.Plugin.Drawing
             if (look.Blank)
             {
                 res["picture_visible"] = false;
-                res["warning"] = "This look shows NO picture (AutoCAD did not draw it in the off-screen view, and a PDF page cannot be drawn from its file). " +
+                res["warning"] = "This look shows NO picture (AutoCAD did not draw it in the off-screen view, and the picture could not be drawn from its file" +
+                                 (pdfWhy != null ? ": " + pdfWhy : "") + "). " +
                                  "Do not trace from it and do not guess: tell the user, and ask them to export the page as PNG / JPG and attach that instead.";
             }
             return res;
@@ -704,6 +735,29 @@ namespace ClaudeCAD.Plugin.Drawing
             if (!Equals(v["picture_from"], "file")) errs.Add($"ảnh xem không dựng từ file ảnh gốc ({v["picture_from"]})");
             info = $"ảnh {string.Join("×", (List<object>)a["pixels"])} px, rộng 8 m sau khi đặt tỉ lệ, lưới {v["grid_lines"]} đường, {bright * 100 / Math.Max(1, total)}% điểm sáng, " +
                    (Equals(v["autocad_drew_picture"], true) ? "AutoCAD có vẽ ảnh nền khi chụp" : "AutoCAD KHÔNG vẽ ảnh nền khi chụp (ảnh xem lấy từ file)");
+            // nâng cấp đợt H1: a one-page PDF attached and looked at; says whether Windows rendered the page from the file
+            try
+            {
+                string pdf = Path.Combine(dir, "h1-trang.pdf");
+                File.WriteAllBytes(pdf, PdfRenderLogic.SamplePdf());
+                var pa = Call(new Dictionary<string, object> { ["action"] = "attach", ["path"] = pdf, ["insert"] = new List<object> { 400000.0, 0.0 } });
+                var pv = Call(new Dictionary<string, object> { ["action"] = "view", ["handle"] = pa["handle"] });
+                bool fromPage = Equals(pv["picture_from"], "pdf_page");
+                info += fromPage ? "; PDF: Windows đọc thẳng trang PDF được" : $"; PDF: KHÔNG đọc thẳng được ({pv["picture_from"]}{(pv.TryGetValue("warning", out var pw) ? ", " + pw : "")})";
+                using (doc.LockDocument())
+                using (var tr = doc.Database.TransactionManager.StartTransaction())
+                {
+                    var pe = (Entity)tr.GetObject(Acad.IdFromHandle(doc.Database, (string)pa["handle"]), OpenMode.ForRead);
+                    var pl = (LayerTableRecord)tr.GetObject(pe.LayerId, OpenMode.ForWrite);
+                    bool was2 = pl.IsLocked;
+                    pl.IsLocked = false;
+                    pe.UpgradeOpen();
+                    pe.Erase();
+                    pl.IsLocked = was2;
+                    tr.Commit();
+                }
+            }
+            catch (Exception ex) { errs.Add("PDF: gắn / xem trang PDF lỗi: " + ex.Message); }
             return errs;
         }
 

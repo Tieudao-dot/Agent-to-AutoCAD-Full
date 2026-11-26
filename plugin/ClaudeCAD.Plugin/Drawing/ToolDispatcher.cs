@@ -165,6 +165,12 @@ namespace ClaudeCAD.Plugin.Drawing
         /// <summary>See ITurnHost.CreatedThisTurn; false without a host (self-test handlers): the safe side.</summary>
         internal bool CreatedThisTurn(string handle) => _host != null && _host.CreatedThisTurn(handle);
 
+        /// <summary>Nâng cấp đợt H5: "Chỉ xem" is on for the drawing of the turn (batch_files refuses its writing task).</summary>
+        internal bool ViewOnly => _host != null && _host.ReadOnly;
+
+        /// <summary>Nâng cấp đợt H5: the plan / work-mode gate of a tool a batch task runs for each file.</summary>
+        internal void RequireToolInPlan(string subTool) { if (_host != null) RequireInPlan(subTool); }
+
         private void RequireInPlan(string tool)
         {
             var plan = _host.Plan;

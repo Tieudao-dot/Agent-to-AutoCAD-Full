@@ -206,6 +206,8 @@ namespace ClaudeCAD.Plugin.Core
             (long, long, long, long) Cell(double[] v)
             {
                 int h = v.Length >= 4 ? v.Length / 2 : -1;
+                // nâng cấp đợt H1 (KFG-43): a shape of 3 numbers (point, block insert: x, y, z) is hashed by its z too
+                if (v.Length == 3) return (C(v[0]), C(v[1]), C(v[2]), 0);
                 return (v.Length > 0 ? C(v[0]) : 0, v.Length > 1 ? C(v[1]) : 0, h >= 0 ? C(v[h]) : 0, h >= 0 ? C(v[h + 1]) : 0);
             }
             int Gid(string g) { if (!groupIds.TryGetValue(g, out var id)) groupIds[g] = id = groupIds.Count; return id; }

@@ -39,6 +39,7 @@
     <Compile Include="..\ClaudeCAD.Plugin\Core\Materials.cs" Link="Core\Materials.cs" />
     <Compile Include="..\ClaudeCAD.Plugin\Core\Render.cs" Link="Core\Render.cs" />
     <Compile Include="..\ClaudeCAD.Plugin\Core\Trace.cs" Link="Core\Trace.cs" />
+    <Compile Include="..\ClaudeCAD.Plugin\Core\Export.cs" Link="Core\Export.cs" />
     <Compile Include="..\ClaudeCAD.Plugin\UI\ChatAttachments.cs" Link="UI\ChatAttachments.cs" />
     <Compile Include="..\ClaudeCAD.Plugin\Core\SelfTestRules.cs" Link="Core\SelfTestRules.cs" />
     <Compile Include="..\ClaudeCAD.Plugin\Core\InternalBuild.cs" Link="Core\InternalBuild.cs" />
@@ -49,6 +50,12 @@
     <Compile Include="..\ClaudeCAD.Plugin\Core\DrawingSet.cs" Link="Core\DrawingSet.cs" />
     <Compile Include="..\ClaudeCAD.Plugin\Core\Estimate.cs" Link="Core\Estimate.cs" />
     <Compile Include="..\ClaudeCAD.Plugin\Core\DrawingCheck.cs" Link="Core\DrawingCheck.cs" />
+    <Compile Include="..\ClaudeCAD.Plugin\Core\SkillSync.cs" Link="Core\SkillSync.cs" />
+    <Compile Include="..\ClaudeCAD.Plugin\Core\PdfRender.cs" Link="Core\PdfRender.cs" />
+    <Compile Include="..\ClaudeCAD.Plugin\Core\OtherDrawing.cs" Link="Core\OtherDrawing.cs" />
+    <Compile Include="..\ClaudeCAD.Plugin\Core\DrawingCompare.cs" Link="Core\DrawingCompare.cs" />
+    <Compile Include="..\ClaudeCAD.Plugin\Core\CompanyStandard.cs" Link="Core\CompanyStandard.cs" />
+    <Compile Include="..\ClaudeCAD.Plugin\Core\BatchFiles.cs" Link="Core\BatchFiles.cs" />
     <Compile Include="..\ClaudeCAD.Plugin\Core\Solids3.cs" Link="Core\Solids3.cs" />
   </ItemGroup>
   <ItemGroup>

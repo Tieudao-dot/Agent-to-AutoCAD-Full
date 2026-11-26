@@ -8,6 +8,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { describe, it } from 'node:test';
+import { fileURLToPath } from 'node:url';
 import type { SDKMessage, SDKUserMessage } from '@anthropic-ai/claude-agent-sdk';
 import { F5_CARD_TOOLS, USER_CONFIRMED_PARAM, applyUserConfirmation, refusedForConfirmation } from '../src/agent/confirmation.js';
 import { AgentSession, type QueryFn } from '../src/agent/session.js';
@@ -149,7 +150,7 @@ describe('F5: multileader of the standard', () => {
     const d = new Map(buildTools(bridge).map((t) => [t.name, t.description]));
     assert.match(d.get('setup_standards')!, /multileader style VN-ML-<scale>/);
     assert.match(d.get('add_mleader')!, /current multileader style \(after setup_standards/);
-    const skill = fs.readFileSync(path.join(path.resolve(path.dirname(new URL(import.meta.url).pathname), '..', '..', '..'), 'skills', 've-kien-truc', 'SKILL.md'), 'utf8');
+    const skill = fs.readFileSync(path.join(path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..', '..'), 'skills', 've-kien-truc', 'SKILL.md'), 'utf8');
     assert.match(skill, /KT-ML-100/);
   });
 });

@@ -7,6 +7,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { describe, it } from 'node:test';
+import { fileURLToPath } from 'node:url';
 import type { SDKMessage, SDKUserMessage } from '@anthropic-ai/claude-agent-sdk';
 import { AgentSession, type QueryFn } from '../src/agent/session.js';
 import { skillPlan } from '../src/agent/skills.js';
@@ -49,7 +50,7 @@ describe('KT-42: 3D inserts blocks but sets no attribute values', () => {
   it('insert_block on 3D has no attribute values; set_block_attributes is not a 3D tool in the plugin labels', () => {
     assert.ok(shapeOf('3d', 'insert_block').includes('name'));
     assert.ok(!shapeOf('3d', 'insert_block').includes('attributes'));
-    const src = fs.readFileSync(path.resolve(path.dirname(new URL(import.meta.url).pathname), '..', '..', '..', 'plugin', 'ClaudeCAD.Plugin', 'Core', 'Plans.cs'), 'utf8');
+    const src = fs.readFileSync(path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..', '..', 'plugin', 'ClaudeCAD.Plugin', 'Core', 'Plans.cs'), 'utf8');
     const twoD = /Add\(ToolGroup\.TwoD,([\s\S]*?)\);/.exec(src)![1]!;
     assert.match(twoD, /\bset_block_attributes\b/);
   });

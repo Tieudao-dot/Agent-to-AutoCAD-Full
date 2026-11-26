@@ -1174,6 +1174,216 @@ namespace ClaudeCAD.Plugin
                 return errs.Count == 0 ? new SelfTestRules.Verdict(true, info) : new SelfTestRules.Verdict(false, string.Join("; ", errs) + " (" + info + ")");
             });
 
+            // Nâng cấp đợt H2: a DWG 2010 copy (read back: its version, the open drawing unchanged), a DXF, an FBX of one box
+            Check("Nâng cấp đợt H2: xuất DWG 2010 (đọc lại đúng đời, bản vẽ đang mở không đổi), DXF, FBX một khối hộp", () =>
+            {
+                var errs = new List<string>();
+                string before = doc.Name;
+                var ctx0 = new ToolContext(doc, null, false, null);
+                Dictionary<string, object> Ex(Dictionary<string, object> q) => (Dictionary<string, object>)DrawingService.ExportDrawing(ctx0, new Params("export_drawing", q));
+                string dwg = Path.Combine(dir, "h2-acad2010.dwg"), dxf = Path.Combine(dir, "h2.dxf"), fbx = Path.Combine(dir, "h2.fbx");
+                foreach (var f in new[] { dwg, dxf, fbx }) if (File.Exists(f)) File.Delete(f);
+                Ex(new Dictionary<string, object> { ["format"] = "dwg", ["version"] = "2010", ["output"] = dwg });
+                using (var side = new Database(false, true))
+                {
+                    side.ReadDwgFile(dwg, FileOpenMode.OpenForReadAndAllShare, true, "");
+                    if (side.OriginalFileVersion != DwgVersion.AC1024) errs.Add($"DWG đọc lại là {side.OriginalFileVersion} (cần AC1024 = 2010)");
+                }
+                if (doc.Name != before) errs.Add("bản vẽ đang mở bị đổi tên");
+                Ex(new Dictionary<string, object> { ["format"] = "dxf", ["output"] = dxf });
+                if (!File.Exists(dxf) || !File.ReadAllText(dxf).Contains("AC1027")) errs.Add("DXF không có hoặc không phải đời 2013");
+                string boxHandle;
+                using (doc.LockDocument())
+                using (var tr = doc.TransactionManager.StartTransaction())
+                {
+                    var ms = (BlockTableRecord)tr.GetObject(SymbolUtilityServices.GetBlockModelSpaceId(doc.Database), OpenMode.ForWrite);
+                    var box = new Solid3d();
+                    box.CreateBox(1000, 1000, 1000);
+                    box.TransformBy(Matrix3d.Displacement(new Vector3d(170000, 0, 500)));
+                    box.SetDatabaseDefaults(doc.Database);
+                    ms.AppendEntity(box);
+                    tr.AddNewlyCreatedDBObject(box, true);
+                    boxHandle = box.Handle.ToString();
+                    tr.Commit();
+                }
+                var fr = Ex(new Dictionary<string, object> { ["format"] = "fbx", ["output"] = fbx, ["handles"] = new List<object> { boxHandle } });
+                var head = File.ReadAllBytes(fbx);
+                if (head.Length < 200 || Encoding.ASCII.GetString(head, 0, 18) != "Kaydara FBX Binary") errs.Add("FBX không đúng dạng");
+                if (Convert.ToInt32(fr["triangles"]) < 12) errs.Add($"FBX chỉ có {fr["triangles"]} tam giác");
+                using (doc.LockDocument())
+                using (var tr = doc.TransactionManager.StartTransaction())
+                {
+                    tr.GetObject(Acad.IdFromHandle(doc.Database, boxHandle), OpenMode.ForWrite).Erase();
+                    tr.Commit();
+                }
+                return errs.Count == 0
+                    ? new SelfTestRules.Verdict(true, $"DWG 2010 đọc lại đúng đời, DXF 2013, FBX {fr["triangles"]} tam giác; bản vẽ đang mở vẫn là {Path.GetFileName(before)}")
+                    : new SelfTestRules.Verdict(false, string.Join("; ", errs));
+            });
+
+            // Nâng cấp đợt H3 (shared with H4): another drawing read next to the open one (side database, released at once):
+            // a DWG and a DXF copy of this drawing give the same number of objects; the file can be deleted right after (not locked)
+            Check("Nâng cấp đợt H3: đọc bản vẽ khác chỉ để đọc (DWG + DXF, không khóa file, bản vẽ đang mở không đổi)", () =>
+            {
+                var errs = new List<string>();
+                string before = doc.Name;
+                var ctx0 = new ToolContext(doc, null, false, null);
+                string dwg = Path.Combine(dir, "h3-doc-cung.dwg"), dxf = Path.Combine(dir, "h3-doc-cung.dxf");
+                foreach (var f in new[] { dwg, dxf }) if (File.Exists(f)) File.Delete(f);
+                DrawingService.ExportDrawing(ctx0, new Params("export_drawing", new Dictionary<string, object> { ["format"] = "dwg", ["output"] = dwg }));
+                DrawingService.ExportDrawing(ctx0, new Params("export_drawing", new Dictionary<string, object> { ["format"] = "dxf", ["output"] = dxf }));
+                int CountOf(string f, out string fmt)
+                {
+                    using (var od = OtherDrawing.Open(ctx0, f, "selftest"))
+                    using (var tr = od.Db.TransactionManager.StartTransaction())
+                    {
+                        od.ModelEntities(tr, 1000000, out int total);
+                        fmt = (string)od.Info()["format"];
+                        tr.Commit();
+                        return total;
+                    }
+                }
+                int nDwg = CountOf(dwg, out string f1), nDxf = CountOf(dxf, out string f2);
+                if (nDwg <= 0) errs.Add("DWG đọc được 0 đối tượng");
+                if (nDwg != nDxf) errs.Add($"DWG {nDwg} đối tượng, DXF {nDxf}");
+                try { File.Delete(dwg); File.Delete(dxf); } catch (Exception ex) { errs.Add("file còn bị khóa sau khi đọc: " + ex.Message); }
+                try { OtherDrawing.Open(ctx0, Path.Combine(dir, "khong-co.dwg"), "selftest").Dispose(); errs.Add("file không có mà không báo lỗi"); }
+                catch (ToolException) { }
+                if (doc.Name != before) errs.Add("bản vẽ đang mở bị đổi tên");
+                return errs.Count == 0 ? new SelfTestRules.Verdict(true, $"{nDwg} đối tượng, {f1}; DXF {f2}") : new SelfTestRules.Verdict(false, string.Join("; ", errs));
+            });
+
+            // Nâng cấp đợt H4: learn a company standard from a copy of this drawing (into a test folder, never the user's
+            // standards), read it back, delete it with its card token; the template file is unchanged
+            Check("Nâng cấp đợt H4: học chuẩn công ty từ bản vẽ mẫu (layer, kiểu chữ, file mẫu không đổi), xem, xóa", () =>
+            {
+                var errs = new List<string>();
+                var ctx0 = new ToolContext(doc, null, false, null);
+                string mau = Path.Combine(dir, "h4-mau.dwg");
+                if (File.Exists(mau)) File.Delete(mau);
+                DrawingService.ExportDrawing(ctx0, new Params("export_drawing", new Dictionary<string, object> { ["format"] = "dwg", ["output"] = mau }));
+                var stamp = File.GetLastWriteTimeUtc(mau);
+                long size = new FileInfo(mau).Length;
+                string keep = DrawingService.CompanyRoot;
+                DrawingService.CompanyRoot = Path.Combine(dir, "chuan-cong-ty");
+                try
+                {
+                    var r = (Dictionary<string, object>)DrawingService.CompanyStandardTool(ctx0, new Params("company_standard", new Dictionary<string, object> { ["action"] = "learn", ["file"] = mau, ["name"] = "Tự kiểm H4" }));
+                    int layers = Convert.ToInt32(r["layers"]);
+                    if (layers <= 0) errs.Add("không học được layer nào");
+                    if (!(r["template_kept"] is bool kept && kept)) errs.Add("không giữ được bản chép file mẫu");
+                    var shown = (Dictionary<string, object>)DrawingService.CompanyStandardTool(ctx0, new Params("company_standard", new Dictionary<string, object> { ["action"] = "show", ["name"] = "tu kiem h4" }));
+                    if (Convert.ToInt32(shown["layers"]) != layers) errs.Add("xem lại không ra cùng số layer");
+                    try
+                    {
+                        DrawingService.CompanyStandardTool(ctx0, new Params("company_standard", new Dictionary<string, object> { ["action"] = "delete", ["name"] = "Tự kiểm H4" }));
+                        errs.Add("xóa mà không hỏi thẻ");
+                    }
+                    catch (ToolException) { }
+                    DrawingService.CompanyStandardTool(ctx0, new Params("company_standard", new Dictionary<string, object>
+                    {
+                        ["action"] = "delete", ["name"] = "Tự kiểm H4",
+                        [SolidLogic.UserConfirmedParam] = new List<object> { CompanyStandardLogic.Token("delete", "Tự kiểm H4") },
+                    }));
+                    if (CompanyStandardLogic.List(DrawingService.CompanyRoot).Count != 0) errs.Add("xóa rồi vẫn còn");
+                    if (File.GetLastWriteTimeUtc(mau) != stamp || new FileInfo(mau).Length != size) errs.Add("file mẫu bị đổi");
+                    try { File.Delete(mau); } catch (Exception ex) { errs.Add("file mẫu còn bị khóa: " + ex.Message); }
+                    return errs.Count == 0 ? new SelfTestRules.Verdict(true, $"{layers} layer, {((List<object>)r["text_styles"]).Count} kiểu chữ; xóa có thẻ; file mẫu không đổi")
+                        : new SelfTestRules.Verdict(false, string.Join("; ", errs));
+                }
+                finally { DrawingService.CompanyRoot = keep; }
+            });
+
+            // Nâng cấp đợt H3: compare with a saved copy: one line drawn after the copy is "added", matched by handle
+            Check("Nâng cấp đợt H3: so sánh hai bản vẽ (bản sao đã lưu + 1 đường mới = 1 thêm, 0 bớt)", () =>
+            {
+                var errs = new List<string>();
+                var ctx0 = new ToolContext(doc, null, false, null);
+                string copy = Path.Combine(dir, "h3-ban-cu.dwg");
+                if (File.Exists(copy)) File.Delete(copy);
+                DrawingService.ExportDrawing(ctx0, new Params("export_drawing", new Dictionary<string, object> { ["format"] = "dwg", ["output"] = copy }));
+                string lineHandle;
+                using (doc.LockDocument())
+                using (var tr = doc.TransactionManager.StartTransaction())
+                {
+                    var ms = (BlockTableRecord)tr.GetObject(SymbolUtilityServices.GetBlockModelSpaceId(doc.Database), OpenMode.ForWrite);
+                    var ln = new Line(new Point3d(180000, 0, 0), new Point3d(183000, 0, 0));
+                    ln.SetDatabaseDefaults(doc.Database);
+                    ms.AppendEntity(ln);
+                    tr.AddNewlyCreatedDBObject(ln, true);
+                    lineHandle = ln.Handle.ToString();
+                    tr.Commit();
+                }
+                Dictionary<string, object> r;
+                using (var tr = doc.TransactionManager.StartTransaction())
+                {
+                    r = (Dictionary<string, object>)DrawingService.CompareDrawings(new ToolContext(doc, tr, false, null),
+                        new Params("compare_drawings", new Dictionary<string, object> { ["file"] = copy }));
+                    tr.Abort();
+                }
+                // a whole-drawing Wblock copy normally keeps the handles (match handle); geometry still finds the new line
+                var diffs = ((List<object>)r["differences"]).Cast<Dictionary<string, object>>().ToList();
+                if (!diffs.Any(d => (string)d["change"] == "added" && (string)d["handle"] == lineHandle)) errs.Add("đường mới không được báo là thêm");
+                if (Convert.ToInt32(r["removed"]) != 0) errs.Add($"báo {r["removed"]} bớt (cần 0)");
+                using (doc.LockDocument())
+                using (var tr = doc.TransactionManager.StartTransaction())
+                {
+                    var id = doc.Database.GetObjectId(false, new Handle(Convert.ToInt64(lineHandle, 16)), 0);
+                    tr.GetObject(id, OpenMode.ForWrite).Erase();
+                    tr.Commit();
+                }
+                try { File.Delete(copy); } catch (Exception ex) { errs.Add("file so sánh còn bị khóa: " + ex.Message); }
+                return errs.Count == 0
+                    ? new SelfTestRules.Verdict(true, $"thêm {r["added"]}, bớt {r["removed"]}, đổi {r["changed"]} ({r["match"]})")
+                    : new SelfTestRules.Verdict(false, string.Join("; ", errs));
+            });
+
+            // Nâng cấp đợt H5: two copies of this drawing in a folder: plan, check both (read only), set up the standard in
+            // both (a backup first, then the file written); the card token is needed; the open drawing is unchanged
+            Check("Nâng cấp đợt H5: làm nhiều file (soát 2 file, áp chuẩn 2 file có sao lưu, cần thẻ)", () =>
+            {
+                var errs = new List<string>();
+                string before = doc.Name;
+                var ctx0 = new ToolContext(doc, null, false, null);
+                string folder = Path.Combine(dir, "h5-thu-muc");
+                Directory.CreateDirectory(folder);
+                foreach (var n in new[] { "a.dwg", "b.dwg" })
+                    DrawingService.ExportDrawing(ctx0, new Params("export_drawing", new Dictionary<string, object> { ["format"] = "dwg", ["output"] = Path.Combine(folder, n), ["overwrite"] = true }));
+                Dictionary<string, object> B(Dictionary<string, object> q) => (Dictionary<string, object>)DrawingService.BatchFiles(ctx0, new Params("batch_files", q));
+                var plan = B(new Dictionary<string, object> { ["action"] = "plan", ["task"] = "check", ["folder"] = folder });
+                if (Convert.ToInt32(plan["count"]) != 2) errs.Add($"kế hoạch có {plan["count"]} file (cần 2)");
+                string stamp = (string)plan["stamp"];
+                try { B(new Dictionary<string, object> { ["action"] = "run", ["task"] = "check", ["folder"] = folder, ["index"] = 0, ["stamp"] = stamp }); errs.Add("chạy mà không cần thẻ"); }
+                catch (ToolException) { }
+                var ok = new List<object> { plan["confirm_token"] };
+                for (int i = 0; i < 2; i++)
+                {
+                    var r = B(new Dictionary<string, object> { ["action"] = "run", ["task"] = "check", ["folder"] = folder, ["index"] = i, ["stamp"] = stamp, [SolidLogic.UserConfirmedParam] = ok });
+                    if ((string)r["status"] != "ok") errs.Add($"soát {r["file"]}: {r["status"]} {(r.TryGetValue("reason", out var why) ? why : "")}");
+                }
+                var sp = B(new Dictionary<string, object> { ["action"] = "plan", ["task"] = "standards", ["folder"] = folder, ["scale"] = "1:100" });
+                var sok = new List<object> { sp["confirm_token"] };
+                for (int i = 0; i < 2; i++)
+                {
+                    var r = B(new Dictionary<string, object> { ["action"] = "run", ["task"] = "standards", ["folder"] = folder, ["scale"] = "1:100", ["index"] = i, ["stamp"] = (string)sp["stamp"], [SolidLogic.UserConfirmedParam] = sok });
+                    if ((string)r["status"] != "ok") errs.Add($"áp chuẩn {r["file"]}: {r["status"]} {(r.TryGetValue("reason", out var why) ? why : "")}");
+                    else if (!File.Exists((string)r["backup"])) errs.Add("không có bản sao lưu");
+                }
+                using (var side = new Database(false, true))
+                {
+                    side.ReadDwgFile(Path.Combine(folder, "a.dwg"), FileOpenMode.OpenForReadAndAllShare, true, "");
+                    using (var tr = side.TransactionManager.StartTransaction())
+                    {
+                        if (!((TextStyleTable)tr.GetObject(side.TextStyleTableId, OpenMode.ForRead)).Has("VN-ARIAL")) errs.Add("file a.dwg chưa có kiểu VN-ARIAL sau khi áp chuẩn");
+                        tr.Commit();
+                    }
+                }
+                if (Directory.GetFiles(folder, ".claudecad-tam-*").Length > 0) errs.Add("còn file tạm");
+                if (doc.Name != before) errs.Add("bản vẽ đang mở bị đổi tên");
+                try { Directory.Delete(folder, true); } catch (Exception ex) { errs.Add("thư mục còn bị khóa: " + ex.Message); }
+                return errs.Count == 0 ? new SelfTestRules.Verdict(true, "soát 2 file, áp chuẩn 2 file (có sao lưu), cần thẻ") : new SelfTestRules.Verdict(false, string.Join("; ", errs));
+            });
+
             string versionFile = Path.Combine(dir, "version-copy.dwg");
             Do("Bản sao phiên bản (Wblock + SaveAs)", () =>
             {

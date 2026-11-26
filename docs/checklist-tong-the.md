@@ -821,3 +821,336 @@ này ghi một trong hai câu: "AutoCAD có vẽ ảnh nền khi chụp", hoặc
 
 *Lỗi nhẹ đã biết, chấp nhận (KFG-43): "soát bản vẽ" có thể mất khoảng 6 giây với bản vẽ có khoảng 20 000 điểm / block chồng thẳng
 đứng (cùng vị trí mặt bằng, khác cao độ). Gặp thì ghi lại thời gian, không tính là "không đạt".*
+
+# Đợt H phần 1 (H1 → H5): thử với bộ cài thử bản 5 (gộp 26/11/2026)
+
+*Test tổng thể đợt H phần 1, nhánh `full/nang-cap-h-tong-the`. Chi tiết: `docs/ban-giao/nang-cap-h1.md` … `-h5-test.md`,
+`docs/ban-giao/test-tong-the-dot-h-phan-1.md`. Gộp từ `checklist-dot-h1.md` … `-h5.md` (các file đó giờ trỏ về đây). Cần máy
+**gói Full** (vài mục cần thêm máy gói 2D / 3D), một bản vẽ đã lưu đơn vị mm, một file mẫu công ty (`.dwt` có khung tên), một PDF
+scan, một thư mục **bản sao** 5 – 10 bản vẽ. Tổng khoảng **3 giờ**: làm **H0** trước (rủi ro nhất), rồi H1 → H6. Mã trong ngoặc
+(vd H5-B2) là mục trong file riêng của đợt.*
+
+## H0. Làm trước: rủi ro nhất, chưa kiểm được ở đâu (~40 phút)
+
+| # | Cần | Làm gì | Thấy gì là đạt |
+| --- | --- | --- | --- |
+| H0-1 | — | Gõ `CLAUDECHATSELFTEST` | Các dòng "Nâng cấp đợt H2 …" → "H5 …" đều ✓; dòng G5 có thêm câu **"PDF: Windows đọc thẳng trang PDF được"** (H1). Câu "KHÔNG đọc thẳng được (…)" hay dòng H3 "so sánh" ghi cách khớp: **chép lại gửi tớ** |
+| H0-2 | Blender / 3ds Max | "Xuất mô hình ra FBX", mở bằng Blender hoặc 3ds Max (H2-C2, C3) | Mô hình hiện ra đúng kích thước, đứng thẳng (Z lên), mặt phẳng không bị tô bóng tròn; ghi mọi cảnh báo của hộp thoại nhập |
+| H0-3 | thư mục bản sao | "Áp chuẩn 1:100 cho cả thư mục" rồi Đồng ý (H5-B1, B2) | Thư mục `_sao-luu-claudecad\<ngày giờ>\` có bản gốc từng file; mở vài file đã áp: có VN-ARIAL / VN-100, hình giữ nguyên; không còn file `.claudecad-tam-…` |
+| H0-4 | PDF scan thật | "Vẽ lại bản này" với một PDF scan có ghi kích thước (H1-B2, B3) | Claude không báo ảnh xem trắng; đo `DIST` một kích thước: lệch bao nhiêu, lệch đều một phía thì ghi lại (lề trang PDF) |
+| H0-5 | máy đã cài bản cũ | Sửa `skills\ve-kien-truc\SKILL.md` rồi cài đè bản thử (H1-A1, A2) | Một dòng báo skill có bản mới (sau dòng chào); file cậu sửa còn nguyên, cạnh nó có `SKILL.ban-moi.md`; skill không sửa thì đã là bản mới |
+| H0-6 | file mẫu công ty | "Học chuẩn công ty từ file … tên ABC", rồi "tạo tờ in theo chuẩn ABC" (H4-A1, D1) | Khung tên **của công ty** đúng chỗ như file mẫu, trên layer KHUNG; khung nhìn đúng chỗ của mẫu; điền ô theo tên ô |
+
+## H1. Skill khi nâng cấp, trace_image đọc thẳng PDF, soát nhiều tầng (~30 phút; mục của `checklist-dot-h1.md`)
+
+AutoCAD 2022–2027, khoảng 30 phút. Cần một máy đã cài bản cũ (bản trước H1) có thư mục skill
+`%AppData%\Autodesk\ApplicationPlugins\ClaudeCAD.bundle\Contents\skills` (bộ cài cài riêng cho từng người dùng; dán đường dẫn này vào
+thanh địa chỉ của File Explorer).
+
+### A. Skill khi cài đè (~12 phút, phần quan trọng nhất)
+
+1. Trên máy đang chạy bản cũ, mở `skills\ve-kien-truc\SKILL.md` bằng Notepad, thêm một dòng cuối (vd "Ghi chú của tớ")
+   rồi lưu. Không sửa các skill khác.
+2. Cài bản H1 đè lên (chạy bộ cài mới), mở AutoCAD, mở khung chat. Cần thấy:
+   - khung chat hiện **một dòng**: "Skill ve-kien-truc có bản mới. Bản cậu đã sửa được giữ nguyên; bản mới nằm cạnh nó…".
+     Dòng này nằm **sau** dòng "Lịch sử chat của …" / "Chào cậu!" và không biến mất (Test & sửa H1 sửa lỗi dòng báo bị xóa
+     ngay khi khung chat nạp lịch sử);
+   - `ve-kien-truc\SKILL.md` **vẫn có** dòng cậu thêm;
+   - cạnh nó có `SKILL.ban-moi.md` (bản mới);
+   - các skill khác cậu không sửa đã là bản mới. Mở một file so với `Contents\skills-ban-moi`: giống nhau;
+   - trong `skills` có file `.ban-da-cai.json` (file ẩn tên bắt đầu bằng dấu chấm, plugin dùng để nhớ).
+3. Đóng, mở lại khung chat (hoặc AutoCAD): dòng báo **không** hiện lại.
+4. Thêm một file của cậu vào `skills` (vd `skills\cua-toi\SKILL.md`), cài lại bộ cài một lần nữa: file của cậu còn nguyên.
+5. Gỡ cài (Control Panel): thư mục `skills` vẫn còn, kể cả file của cậu.
+6. *(Nếu có bản cập nhật trong app)* Trên máy bản cũ (trước H1), bấm "Kiểm tra cập nhật" để lên bản H1 trở về sau: kết quả
+   giống bước 2–3 ngay lần cập nhật đầu (sửa KTH-24: gói cập nhật mang sẵn `skills-ban-moi`). Skill đã sửa được giữ, có file
+   `.ban-moi`.
+7. *(Chỉ khi có hai bản sau H1 để cài liên tiếp)* Sửa cả `SKILL.ban-moi.md` (vd gộp dần vào đó), rồi cài bản kế tiếp:
+   file `SKILL.ban-moi.md` cậu đã sửa **còn nguyên**; bản mới hơn nằm ở `SKILL.ban-moi-2.md`, khung chat báo một lần.
+8. *(Sửa KTH-25)* Xóa hẳn thư mục một skill (vd `skills\ve-mep`), đóng rồi mở lại khung chat hai lần: skill đó **không** tự
+   quay lại. Nó chỉ quay lại khi có bản cài mới mang bản mới của skill đó.
+9. Máy mới chưa từng cài: cài bản H1, mở khung chat. **Không** có dòng báo skill; skill đủ như bộ cài.
+
+### B. trace_image với PDF scan (~12 phút)
+
+Máy gói 2D hoặc Full, Windows 10 / 11, bản vẽ đã lưu thành file.
+
+1. Gõ `CLAUDECHATSELFTEST`. Trong kết quả tìm dòng **"PDF: Windows đọc thẳng trang PDF được"**. Nếu thấy "KHÔNG đọc thẳng
+   được (…)", chép nguyên dòng đó gửi tớ.
+2. Kéo một PDF scan 1 trang có ghi kích thước vào khung chat (hoặc nói đường dẫn), gõ "vẽ lại bản này". Cần thấy:
+   - Claude gắn PDF làm nền, đặt tỉ lệ, vẽ đè như đợt G5;
+   - Claude **không** báo "ảnh xem trống / nền trắng". Trước H1, PDF có lúc hiện trắng trong ảnh Claude xem.
+3. Đo bằng `DIST` một kích thước ghi trên bản scan, so với nét Claude vẽ: lệch bao nhiêu mm? Lệch đều về một phía (vd
+   toàn bộ nét lệch sang phải vài mm) thì ghi lại. Đó là lề trang PDF, tớ cần biết để chỉnh.
+4. Xem thư mục `%TEMP%\ClaudeCAD\pdf-trang`: có file `pdf-….png`. Mở ra là đúng trang scan. Không có file nào tên chứa
+   `.dang-ve-` (ảnh đang dựng dở) sau khi Claude xem xong.
+5. PDF nhiều trang, nói "vẽ lại trang 2": ảnh Claude xem là trang 2.
+6. *(Nếu được)* PDF có mật khẩu: Claude vẫn làm được như trước (ảnh xem lấy từ AutoCAD) hoặc báo rõ không đọc được. Không
+   treo quá khoảng 30 giây.
+
+### C. Soát bản vẽ nhiều tầng (~3 phút, KFG-43)
+
+1. Bản vẽ 3D nhiều tầng có hàng nghìn block / điểm chồng theo chiều cao (vd cột lặp mỗi tầng), gõ "soát bản vẽ". Kết quả
+   ra trong vài giây (trước đây có thể lâu), không báo trùng các block khác tầng.
+
+### D. Thư viện block dưới UCS xoay (~3 phút, bản vá F2)
+
+1. Lệnh `UCS` → Z → 30, gõ "liệt kê thư viện block": Claude kể được danh sách (không báo lỗi "plugin bug").
+
+## H2. Xuất DWG đời cũ / DXF / FBX (~30 phút; mục của `checklist-dot-h2.md`)
+
+Mọi gói (FBX: gói 3D / Full), AutoCAD 2022 – 2027. Một bản vẽ đã lưu có hình 2D, vài layout và (gói 3D / Full) vài khối 3D.
+Khoảng 30 phút. Mở file xuất ra bằng chương trình khác nếu có (AutoCAD đời cũ, TrueView, LibreCAD / DraftSight, Blender,
+3ds Max, SketchUp).
+
+### A. DWG đời cũ (~8 phút, quan trọng nhất)
+
+1. Gõ "lưu bản vẽ ra DWG 2010 để gửi đối tác". Cần thấy:
+   - file mới `<tên bản vẽ>-acad2010.dwg` cạnh bản vẽ; Claude nói đường dẫn và "mở được bằng AutoCAD 2010 trở lên";
+   - **bản vẽ đang mở vẫn là file gốc**: thanh tiêu đề AutoCAD không đổi tên; lệnh `QSAVE` lưu vào file gốc; mở file gốc bằng
+     AutoCAD mới vẫn là đời hiện tại.
+2. Mở file 2010 (bằng AutoCAD đời cũ / TrueView, hoặc AutoCAD hiện tại): đủ hình, layer, kiểu chữ, kích thước, **các layout**
+   (đếm số tab giống bản gốc; kết quả Claude báo `layouts`).
+3. Gõ lại cùng câu: file đã có nên hiện thẻ **Đồng ý / Hủy**. Hủy: file cũ không đổi. Đồng ý: file được ghi lại.
+4. Thử "DWG 2000": được. Thử "DWG R14": Claude nói AutoCAD chỉ lưu được từ 2000 trở lên.
+5. "Lưu đè lên chính bản vẽ này dạng 2010" (đặt tên trùng file đang mở): Claude từ chối, nói bản xuất luôn là file mới.
+
+### B. DXF (~5 phút)
+
+1. "Xuất DXF": file `<tên>-acad2013.dxf`. Mở bằng AutoCAD hoặc chương trình khác (LibreCAD, DraftSight…): hình đúng chỗ, đúng layer.
+2. "Xuất DXF chỉ layer A-WALL": file `…-mot-phan.dxf` chỉ có tường (không có layout, Claude nói rõ).
+3. Bật "Chỉ xem" (🔒): xuất vẫn chạy (chỉ đọc bản vẽ, ghi file mới).
+
+### C. FBX (gói 3D / Full, ~10 phút, rủi ro cao)
+
+FBX do plugin tự ghi (không dùng lệnh `FBXEXPORT` của AutoCAD). Chưa ai mở thử bằng 3ds Max / Blender thật.
+
+1. "Xuất mô hình ra FBX": file `<tên>.fbx`; Claude báo số khối và số tam giác.
+2. **Blender** (File › Import › FBX): mô hình hiện ra, đúng kích thước (mét trong Blender: tường 3 m cao 3 m), đứng thẳng (Z lên trên),
+   mỗi khối một vật, màu theo màu khối / layer. Ghi lại nếu báo lỗi hay mô hình nằm ngang / sai cỡ 10 lần.
+3. **3ds Max** (Import › FBX): như trên. Ghi lại mọi cảnh báo của hộp thoại nhập FBX.
+4. Máy gói 2D: "xuất FBX": Claude nói FBX cần gói 3D / Full; DXF / DWG vẫn dùng được.
+5. Bản vẽ chỉ có hình 2D: "xuất FBX": Claude nói FBX chỉ lấy khối 3D, gợi ý DXF / DWG.
+6. *(Test & sửa H2)* Trong Blender / 3ds Max nhìn một khối hộp: các mặt **phẳng, sắc cạnh** (không bị tô bóng tròn như quả bóng).
+   Khối tròn (cột tròn) sẽ thấy từng mặt nhỏ: ghi lại nếu khó chịu.
+7. *(Test & sửa H2)* Máy gói 2D (hoặc Full chế độ 2D): Claude không đề nghị FBX; nhờ thẳng "xuất FBX" thì Claude nói FBX là phần 3D và
+   gợi ý DWG / DXF (3ds Max mở được DWG), không nói gì về "thuộc tính block".
+8. *(Test & sửa H2)* Khối 3D nằm trong block (vd block cửa 3D): không vào FBX; kết quả nói rõ chỉ lấy khối của Model.
+
+### D. SketchUp (~5 phút, nếu có SketchUp)
+
+1. SketchUp Pro: File › Import › chọn file DWG / DXF 2013 vừa xuất: nét 2D vào được. Khối 3D có thể không vào (SketchUp đọc mặt / lưới,
+   không đọc khối ACIS): ghi lại.
+2. Thử `export_stl` (đã có) rồi nhập STL vào SketchUp (SketchUp 2018+ có sẵn STL importer): ghi lại kết quả.
+
+### E. Đường dẫn
+
+1. "Xuất DWG vào `\\máy-khác\thư-mục\a.dwg`" (máy khác chỗ lưu bản vẽ): Claude từ chối, nhờ chọn thư mục trên máy hoặc thư mục của bản vẽ.
+2. Bản vẽ chưa lưu bao giờ: file xuất vào thư mục Documents.
+3. *(Test & sửa H2)* Nhờ "xuất layer A-WALL và hai khối này" (vừa layer vừa handle): Claude được báo chọn một trong hai, không xuất thiếu.
+
+### F. Tự kiểm
+
+Bấm "Tự kiểm": bước "Nâng cấp đợt H2" phải đạt (DWG 2010 đọc lại đúng đời, bản vẽ đang mở không đổi tên, DXF 2013, FBX của một khối hộp).
+
+## H3. So sánh hai bản vẽ (~30 phút; mục của `checklist-dot-h3.md`)
+
+AutoCAD 2022–2027, máy gói 2D hoặc Full, khoảng 30 phút.
+
+**Chuẩn bị:**
+
+- Mở một mặt bằng có sẵn, lưu thành `nha-moi.dwg`. Dùng "Save As" chép ra `nha-cu.dwg` cùng thư mục.
+- Trong `nha-moi.dwg`:
+  - xóa một bức tường;
+  - kéo dài một đường;
+  - sửa chữ tên một phòng;
+  - đổi layer một cửa;
+  - thêm một cửa sổ.
+
+### A. So và báo (~10 phút)
+
+1. Gõ "so bản vẽ này với file nha-cu.dwg" (đường dẫn đầy đủ, hoặc kéo file vào khung chat). Cần thấy:
+   - Claude nói **khớp theo handle** (hai file cùng gốc);
+   - số **thêm / bớt / đổi** đúng với các thay đổi đã làm (bức tường đã xóa là "bớt", cửa sổ mới là "thêm");
+   - mỗi chỗ "đổi" có câu khác ở đâu (đổi hình, đổi layer, chữ cũ → chữ mới);
+   - file `nha-cu.dwg` không đổi ngày sửa.
+2. Gõ "so lại, file kia là bản mới": thêm và bớt đổi chỗ cho nhau.
+3. Mở `nha-cu.dwg` trong AutoCAD thứ hai (hoặc trên máy khác qua thư mục mạng), rồi so lại từ `nha-moi.dwg`. Cần thấy: hoặc so
+   được bình thường (kèm ghi chú đọc bản đã lưu), hoặc Claude báo rõ file **đang bị mở / khóa**. Lời báo "có thể hỏng" ở bước
+   này là lỗi: ghi lại nguyên câu Claude trả lời.
+4. Vẽ lại một mặt bằng gần giống từ đầu (không chép file), lưu `nha-ve-lai.dwg`, rồi so với nó. Claude nói **khớp theo hình
+   học**; đường vẽ ngược chiều không bị báo khác.
+5. So với chính `nha-moi.dwg`: Claude từ chối, hỏi file khác.
+6. So với một file `.pdf` hoặc `.bak`: Claude báo không phải bản vẽ, có gợi ý.
+
+### B. Khoanh chỗ khác (~8 phút)
+
+1. "So với nha-cu.dwg và khoanh chỗ khác". Cần thấy:
+   - các đám mây trên layer `X-SO-SANH`: **xanh lá** quanh cửa sổ mới, **đỏ** ở chỗ bức tường đã xóa, **vàng** quanh các chỗ
+     đổi;
+   - các chỗ khác sát nhau chung một đám mây;
+   - mây không đè sát lên đối tượng.
+2. Bấm U một lần: mọi đám mây mất.
+3. Khoanh lại rồi xóa layer `X-SO-SANH` (lệnh LAYDEL hoặc Layer Properties): hết dấu, bản vẽ còn nguyên.
+4. Bản vẽ khác nhiều (vd so với một mặt bằng khác hẳn): Claude hiện **thẻ xác nhận** trước khi vẽ hơn 50 đám mây. Bấm "Không
+   đồng ý": không vẽ gì.
+5. *(Test & sửa H3)* Khoanh lần hai mà chưa xóa mây cũ: Claude **nói rõ** mây cũ còn trên layer `X-SO-SANH` và mây mới vẽ
+   chồng lên. Khóa layer `X-SO-SANH` rồi khoanh lại: Claude báo layer đang khóa, **không** hiện thẻ trước.
+6. *(Test & sửa H3)* Hai bản vẽ mới tạo từ **cùng một file mẫu** nhưng vẽ khác nhau (vd hai phương án): Claude nói khớp
+   **theo hình học**, không báo "đổi" tràn lan.
+7. *(Test & sửa H3)* So một file cũ **không đặt đơn vị** (INSUNITS = 0) với bản đang mở đặt mét: Claude ghi chú "không đổi đơn
+   vị" và kết quả không lệch 1000 lần.
+
+### C. Excel và giới hạn (~5 phút)
+
+1. "So với nha-cu.dwg, xuất Excel": có file `nha-moi-so-sanh.xlsx` cạnh bản vẽ, mỗi chỗ khác một dòng (Thêm / Bớt / Đổi, layer,
+   khác ở đâu). Gọi lại lần hai thì Claude hỏi thẻ ghi đè file.
+2. *(Nếu có bản vẽ rất lớn, trên 20 000 đối tượng)* So: kết quả ghi rõ "chỉ so phần đầu".
+
+### D. Khối 3D (~4 phút, máy gói 3D hoặc Full)
+
+1. Dựng vài khối 3D, lưu bản cũ. Đục một lỗ cửa vào một khối, xóa một khối, rồi so. Cần thấy: khối có lỗ là "đổi" (thể tích cũ
+   → mới), khối đã xóa là "bớt".
+2. Máy gói 3D: Claude nói chỉ so khối 3D (đường và chữ không so).
+
+### E. SelfTest (~3 phút)
+
+1. Gõ `CLAUDECHATSELFTEST`. Tìm hai dòng:
+   - "Nâng cấp đợt H3: đọc bản vẽ khác chỉ để đọc";
+   - "Nâng cấp đợt H3: so sánh hai bản vẽ".
+
+   Cả hai phải đạt. Dòng thứ hai ghi cách khớp (handle / geometry). Ghi lại cách khớp gửi tớ.
+
+## H4. Học chuẩn công ty từ bản vẽ mẫu (~45 phút; mục của `checklist-dot-h4.md`)
+
+*Nhánh `full/nang-cap-h4`. Chi tiết: `docs/ban-giao/nang-cap-h4.md`. Máy gói Full hoặc 2D (bộ cài thử nội bộ). Cần một **file mẫu
+của công ty** (.dwg hoặc .dwt) có: vài layer riêng (tên, màu, kiểu nét, độ dày nét khác nhau), một kiểu chữ, một kiểu kích thước,
+một layout A3 có khung tên là block có thuộc tính, và một khung nhìn. Khoảng 30 phút. "Đạt" là thấy đúng như cột phải; khác thì
+chụp màn hình và ghi số thứ tự.*
+
+### A. Học chuẩn (~8 phút)
+
+| # | Làm gì | Thấy gì là đạt |
+| --- | --- | --- |
+| A1 | Gõ `CLAUDECHATSELFTEST` | Dòng "Nâng cấp đợt H4: học chuẩn công ty…" **đạt** |
+| A2 | Kéo file mẫu vào khung chat (hoặc gõ đường dẫn), gõ "học chuẩn công ty từ file này, đặt tên ABC" | Claude báo số layer, các kiểu chữ / kích thước / ghi chú mũi tên, tên khung tên kèm các ô (thuộc tính), khổ giấy. Số layer khớp với file mẫu |
+| A3 | Mở thư mục file mẫu: ngày sửa của file mẫu | **Không đổi** (file mẫu chỉ được đọc). File mẫu đang mở ở AutoCAD khác vẫn học được |
+| A4 | Mở `%LOCALAPPDATA%\ClaudeCAD\chuan-cong-ty\abc` | Có `standard.json` và `mau.dwg` |
+| A5 | "Có những bộ chuẩn công ty nào?" rồi "xem chuẩn ABC" | Liệt kê ABC; xem: danh sách layer kèm màu, kiểu nét, độ dày |
+| A6 | Học lại cùng tên ABC | Hiện **thẻ Đồng ý / Hủy** thay bộ cũ. Hủy: giữ bộ cũ |
+| A7 | Học từ file `.dwl` / file không có | Claude báo rõ (file khóa / không có), không tạo bộ chuẩn |
+
+### B. Áp chuẩn (~6 phút)
+
+| # | Làm gì | Thấy gì là đạt |
+| --- | --- | --- |
+| B1 | Bản vẽ mới trống: "áp chuẩn ABC" | Các layer, kiểu chữ, kiểu kích thước, kiểu ghi chú của ABC có trong bản vẽ (LAYER, STYLE, DIMSTYLE); kiểu đang dùng giống file mẫu |
+| B2 | Đổi màu một layer của ABC trong bản vẽ, "áp chuẩn ABC" lần nữa | Claude nói layer đó khác chuẩn, hiện **thẻ**; Đồng ý: layer trở lại màu chuẩn; Hủy: giữ màu cậu đổi |
+| B3 | Gõ U một lần | Bỏ hết phần vừa áp |
+
+### C. Soát theo chuẩn (~5 phút)
+
+| # | Làm gì | Thấy gì là đạt |
+| --- | --- | --- |
+| C1 | Vẽ vài nét trên layer lạ (vd "TAM"), một chữ kiểu Standard, "soát bản vẽ theo chuẩn ABC" | Báo "Layer không thuộc bảng layer chuẩn" (TAM), "kiểu ngoài bộ chuẩn" cho chữ Standard; không báo layer của ABC |
+| C2 | Chữ cỡ khác hẳn các cỡ chữ trong file mẫu | Báo "Chữ lệch cỡ chuẩn", kèm các cỡ của ABC |
+| C3 | Như C1 nhưng "soát bản vẽ" (không nói chuẩn) | Như trước H4 (theo chuẩn Việt Nam nếu bản vẽ dùng) |
+| C4 | Hỏi "sửa kiểu chữ" sau C1 | Claude **không** đề nghị sửa tự động nhóm kiểu chữ theo ABC; gợi ý áp chuẩn ABC rồi đổi kiểu cho đối tượng |
+
+### D. Tờ in có khung tên công ty (~7 phút)
+
+| # | Làm gì | Thấy gì là đạt |
+| --- | --- | --- |
+| D1 | "Tạo tờ in theo chuẩn ABC, tên dự án Nhà phố Q7" | Layout mới, khổ giấy như file mẫu, **khung tên của công ty** (đúng chỗ như file mẫu), khung nhìn đúng chỗ khung nhìn của mẫu; không có khung tên VN |
+| D2 | Claude điền ô | Claude hỏi / dùng đúng tên ô (thuộc tính) của khung tên ABC; ô điền đúng chữ |
+| D3 | Xóa thư mục `mau.dwg` trong `chuan-cong-ty\abc` (giữ `standard.json`), làm lại D1 | Tờ vẫn ra, dùng khung tên VN, Claude nói rõ khung tên công ty không còn (nhờ học lại) |
+| D4 | Đổi tên / xóa file mẫu gốc, "áp chuẩn ABC" | Vẫn áp được (dùng bản chép trong `chuan-cong-ty`) |
+| D5 | In D1 ra PDF (`plot_pdf`) | Khung tên công ty in đúng |
+
+### E. Gói, xóa (~4 phút)
+
+| # | Làm gì | Thấy gì là đạt |
+| --- | --- | --- |
+| E1 | *(máy khác)* Máy gói 3D: "học chuẩn công ty từ file này" | Claude nói việc này thuộc phần 2D |
+| E2 | Full chế độ 3D | Claude bảo đổi chế độ 2D / Cả hai |
+| E3 | "Xóa chuẩn ABC" | Hiện **thẻ**; Đồng ý: hết trong danh sách, thư mục `abc` mất; file mẫu gốc không bị đụng |
+| E4 | Cài đè bộ cài (bản mới) rồi "có những bộ chuẩn nào" | Bộ chuẩn học trước vẫn còn |
+
+### F. Thêm ở Test & sửa H4 (~8 phút)
+
+| # | Làm gì | Thấy gì là đạt |
+| --- | --- | --- |
+| F1 | Mở file mẫu `ABC.dwt` trong một AutoCAD khác (hoặc trên máy đồng nghiệp qua thư mục mạng), rồi "học chuẩn công ty từ file này, tên ABC2" | Học được **kèm bản chép** (`chuan-cong-ty\abc2\mau.dwg` có), Claude không báo "could not be copied" |
+| F2 | Trong bản vẽ đang mở, đổi màu layer 0 và layer hiện hành (layer đang vẽ) khác chuẩn ABC, rồi "áp chuẩn ABC", Đồng ý thẻ | Hai layer đổi đúng màu / nét / độ dày như chuẩn; đối tượng trên đó vẫn còn và vẫn ở layer cũ; không báo lỗi |
+| F3 | Mở `chuan-cong-ty\abc\standard.json` bằng Notepad, xóa nửa sau rồi lưu; hỏi "có những bộ chuẩn nào", rồi "soát theo chuẩn ABC" | Danh sách ghi `abc` **hỏng**; lệnh soát báo bộ chuẩn hỏng, nhờ học lại hoặc xóa (không báo "plugin bug"); "xóa chuẩn ABC" vẫn làm được (qua thẻ) |
+| F4 | Đặt tên bộ chuẩn là "CON" | Học được; thư mục là `con-chuan` |
+| F5 | Đặt layer hiện hành là A-WALL rồi "tạo tờ in theo chuẩn ABC" | Khung tên công ty nằm trên layer **KHUNG**, không trên A-WALL |
+| F6 | "Tạo tờ in A1 theo chuẩn ABC" khi file mẫu là A3 | Claude nói khung tên công ty đặt theo tờ A3 của mẫu nên có thể lệch khỏi khung, gợi ý dùng A3 |
+| F7 | Sau C1 (soát theo chuẩn ABC), nói "sửa các kiểu chữ sai" | Claude không sửa bằng kiểu VN; nếu vẫn gọi sửa thì lệnh từ chối, "Nothing was changed" |
+| F8 | File mẫu đơn vị **mét**, bản vẽ đang mở mm: "áp chuẩn" | Claude báo kiểu kích thước / ghi chú của mẫu theo mét (cỡ chữ cần xem lại), cỡ chữ chuẩn đổi đúng ra mm |
+| F9 | *(Sửa KTH-09)* File mẫu không dùng kiểu chữ "Standard"; học rồi, trong bản vẽ đang mở gõ một dòng chữ kiểu Standard, "soát theo chuẩn ABC" | Dòng chữ đó bị báo **kiểu ngoài bộ chuẩn**; "xem chuẩn ABC" không liệt kê Standard / ISO-25 (ghi chú số kiểu mặc định đã bỏ) |
+| F10 | *(Sửa KTH-10)* Bản vẽ có hơn 50 layer khác màu so với chuẩn ABC, "áp chuẩn ABC" | Thẻ hỏi 50 layer đầu; Đồng ý xong Claude nói còn bao nhiêu và hỏi tiếp, không báo lỗi "too many" |
+| F11 | *(Sửa KTH-11)* "Tạo tờ in theo chuẩn ABC, tên dự án Nhà phố Q7" | Claude chỉ báo ô **thật sự** đã điền (tên ô của khung tên ABC), kể các ô còn trống; tên ô gõ sai thì Claude nói không có ô đó |
+| F12 | *(Sửa KTH-12)* Sau F11, "soát theo chuẩn ABC" | Không báo layer KHUNG / KHUNG-VP là layer lạ |
+| F13 | *(Sửa KTH-13)* Học một bộ tên "C++", rồi "soát theo chuẩn C#" | Claude báo tên "C#" trùng thư mục với bộ "C++", không dùng bộ "C++" thay |
+
+## H5. Làm nhiều file một lúc (~30 phút; mục của `checklist-dot-h5.md`)
+
+*Nhánh `full/nang-cap-h5`. Chi tiết: `docs/ban-giao/nang-cap-h5.md`. Máy gói Full hoặc 2D. Chuẩn bị một thư mục **bản sao** gồm
+5 – 10 bản vẽ (có một thư mục con), một file chỉ đọc (chuột phải › Properties › Read-only), một file đang mở trên máy khác (hoặc ở
+AutoCAD thứ hai). Khoảng 30 phút. "Đạt" là thấy đúng như cột phải; khác thì chụp màn hình và ghi số thứ tự.*
+
+### A. Soát cả thư mục (~8 phút)
+
+| # | Làm gì | Thấy gì là đạt |
+| --- | --- | --- |
+| A1 | Gõ `CLAUDECHATSELFTEST` | Dòng "Nâng cấp đợt H5: làm nhiều file…" **đạt** |
+| A2 | "Soát lỗi cả thư mục `D:\Thu\H5`" | Claude kể số file sẽ soát, các file bỏ qua và lý do, rồi hiện **thẻ Đồng ý / Hủy**. Hủy: không làm gì |
+| A3 | Đồng ý | Khung chat hiện "file 1 / N …"; cuối cùng mỗi file một dòng: số lỗi nên sửa / cân nhắc / gợi ý, 2 – 3 nhóm lỗi chính. Ngày sửa của các file **không đổi** |
+| A4 | "Soát cả thư mục con nữa, xuất Excel" | Có file trong thư mục con; file `tong-hop-check-<ngày giờ>.xlsx` trong thư mục, mỗi file một dòng, dòng Tổng |
+| A5 | "Soát theo chuẩn ABC cả thư mục" (bộ chuẩn đã học ở H4) | Lỗi layer / kiểu theo bộ chuẩn ABC |
+| A6 | Đặt một file hỏng (đổi đuôi một file .txt thành .dwg) vào thư mục, soát lại | File đó **Lỗi** kèm lý do; các file khác vẫn soát xong |
+
+### B. Áp chuẩn cả thư mục (~10 phút)
+
+| # | Làm gì | Thấy gì là đạt |
+| --- | --- | --- |
+| B1 | "Áp chuẩn 1:100 cho cả thư mục" | Thẻ nói rõ số file, mỗi file được **sao lưu trước** vào `_sao-luu-claudecad`; file chỉ đọc và file đang mở ở máy khác nằm trong danh sách bỏ qua |
+| B2 | Đồng ý | Mỗi file: kiểu chữ / kích thước VN-… tạo hay giữ; thư mục `_sao-luu-claudecad\<ngày giờ>\` có bản gốc của từng file (cả thư mục con) |
+| B3 | Mở một file vừa áp | Có VN-ARIAL, VN-100; bản vẽ vẫn mở được, cùng đời DWG như trước (xem Properties hoặc lệnh `DWGPROPS`) |
+| B4 | Mở bản sao lưu của file đó | Là bản trước khi áp |
+| B5 | Bản vẽ đang mở trong AutoCAD này nằm trong thư mục | Bị bỏ qua, Claude nhờ lưu và đóng rồi làm lại |
+| B6 | Bật **Chỉ xem**, "áp chuẩn cả thư mục" | Claude nói Chỉ xem đang bật, không ghi file nào; soát (A2) vẫn chạy |
+| B7 | "Áp chuẩn ABC cho cả thư mục" | Layer / kiểu ABC có trong các file |
+| B8 | Giữa lúc áp (thư mục 10 file), bấm **Dừng** | Dừng sau file đang làm; Claude nói đã làm bao nhiêu file; không còn file `.claudecad-tam-…` nào trong thư mục; các file chưa tới không đổi |
+| B9 | *(Test & sửa H5)* Lập kế hoạch áp chuẩn, **trước khi** bấm Đồng ý thì chép thêm một file `.dwg` vào thư mục | Claude báo thẻ không còn khớp danh sách, không ghi file nào; lập kế hoạch lại thì có file mới |
+| B10 | *(Test & sửa H5)* Đang áp (thư mục 10 file), chép thêm một file `.dwg` vào thư mục | Lượt dừng ở file kế tiếp; Claude **vẫn kể** các file đã áp xong (kèm nơi sao lưu) và nói các file còn lại chưa đụng tới |
+
+### C. In PDF hàng loạt (~7 phút, rủi ro cao)
+
+| # | Làm gì | Thấy gì là đạt |
+| --- | --- | --- |
+| C1 | "In PDF cả thư mục" (**ít nhất 3 file**, các file có layout) | Mỗi file một PDF cùng tên cạnh file, đủ các layout; AutoCAD mở từng file (chỉ đọc) rồi đóng, trở lại bản vẽ của cậu. Khung chat **không** báo "Cậu đã chuyển sang bản vẽ khác giữa lượt" và không dừng sau file đầu (Test & sửa H5 sửa lỗi này); lịch sử chat vẫn là của bản vẽ của cậu |
+| C2 | Làm lại C1 | Thẻ nói rõ số PDF có sẵn sẽ bị thay; Đồng ý thì thay |
+| C3 | File chỉ có Model (không layout) | File đó **Lỗi** "the drawing has no paper layouts"; các file khác vẫn in |
+| C4 | Một file đang mở ở đây có thay đổi chưa lưu **ở tab đang xem** | Bỏ qua, nhờ lưu trước. *(Sửa KTH-08)* Đang mở ở **tab khác** thì in bản đang hiện trên màn hình của tab đó (plugin chỉ biết thay đổi chưa lưu của tab đang xem): lưu trước khi in hàng loạt |
+
+### D. Đếm block, giới hạn, gói (~5 phút)
+
+| # | Làm gì | Thấy gì là đạt |
+| --- | --- | --- |
+| D1 | "Đếm block cả thư mục, xuất Excel" | Bảng tổng hợp + file `tong-hop-block-<ngày giờ>.xlsx`: mỗi dòng file / block / số lượng |
+| D2 | Thư mục có hơn 200 bản vẽ | Claude nói chỉ làm 200 file đầu, nhờ chia thư mục |
+| D3 | *(máy khác)* Máy gói 3D | Không có lệnh này; Claude nói việc này thuộc phần 2D |
+| D4 | Thư mục mạng khác máy chủ với bản vẽ đang mở | Bị từ chối như luật đường dẫn G5 |
+
+## H6. Chéo giữa các đợt (test tổng thể đợt H phần 1, ~10 phút)
+
+| # | Làm gì | Thấy gì là đạt |
+| --- | --- | --- |
+| H6-1 | *(TTH-1)* Lưu một bản vẽ bằng AutoCAD đời mới hơn máy đang dùng (hoặc đổi tên một file không phải bản vẽ thành `.dwg`) vào thư mục bản sao, "áp chuẩn cả thư mục" | Dòng của file đó: **lỗi**, lý do "saved by a newer AutoCAD" / "does not start like a DWG", không có bản sao lưu của file đó; các file khác vẫn làm |
+| H6-2 | *(TTH-2)* `UCS` → Z → 30, rồi "xuất DWG 2010", "có những bộ chuẩn công ty nào", "soát cả thư mục" | Kết quả không có câu "All points here are in UCS…"; mọi việc như ở UCS gốc |
+| H6-3 | So bản vẽ với một file mẫu `.dwt` (H3 + H4) | So được như với `.dwg` |
+| H6-4 | "Soát cả thư mục theo chuẩn ABC" (H5 + H4) | Mỗi file soát theo layer / kiểu ABC (không theo VN); "sửa kiểu chữ sai" thì Claude không dùng fix_drawing áp kiểu VN |
+| H6-5 | Máy gói 3D: "so với bản cũ", "xuất FBX", "học chuẩn công ty", "soát cả thư mục" | So (chỉ khối 3D) và xuất FBX được; học chuẩn / làm nhiều file: Claude nói là phần 2D |
+

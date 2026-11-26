@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
+using System.IO;
 using Autodesk.AutoCAD.ApplicationServices;
 using Autodesk.AutoCAD.DatabaseServices;
 using Autodesk.AutoCAD.Geometry;
@@ -168,6 +169,8 @@ namespace ClaudeCAD.Plugin.Drawing
 
         internal static object SetupStandards(ToolContext ctx, Params p)
         {
+            // nâng cấp đợt H4: the company standard learnt from a template, instead of the Vietnamese one
+            if (p.Has("company")) return SetupCompanyStandard(ctx, p);
             string standard = p.Str("standard", "");
             int n = StandardsLogic.ScaleDenominator(p.Get("scale"));
             double f = MmPerUnitOf(ctx, out var unitName);
@@ -368,8 +371,12 @@ namespace ClaudeCAD.Plugin.Drawing
         {
             var doc = ctx.Doc;
             var db = ctx.Db;
-            string paper = SheetLogic.NormalizePaper(p.Str("paper", "A3"));
-            bool? land = null;
+            // nâng cấp đợt H4: the company standard's paper and title block
+            CompanyStandard company = p.Has("company") ? CompanyStandardLogic.Require(CompanyRoot, p.Str("company"), "create_sheet") : null;
+            var cTitle = company?.TitleBlocks.FirstOrDefault();
+            var cPaper = company == null ? null : company.Papers.FirstOrDefault(x => cTitle != null && x.Layout == cTitle.Layout) ?? company.Papers.FirstOrDefault(x => x.Name != null);
+            string paper = SheetLogic.NormalizePaper(p.Str("paper", cPaper?.Name ?? "A3"));
+            bool? land = cPaper != null && cPaper.Name != null && !p.Has("paper") ? cPaper.Landscape : (bool?)null;
             var orient = p.Str("orientation", null);
             if (!string.IsNullOrEmpty(orient))
             {
@@ -378,6 +385,14 @@ namespace ClaudeCAD.Plugin.Drawing
                 else throw ToolException.Invalid("create_sheet: orientation must be landscape or portrait.");
             }
             var sheet = SheetLogic.Build(paper, land);
+            // the main viewport of the company's layout, when it is on the same paper
+            bool cVp = cPaper?.Viewport != null && cPaper.Name == paper && cPaper.Landscape == sheet.Landscape && cTitle != null
+                && company.TemplateKept && File.Exists(CompanyStandardLogic.TemplatePath(CompanyRoot, company.Name));
+            if (cVp)
+            {
+                var v = cPaper.Viewport;
+                sheet.VpX0 = v[0] - v[2] / 2; sheet.VpX1 = v[0] + v[2] / 2; sheet.VpY0 = v[1] - v[3] / 2; sheet.VpY1 = v[1] + v[3] / 2;
+            }
             double f;
             string unitName;
             using (var tr0 = doc.TransactionManager.StartTransaction())
@@ -458,7 +473,10 @@ namespace ClaudeCAD.Plugin.Drawing
                         var space = (BlockTableRecord)tr.GetObject(lo.BlockTableRecordId, OpenMode.ForWrite);
                         var frameLayer = EnsureLayerF2(c, F2Numbers.FrameLayer, F2Numbers.FrameLayerColor);
                         var vpLayer = EnsureLayerF2(c, F2Numbers.ViewportLayer, F2Numbers.ViewportLayerColor, plottable: false);
-                        var tbId = EnsureTitleBlockDef(c);
+                        string cWhy = null;
+                        ObjectId? cDef = cTitle != null ? CompanyTitleBlockDef(c, company, cTitle, out cWhy) : null;
+                        if (company != null && cTitle == null) cWhy = $"the company standard '{company.Name}' has no title block (no block with attributes on a layout of the template)";
+                        var tbId = cDef ?? EnsureTitleBlockDef(c);
 
                         var frame = Acad.MakePolyline(new List<double[]>
                         {
@@ -468,17 +486,24 @@ namespace ClaudeCAD.Plugin.Drawing
                         ByLayer(frame);
                         frame.LayerId = frameLayer;
                         frame.LineWeight = (LineWeight)Geometry.LineWeightFrom(F2Numbers.FrameLineweight);
-                        var frameId = space.AppendEntity(frame);
-                        tr.AddNewlyCreatedDBObject(frame, true);
+                        // a company title block carries its own frame: the Vietnamese frame is only drawn without one
+                        ObjectId frameId = ObjectId.Null;
+                        if (cDef == null) { frameId = space.AppendEntity(frame); tr.AddNewlyCreatedDBObject(frame, true); }
+                        else frame.Dispose();
 
-                        var br = new BlockReference(new Point3d(sheet.X1, sheet.Y0, 0), tbId);
+                        var br = cDef != null
+                            ? new BlockReference(new Point3d(cTitle.X, cTitle.Y, 0), tbId) { Rotation = cTitle.Rotation * Math.PI / 180, ScaleFactors = new Scale3d(cTitle.Scale) }
+                            : new BlockReference(new Point3d(sheet.X1, sheet.Y0, 0), tbId);
                         br.SetDatabaseDefaults(db);
                         ByLayer(br);
-                        br.LayerId = frameLayer;
+                        br.LayerId = frameLayer; // Test & sửa H4: the company title block too (not the current layer)
                         var brId = space.AppendEntity(br);
                         tr.AddNewlyCreatedDBObject(br, true);
                         var tbtr = (BlockTableRecord)tr.GetObject(tbId, OpenMode.ForRead);
                         var objValues = values.ToDictionary(kv => kv.Key, kv => (object)kv.Value, StringComparer.OrdinalIgnoreCase);
+                        // nâng cấp đợt H4: the company block's own tags (attributes: tag → text)
+                        var given = p.ObjOpt("attributes")?.Raw;
+                        if (given != null) foreach (var kv in given) objValues[kv.Key] = Convert.ToString(kv.Value, CultureInfo.InvariantCulture) ?? "";
                         var atts = AddAttributes(c, br, tbtr, objValues);
 
                         var vp = new Viewport();
@@ -513,9 +538,29 @@ namespace ClaudeCAD.Plugin.Drawing
                         result["media"] = media;
                         result["sheet_mm"] = new List<object> { sheet.W, sheet.H };
                         result["frame_mm"] = new List<object> { sheet.X0, sheet.Y0, sheet.X1, sheet.Y1 };
-                        result["frame_handle"] = Acad.H(frameId);
+                        if (!frameId.IsNull) result["frame_handle"] = Acad.H(frameId);
+                        if (company != null)
+                        {
+                            result["company"] = company.Name;
+                            if (cDef != null) result["company_title_block"] = new Dictionary<string, object> { ["block"] = cTitle.Block, ["tags"] = cTitle.Tags.Cast<object>().ToList(), ["viewport_from_template"] = cVp };
+                            else result["company_note"] = "The Vietnamese frame and title block were used: " + cWhy + ".";
+                            if (cPaper != null && cPaper.Name == null) result["company_paper_note"] = $"The template's paper ({cPaper.Media}, {cPaper.W} × {cPaper.H} mm) is not A0 … A4: {paper} was used.";
+                            // Test & sửa H4: the company title block sits where it was on the template's paper: on another paper it is off the sheet
+                            else if (cDef != null && cPaper != null && (cPaper.Name != paper || cPaper.Landscape != sheet.Landscape))
+                                result["company_paper_note"] = $"The company title block was placed as on the template's {cPaper.Name} {(cPaper.Landscape ? "landscape" : "portrait")} sheet, but this sheet is {paper} {(sheet.Landscape ? "landscape" : "portrait")}: it may sit off the frame. Tell the user; use the template's paper unless they want this one.";
+                        }
                         result["title_block_handle"] = Acad.H(brId);
-                        result["title_fields"] = values.ToDictionary(kv => kv.Key, kv => (object)kv.Value);
+                        if (cDef == null) result["title_fields"] = values.ToDictionary(kv => kv.Key, kv => (object)kv.Value);
+                        else
+                        {
+                            // Sửa KTH-11: the company block's own fields as written (not the Vietnamese ones it does not have)
+                            result["filled"] = atts.Where(kv => !string.IsNullOrWhiteSpace(kv.Value.TextString)).ToDictionary(kv => kv.Key, kv => (object)kv.Value.TextString);
+                            var empty = atts.Where(kv => string.IsNullOrWhiteSpace(kv.Value.TextString)).Select(kv => (object)kv.Key).ToList();
+                            if (empty.Count > 0) result["empty_fields"] = empty;
+                            var unknown = (given ?? new Dictionary<string, object>()).Keys.Where(k => !atts.ContainsKey(k)).Cast<object>().ToList();
+                            if (unknown.Count > 0) result["unknown_attributes"] = unknown;
+                            if (p.Has("fields")) result["fields_note"] = $"'fields' are the Vietnamese title block's; the company block {cTitle.Block} has its own fields ({string.Join(", ", cTitle.Tags)}): fill them with 'attributes' (tag → text).";
+                        }
                         result["viewport_handle"] = Acad.H(vpId);
                         result["scale"] = "1:" + n.ToString(CultureInfo.InvariantCulture) + (scaleGiven ? "" : " (chosen: the drawing fits)");
                         result["view_center"] = Acad.J(new Point3d(center[0], center[1], 0));
@@ -525,10 +570,10 @@ namespace ClaudeCAD.Plugin.Drawing
                         if (extOk && !SheetLogic.Fits(sheet, n, f, ew, eh))
                             result["warning"] = $"The drawing ({Acad.R(ew)} × {Acad.R(eh)}) is bigger than the viewport at 1:{n} ({Acad.R(area[0])} × {Acad.R(area[1])}): " +
                                 $"part of it is outside. 1:{SheetLogic.FitScale(sheet, f, ew, eh)} fits this paper, or use a bigger paper.";
-                        var longOnes = SheetLogic.TooLong(SheetLogic.BuildTitleBlock(), values);
+                        var longOnes = cDef != null ? new List<string>() : SheetLogic.TooLong(SheetLogic.BuildTitleBlock(), values);
                         if (longOnes.Count > 0) result["long_fields"] = longOnes.Cast<object>().ToList();
-                        result["next"] = $"Change a title field later with set_block_attributes on {Acad.H(brId)} (tags {string.Join(", ", SheetLogic.Fields.Select(x => x.tag))}). Print with plot_pdf {{\"layout\": \"{name}\"}}.";
-                        if (atts.Count == 0) result["warning_title"] = "The title block has no fields (a block named " + F2Numbers.TitleBlockName + " already existed in the drawing and was used as is).";
+                        result["next"] = $"Change a title field later with set_block_attributes on {Acad.H(brId)} (tags {string.Join(", ", cDef != null ? cTitle.Tags : SheetLogic.Fields.Select(x => x.tag))}). Print with plot_pdf {{\"layout\": \"{name}\"}}.";
+                        if (cDef == null && atts.Count == 0) result["warning_title"] = "The title block has no fields (a block named " + F2Numbers.TitleBlockName + " already existed in the drawing and was used as is).";
                     }
                 }
                 catch

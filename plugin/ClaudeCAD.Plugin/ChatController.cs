@@ -225,11 +225,14 @@ namespace ClaudeCAD.Plugin
                 Ui.ApplySettings(_settings);
                 ApplyTheme();
                 Ui.SetTemplates(QuickTemplates.LoadAll(PluginPaths.TemplatesFile, QuickTemplates.UserFile));
+                var skillNote = SyncShippedSkills(); // nâng cấp đợt H1: the new version's skills, the user's own kept
                 InitSkills();
                 _macroStore = new MacroStore(MacrosRoot);
                 Ui.SetMacros(_macroStore.List());
                 foreach (Document d in AcApp.DocumentManager) WatchDoc(d);
                 LoadTranscriptFor(AcApp.DocumentManager.MdiActiveDocument);
+                // Test & sửa H1: said after the drawing's chat is shown (loading it clears the chat, the note was never seen)
+                if (skillNote != null) Ui.AddNote(skillNote);
                 _ipc.Start();
                 UpdateService.CheckInBackground(msg => { Ui.AddNote(msg); Ui.ShowToast(msg, ChatControl.ToastKind.Info, 10); }); // phase 3: daily update check
             }
@@ -383,6 +386,24 @@ namespace ClaudeCAD.Plugin
 
         /// <summary>Skill folder of the plugin (Contents\skills in the bundle, repo\skills in dev).</summary>
         private string SkillsRoot => PluginPaths.SkillsDirectory ?? Path.Combine(PluginPaths.DllDirectory, "skills");
+
+        /// <summary>
+        /// Nâng cấp đợt H1: on an upgraded machine, skills the user never changed get the new version; for the changed ones the new
+        /// version is put next to them and the chat names them once (Core/SkillSync.cs).
+        /// </summary>
+        private string SyncShippedSkills()
+        {
+            try
+            {
+                var parent = Path.GetDirectoryName(SkillsRoot.TrimEnd('\\', '/'));
+                if (string.IsNullOrEmpty(parent)) return null;
+                var r = SkillSync.Sync(Path.Combine(parent, SkillSync.StagedFolder), SkillsRoot, SkillSync.KnownShipped);
+                if (r.Added.Count + r.Replaced.Count + r.KeptWithNew.Count > 0)
+                    Logger.Info($"skills: {r.Added.Count} added, {r.Replaced.Count} updated, {r.KeptWithNew.Count} kept (user's) with the new one next to them");
+                return SkillSync.NoticeText(r.Notice); // shown by the caller once the chat is loaded
+            }
+            catch (Exception ex) { Logger.Warn("skills: sync failed: " + ex.Message); return null; }
+        }
 
         private void InitSkills()
         {
@@ -2732,6 +2753,8 @@ namespace ClaudeCAD.Plugin
 
         private void OnDocumentActivatedCore(object sender, DocumentCollectionEventArgs e)
         {
+            // Test & sửa H5: batch_files brings each drawing it prints to the front, then back: not the user switching drawings
+            if (_busy && e.Document != null && BatchDocSwitches.IsRuns(e.Document, DocPath(e.Document))) return;
             // an old version opened from the palette: no chat of its own
             if (_openingVersion.HasValue && e.Document != null && !_versionDocs.ContainsKey(e.Document) && e.Document != _transcriptDoc)
             {
@@ -2790,6 +2813,11 @@ namespace ClaudeCAD.Plugin
                 Logger.Error("palette action failed: " + what, ex);
                 try { Ui.AddNote($"Lỗi nội bộ ({what}): {ex.Message}. Xem log bằng lệnh CLAUDECHATLOG.", true); } catch { }
             }
+        }
+
+        private static string DocPath(Document d)
+        {
+            try { return d?.Name; } catch { return null; }
         }
 
         private static string SafeDocName(Document d)

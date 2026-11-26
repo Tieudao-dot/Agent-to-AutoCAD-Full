@@ -105,6 +105,14 @@ namespace ClaudeCAD.Plugin.Core
                 "check_drawing fix_drawing");
             // nâng cấp đợt G5 (Drawing/TraceTools.cs): trace a photo / scan / PDF scan (2D / Full)
             Add(ToolGroup.TwoD, "trace_image");
+            // nâng cấp đợt H4 (Drawing/CompanyStandardTools.cs): learn a company standard from a template (2D / Full, like setup_standards)
+            Add(ToolGroup.TwoD, "company_standard");
+            // nâng cấp đợt H2 (Drawing/ExportTools.cs): DXF / older DWG on every plan, FBX 3D / Full (ThreeDValues)
+            Add(ToolGroup.Common, "export_drawing");
+            // nâng cấp đợt H3 (Drawing/CompareTools.cs): compare with another file; 2D objects on 2D / Full, 3D solids on 3D / Full
+            Add(ToolGroup.Common, "compare_drawings");
+            // nâng cấp đợt H5 (Drawing/BatchFilesTools.cs): its four tasks are 2D tools (2D / Full; each also checked inside)
+            Add(ToolGroup.TwoD, "batch_files");
             // 3D phases 1, 2 and 3 (Drawing/SolidTools.cs, Solid2Tools.cs, PlanTo3dTools.cs, SectionTools.cs): only the 3D and Full plans
             Add(ToolGroup.ThreeD,
                 // draw_solid (nâng cấp đợt A) replaces the six primitives for Claude; their old names stay for recorded macros
@@ -168,9 +176,19 @@ namespace ClaudeCAD.Plugin.Core
             ["array_rect"] = "levels",
         };
 
-        /// <summary>The 3D parameter of this call the plan does not have (array_rect levels above 1 on a plan without 3D), or null.</summary>
+        /// <summary>Nâng cấp đợt H2: values of a Common tool's parameter that are 3D (export_drawing format fbx: 3D / Full).</summary>
+        public static readonly IReadOnlyDictionary<string, (string param, string[] values)> ThreeDValues =
+            new Dictionary<string, (string, string[])>(StringComparer.Ordinal)
+            {
+                ["export_drawing"] = ("format", new[] { "fbx" }),
+            };
+
+        /// <summary>The 3D parameter of this call the plan does not have (array_rect levels above 1, export_drawing fbx, on a plan without 3D), or null.</summary>
         public static string Blocked3dParam(string plan, string tool, IDictionary<string, object> p)
         {
+            if (tool != null && p != null && !Has3D(plan) && ThreeDValues.TryGetValue(tool, out var tv) && p.TryGetValue(tv.param, out var tvv) && tvv != null
+                && tv.values.Contains((Convert.ToString(tvv, System.Globalization.CultureInfo.InvariantCulture) ?? "").Trim().ToLowerInvariant().TrimStart('.')))
+                return tv.param;
             if (tool == null || p == null || Has3D(plan) || !ThreeDParams.TryGetValue(tool, out var name)) return null;
             if (!p.TryGetValue(name, out var v) || v == null) return null;
             try { return Convert.ToDouble(v, System.Globalization.CultureInfo.InvariantCulture) > 1 ? name : null; }
@@ -221,6 +239,11 @@ namespace ClaudeCAD.Plugin.Core
                   $"{string.Join(" / ", tv.values)} properties from the 2D group. Leave them out (layer, color, linetype... are copied on every plan), " +
                   $"or tell the user in Vietnamese that this machine uses the \"{Label(plan)}\" plan and that the plugin owner can open the 2D group" +
                   (string.IsNullOrWhiteSpace(contact) ? "." : $" ({contact}).")
+            : ThreeDValues.TryGetValue(tool ?? "", out var v3) && v3.param == param
+                // Test & sửa H2: FBX on a plan without 3D (before: the block-attribute text)
+                ? $"{tool}: this machine's plan is \"{Label(plan)}\", which has no 3D, and {param} {string.Join(" / ", v3.values)} (the 3D solids as meshes) belongs to the 3D group. " +
+                  "Offer dwg or dxf instead (3ds Max opens DWG too), or tell the user in Vietnamese that this machine uses the " +
+                  $"\"{Label(plan)}\" plan and that the plugin owner can open the 3D group" + (string.IsNullOrWhiteSpace(contact) ? "." : $" ({contact}).")
             : ThreeDParams.TryGetValue(tool ?? "", out var p3) && p3 == param
                 ? $"{tool}: this machine's plan is \"{Label(plan)}\", which has no 3D, and '{param}' (copies stacked along Z) belongs to the 3D group. " +
                   "Leave levels out (one level), or tell the user in Vietnamese that this machine uses the " +
@@ -242,7 +265,7 @@ namespace ClaudeCAD.Plugin.Core
             {
                 var bp = Allowed(plan, tool) ? BlockedParam(plan, tool, p) : null;
                 string what = !Allowed(plan, tool) ? tool : bp == null ? null
-                    : tool + (Blocked3dParam(plan, tool, p) != null ? " (số tầng)" : BlockedTextValue(plan, tool, p) != null ? " (thuộc tính chữ / kích thước)"
+                    : tool + (Blocked3dParam(plan, tool, p) != null ? (ThreeDValues.ContainsKey(tool) ? " (FBX, phần 3D)" : " (số tầng)") : BlockedTextValue(plan, tool, p) != null ? " (thuộc tính chữ / kích thước)"
                         : TextParams.TryGetValue(tool, out var tp) && tp == "table_position" ? " (bảng trong bản vẽ)" : " (thuộc tính block)");
                 if (what != null && !list.Contains(what)) list.Add(what);
             }

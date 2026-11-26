@@ -38,6 +38,20 @@ namespace ClaudeCAD.Plugin.Drawing
             Dispatcher = dispatcher;
         }
 
+        /// <summary>
+        /// Nâng cấp đợt H5: a drawing file read (or written) next to the open one (batch_files): its own database; the open
+        /// document stays the one of the path rules and the plan.
+        /// </summary>
+        public ToolContext(Document doc, Database db, Transaction tr, bool writable, ToolDispatcher dispatcher)
+        {
+            Doc = doc;
+            Db = db;
+            Ed = doc?.Editor;
+            Tr = tr;
+            Writable = writable;
+            Dispatcher = dispatcher;
+        }
+
         public BlockTableRecord ModelSpace
         {
             get

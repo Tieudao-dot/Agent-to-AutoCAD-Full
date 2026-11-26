@@ -146,6 +146,9 @@ namespace ClaudeCAD.Plugin.UI
             ["build_beam"] = "Dựng dầm",
             ["presspull"] = "Kéo / ấn mặt khối",
             ["export_stl"] = "Xuất STL",
+            ["export_drawing"] = "Xuất DXF / DWG / FBX",
+            ["company_standard"] = "Chuẩn công ty", // nâng cấp đợt H4
+            ["batch_files"] = "Làm nhiều file", // nâng cấp đợt H5
             ["volume_schedule"] = "Bảng khối lượng",
             ["setup_standards"] = "Thiết lập style chuẩn",
             ["create_sheet"] = "Tạo trang in có khung tên",
@@ -157,6 +160,7 @@ namespace ClaudeCAD.Plugin.UI
             ["check_drawing"] = "Soát bản vẽ",
             ["trace_image"] = "Vẽ lại từ ảnh",
             ["fix_drawing"] = "Sửa lỗi bản vẽ",
+            ["compare_drawings"] = "So sánh hai bản vẽ", // nâng cấp đợt H3
         };
 
         public static string Describe(string tool)
