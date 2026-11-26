@@ -163,3 +163,38 @@ Không thêm số. Hai lỗi chéo đã sửa (`docs/ban-giao/test-tong-the-dot-
 - **TTH-2:** ba lệnh file của đợt H giữ hệ WCS.
 
 Quyết định: không có điểm mới.
+
+## Sau kiểm tra độc lập đợt H phần 1 (sửa KTH, 26/11)
+
+Báo cáo: `docs/ban-giao/kiem-tra-doc-lap-dot-h-phan-1.md` (27 lỗi KTH). Bàn giao: `nang-cap-h-sua-kth-a.md` (H4, prompt),
+`nang-cap-h-sua-kth-b.md` (H1 / H2 / H3), `nang-cap-h-sua-kth-c.md` (H5).
+
+### Con số mới
+
+| Số | Ở đâu | Khách thấy gì | Vì sao đề xuất |
+| --- | --- | --- | --- |
+| **5 000** chỗ khác (H3) | `H3Numbers.MaxRowsForClouds` (`Core/DrawingCompare.cs`) | So hai bản khác nhau quá nhiều: Claude nói không vẽ đám mây, đưa danh sách / Excel | Số đã có trong code (`MaxClouds × 10`), nay thành hằng số riêng; 5 000 chỗ khác là hai bản gần như khác hẳn |
+| Chờ tối đa **5 phút** cho `export_drawing`, **2 phút** cho `compare_drawings` và `company_standard` học mẫu (H2 / H3 / H4) | `timeoutFor` (`agent/src/ipc/rpc.ts`) | File quá lớn mà quá giờ thì Claude báo hết giờ (trước là 30 giây như lệnh vẽ) | 5 phút = trần chung của lệnh chậm; so / học một bản vẽ lớn thường dưới 1 phút |
+
+Số bên trong (không phải duyệt):
+- giá trị thuộc tính động làm tròn 3 số lẻ;
+- góc mẫu hatch làm tròn 0,001°;
+- tối đa 5 000 ô chữ đọc mỗi bảng (H3);
+- nhận khung nhìn của chính layout mẫu khi to bằng 98 % tờ giấy (H4).
+
+### Quyết định tự chọn mới
+
+- **H3:**
+  - polyline kín so từ đỉnh có x nhỏ nhất (KTH-15);
+  - độ dài để đo góc là đường chéo khung bao (KTH-17);
+  - chỗ cũ và chỗ mới của một đối tượng tính là một chỗ khác (KTH-22);
+  - `compare_drawings` không còn khai "chỉ đọc" (có khoanh mây).
+- **H1:** skill khách đã xóa quay lại khi bản cài sau có bản mới của nó; muốn bỏ hẳn thì tắt trong ⚙ (KTH-25).
+- **H4:**
+  - kiểu mặc định của AutoCAD mà mẫu không dùng thì không học (KTH-09);
+  - tên bộ chuẩn chỉ khác dấu câu mà chung thư mục thì từ chối (KTH-13);
+  - tên có chữ ngoài a–z có mã riêng trong tên thư mục;
+  - khung tên là block nhiều ô nhất.
+- **H5:** `batch_files` từ chối khi đang phát macro.
+- **Prompt:** mục 7 cho phép các lệnh làm file khi khách yêu cầu (KTH-27).
+

@@ -89,3 +89,23 @@ Run 45802392263 trên `9612510`: **xanh**, 1 / 2 lượt. Log Windows: trợ lý
 ## 8. Chưa kiểm được
 
 Mọi mục "chưa kiểm được" của H1 → H5 (cần AutoCAD thật), gom ở H0 của checklist tổng.
+
+## 9. Sau kiểm tra độc lập (sửa KTH, 26/11)
+
+Báo cáo `docs/ban-giao/kiem-tra-doc-lap-dot-h-phan-1.md`: 27 lỗi KTH (2 nặng, 13 vừa, 12 nhẹ). Ba phần sửa gộp trên nhánh này:
+
+| Phần | Lỗi | Thread | Nhánh / commit | Bàn giao |
+| --- | --- | --- | --- | --- |
+| A: H4, prompt | KTH-09 → 14, KTH-27 + 2 nghi vấn H4 | thread này | ngay trên nhánh, `b2e7549` | `nang-cap-h-sua-kth-a.md` |
+| B: H1 / H2 / H3 | KTH-15 → 26 + nghi vấn `compare.ts` | Test & sửa F1 | `full/nang-cap-h-sua-kth-b` @ `bf21eee` | `nang-cap-h-sua-kth-b.md` |
+| C: H5 | KTH-01 → 08 + 2 nghi vấn (macro, thời gian chờ) | đợt F2 | `full/nang-cap-h-sua-kth-c` @ `5ce5296` | `nang-cap-h-sua-kth-c.md` |
+
+- Gộp C rồi B: không có chỗ chồng.
+- `docs/dot-h-cho-duyet.md` thêm mục "Sau kiểm tra độc lập":
+  - 5 000 chỗ khác (H3);
+  - thời gian chờ 5 phút / 2 phút;
+  - các quyết định mới.
+- Checklist H4 thêm F9 → F13; các thread B / C đã cập nhật checklist H1 / H5 và khối tương ứng trong checklist tổng.
+- Test sau gộp: lõi **1605 / 1605**, trợ lý **441 / 441**, build 3 target qua.
+- CI: ghi dưới.
+
