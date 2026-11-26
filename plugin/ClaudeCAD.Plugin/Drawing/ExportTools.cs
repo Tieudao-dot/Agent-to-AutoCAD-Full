@@ -220,13 +220,8 @@ namespace ClaudeCAD.Plugin.Drawing
             return res;
         }
 
-        private static float[] Unshift(float[] t, double[] shift)
-        {
-            var r = (float[])t.Clone();
-            for (int k = 0; k < 3; k++)
-                for (int a = 0; a < 3; a++) r[3 + k * 3 + a] = (float)(t[3 + k * 3 + a] - shift[a]);
-            return r;
-        }
+        /// <summary>Sửa KTH-23: back to the real place in double (never rounded to float again).</summary>
+        private static double[] Unshift(float[] t, double[] shift) => ExportLogic.Unshift(t, shift);
 
         /// <summary>The colour of a solid (its own, else its layer's), RGB.</summary>
         private static int[] SolidRgb(Transaction tr, Entity e)

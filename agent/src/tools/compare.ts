@@ -21,6 +21,8 @@ export function compareTools(b: ToolBridge): AnyTool[] {
         mark: z.boolean().optional().describe('Ring the differences with clouds (default false: only the list).'),
         ...excelParams,
       },
-      { readOnly: true }),
+      // sửa KTH (nghi vấn): mark draws clouds (and excel writes a file), so it is not declared read-only (a read-only tool may
+      // be run at the same time as another)
+      { readOnly: false }),
   ];
 }

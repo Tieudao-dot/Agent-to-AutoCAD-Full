@@ -105,6 +105,8 @@ namespace ClaudeCAD.Plugin.Core
         public sealed class Result
         {
             public List<string> Added = new List<string>(), Replaced = new List<string>(), KeptWithNew = new List<string>();
+            /// <summary>Sửa KTH-25: files the user deleted (this version was installed before): not brought back.</summary>
+            public List<string> LeftDeleted = new List<string>();
             /// <summary>The skills to name in the chat now (folder names, e.g. "ve-kien-truc").</summary>
             public List<string> Notice = new List<string>();
         }
@@ -137,6 +139,8 @@ namespace ClaudeCAD.Plugin.Core
                 string dst = Path.Combine(skillsDir, rel.Replace('/', Path.DirectorySeparatorChar));
                 if (!File.Exists(dst))
                 {
+                    // Sửa KTH-25: installed before, then deleted by the user: it stays deleted until a new version of it comes
+                    if (m.Installed.TryGetValue(rel, out var had) && had == newH) { r.LeftDeleted.Add(rel); continue; }
                     Directory.CreateDirectory(Path.GetDirectoryName(dst));
                     File.WriteAllBytes(dst, bytes);
                     m.Installed[rel] = newH;

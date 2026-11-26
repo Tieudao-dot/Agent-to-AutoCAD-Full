@@ -114,6 +114,9 @@ fs.writeFileSync(path.join(outRoot, 'activation.iss'),
 
 // skills (only folders with SKILL.md + the README) and the "/" quick prompts
 fs.cpSync(path.join(repo, 'skills'), path.join(contents, 'skills'), { recursive: true });
+// sửa KTH-24: the new skills also wait in skills-ban-moi inside the bundle itself, so an in-app update made by a plugin older
+// than H1 (its script mirrors everything but skills) still brings them; the plugin then syncs them (Core/SkillSync.cs)
+fs.cpSync(path.join(repo, 'skills'), path.join(contents, 'skills-ban-moi'), { recursive: true });
 fs.cpSync(path.join(repo, 'templates'), path.join(contents, 'templates'), { recursive: true });
 
 // agent: compiled JS + manifest + production dependencies

@@ -24,6 +24,8 @@ namespace ClaudeCAD.Plugin.Core
         /// <summary>More clouds than this need the card; more than MaxClouds are not drawn at all (the list / Excel only).</summary>
         public const int CardAboveClouds = 50;
         public const int MaxClouds = 500;
+        /// <summary>Sửa KTH-21: more differences than this are not ringed at all (the clouds are not even worked out).</summary>
+        public const int MaxRowsForClouds = 5000;
         /// <summary>A cloud goes this share of the longest side of what it rings outside it, at least CloudMinMarginMm.</summary>
         public const double CloudMarginShare = 0.05;
         public const double CloudMinMarginMm = 100;
@@ -53,6 +55,14 @@ namespace ClaudeCAD.Plugin.Core
         public Dictionary<string, double> Sizes = new Dictionary<string, double>(StringComparer.Ordinal);
         /// <summary>Test & sửa H3: areas compared like volumes (H3Numbers.VolumeShare), not as text.</summary>
         public Dictionary<string, double> Areas = new Dictionary<string, double>(StringComparer.Ordinal);
+        /// <summary>
+        /// Sửa KTH-17: angles (radians) compared within the tolerance where it shows: |difference| × Reach ≤ tolerance (a text
+        /// turned 0.0001 rad moves its far end 0.25 mm on 2.5 m), not as exact text.
+        /// </summary>
+        public Dictionary<string, double> Angles = new Dictionary<string, double>(StringComparer.Ordinal);
+        public double Reach = 1;
+        /// <summary>Sửa KTH-16: the point a changed shape is found by (its first point), when not the first three numbers.</summary>
+        public double[] AnchorAt, AltAnchorAt;
         public double[] Min, Max;
     }
 
@@ -63,6 +73,8 @@ namespace ClaudeCAD.Plugin.Core
         public string Kind, Layer, Handle, OtherHandle;
         public List<string> What = new List<string>();
         public double[] Min, Max;
+        /// <summary>Sửa KTH-22: a changed object's box in the old drawing too (its cloud rings both places).</summary>
+        public double[] OldMin, OldMax;
     }
 
     public static class DrawingCompareLogic
@@ -196,7 +208,7 @@ namespace ClaudeCAD.Plugin.Core
                 if (oldMatched[i] >= 0) continue;
                 var o = oldItems[i];
                 int j = anchors.Find(o.Kind, Anchor(o), k => !usedNew[k]);
-                if (j < 0 && o.Alt != null) j = anchors.Find(o.Kind, Anchor(o.Alt), k => !usedNew[k]);
+                if (j < 0 && o.Alt != null) j = anchors.Find(o.Kind, o.AltAnchorAt ?? Anchor(o.Alt), k => !usedNew[k]);
                 if (j < 0) continue;
                 usedNew[j] = true; oldMatched[i] = j;
                 rows.Add(Row("changed", newItems[j], o, Differences(o, newItems[j], t, true)));
@@ -208,11 +220,51 @@ namespace ClaudeCAD.Plugin.Core
 
         private static string ShapeKey(CmpItem it) => it.Kind + "|" + it.Exact;
 
-        private static double[] Anchor(CmpItem it) => Anchor(it.Nums);
+        private static double[] Anchor(CmpItem it) => it.AnchorAt ?? Anchor(it.Nums);
         private static double[] Anchor(double[] nums) => nums == null ? new double[0] : nums.Take(Math.Min(3, nums.Length)).ToArray();
 
         private static bool SameShape(CmpItem a, CmpItem b, double t) =>
-            a.Kind == b.Kind && a.Exact == b.Exact && (Close(a.Nums, b.Nums, t) || (a.Alt != null && Close(a.Alt, b.Nums, t))) && SameVolume(a.Volume, b.Volume);
+            a.Kind == b.Kind && a.Exact == b.Exact && (Close(a.Nums, b.Nums, t) || (a.Alt != null && Close(a.Alt, b.Nums, t))) && SameVolume(a.Volume, b.Volume) &&
+            SameAngles(a, b, t);
+
+        /// <summary>Sửa KTH-17: the angles of two objects agree within the tolerance at their reach.</summary>
+        public static bool SameAngles(CmpItem a, CmpItem b, double t)
+        {
+            foreach (var k in a.Angles.Keys.Union(b.Angles.Keys))
+            {
+                if (!a.Angles.TryGetValue(k, out var x) || !b.Angles.TryGetValue(k, out var y)) return false;
+                double d = Math.Abs(Math.IEEERemainder(x - y, 2 * Math.PI));
+                if (d * Math.Max(a.Reach, b.Reach) > t * (1 + 1e-9)) return false;
+            }
+            return true;
+        }
+
+        /// <summary>
+        /// Sửa KTH-15: a closed outline read the same way whatever its first vertex and direction: from its lowest-x (then y)
+        /// vertex, counter-clockwise. verts: x, y each; bulges: of the segment from each vertex. Returns the numbers (x, y of
+        /// each vertex, then the elevation) and the bulges in that order.
+        /// </summary>
+        public static (double[] nums, double[] bulges) CanonicalLoop(IList<double[]> verts, IList<double> bulges, double elevation)
+        {
+            int n = verts.Count;
+            var v = verts.Select(p => new[] { p[0], p[1] }).ToList();
+            var b = Enumerable.Range(0, n).Select(i => i < bulges.Count ? bulges[i] : 0).ToList();
+            double area = 0;
+            for (int i = 0; i < n; i++) { var p = v[i]; var q = v[(i + 1) % n]; area += p[0] * q[1] - q[0] * p[1]; }
+            if (area < 0)
+            {
+                // reversed: vertex k is the old n-1-k; the segment k → k+1 is the old one (n-2-k) read backwards
+                var rv = new List<double[]>(); var rb = new List<double>();
+                for (int k = 0; k < n; k++) { rv.Add(v[n - 1 - k]); rb.Add(-b[((n - 2 - k) % n + n) % n]); }
+                v = rv; b = rb;
+            }
+            int s = 0;
+            for (int i = 1; i < n; i++) if (v[i][0] < v[s][0] || (v[i][0] == v[s][0] && v[i][1] < v[s][1])) s = i;
+            var nums = new List<double>(); var bs = new List<double>();
+            for (int k = 0; k < n; k++) { var p = v[(k + s) % n]; nums.Add(p[0]); nums.Add(p[1]); bs.Add(b[(k + s) % n] + 0.0); }
+            nums.Add(elevation);
+            return (nums.ToArray(), bs.ToArray());
+        }
 
         public static bool Close(double[] a, double[] b, double t)
         {
@@ -232,7 +284,7 @@ namespace ClaudeCAD.Plugin.Core
         public static List<string> Differences(CmpItem o, CmpItem n, double tol, bool geometry)
         {
             var what = new List<string>();
-            if (geometry && !(o.Exact == n.Exact && (Close(o.Nums, n.Nums, tol) || (o.Alt != null && Close(o.Alt, n.Nums, tol)))))
+            if (geometry && !(o.Exact == n.Exact && (Close(o.Nums, n.Nums, tol) || (o.Alt != null && Close(o.Alt, n.Nums, tol))) && SameAngles(o, n, tol)))
                 what.Add("geometry" + Moved(o, n));
             if (!SameVolume(o.Volume, n.Volume))
                 what.Add($"volume {Fmt(o.Volume)} → {Fmt(n.Volume)}");
@@ -279,6 +331,8 @@ namespace ClaudeCAD.Plugin.Core
             {
                 Change = change, Kind = src.Kind, Layer = src.Layer, Handle = n?.Handle, OtherHandle = o?.Handle,
                 What = what ?? new List<string>(), Min = src.Min, Max = src.Max,
+                // Sửa KTH-22: a changed object is ringed where it was too
+                OldMin = n != null && o != null ? o.Min : null, OldMax = n != null && o != null ? o.Max : null,
             };
         }
 
@@ -315,11 +369,24 @@ namespace ClaudeCAD.Plugin.Core
             var clouds = new List<Cloud>();
             foreach (var g in rows.Where(r => r.Min != null && r.Max != null && r.Min.Length >= 2 && r.Max.Length >= 2).GroupBy(r => r.Change))
             {
-                var boxes = g.Select(r =>
+                Cloud Box(double[] min, double[] max)
                 {
-                    double m = Margin(r.Min, r.Max, mmPerUnit);
-                    return new Cloud { Change = g.Key, Color = ColorOf(g.Key), Count = 1, Min = new[] { r.Min[0] - m, r.Min[1] - m }, Max = new[] { r.Max[0] + m, r.Max[1] + m } };
-                }).ToList();
+                    double m = Margin(min, max, mmPerUnit);
+                    return new Cloud { Change = g.Key, Color = ColorOf(g.Key), Count = 1, Min = new[] { min[0] - m, min[1] - m }, Max = new[] { max[0] + m, max[1] + m } };
+                }
+                var boxes = new List<Cloud>();
+                foreach (var r in g)
+                {
+                    boxes.Add(Box(r.Min, r.Max));
+                    // Sửa KTH-22: the old place of a changed object as well (merged with the new one when they touch)
+                    if (r.OldMin != null && r.OldMax != null && r.OldMin.Length >= 2 && r.OldMax.Length >= 2 &&
+                        !(r.OldMin[0] == r.Min[0] && r.OldMin[1] == r.Min[1] && r.OldMax[0] == r.Max[0] && r.OldMax[1] == r.Max[1]))
+                    {
+                        var old = Box(r.OldMin, r.OldMax);
+                        old.Count = 0; // one difference, two places
+                        boxes.Add(old);
+                    }
+                }
                 bool merged = true;
                 while (merged)
                 {
