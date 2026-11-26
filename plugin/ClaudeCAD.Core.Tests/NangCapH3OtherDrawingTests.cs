@@ -124,7 +124,8 @@ namespace ClaudeCAD.Core.Tests
             foreach (var bad in new[] { ".Save(", "SaveAs(", "OpenForReadAndWriteNoShare", "OpenForReadAndReadShare", "OpenMode.ForWrite", "UpgradeOpen" })
                 Assert.DoesNotContain(bad, s);
             // the header check comes before AutoCAD reads the file
-            Assert.True(s.IndexOf("OtherDrawingLogic.HeaderRefusal(", StringComparison.Ordinal) < s.IndexOf("db.ReadDwgFile(", StringComparison.Ordinal));
+            Assert.True(s.IndexOf("code = RequireReadableHeader(full, ours, tool)", StringComparison.Ordinal) < s.IndexOf("db.ReadDwgFile(", StringComparison.Ordinal));
+            Assert.Contains("OtherDrawingLogic.HeaderRefusal(full, code, ours, tool)", s); // test tổng thể đợt H: the check is in RequireReadableHeader
             var t = Src("plugin", "ClaudeCAD.Plugin", "Drawing", "TraceTools.cs");
             Assert.Contains("internal static void CheckPathAllowed(ToolContext ctx, string path, string chatDir, string tool)", t);
             Assert.Contains("Nâng cấp đợt H3: đọc bản vẽ khác chỉ để đọc", Src("plugin", "ClaudeCAD.Plugin", "SelfTest.cs"));

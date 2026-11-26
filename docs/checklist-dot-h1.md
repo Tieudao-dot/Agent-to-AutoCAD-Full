@@ -1,5 +1,7 @@
 # Checklist thử tay đợt H1: skill trên máy nâng cấp, trace_image đọc thẳng PDF
 
+*Đã gộp vào khối "Đợt H phần 1" của [`docs/checklist-tong-the.md`](checklist-tong-the.md) (test tổng thể đợt H phần 1), thử tay theo file đó.*
+
 AutoCAD 2022–2027, khoảng 30 phút. Cần một máy đã cài bản cũ (bản trước H1) có thư mục skill
 `C:\Program Files\ClaudeCAD\Contents\skills` (hoặc đường dẫn cài của cậu).
 
@@ -28,7 +30,7 @@ AutoCAD 2022–2027, khoảng 30 phút. Cần một máy đã cài bản cũ (b�
 
 Máy gói 2D hoặc Full, Windows 10 / 11, bản vẽ đã lưu thành file.
 
-1. Gõ `CLAUDECAD_SELFTEST`. Trong kết quả tìm dòng **"PDF: Windows đọc thẳng trang PDF được"**. Nếu thấy "KHÔNG đọc thẳng
+1. Gõ `CLAUDECHATSELFTEST`. Trong kết quả tìm dòng **"PDF: Windows đọc thẳng trang PDF được"**. Nếu thấy "KHÔNG đọc thẳng
    được (…)", chép nguyên dòng đó gửi tớ.
 2. Kéo một PDF scan 1 trang có ghi kích thước vào khung chat (hoặc nói đường dẫn), gõ "vẽ lại bản này". Cần thấy:
    - Claude gắn PDF làm nền, đặt tỉ lệ, vẽ đè như đợt G5;

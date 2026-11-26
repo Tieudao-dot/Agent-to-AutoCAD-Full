@@ -206,6 +206,10 @@ namespace ClaudeCAD.Plugin.Drawing
         /// <summary>setup_standards on a file: backup, read it into memory, set up, write a temporary copy, swap it in.</summary>
         private static void BatchStandards(ToolContext ctx, Params p, BatchPlan b, string stamp, string file, Dictionary<string, object> row, string tool)
         {
+            // Test tổng thể đợt H: the header check of the shared reader (H3) first: a newer / damaged DWG gets its clear reason
+            // and no backup is made of a file that will not be written
+            string ours = OtherDrawing.OurCode;
+            string code = OtherDrawing.RequireReadableHeader(Path.GetFullPath(file), ours, tool);
             var backup = BatchLogic.BackupPath(b.Root, stamp, file);
             Directory.CreateDirectory(Path.GetDirectoryName(backup));
             if (!File.Exists(backup)) File.Copy(file, backup, false); // a second pass of the same run keeps the first backup
@@ -218,7 +222,8 @@ namespace ClaudeCAD.Plugin.Drawing
             {
                 using (var db = new Database(false, true))
                 {
-                    db.ReadDwgFile(file, FileShare.Read, true, "");
+                    try { db.ReadDwgFile(file, FileShare.Read, true, ""); }
+                    catch (Autodesk.AutoCAD.Runtime.Exception ex) { throw ToolException.Invalid(OtherDrawingLogic.ReadFailure(file, ex.ErrorStatus.ToString(), code, ours, tool)); }
                     db.CloseInput(true); // in memory: the file is free for the swap
                     var version = db.OriginalFileVersion;
                     Dictionary<string, object> r;

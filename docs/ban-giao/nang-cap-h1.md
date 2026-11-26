@@ -58,7 +58,7 @@ Claude thấy nền trắng.
   báo `from: "pdf_page"`.
 - **Đường lui giữ nguyên:** nếu Windows cũ, PowerShell bị khóa, PDF có mật khẩu, hoặc quá 30 giây, ảnh xem dùng ảnh chụp
   AutoCAD như trước. Khi ảnh vẫn trắng, cảnh báo ghi thêm lý do không đọc được PDF.
-- SelfTest (`CLAUDECAD_SELFTEST`) thêm một bước: tạo PDF 1 trang, gắn, xem, rồi báo "PDF: Windows đọc thẳng trang PDF
+- SelfTest (`CLAUDECHATSELFTEST`) thêm một bước: tạo PDF 1 trang, gắn, xem, rồi báo "PDF: Windows đọc thẳng trang PDF
   được" hoặc "KHÔNG đọc thẳng được (lý do)".
 - File: `Core/PdfRender.cs` (phần không cần AutoCAD, có test), `Drawing/PdfPageImage.cs` (chạy tiến trình), `Drawing/TraceTools.cs`.
 

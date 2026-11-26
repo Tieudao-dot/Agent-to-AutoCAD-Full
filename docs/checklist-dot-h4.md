@@ -1,5 +1,7 @@
 # Thử tay đợt H4: học chuẩn công ty từ bản vẽ mẫu
 
+*Đã gộp vào khối "Đợt H phần 1" của [`docs/checklist-tong-the.md`](checklist-tong-the.md) (test tổng thể đợt H phần 1), thử tay theo file đó.*
+
 *Nhánh `full/nang-cap-h4`. Chi tiết: `docs/ban-giao/nang-cap-h4.md`. Máy gói Full hoặc 2D (bộ cài thử nội bộ). Cần một **file mẫu
 của công ty** (.dwg hoặc .dwt) có: vài layer riêng (tên, màu, kiểu nét, độ dày nét khác nhau), một kiểu chữ, một kiểu kích thước,
 một layout A3 có khung tên là block có thuộc tính, và một khung nhìn. Khoảng 30 phút. "Đạt" là thấy đúng như cột phải; khác thì

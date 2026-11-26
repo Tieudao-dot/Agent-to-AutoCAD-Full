@@ -58,17 +58,7 @@ namespace ClaudeCAD.Plugin.Drawing
             string full = System.IO.Path.GetFullPath(plain);
             string ours = OurCode;
             string code = null;
-            if (kind == "dwg")
-            {
-                var head = new byte[6];
-                int got = 0;
-                try { using (var fs = new FileStream(full, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete)) got = fs.Read(head, 0, head.Length); }
-                catch (IOException ex) { throw ToolException.Invalid(OtherDrawingLogic.ReadFailure(full, "FileSharingViolation: " + ex.Message, null, ours, tool)); }
-                catch (UnauthorizedAccessException ex) { throw ToolException.Invalid(OtherDrawingLogic.ReadFailure(full, "AccessDenied: " + ex.Message, null, ours, tool)); }
-                code = got == 6 ? OtherDrawingLogic.DwgCode(head) : null;
-                var refusal = OtherDrawingLogic.HeaderRefusal(full, code, ours, tool);
-                if (refusal != null) throw ToolException.Invalid(refusal);
-            }
+            if (kind == "dwg") code = RequireReadableHeader(full, ours, tool);
             var od = new OtherDrawing { Path = full, Kind = kind, Code = code };
             foreach (Document d in AcApp.DocumentManager)
             {
@@ -108,6 +98,24 @@ namespace ClaudeCAD.Plugin.Drawing
             }
             od.Db = db;
             return od;
+        }
+
+        /// <summary>
+        /// The file code of a DWG read from its first bytes without locking it, or a refusal (not a DWG, saved by a newer AutoCAD,
+        /// locked / no permission), before AutoCAD reads the file. Test tổng thể đợt H: also used by batch_files before it writes
+        /// a file (one message for every tool that reads another drawing).
+        /// </summary>
+        internal static string RequireReadableHeader(string full, string ours, string tool)
+        {
+            var head = new byte[6];
+            int got = 0;
+            try { using (var fs = new FileStream(full, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete)) got = fs.Read(head, 0, head.Length); }
+            catch (IOException ex) { throw ToolException.Invalid(OtherDrawingLogic.ReadFailure(full, "FileSharingViolation: " + ex.Message, null, ours, tool)); }
+            catch (UnauthorizedAccessException ex) { throw ToolException.Invalid(OtherDrawingLogic.ReadFailure(full, "AccessDenied: " + ex.Message, null, ours, tool)); }
+            var code = got == 6 ? OtherDrawingLogic.DwgCode(head) : null;
+            var refusal = OtherDrawingLogic.HeaderRefusal(full, code, ours, tool);
+            if (refusal != null) throw ToolException.Invalid(refusal);
+            return code;
         }
 
         /// <summary>The objects of its model space, at most <paramref name="limit"/> (and how many there are), in a read transaction.</summary>

@@ -1,5 +1,7 @@
 # Thử tay đợt H5: làm nhiều file một lúc
 
+*Đã gộp vào khối "Đợt H phần 1" của [`docs/checklist-tong-the.md`](checklist-tong-the.md) (test tổng thể đợt H phần 1), thử tay theo file đó.*
+
 *Nhánh `full/nang-cap-h5`. Chi tiết: `docs/ban-giao/nang-cap-h5.md`. Máy gói Full hoặc 2D. Chuẩn bị một thư mục **bản sao** gồm
 5 – 10 bản vẽ (có một thư mục con), một file chỉ đọc (chuột phải › Properties › Read-only), một file đang mở trên máy khác (hoặc ở
 AutoCAD thứ hai). Khoảng 30 phút. "Đạt" là thấy đúng như cột phải; khác thì chụp màn hình và ghi số thứ tự.*

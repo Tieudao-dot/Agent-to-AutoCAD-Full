@@ -1,5 +1,7 @@
 # Checklist thử tay đợt H2: xuất bản vẽ sang định dạng khác
 
+*Đã gộp vào khối "Đợt H phần 1" của [`docs/checklist-tong-the.md`](checklist-tong-the.md) (test tổng thể đợt H phần 1), thử tay theo file đó.*
+
 Mọi gói (FBX: gói 3D / Full), AutoCAD 2022 – 2027. Một bản vẽ đã lưu có hình 2D, vài layout và (gói 3D / Full) vài khối 3D.
 Khoảng 30 phút. Mở file xuất ra bằng chương trình khác nếu có (AutoCAD đời cũ, TrueView, LibreCAD / DraftSight, Blender,
 3ds Max, SketchUp).

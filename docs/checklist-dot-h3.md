@@ -1,5 +1,7 @@
 # Checklist thử tay đợt H3: so sánh hai bản vẽ
 
+*Đã gộp vào khối "Đợt H phần 1" của [`docs/checklist-tong-the.md`](checklist-tong-the.md) (test tổng thể đợt H phần 1), thử tay theo file đó.*
+
 AutoCAD 2022–2027, máy gói 2D hoặc Full, khoảng 30 phút.
 
 **Chuẩn bị:**
@@ -60,7 +62,7 @@ AutoCAD 2022–2027, máy gói 2D hoặc Full, khoảng 30 phút.
 
 ## E. SelfTest (~3 phút)
 
-1. Gõ `CLAUDECAD_SELFTEST`. Tìm hai dòng:
+1. Gõ `CLAUDECHATSELFTEST`. Tìm hai dòng:
    - "Nâng cấp đợt H3: đọc bản vẽ khác chỉ để đọc";
    - "Nâng cấp đợt H3: so sánh hai bản vẽ".
 
