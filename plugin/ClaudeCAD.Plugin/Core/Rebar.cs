@@ -60,6 +60,11 @@ namespace ClaudeCAD.Plugin.Core
         public const double FirstStirrupMm = 50, MinSpacingMm = 50, MaxSpacingMm = 1000;
         /// <summary>KTP-31: the shortest beam span drawn (mm); less is refused with a plain message.</summary>
         public const double MinSpanMm = 100;
+        /// <summary>
+        /// KTP-20 (chủ dự án chốt 27/11/2026, TCVN): the least clear gap between two bars of one row of a beam: bottom bars
+        /// max(d, 25 mm), top bars max(d, 30 mm).
+        /// </summary>
+        public const double BottomBarMinClearMm = 25, TopBarMinClearMm = 30;
         /// <summary>Layers: footings, lean concrete (3D); concrete outline, bars, texts (2D details).</summary>
         public const string FootingLayer = "S-FOOT-3D", LeanLayer = "S-LEAN-3D", ConcreteLayer = "S-CONC", RebarLayer = "S-REBAR", TextLayer = "S-REBAR-TEXT";
         public const short FootingColor = 8, LeanColor = 9, ConcreteColor = 7, RebarColor = 1, TextColor = 7;
@@ -178,6 +183,7 @@ namespace ClaudeCAD.Plugin.Core
             double zone = Math.Min(span * H8Numbers.StirrupEndShare, span / 2);
             var left = new List<double>();
             for (double x = first; x <= zone + 1e-9 && x <= span / 2 + 1e-9; x += endSpacing) left.Add(x);
+            if (left.Count == 0) left.Add(first); // KTP-40: a span of 101 – 199 mm has its end zone under the first stirrup's place
             double xl = left[left.Count - 1], xr = span - xl;
             var r = new List<double>(left);
             if (xr - xl > 1e-9)
@@ -190,14 +196,16 @@ namespace ClaudeCAD.Plugin.Core
         }
 
         /// <summary>Positions (mm, from the left face) of n bars across a width b, inside the cover and the stirrup.</summary>
-        public static List<double> BarPositions(int n, double b, double cover, double stirrupDia, double barDia)
+        public static List<double> BarPositions(int n, double b, double cover, double stirrupDia, double barDia, double minClearMm = 0)
         {
             double first = cover + stirrupDia + barDia / 2, last = b - first;
             if (last < first - 1e-9) throw ToolException.Invalid($"{DrawTool}: Ø{Num(barDia)} bars do not fit in {Num(b)} mm with the cover.");
             if (n == 1) return new List<double> { b / 2 };
             double gap = (last - first) / (n - 1);
-            // KTP-20: the clear gap between two bars (centre to centre less one bar) must be at least one bar
-            if (gap - barDia < barDia - 1e-9) throw ToolException.Invalid($"{DrawTool}: {n}Ø{Num(barDia)} do not fit in one row of {Num(b)} mm (less than one bar between them): ask the user for fewer bars or a wider section.");
+            // KTP-20: the clear gap between two bars (centre to centre less one bar) must be at least one bar, and at least
+            // minClearMm (BottomBarMinClearMm 25 / TopBarMinClearMm 30, chủ dự án chốt 27/11)
+            double need = Math.Max(barDia, minClearMm);
+            if (gap - barDia < need - 1e-9) throw ToolException.Invalid($"{DrawTool}: {n}Ø{Num(barDia)} do not fit in one row of {Num(b)} mm (the clear gap between bars would be {Num(gap - barDia)} mm, at least {Num(need)} mm is needed): ask the user for fewer bars or a wider beam.");
             return Enumerable.Range(0, n).Select(i => first + i * gap).ToList();
         }
 
@@ -278,8 +286,8 @@ namespace ClaudeCAD.Plugin.Core
             if (span < H8Numbers.MinSpanMm) throw ToolException.Invalid($"{DrawTool}: span {Num(span)} mm is too short for a beam drawing (at least {Num(H8Numbers.MinSpanMm)} mm): check the span (mm).");
             double cover = Cover("beam", Math.Max(bottom.d, top.d));
             StirrupLength(b, h, cover, stirrupDia); // the section fits
-            BarPositions(bottom.n, b, cover, stirrupDia, bottom.d);
-            BarPositions(top.n, b, cover, stirrupDia, top.d);
+            BarPositions(bottom.n, b, cover, stirrupDia, bottom.d, H8Numbers.BottomBarMinClearMm);
+            BarPositions(top.n, b, cover, stirrupDia, top.d, H8Numbers.TopBarMinClearMm);
             double Len(double d)
             {
                 double a = anchorMm ?? Anchor(d);

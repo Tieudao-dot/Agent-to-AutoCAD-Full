@@ -51,6 +51,7 @@ cho khách.
 | Đường kính, loại thép | 6, 8, 10, 12, 14, 16, 18, 20, 22, 25, 28, 32; Ø ≤ 10 thép trơn CB240-T, Ø ≥ 12 thép gân CB400-V | ký hiệu thép | TCVN 1651 |
 | Thép mẫu | sàn Ø8 a200; đai dầm Ø6 a150 ở 1/4 nhịp gần gối, a200 đoạn giữa; đai cột Ø6 a200; cây thép dài 11,7 m (đếm mối nối) | khi khách không nói | thông lệ. **Plugin không tự chọn số thanh / đường kính thép chủ** (đó là tính toán): khách phải nhập, vd "dầm 2Ø18 dưới, 2Ø16 trên" |
 | Cỡ móng mẫu | móng đơn 1 200 × 1 200, đế cao 350, cổ móng bằng cỡ cột; móng băng rộng 1 000, cao 300, sườn 300 × 600; bê tông lót dày 100, rộng hơn móng 100 mỗi bên; ghi "cỡ mẫu, kỹ sư quyết" | móng vẽ thử | thông lệ nhà 2–4 tầng; đề xuất bắt khách nhập cỡ thật |
+| Khe hở thép dầm *(thêm 27/11)* | khe hở thông thủy giữa hai thanh một hàng: thép dưới ≥ max(d, 25 mm), thép trên ≥ max(d, 30 mm); không đủ chỗ thì từ chối, gợi ý bớt thanh hoặc tăng bề rộng dầm | mặt cắt dầm | TCVN 5574:2018 (khoảng hở cốt thép dọc); **chủ dự án chốt 27/11** |
 | Tỉ lệ, ký hiệu | mặt cắt dầm / cột 1:20 (hoặc 1:25); triển khai dầm, mặt bằng thép sàn 1:50; mặt bằng móng 1:100; số hiệu thanh trong vòng tròn, ghi "2Ø18 L=5200", "Ø8a200" | bản vẽ thép | thông lệ; TCVN 5572:2012 **chưa chắc** số tỉ lệ |
 
 ## Các chỗ cần đối chiếu bản TCVN chính thức
@@ -86,6 +87,8 @@ cho khách.
   - Lý do: thread rà phát hiện D60 dốc mặc định 2 % thấp hơn mức tối thiểu 2,5 % của cỡ này, nên ống nào vẽ ra cũng bị cảnh báo.
   - Từ nay độ dốc mặc định = max(2 %, mức tối thiểu theo cỡ). D60 → 2,5 %; D110 trở lên → 2 %.
   - Mức tối thiểu theo cỡ giữ như bảng.
+- **27/11, chủ dự án chốt thêm cho H8 (KTP-20, khe hở thép dầm) theo TCVN:** thép dưới ≥ max(d, 25 mm), thép trên ≥ max(d,
+  30 mm) (`H8Numbers.BottomBarMinClearMm` / `TopBarMinClearMm`).
 - **Giới hạn nói với khách giữ nguyên:**
   - bản vẽ hỗ trợ, kỹ sư vẫn kiểm;
   - không tính thủy lực / kết cấu;
