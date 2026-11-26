@@ -72,3 +72,13 @@ Sau quy trình chuẩn bị và có block `E-DEN`:
 ```
 
 Rồi nối dây bằng một `batch_execute` các `draw_polyline` trên `E-LIGHT`, ghi `add_mleader` loại dây. Báo cáo số thiết bị theo loại và nhắc gõ U để hoàn tác cả lượt.
+
+## 7. Ống 3D (gói 3D / Full: `draw_mep`, `mep_report`)
+
+- Chỉ vẽ theo cỡ ống người dùng đưa (hoặc cỡ mặc định dưới đây), **không tính thủy lực / lưu lượng**. Nói rõ điều này khi người dùng hỏi cỡ ống.
+- Cỡ mặc định khi người dùng không nói: cấp nước PPR D25 ống nhánh (`use: "branch"`), D32 ống chính tầng (`use: "main"`); thoát nước uPVC D60 thoát sàn / lavabo (`use: "floor"`), D110 xí và ống đứng (`use: "wc"`, `"stack"`); thông hơi D60. **PCCC và ống gió: hỏi người dùng cỡ** (không có mặc định).
+- Ống thoát nước dốc 2 % về cuối tuyến (điểm đầu là đầu cao); plugin báo khi độ dốc thấp hơn mức tối thiểu theo cỡ (D50 2,5 %, D100 1,2 %, D125 1 %, D150 0,7 %, D200 0,5 %). *Mức tối thiểu là số mặc định, kỹ sư đối chiếu TCVN hiện hành (TCVN 4474) trước khi dùng.*
+- Cao độ: `under_beams: true` cho đỉnh ống cách đáy dầm 100 mm (không có dầm: cách đáy sàn 300 mm); hoặc `elevation` (mm, tim ống).
+- Co 1,5 lần đường kính (ống gió: 1 lần bề rộng); tê vuông góc khi nối nhánh (`connect_to` = handle ống chính).
+- Layer 3D theo hệ: `P-SUPL-3D` (5), `P-HOT-3D` (1), `P-DRAIN-3D` (3), `P-VENT-3D` (8), `M-DUCT-3D` (4), `M-DUCT-RET-3D` (6), `F-SPRK-3D` (1).
+- Sau khi vẽ: `mep_report` `action: "schedule"` (chiều dài theo hệ + cỡ, số co / tê; `excel: true` khi người dùng muốn Excel; không cộng hao hụt trừ khi người dùng nói % hao hụt) và `action: "clash"` (chạm hoặc sát dưới 50 mm với dầm / cột / ống khác).

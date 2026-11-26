@@ -3,9 +3,10 @@
 Thread `session_01D56HmFrL65iF9oJokvqXw5` (người viết). Nhánh `full/nang-cap-h7`, tách từ `full/nang-cap-h-tong-the` @
 `76ecfae`. Chạy cùng lúc với H6 (hạ tầng, thread đợt F2). Chưa thử trên AutoCAD thật.
 
-> **Chưa "xong":** các số theo tiêu chuẩn của H7 (`docs/dot-h-so-tieu-chuan.md`, mục H7) **đang chờ chủ dự án duyệt**. Code
-> dùng tạm số đề xuất, gom một chỗ ở `H7Numbers` (`Core/Mep.cs`). Duyệt xong: đổi số ở đó, chạy lại test, rồi mới đưa số vào
-> skill / tài liệu cho khách. Mô tả lệnh và system prompt **không** nêu số nào trong đó (test giữ điều này).
+> **Số theo tiêu chuẩn: đã duyệt 26/11/2026** (chủ dự án chọn "Dùng hết số đề xuất", `docs/dot-h-so-tieu-chuan.md` mục
+> "Kết quả duyệt"). Các số ở `H7Numbers` (`Core/Mep.cs`) và được nhắc lại trong mô tả lệnh, skill `ve-mep` mục 7; test giữ
+> các chỗ này khớp nhau. Hai chỗ "chưa chắc" (mức dốc tối thiểu theo TCVN 4474, cỡ gợi ý PCCC) vẫn dùng số đề xuất, ghi
+> trong skill: "số mặc định, kỹ sư đối chiếu TCVN hiện hành trước khi dùng".
 
 ## 1. Khách thấy gì
 
@@ -50,12 +51,13 @@ Thread `session_01D56HmFrL65iF9oJokvqXw5` (người viết). Nhánh `full/nang-c
 | `Drawing/MepTools.cs` (mới) | `draw_mep` (ống: `CreateFrustum` / `CreateBox` rồi đặt theo trục; co: `Revolve` mặt cắt quanh trục co; tê), dấu `CLAUDECAD_MEP` trên mỗi khối (hệ, loại, cỡ, chiều dài, tuyến, trục), `mep_report` |
 | `Drawing/DrawingService.cs`, `Core/Plans.cs`, `UI/ToolLabels.cs`, `Core/Ucs.cs` | mỗi file thêm 1–3 dòng: đăng ký, nhóm 3D, nhãn, `elevation` là cao độ |
 | `SelfTest.cs` | bước "Nâng cấp đợt H7…": dầm hộp, tuyến chữ L thoát nước (1 co), nhánh có tê, thống kê, soát chạm dầm, xóa hết |
-| `agent/src/tools/mep.ts` (mới), `index.ts`, `solids.ts`, `confirmation.ts`, `systemPrompt.ts` | hai lệnh (hoãn nạp), danh sách lệnh 3D, thẻ Excel, 1 dòng prompt ở phần 3D |
+| `agent/src/tools/mep.ts` (mới), `index.ts`, `solids.ts`, `confirmation.ts`, `systemPrompt.ts` | hai lệnh (hoãn nạp, mô tả có số mặc định đã duyệt), danh sách lệnh 3D, thẻ Excel, 1 dòng prompt ở phần 3D |
+| `skills/ve-mep/SKILL.md` | mục 7 "Ống 3D": cỡ mặc định, dốc, cao độ, co / tê, layer 3D, thống kê / soát (số đã duyệt) |
 | test | `Core.Tests/NangCapH7Tests.cs` (14), `agent/test/nangcaph7.test.ts` (3); cập nhật số lệnh 3D trong `SolidTests.cs`, `CrossPlanTests.cs`, `agent/test/crossplan.test.ts` (39 → 41) |
 
-## 3. Số theo tiêu chuẩn: chờ duyệt (`docs/dot-h-so-tieu-chuan.md`, H7)
+## 3. Số theo tiêu chuẩn: đã duyệt 26/11/2026 (`docs/dot-h-so-tieu-chuan.md`, H7)
 
-Đang dùng số đề xuất; tất cả ở `H7Numbers`:
+Đúng các số đề xuất; tất cả ở `H7Numbers`:
 
 - `SupplyBranchMm` 25, `SupplyMainMm` 32;
 - `DrainFloorMm` 60, `DrainWcMm` 110, `VentMm` 60;
@@ -67,9 +69,12 @@ Thread `session_01D56HmFrL65iF9oJokvqXw5` (người viết). Nhánh `full/nang-c
 - `LengthDecimals` 2;
 - PCCC và ống gió không có cỡ mặc định.
 
-Điểm chủ dự án còn chọn: cột hao hụt (`WasteColumnByDefault`, đang tắt; gọi `waste_percent` vẫn có).
+- Thống kê không cộng hao hụt (chủ dự án chọn 26/11): `WasteColumnByDefault` tắt. Khách nói % hao hụt thì `waste_percent`
+  thêm cột.
+- Mức dốc tối thiểu theo TCVN 4474 và cỡ gợi ý PCCC: **chưa chắc**, vẫn dùng số đề xuất. Skill ghi "số mặc định, kỹ sư
+  đối chiếu TCVN hiện hành trước khi dùng".
 
-## 4. Con số chờ chủ dự án duyệt (số thường)
+## 4. Con số chờ chủ dự án duyệt (số thường, chưa duyệt)
 
 | Số | Dùng ở đâu | Khách thấy gì | Vì sao đề xuất |
 | --- | --- | --- | --- |

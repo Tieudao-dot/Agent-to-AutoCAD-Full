@@ -3,8 +3,8 @@
 Máy gói 3D hoặc Full, AutoCAD 2022–2027. Bản vẽ có sẵn vài dầm 3D (vd dựng bằng "dựng dầm 220x400 theo trục…") hoặc tự
 vẽ một khối hộp trên layer `A-BEAM-3D`.
 
-*Các cỡ ống mặc định, độ dốc, cao độ dưới dầm, bán kính co, khoảng hở 50 mm, tên layer / màu đang **chờ chủ dự án duyệt***
-*(`docs/dot-h-so-tieu-chuan.md`, mục H7). Khi thử, thấy số nào chưa hợp thì ghi lại để chỉnh trong `H7Numbers`.*
+*Số mặc định (đã duyệt 26/11/2026): PPR D25 / D32; uPVC D60 / D110, thông hơi D60; dốc 2 %; đỉnh ống cách đáy dầm 100 mm*
+*(đáy sàn 300 mm); co 1,5D (ống gió 1 lần bề rộng); khoảng hở 50 mm. Thấy số nào chưa hợp thì ghi lại để chỉnh trong `H7Numbers`.*
 
 ## A. Đi ống tròn (~8 phút)
 
@@ -12,7 +12,7 @@ vẽ một khối hộp trên layer `A-BEAM-3D`.
    chỗ chạm dầm.
 2. "Đi ống thoát nước xí từ (0,0) tới (4000,0) rồi tới (4000,3000), cao độ tim ống 2800". Cần thấy:
    - ống tròn 3D trên layer `P-DRAIN-3D` (xanh lá), có **một co** ở góc;
-   - ống dốc dần về điểm cuối; Claude nói độ dốc và cao độ hai đầu;
+   - ống D110, dốc 2 % về điểm cuối (đầu cuối thấp hơn đầu đầu khoảng 140 mm); Claude nói độ dốc và cao độ hai đầu;
    - xoay góc nhìn (`3DORBIT` hoặc "xem phối cảnh tây nam") thấy co nối liền hai đoạn, không hở, không chồng.
 3. "Đi ống cấp nước D25 từ (1000,0) tới (1000,-2000), cao độ 3000, nối vào ống vừa vẽ": nếu điểm đầu nằm trên ống kia,
    Claude vẽ **tê** ở chỗ nối (khối hơi to hơn ống chính). Không nằm trên ống thì Claude báo rõ.
@@ -27,7 +27,7 @@ vẽ một khối hộp trên layer `A-BEAM-3D`.
 
 ## C. Đi dưới dầm, UCS (~4 phút)
 
-1. "Đi ống cấp nước D32 dưới dầm từ … tới …" (tuyến đi dưới một dầm 3D): ống nằm ngay dưới đáy dầm, không chạm dầm.
+1. "Đi ống cấp nước D32 dưới dầm từ … tới …" (tuyến đi dưới một dầm 3D): đỉnh ống cách đáy dầm 100 mm (đo bằng `DIST`), không chạm dầm.
 2. Đặt UCS xoay 30° và cao +3000 (`UCS` → Z → 30, rồi dời gốc lên 3000), đi một ống theo tọa độ UCS: ống nằm đúng chỗ theo UCS.
 
 ## D. Thống kê, Excel, va chạm (~6 phút)
@@ -42,4 +42,5 @@ vẽ một khối hộp trên layer `A-BEAM-3D`.
 ## E. Giới hạn nói rõ với khách
 
 - Claude nói rõ chỉ vẽ theo cỡ ống khách đưa (hoặc cỡ mặc định của loại ống), **không tính thủy lực / lưu lượng**.
+- Hỏi "độ dốc tối thiểu ống D100 là bao nhiêu": Claude nói 1,2 % là số mặc định, kỹ sư đối chiếu TCVN hiện hành.
 - U một lần xóa hết ống vừa vẽ của lượt.

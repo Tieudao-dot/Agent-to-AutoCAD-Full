@@ -1,15 +1,19 @@
 /**
  * Nâng cấp đợt H7 (docs/ban-giao/nang-cap-h7.md): draw_mep / mep_report on the assistant side: deferred, 3D / Full only,
- * the schema, the card of the Excel file, one prompt line (no standard number in the descriptions until approved).
+ * the schema, the card of the Excel file, one prompt line, the approved standard numbers (26/11/2026) in the descriptions.
  */
 import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import path from 'node:path';
 import { describe, it } from 'node:test';
+import { fileURLToPath } from 'node:url';
 import { z } from 'zod';
 import { F5_CARD_TOOLS } from '../src/agent/confirmation.js';
 import { systemPromptFor } from '../src/agent/systemPrompt.js';
 import { MEP_TOOL_NAMES } from '../src/tools/mep.js';
 import { ALWAYS_LOADED_TOOLS, buildTools } from '../src/tools/index.js';
 
+const repo = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..', '..');
 const bridge = { call: async () => ({ id: 'x', ok: true as const, result: {} }), status: () => {} };
 const tools = buildTools(bridge);
 const schemaOf = (n: string) => z.object((tools.find((t) => t.name === n) as any).inputSchema as z.ZodRawShape);
@@ -37,11 +41,22 @@ describe('H7: MEP pipes in 3D', () => {
     assert.ok(!r.safeParse({ action: 'erase' }).success);
   });
 
-  it('one prompt line on 3D / Full, none on 2D; no standard default number in the descriptions', () => {
+  it('one prompt line on 3D / Full, none on 2D; the descriptions give the approved numbers of the plugin', () => {
     for (const p of ['3d', '2d3d'] as const) assert.match(systemPromptFor(p), /draw_mep/);
     assert.ok(!systemPromptFor('2d').includes('draw_mep'));
-    const text = MEP_TOOL_NAMES.map((n) => JSON.stringify((tools.find((t) => t.name === n) as any).description)).join(' ');
-    for (const n of ['D25', 'D32', 'D60', 'D110', '2%', '50 mm', '100 mm']) assert.ok(!text.includes(n), n);
+    const text = MEP_TOOL_NAMES.map((n) => (tools.find((t) => t.name === n) as any).description).join(' ');
     assert.match(text, /never sizes pipes/);
+    // the numbers approved 26/11/2026 are the plugin's (H7Numbers, Core/Mep.cs)
+    const cs = fs.readFileSync(path.join(repo, 'plugin', 'ClaudeCAD.Plugin', 'Core', 'Mep.cs'), 'utf8');
+    const num = (name: string) => cs.match(new RegExp(`${name} = ([0-9.]+)`))![1]!;
+    for (const [k, label] of [['SupplyBranchMm', 'branch D'], ['SupplyMainMm', 'main D'], ['DrainFloorMm', 'floor D'], ['DrainWcMm', 'stack D'], ['VentMm', 'vent D']] as const)
+      assert.ok(text.includes(label + num(k)), `${label}${num(k)}`);
+    assert.ok(text.includes(`falls ${num('DrainSlopePercent')} %`));
+    assert.ok(text.includes(`elbows ${num('PipeBendFactor')} × D`));
+    const schema = JSON.stringify(Object.fromEntries(Object.entries((tools.find((t) => t.name === 'draw_mep') as any).inputSchema).map(([k, v]) => [k, (v as any).description])));
+    assert.ok(schema.includes(`${num('TopBelowBeamMm')} mm under the lowest beam`));
+    assert.ok(schema.includes(`${num('TopBelowSlabMm')} mm under the slab`));
+    const rs = JSON.stringify(Object.fromEntries(Object.entries((tools.find((t) => t.name === 'mep_report') as any).inputSchema).map(([k, v]) => [k, (v as any).description])));
+    assert.ok(rs.includes(`(default ${num('ClearanceMm')})`));
   });
 });

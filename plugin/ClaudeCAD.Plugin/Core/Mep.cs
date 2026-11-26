@@ -7,12 +7,14 @@ namespace ClaudeCAD.Plugin.Core
 {
     /// <summary>
     /// Nâng cấp đợt H7 (docs/ban-giao/nang-cap-h7.md): every number of the MEP pipes in one place.
-    /// The STANDARD numbers (sizes, slope, heights, bend radius, clearance, layers / colours) wait for the owner's approval
-    /// (docs/dot-h-so-tieu-chuan.md, H7): the values here are the proposed ones, so the tests run; change them here only.
+    /// The STANDARD numbers (sizes, slope, heights, bend radius, clearance, layers / colours) were approved by the owner on
+    /// 26/11/2026 as proposed (docs/dot-h-so-tieu-chuan.md, H7). The least drain slopes (TCVN 4474) and the fire pipe sizes are
+    /// defaults for the engineer to check against the TCVN in force. Change them here only (the tool descriptions and the
+    /// skill ve-mep repeat them; tests keep them the same).
     /// </summary>
     public static class H7Numbers
     {
-        // ---- standard numbers, waiting for approval (docs/dot-h-so-tieu-chuan.md, H7)
+        // ---- standard numbers, approved 26/11/2026 (docs/dot-h-so-tieu-chuan.md, H7)
         /// <summary>Default sizes (mm, outside diameter) when the user gives none: supply branch / main, drain floor / WC + stack, vent.</summary>
         public const double SupplyBranchMm = 25, SupplyMainMm = 32, DrainFloorMm = 60, DrainWcMm = 110, VentMm = 60;
         /// <summary>Default slope of a drain (%), and the least slope by size (mm → %): below it the result warns.</summary>
@@ -29,8 +31,8 @@ namespace ClaudeCAD.Plugin.Core
         /// <summary>The 3D layers of a system: its 2D layer + this ("P-DRAIN" → "P-DRAIN-3D").</summary>
         public const string Layer3dSuffix = "-3D";
 
-        // ---- the owner's choice still open: a waste (hao hụt) column in the schedule
-        /// <summary>Show the waste column (length × (1 + share)) by default. Off until the owner chooses; a call can still ask for it.</summary>
+        // ---- the waste (hao hụt) column of the schedule: off by default (approved 26/11/2026)
+        /// <summary>Show the waste column (length × (1 + share)) by default. Off (the owner chose no waste, 26/11/2026); a call can still ask for it.</summary>
         public const bool WasteColumnByDefault = false;
 
         // ---- ordinary numbers (table "Con số chờ chủ dự án duyệt" of the handover)

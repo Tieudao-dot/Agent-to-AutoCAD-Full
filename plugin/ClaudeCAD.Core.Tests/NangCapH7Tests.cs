@@ -240,14 +240,21 @@ namespace ClaudeCAD.Core.Tests
         // ------------------------------------------------------------ numbers waiting for approval stay in one place
 
         [Fact]
-        public void The_standard_numbers_are_only_in_h7_numbers()
+        public void The_standard_numbers_are_only_in_h7_numbers_and_the_skill_says_the_same()
         {
             var tools = Src("plugin", "ClaudeCAD.Plugin", "Drawing", "MepTools.cs");
             foreach (var n in new[] { "1.5", "0.025", "= 50", "= 100", "= 300" }) Assert.DoesNotContain(" " + n + ";", tools);
-            var ts = Src("agent", "src", "tools", "mep.ts");
-            // the descriptions name no default number of the standard (they wait for the owner's approval)
-            foreach (var n in new[] { "D25", "D32", "D60", "D110", "2%", "2 %", "50 mm", "100 mm", "300 mm" }) Assert.DoesNotContain(n, ts);
-            Assert.DoesNotContain("H7", Src("skills", "ve-mep", "SKILL.md"));
+            // approved 26/11/2026: the skill gives the same defaults (and says the least slopes are to be checked against TCVN)
+            var skill = Src("skills", "ve-mep", "SKILL.md");
+            foreach (var d in new[] { H7Numbers.SupplyBranchMm, H7Numbers.SupplyMainMm, H7Numbers.DrainFloorMm, H7Numbers.DrainWcMm, H7Numbers.VentMm })
+                Assert.Contains("D" + MepLogic.Num(d), skill);
+            Assert.Contains($"dốc {MepLogic.Num(H7Numbers.DrainSlopePercent)} %", skill);
+            Assert.Contains($"cách đáy dầm {MepLogic.Num(H7Numbers.TopBelowBeamMm)} mm", skill);
+            Assert.Contains($"cách đáy sàn {MepLogic.Num(H7Numbers.TopBelowSlabMm)} mm", skill);
+            Assert.Contains($"dưới {MepLogic.Num(H7Numbers.ClearanceMm)} mm", skill);
+            Assert.Contains("kỹ sư đối chiếu TCVN hiện hành", skill);
+            foreach (var s in MepLogic.Systems) Assert.Contains($"`{s.Layer3d}` ({s.Color})", skill);
+            foreach (var (size, percent) in H7Numbers.MinDrainSlope) Assert.Contains($"D{MepLogic.Num(size)} {percent.ToString(System.Globalization.CultureInfo.GetCultureInfo("vi-VN"))} %", skill);
         }
     }
 }
