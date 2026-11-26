@@ -184,7 +184,7 @@ namespace ClaudeCAD.Core.Tests
             Assert.Contains("1F2, 1F3", m);
             Assert.Contains("request_confirmation", m);
             // the plugin refuses before deleting / saving over: the check comes first in the source
-            var t = Tools;
+            var t = Tools.Replace("\r\n", "\n"); // a Windows checkout has CRLF line ends
             int del = t.IndexOf("lsm.DeleteLayerState(name);\n                    return", StringComparison.Ordinal);
             int refuse = t.LastIndexOf("delete the layer state", del, StringComparison.Ordinal);
             Assert.True(refuse > 0 && refuse < del);

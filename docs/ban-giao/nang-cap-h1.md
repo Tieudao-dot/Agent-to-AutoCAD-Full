@@ -162,7 +162,16 @@ Không thêm lệnh, không đổi mô tả lệnh hay system prompt, nên khôn
 
 ## 10. CI
 
-(điền sau khi chạy)
+- Lượt 1: run 45775374409 trên `87d159e`, **đỏ**. Test lõi `Overwrite_refusals_never_change_anything_and_name_the_handles`
+  tìm chuỗi có `\n` trong mã nguồn, nhưng bản checkout trên Windows dùng CRLF. Đã sửa: test đổi CRLF về LF trước khi tìm.
+- Lượt 2: xem dòng dưới (ghi sau khi chạy).
+- **Lỗi có sẵn, không thuộc H1** (báo luồng chính): trên Windows CI, 3 test trợ lý cũ hỏng từ trước
+  (`nangcapf5.test.ts` "setup_standards makes it…", `nangcapg5.test.ts` "a new user message starts the count again",
+  `plan-fixes.test.ts` "KT-42"). Run xanh 45710924398 của nhánh tích hợp đợt G cũng hỏng đúng 3 test này.
+  - Hai test dựng đường dẫn từ `new URL(...).pathname`, ra `D:\D:\...`.
+  - Một test dùng regex có `\n` trong khi file có CRLF.
+  - Bước CI vẫn xanh vì PowerShell chỉ lấy mã thoát của lệnh cuối (`npm run build`), nên `npm test` hỏng không chặn CI.
+  - H1 không sửa vì ngoài phạm vi; cần một thread sửa cả 3 test và cho bước CI dừng khi `npm test` hỏng.
 
 ## 11. Chưa kiểm được
 
