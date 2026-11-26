@@ -8,6 +8,7 @@ import { annotationTools } from './annotation.js';
 import { utility2dTools } from './utility2d.js';
 import { drawingCheckTools } from './drawingCheck.js';
 import { traceTools } from './trace.js';
+import { exportDrawingTools } from './exportDrawing.js';
 import { batchTools } from './batch.js';
 import { blockTools } from './blocks.js';
 import { captureTools } from './capture.js';
@@ -74,6 +75,7 @@ export function buildTools(bridge: ToolBridge, allowed?: readonly string[], plan
     ...estimateTools(bridge), // nâng cấp đợt G3
     ...drawingCheckTools(bridge), // nâng cấp đợt G2
     ...traceTools(bridge), // nâng cấp đợt G5
+    ...exportDrawingTools(bridge), // nâng cấp đợt H2
     ...systemTools(bridge),
   ];
   const kept = allowed ? all.filter((t) => new Set(allowed).has(t.name)) : all;
@@ -103,6 +105,10 @@ export const PLAN_HIDDEN_PARAMS: Record<string, { needs: '2d' | '3d'; params: st
 
 function trimForPlan(t0: AnyTool, plan: string): AnyTool {
   let t = t0;
+  // Test & sửa H2: FBX is 3D (the plugin refuses it on 2D, PlanLogic.ThreeDValues): not offered there
+  if (t.name === 'export_drawing' && plan === '2d') {
+    t = { ...t, inputSchema: { ...(t.inputSchema as Record<string, unknown>), format: z.enum(['dxf', 'dwg']) } } as AnyTool;
+  }
   // KFG-25: cost_estimate offers only the quantities of the plan's schedules (volumes: 3D; blocks / areas: 2D)
   if (t.name === 'cost_estimate' && (plan === '2d' || plan === '3d')) {
     const q = plan === '3d' ? z.enum(['volume']) : z.enum(['blocks', 'areas']);

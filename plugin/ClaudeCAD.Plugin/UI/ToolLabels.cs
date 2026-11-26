@@ -146,6 +146,7 @@ namespace ClaudeCAD.Plugin.UI
             ["build_beam"] = "Dựng dầm",
             ["presspull"] = "Kéo / ấn mặt khối",
             ["export_stl"] = "Xuất STL",
+            ["export_drawing"] = "Xuất DXF / DWG / FBX",
             ["volume_schedule"] = "Bảng khối lượng",
             ["setup_standards"] = "Thiết lập style chuẩn",
             ["create_sheet"] = "Tạo trang in có khung tên",

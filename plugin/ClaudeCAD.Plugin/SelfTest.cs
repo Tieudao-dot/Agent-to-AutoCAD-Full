@@ -1174,6 +1174,53 @@ namespace ClaudeCAD.Plugin
                 return errs.Count == 0 ? new SelfTestRules.Verdict(true, info) : new SelfTestRules.Verdict(false, string.Join("; ", errs) + " (" + info + ")");
             });
 
+            // Nâng cấp đợt H2: a DWG 2010 copy (read back: its version, the open drawing unchanged), a DXF, an FBX of one box
+            Check("Nâng cấp đợt H2: xuất DWG 2010 (đọc lại đúng đời, bản vẽ đang mở không đổi), DXF, FBX một khối hộp", () =>
+            {
+                var errs = new List<string>();
+                string before = doc.Name;
+                var ctx0 = new ToolContext(doc, null, false, null);
+                Dictionary<string, object> Ex(Dictionary<string, object> q) => (Dictionary<string, object>)DrawingService.ExportDrawing(ctx0, new Params("export_drawing", q));
+                string dwg = Path.Combine(dir, "h2-acad2010.dwg"), dxf = Path.Combine(dir, "h2.dxf"), fbx = Path.Combine(dir, "h2.fbx");
+                foreach (var f in new[] { dwg, dxf, fbx }) if (File.Exists(f)) File.Delete(f);
+                Ex(new Dictionary<string, object> { ["format"] = "dwg", ["version"] = "2010", ["output"] = dwg });
+                using (var side = new Database(false, true))
+                {
+                    side.ReadDwgFile(dwg, FileOpenMode.OpenForReadAndAllShare, true, "");
+                    if (side.OriginalFileVersion != DwgVersion.AC1024) errs.Add($"DWG đọc lại là {side.OriginalFileVersion} (cần AC1024 = 2010)");
+                }
+                if (doc.Name != before) errs.Add("bản vẽ đang mở bị đổi tên");
+                Ex(new Dictionary<string, object> { ["format"] = "dxf", ["output"] = dxf });
+                if (!File.Exists(dxf) || !File.ReadAllText(dxf).Contains("AC1027")) errs.Add("DXF không có hoặc không phải đời 2013");
+                string boxHandle;
+                using (doc.LockDocument())
+                using (var tr = doc.TransactionManager.StartTransaction())
+                {
+                    var ms = (BlockTableRecord)tr.GetObject(SymbolUtilityServices.GetBlockModelSpaceId(doc.Database), OpenMode.ForWrite);
+                    var box = new Solid3d();
+                    box.CreateBox(1000, 1000, 1000);
+                    box.TransformBy(Matrix3d.Displacement(new Vector3d(170000, 0, 500)));
+                    box.SetDatabaseDefaults(doc.Database);
+                    ms.AppendEntity(box);
+                    tr.AddNewlyCreatedDBObject(box, true);
+                    boxHandle = box.Handle.ToString();
+                    tr.Commit();
+                }
+                var fr = Ex(new Dictionary<string, object> { ["format"] = "fbx", ["output"] = fbx, ["handles"] = new List<object> { boxHandle } });
+                var head = File.ReadAllBytes(fbx);
+                if (head.Length < 200 || Encoding.ASCII.GetString(head, 0, 18) != "Kaydara FBX Binary") errs.Add("FBX không đúng dạng");
+                if (Convert.ToInt32(fr["triangles"]) < 12) errs.Add($"FBX chỉ có {fr["triangles"]} tam giác");
+                using (doc.LockDocument())
+                using (var tr = doc.TransactionManager.StartTransaction())
+                {
+                    tr.GetObject(Acad.IdFromHandle(doc.Database, boxHandle), OpenMode.ForWrite).Erase();
+                    tr.Commit();
+                }
+                return errs.Count == 0
+                    ? new SelfTestRules.Verdict(true, $"DWG 2010 đọc lại đúng đời, DXF 2013, FBX {fr["triangles"]} tam giác; bản vẽ đang mở vẫn là {Path.GetFileName(before)}")
+                    : new SelfTestRules.Verdict(false, string.Join("; ", errs));
+            });
+
             string versionFile = Path.Combine(dir, "version-copy.dwg");
             Do("Bản sao phiên bản (Wblock + SaveAs)", () =>
             {
