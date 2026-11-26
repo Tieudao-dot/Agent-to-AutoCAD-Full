@@ -241,6 +241,8 @@ chính đưa. Nhóm 2 (tự cập nhật, thống kê mức dùng, bản dùng t
   - bảng thép là thống kê từ bản vẽ, không phải tính toán kết cấu (không tính cần bao nhiêu thép);
   - MEP chỉ vẽ theo cỡ ống khách đưa, không tính thủy lực / lưu lượng;
   - trắc dọc, trắc ngang, móng, thép theo TCVN; kết quả là bản vẽ hỗ trợ, kỹ sư vẫn kiểm.
+- **Số tiêu chuẩn phần 2 (H6, H7, H8):** thread Test & sửa F1 gom xong 26/11 16h13 (18 nhóm, 6 chỗ cần đối chiếu bản TCVN chính thức):
+  [`dot-h-so-tieu-chuan.md`](dot-h-so-tieu-chuan.md). Chờ chủ dự án duyệt trước khi viết phần 2.
 - **Bản 5 chưa chạy trên AutoCAD thật.** Lỗi chủ dự án báo khi thử bản 5 được sửa trước và gộp vào chuỗi đợt H.
 - Lệnh mới làm tăng token mở chat; nạp gọn lệnh (đợt F4) giữ mức tăng nhỏ, đo lại ở test tổng thể.
 
