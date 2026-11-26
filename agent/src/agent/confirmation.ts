@@ -363,7 +363,9 @@ export const F5_CARD_TOOLS = new Set(['plot_pdf', 'export_stl', 'export_drawing'
   // nâng cấp đợt G3: the Excel file of the estimate
   'cost_estimate',
   // nâng cấp đợt G2: repairing the drawing (one token per fix), the Excel list of the check
-  'fix_drawing', 'check_drawing']);
+  'fix_drawing', 'check_drawing',
+  // nâng cấp đợt H3: many revision clouds of a compare, the Excel list
+  'compare_drawings']);
 
 function flaggedF5(params: Record<string, unknown>, g: GateState): Record<string, unknown> {
   const { [USER_CONFIRMED_PARAM]: _ignored, confirm_handles: asked, ...rest } = params;

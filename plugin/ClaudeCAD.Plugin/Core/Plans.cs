@@ -107,6 +107,8 @@ namespace ClaudeCAD.Plugin.Core
             Add(ToolGroup.TwoD, "trace_image");
             // nâng cấp đợt H2 (Drawing/ExportTools.cs): DXF / older DWG on every plan, FBX 3D / Full (ThreeDValues)
             Add(ToolGroup.Common, "export_drawing");
+            // nâng cấp đợt H3 (Drawing/CompareTools.cs): compare with another file; 2D objects on 2D / Full, 3D solids on 3D / Full
+            Add(ToolGroup.Common, "compare_drawings");
             // 3D phases 1, 2 and 3 (Drawing/SolidTools.cs, Solid2Tools.cs, PlanTo3dTools.cs, SectionTools.cs): only the 3D and Full plans
             Add(ToolGroup.ThreeD,
                 // draw_solid (nâng cấp đợt A) replaces the six primitives for Claude; their old names stay for recorded macros

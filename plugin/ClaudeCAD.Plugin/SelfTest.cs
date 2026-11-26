@@ -1253,6 +1253,50 @@ namespace ClaudeCAD.Plugin
                 return errs.Count == 0 ? new SelfTestRules.Verdict(true, $"{nDwg} đối tượng, {f1}; DXF {f2}") : new SelfTestRules.Verdict(false, string.Join("; ", errs));
             });
 
+            // Nâng cấp đợt H3: compare with a saved copy: one line drawn after the copy is "added", matched by handle
+            Check("Nâng cấp đợt H3: so sánh hai bản vẽ (bản sao đã lưu + 1 đường mới = 1 thêm, 0 bớt)", () =>
+            {
+                var errs = new List<string>();
+                var ctx0 = new ToolContext(doc, null, false, null);
+                string copy = Path.Combine(dir, "h3-ban-cu.dwg");
+                if (File.Exists(copy)) File.Delete(copy);
+                DrawingService.ExportDrawing(ctx0, new Params("export_drawing", new Dictionary<string, object> { ["format"] = "dwg", ["output"] = copy }));
+                string lineHandle;
+                using (doc.LockDocument())
+                using (var tr = doc.TransactionManager.StartTransaction())
+                {
+                    var ms = (BlockTableRecord)tr.GetObject(SymbolUtilityServices.GetBlockModelSpaceId(doc.Database), OpenMode.ForWrite);
+                    var ln = new Line(new Point3d(180000, 0, 0), new Point3d(183000, 0, 0));
+                    ln.SetDatabaseDefaults(doc.Database);
+                    ms.AppendEntity(ln);
+                    tr.AddNewlyCreatedDBObject(ln, true);
+                    lineHandle = ln.Handle.ToString();
+                    tr.Commit();
+                }
+                Dictionary<string, object> r;
+                using (var tr = doc.TransactionManager.StartTransaction())
+                {
+                    r = (Dictionary<string, object>)DrawingService.CompareDrawings(new ToolContext(doc, tr, false, null),
+                        new Params("compare_drawings", new Dictionary<string, object> { ["file"] = copy }));
+                    tr.Abort();
+                }
+                // a whole-drawing Wblock copy normally keeps the handles (match handle); geometry still finds the new line
+                var diffs = ((List<object>)r["differences"]).Cast<Dictionary<string, object>>().ToList();
+                if (!diffs.Any(d => (string)d["change"] == "added" && (string)d["handle"] == lineHandle)) errs.Add("đường mới không được báo là thêm");
+                if (Convert.ToInt32(r["removed"]) != 0) errs.Add($"báo {r["removed"]} bớt (cần 0)");
+                using (doc.LockDocument())
+                using (var tr = doc.TransactionManager.StartTransaction())
+                {
+                    var id = doc.Database.GetObjectId(false, new Handle(Convert.ToInt64(lineHandle, 16)), 0);
+                    tr.GetObject(id, OpenMode.ForWrite).Erase();
+                    tr.Commit();
+                }
+                try { File.Delete(copy); } catch (Exception ex) { errs.Add("file so sánh còn bị khóa: " + ex.Message); }
+                return errs.Count == 0
+                    ? new SelfTestRules.Verdict(true, $"thêm {r["added"]}, bớt {r["removed"]}, đổi {r["changed"]} ({r["match"]})")
+                    : new SelfTestRules.Verdict(false, string.Join("; ", errs));
+            });
+
             string versionFile = Path.Combine(dir, "version-copy.dwg");
             Do("Bản sao phiên bản (Wblock + SaveAs)", () =>
             {
