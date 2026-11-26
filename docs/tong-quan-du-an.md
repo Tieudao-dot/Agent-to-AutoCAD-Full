@@ -98,6 +98,7 @@ quy tắc làm việc và danh bạ thread: [`../CLAUDE.md`](../CLAUDE.md).
 | 25/11 | Làm tiếp đợt F5 và đợt G | Chủ dự án chọn làm cả hai nhóm luồng chính đề xuất: F5 (ô nạp gọn trong ⚙, thẻ xác nhận đồng bộ, ghi chú có mũi tên) và đợt G (ra bộ hồ sơ, soát lỗi bản vẽ, bảng dự toán, render thật, vẽ lại từ ảnh / PDF scan; ước $150–200). Chạy liền như đợt F; G1 cùng lúc G2, G3 cùng lúc G4 |
 | 25/11 | Giao bộ cài | Chỉ gửi một lần khi xong hết (bản 5, sau đợt G). Trước khi gửi: một agent khác test lại toàn bộ tính năng một lượt. Gửi bằng cách tạo thread "Lưu trữ bộ cài" và đưa link / file bộ cài vào đó. Bản 4 chỉ là mốc kiểm nội bộ, không gửi |
 | 26/11 | Duyệt con số đợt F + G | Chủ dự án chọn "thử thật rồi duyệt": bản thử dùng số đề xuất; chủ dự án thử bộ cài thử bản 5, số nào chưa hợp thì báo; thử xong luồng chính mới ghi "đã duyệt". Tới lúc đó các số trong [`dot-f-cho-duyet.md`](dot-f-cho-duyet.md), [`dot-g-cho-duyet.md`](dot-g-cho-duyet.md) vẫn là chờ duyệt |
+| 26/11 | Dọn thread | Chủ dự án cho đóng 6 thread không còn việc: F3 lần 1, F3 lần 2, Test & sửa F2 (thread con), Kiểm tra độc lập đợt F, Tối ưu khung chat, Commit & CI. Đã đóng 5; thread con Test & sửa F2 còn một bản vá chưa lưu nên luồng chính lấy bản vá về tài liệu trước rồi mới đóng |
 | 12/11 | Cách làm việc | Luồng chính điều phối; mỗi đợt một thread, thread đợt tự mở thread con "Test & sửa" |
 
 ## 4. Đã làm
