@@ -175,6 +175,7 @@ Báo cáo: `docs/ban-giao/kiem-tra-doc-lap-dot-h-phan-1.md` (27 lỗi KTH). Bàn
 | --- | --- | --- | --- |
 | **5 000** chỗ khác (H3) | `H3Numbers.MaxRowsForClouds` (`Core/DrawingCompare.cs`) | So hai bản khác nhau quá nhiều: Claude nói không vẽ đám mây, đưa danh sách / Excel | Số đã có trong code (`MaxClouds × 10`), nay thành hằng số riêng; 5 000 chỗ khác là hai bản gần như khác hẳn |
 | Chờ tối đa **5 phút** cho `export_drawing`, **2 phút** cho `compare_drawings` và `company_standard` học mẫu (H2 / H3 / H4) | `timeoutFor` (`agent/src/ipc/rpc.ts`) | File quá lớn mà quá giờ thì Claude báo hết giờ (trước là 30 giây như lệnh vẽ) | 5 phút = trần chung của lệnh chậm; so / học một bản vẽ lớn thường dưới 1 phút |
+| Mỗi file của `batch_files`: tối đa **2 phút** khi soát / đếm block, **5 phút** khi áp chuẩn / in PDF (H5, KTH-02) | `timeoutFor` (`agent/src/ipc/rpc.ts`); xem `nang-cap-h-sua-kth-c.md` | Một file quá hạn thì Claude dừng cả lượt và báo | Soát / đếm chỉ đọc file; áp chuẩn / in PDF ghi file nên cần lâu hơn |
 
 Số bên trong (không phải duyệt):
 - giá trị thuộc tính động làm tròn 3 số lẻ;
@@ -185,7 +186,7 @@ Số bên trong (không phải duyệt):
 ### Quyết định tự chọn mới
 
 - **H3:**
-  - polyline kín so từ đỉnh có x nhỏ nhất (KTH-15);
+  - polyline kín: tra theo tâm, so theo dung sai từ mọi đỉnh đầu, cả hai chiều (KTH-15, sửa lại ở KTH-28). Hạn chế còn lại: phòng vừa đổi hình vừa có hai đỉnh chênh x dưới dung sai có thể ra "bớt + thêm" thay vì "đổi";
   - độ dài để đo góc là đường chéo khung bao (KTH-17);
   - chỗ cũ và chỗ mới của một đối tượng tính là một chỗ khác (KTH-22);
   - `compare_drawings` không còn khai "chỉ đọc" (có khoanh mây).
@@ -195,6 +196,8 @@ Số bên trong (không phải duyệt):
   - tên bộ chuẩn chỉ khác dấu câu mà chung thư mục thì từ chối (KTH-13);
   - tên có chữ ngoài a–z có mã riêng trong tên thư mục;
   - khung tên là block nhiều ô nhất.
-- **H5:** `batch_files` từ chối khi đang phát macro.
+- **H5:**
+  - `batch_files` từ chối khi đang phát macro;
+  - một file quá hạn thì dừng cả lượt, kể các file đã xong, nhờ khách mở kiểm file quá hạn trước khi chạy lại (KTH-02).
 - **Prompt:** mục 7 cho phép các lệnh làm file khi khách yêu cầu (KTH-27).
 

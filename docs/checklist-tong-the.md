@@ -822,7 +822,7 @@ này ghi một trong hai câu: "AutoCAD có vẽ ảnh nền khi chụp", hoặc
 *Lỗi nhẹ đã biết, chấp nhận (KFG-43): "soát bản vẽ" có thể mất khoảng 6 giây với bản vẽ có khoảng 20 000 điểm / block chồng thẳng
 đứng (cùng vị trí mặt bằng, khác cao độ). Gặp thì ghi lại thời gian, không tính là "không đạt".*
 
-# Đợt H phần 1 (H1 → H5): thử với bộ cài thử bản 5 (gộp 26/11/2026)
+# Đợt H phần 1 (H1 → H5): thử với bộ cài thử bản 6 (gộp 26/11/2026)
 
 *Test tổng thể đợt H phần 1, nhánh `full/nang-cap-h-tong-the`. Chi tiết: `docs/ban-giao/nang-cap-h1.md` … `-h5-test.md`,
 `docs/ban-giao/test-tong-the-dot-h-phan-1.md`. Gộp từ `checklist-dot-h1.md` … `-h5.md` (các file đó giờ trỏ về đây). Cần máy
