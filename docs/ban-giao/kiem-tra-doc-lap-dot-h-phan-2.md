@@ -324,3 +324,48 @@ Lượt soát mất khoảng 25 phút. Chi phí cả thread khoảng $25,6.
     "được thôi" và "ok thôi" là đồng ý; "thôi" đứng riêng là từ chối.
   - **KTP-47a:** gõ riêng "thôi được" là đồng ý; "không sao" là không đồng ý, vì có chữ "không".
 - **Hỏi chủ dự án:** KTP-20, khe hở giữa hai thanh thép dầm.
+
+## Soát lại lượt 2 (27/11 00h56, trên `83508ee`)
+
+Kết quả test: lõi 1716 / 1716, trợ lý 467 / 467, build 3 bản 0 lỗi. Test thử lượt trước chạy lại vẫn đạt: H6 08 → 26, 83 ca khe hở
+ống, 69 câu từ chối cũ.
+
+**17 KTP trong phạm vi:**
+- 14 sửa đúng: 04, 07 / 41, 12 / 39, 24, 31 / 40, 37, 42, 43, 45, 46, 47, cọc cuối, KTP-20, 17, 29;
+- 2 sửa đúng nhưng sinh lỗi mới: 38 sinh KTP-51, 44 sinh KTP-49;
+- 1 chưa đủ: 48 (KTP-52, 53).
+
+SelfTest cọc cuối < 1 mm bắt được lỗi `Alignment.At` cũ.
+
+**KTP-20 tính tay** (dầm 200, lớp bảo vệ 25, đai Ø6):
+- 4Ø16 (khe 24,67) bị từ chối, 3Ø16 nhận.
+- 4Ø12 (khe 30,0) nhận ở cả hai lớp.
+- Dầm 201 với 4Ø16: thép dưới nhận, thép trên từ chối.
+
+### Lỗi mới
+
+| Mã | Mức | Mảng | Chỗ | Lỗi | Gợi ý |
+| --- | --- | --- | --- | --- | --- |
+| KTP-49 | **Vừa** (chiều không an toàn) | H9 (do sửa 44) | `confirmation.ts:282-283` | "thôi" bị bỏ qua sau ok / được, kể cả có dấu phẩy: "ok, thôi đi", "ok thôi đi", "ok thoi di", "được thôi đi", "ok, thôi", "được, thôi" → đồng ý. Khách muốn dừng mà lệnh vẫn chạy | Chỉ nhận đúng cụm "được thôi" / "ok thôi" ở cuối câu (cho thêm nhé / ạ), không dấu phẩy chen, không "đi" sau "thôi"; test 6 câu ra không đồng ý |
+| KTP-50 | **Vừa** (có từ trước) | H6 | `Terrain.cs:448` | Không có tiêu đề thì lấy dòng mẫu là dòng đầu có ≥ 2 ô, kể cả dòng toàn chữ. "Toa do" / "Ten diem" / "Sodiem,2" → 0 điểm; **"DANH SACH DIEM" → 2 điểm mất cao độ, không cảnh báo** | Dòng mẫu là dòng đầu có ≥ 2 ô đọc được số |
+| KTP-51 | Nhẹ–vừa | H7 (sửa 38 làm hỏng một ca của 14) | `MepTools.cs:410`, `Mep.cs` `JointOnly` | Hai tuyến nối đầu gấp góc 90° lại bị báo "chạm": hai trụ phẳng đầu chồng một mẩu nêm ở mối nối | Bỏ qua cặp chung đầu trừ khi hai ống cùng hướng ra từ đầu chung; test 90° qua đường kiểm khối; checklist P2-H7 mục 10 |
+| KTP-52 | Nhẹ | H6 (48 chưa đủ) | `Terrain.cs` `HeaderKeys` | "So hieu diem X Y Z" → 0 điểm | Thêm "so hieu diem" / "số hiệu điểm", hoặc thử các cách ghép chọn đúng số ô |
+| KTP-53 | Nhẹ | H6 | `Terrain.cs` `HeaderKeys` | Chỉ so với một dòng dữ liệu: "Tên điểm X Y Z Mã" mà dòng đầu thiếu mã thì lệch cột, ra 0 điểm | So với số ô lớn nhất trong vài dòng đầu |
+| KTP-54 | Nhẹ | Tài liệu | `nang-cap-h9.md:149`, `dot-h-cho-duyet.md`, bàn giao A lượt 3, bàn giao B 1b | (a) còn ghi "ok, không sao" là đồng ý; (b) KTP-12: code chỉ bỏ dòng một chữ không có dấu phẩy; (c) "yeah" / "alright" đứng riêng là đồng ý, tài liệu ghi là chữ đệm; (d) thêm "dầm dốc" vào phần đo bằng hộp bao | Sửa chữ |
+
+### Ghi chú, không tính lỗi
+
+- **Chữ đồng ý đứng một mình:** "ghi đè", "thay thế", "overwrite" gõ riêng là đồng ý, dù thẻ đang hỏi việc khác (vd thẻ hỏi xóa).
+- **Danh sách đóng làm vài câu đồng ý bị hiểu là chưa đồng ý:** "I agree", "oki", "fine", "ok vẽ đi", "continue". Đây là chiều an
+  toàn: Claude hỏi lại.
+- **Thép cột** vẫn chỉ đòi khe ≥ d. TCVN 5574 có khe riêng cho cấu kiện đổ bê tông đứng: số tiêu chuẩn, hỏi chủ dự án.
+- **Ví dụ trong skill:** `SKILL.md:37-44` (ve-ha-tang) còn số ví dụ chỉ đúng cho bản vẽ mm.
+
+Lượt soát mất khoảng 20 phút. Chi phí cả thread khoảng $32,7.
+
+### Lượt sửa 3 (luồng chính ghi, 27/11 01h00)
+
+- **A:** KTP-49 và KTP-54 a, c.
+- **B:** KTP-51 và KTP-54 d; chuẩn bị số khe hở tối thiểu cho thép cột.
+- **C:** KTP-50, 52, 53, KTP-54 b và ghi chú về ví dụ trong skill; sau đó gộp hai nhánh A, B và chạy CI.
+- **Hỏi chủ dự án:** khe hở tối thiểu cho thép cột.
