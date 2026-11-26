@@ -234,3 +234,5 @@ Sau đợt F + G (ước tính, đo ở thread test tổng thể đợt G; đợ
   - 17h46 mở thread kiểm tra độc lập đợt H phần 1 (`session_01D56HmH63NM9pSxbHQh6Ckv`, agent mới, chỉ ghi lỗi KTH-xx).
   - 18h05 kiểm tra độc lập báo 27 lỗi (2 nặng ở H5, 13 vừa, 12 nhẹ): [`ban-giao/kiem-tra-doc-lap-dot-h-phan-1.md`](ban-giao/kiem-tra-doc-lap-dot-h-phan-1.md).
     18h10 chia ba thread sửa: đợt F2 phần H5, Test & sửa F1 phần H1 / H2 / H3, đợt F1 phần H4 + prompt, gộp và CI.
+  - 18h33 sửa xong 27 lỗi + 5 nghi vấn đúng là lỗi; nhánh tích hợp `b7e408f` (code `0275e38`, CI 45810078065 xanh, `# fail 0`).
+    18h35 nhờ thread kiểm tra độc lập soát lại; 18h36 giao thread Bộ cài thử nội bộ chuẩn bị bản 6.
