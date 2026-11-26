@@ -236,3 +236,9 @@ Sau đợt F + G (ước tính, đo ở thread test tổng thể đợt G; đợ
     18h10 chia ba thread sửa: đợt F2 phần H5, Test & sửa F1 phần H1 / H2 / H3, đợt F1 phần H4 + prompt, gộp và CI.
   - 18h33 sửa xong 27 lỗi + 5 nghi vấn đúng là lỗi; nhánh tích hợp `b7e408f` (code `0275e38`, CI 45810078065 xanh, `# fail 0`).
     18h35 nhờ thread kiểm tra độc lập soát lại; 18h36 giao thread Bộ cài thử nội bộ chuẩn bị bản 6.
+  - 19h01 soát lại lượt 2: 28 / 28 lỗi KTH sửa đúng, 0 lỗi mở. Nhánh chốt phần 1 `full/nang-cap-h-tong-the` @ `76ecfae` (code `93096dc`,
+    CI 45813679683 xanh, lõi 1608, trợ lý 443).
+  - 19h05 bộ cài thử bản 6 (`5ab2fab`, CI 45815996979 xanh, 141 MB); link gửi thread "Lưu trữ bộ cài". Phần 1 khoảng 5 giờ 10 phút,
+    ~$135. Báo cáo: [`bao-cao-dot-h-phan-1-26-11.md`](bao-cao-dot-h-phan-1-26-11.md). Chờ chủ dự án: duyệt số phần 1, thử bản 6.
+  - 19h03 phần 2 bắt đầu: H6 hạ tầng (thread đợt F2) và H7 MEP 3D (thread Test & sửa F1) cùng lúc từ `76ecfae`, làm phần không dính
+    số tiêu chuẩn; số tiêu chuẩn chờ chủ dự án duyệt.

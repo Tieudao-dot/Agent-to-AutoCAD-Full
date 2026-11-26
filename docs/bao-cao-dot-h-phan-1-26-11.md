@@ -13,7 +13,8 @@ chuẩn hỏi trước; skill trên máy nâng cấp cập nhật nhưng giữ b
   - CI Windows xanh (run 45813679683, log `# fail 0`).
 - **Sửa thêm một lỗi của CI:** trước đây CI Windows bỏ qua test trợ lý hỏng. Cả 3 test hỏng từ bản chốt G đều là lỗi của chính test, bản 5 không bị ảnh hưởng. Từ nay mỗi lần báo "CI xanh", tớ tự xem số `# fail` trong log.
 - **Chưa phần nào chạy trên AutoCAD thật, Claude thật, Blender / 3ds Max thật.** Chưa phát hành: `main` vẫn là v0.9.3 của bản gốc.
-- **Bộ cài thử bản 6** (đủ đợt F + G + H phần 1): xem mục 3.
+- **Bộ cài thử bản 6** (đủ đợt F + G + H phần 1): build xong 19h05, CI xanh (run 45815996979). Link tải ở mục 3 và ở thread
+  ["Lưu trữ bộ cài"](https://claude.ai/code/session_01D56HmJdn7RASaJtfgMQp5x).
 - **Phần 2 đã bắt đầu** (H6 hạ tầng, H7 ống MEP 3D chạy cùng lúc): mới làm phần không dính số tiêu chuẩn, **chờ cậu duyệt số
   tiêu chuẩn** ([`dot-h-so-tieu-chuan.md`](dot-h-so-tieu-chuan.md)).
 
@@ -32,7 +33,9 @@ chuẩn hỏi trước; skill trên máy nâng cấp cập nhật nhưng giữ b
 1. **Duyệt số tiêu chuẩn phần 2 (gấp nhất, đang chặn H6 / H7 / H8).** Danh sách:
    [`dot-h-so-tieu-chuan.md`](dot-h-so-tieu-chuan.md) (trắc dọc, đồng mức, cỡ ống, độ dốc, lớp bê tông bảo vệ, neo / nối thép…).
    Cậu nhắn "duyệt số", tớ hỏi lần lượt từng nhóm, có số đề xuất.
-2. **Cài bộ cài thử bản 6.** __LINK_BAN_6__
+2. **Cài bộ cài thử bản 6.** [Tải `AgentToAutoCADFull-ThuNoiBo-nang-cap-6-0.9.4`](https://github.com/Tieudao-dot/Agent-to-AutoCAD-Full/actions/runs/45815996979/artifacts/15114863910)
+   (khoảng 141 MB, tải được tới 24/02/2027; mở link bằng trình duyệt đã đăng nhập GitHub). CI xanh (run 45815996979, log
+   `# fail 0`, 38 test giao diện qua).
    - Cài đè lên bản 5 được, **không phải xóa skill cũ**:
      - skill cậu chưa sửa tự được thay;
      - skill cậu đã sửa được giữ, bản mới nằm cạnh (`SKILL.ban-moi.md`).
@@ -156,8 +159,8 @@ cậu quay lại, tớ hỏi một câu.
   | Thread đợt F2 (viết H4, H5; rà H2; sửa H5) | ≈ 37,5 |
   | Thread Test & sửa F1 (viết H2; rà H1, H3, H5; gom số tiêu chuẩn phần 2; sửa H1 / H2 / H3) | ≈ 30,1 |
   | Kiểm tra độc lập đợt H phần 1 | ≈ 18,0 |
-  | Bộ cài thử bản 6 | __CHI_PHI_BO_CAI__ |
-  | **Cộng** | **≈ __TONG__** |
+  | Bộ cài thử bản 6 | ≈ 1,5 |
+  | **Cộng** | **≈ 135** |
 
   Ước lúc lập kế hoạch: $135–205. Chưa kể luồng chính.
 - **Phần tốn nhất:** các lượt rà từng phần (27 lỗi) và lượt sửa sau kiểm tra độc lập.
@@ -168,7 +171,7 @@ cậu quay lại, tớ hỏi một câu.
 | Thứ | Ở đâu |
 | --- | --- |
 | Mã chốt phần 1 | `full/nang-cap-h-tong-the` @ `76ecfae` (code `93096dc`, CI 45813679683) |
-| Bộ cài thử bản 6 | __NHANH_BO_CAI__ |
+| Bộ cài thử bản 6 | `full/ban-thu-noi-bo` @ `5ab2fab` (CI chạy trên `bd65f07`, commit sau chỉ thêm link vào tài liệu), CI 45815996979 xanh, lõi 1618 (gồm 10 test bản thử), trợ lý 443. Nhánh này không bao giờ gộp |
 | Checklist thử tay | `docs/checklist-tong-the.md` trên nhánh chốt (khối "Đợt H phần 1") |
 | Con số và quyết định chờ duyệt | `docs/dot-h-cho-duyet.md` trên nhánh chốt |
 | Số tiêu chuẩn phần 2 | [`dot-h-so-tieu-chuan.md`](dot-h-so-tieu-chuan.md) |
