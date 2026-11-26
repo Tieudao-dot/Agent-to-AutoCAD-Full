@@ -82,8 +82,14 @@ namespace ClaudeCAD.Core.Tests
             var warn = new List<string>();
             var k = RebarLogic.BeamBars(220, 400, 5000, (2, 18), (2, 16), 6, 150, 200, null, warn);
             Assert.Empty(warn);
-            Assert.Equal(5000 + 2 * 540, k[0].LengthMm, 9); // ribbed: no hook
-            Assert.Equal(5000 + 2 * 480, k[1].LengthMm, 9);
+            Assert.Equal(5000 + 2 * 540 + 2 * 180, k[0].LengthMm, 9); // ribbed: 30d into each support + an L bend of 10d
+            Assert.Equal(5000 + 2 * 480 + 2 * 160, k[1].LengthMm, 9);
+            Assert.Equal("bẻ L 10d hai đầu", k[0].Shape);
+            Assert.Equal("2Ø18 L=6440", RebarLogic.Label(k[0].Count, k[0].Dia, k[0].LengthMm));
+            // a plain main bar keeps its 180° hooks, no L bend
+            var pl = RebarLogic.BeamBars(220, 400, 5000, (2, 10), (2, 10), 6, 150, 200, null, new List<string>());
+            Assert.Equal(5000 + 2 * 300 + 2 * RebarLogic.MainHook(10), pl[0].LengthMm, 9);
+            Assert.Equal(10 * 16, RebarLogic.AnchorEnd(16), 9);
             Assert.Equal(2, k[0].Count);
             Assert.Equal("stirrup", k[2].Role);
             double cover = 25, w = 220 - 2 * cover - 6, h = 400 - 2 * cover - 6;
@@ -137,6 +143,9 @@ namespace ClaudeCAD.Core.Tests
             Assert.Equal(4, r1.Count);
             Assert.Equal(Math.Round(6.08 * 4 * 0.00617 * 18 * 18, 2), r1.Kg, 9);
             Assert.Equal(8, rows[3].Splices); // 12.5 m from 11.7 m stock bars: one splice each
+            Assert.Equal(12500 + 35 * 20, rows[3].LengthMm); // its lap (column 35d) is added to the length and the weight
+            Assert.Equal(Math.Round(13.2 * 8 * 0.00617 * 20 * 20, 2), rows[3].Kg, 9);
+            Assert.Contains("gồm 1 nối chồng 35d = 700", rows[3].Shape);
             var t = RebarLogic.ScheduleTable(rows, null);
             Assert.Equal(10, t[0].Count);
             Assert.Equal("Tổng", t[t.Count - 1][0]);
@@ -150,6 +159,40 @@ namespace ClaudeCAD.Core.Tests
             Assert.Contains("hao hụt 3%", (string)w[0][9]);
             Assert.Equal(1, RebarLogic.NextMark(new int[0]));
             Assert.Equal(8, RebarLogic.NextMark(new[] { 3, 7, 1 }));
+        }
+
+        [Fact]
+        public void A_mark_on_two_bar_kinds_is_warned_about_and_never_merged()
+        {
+            var warn = new List<string>();
+            var rows = RebarLogic.Schedule(new List<RebarMark>
+            {
+                new RebarMark { Mark = 5, Dia = 18, Shape = "thẳng", Element = "dầm", LengthMm = 6440, Count = 2 },
+                new RebarMark { Mark = 5, Dia = 25, Shape = "thẳng", Element = "dầm", LengthMm = 7000, Count = 3 },
+                new RebarMark { Mark = 6, Dia = 16, Shape = "thẳng", Element = "dầm", LengthMm = 6280, Count = 2 },
+                new RebarMark { Mark = 6, Dia = 16, Shape = "thẳng", Element = "dầm", LengthMm = 6280, Count = 2 }, // the same kind twice: adds
+            }, warn);
+            Assert.Equal(3, rows.Count);
+            Assert.Equal(new[] { 18.0, 25.0 }, rows.Where(r => r.Mark == 5).Select(r => r.Dia).ToArray());
+            Assert.Equal(Math.Round(7.0 * 3 * 0.00617 * 25 * 25, 2), rows.Single(r => r.Dia == 25).Kg, 9);
+            Assert.Equal(4, rows.Single(r => r.Mark == 6).Count);
+            Assert.Single(warn);
+            Assert.Contains("Bar mark 5", warn[0]);
+            Assert.Contains("renumber", warn[0]);
+        }
+
+        [Fact]
+        public void A_bar_longer_than_a_stock_bar_gets_its_laps_added()
+        {
+            Assert.Equal((0, 720.0, 11000.0), RebarLogic.WithLaps(11000, 18, "dầm"));
+            var b = RebarLogic.WithLaps(12000, 18, "dầm"); // 40d for a beam
+            Assert.Equal(1, b.splices);
+            Assert.Equal(12720, b.lengthMm, 9);
+            Assert.Equal(700, RebarLogic.WithLaps(12000, 20, "cột").lapEach, 9); // 35d for a column
+            // the laps make the bar longer: counted again (23 000 + 1 lap of 800 = 23 800 > 23 400: 2 splices)
+            var l = RebarLogic.WithLaps(23000, 20, "dầm");
+            Assert.Equal(2, l.splices);
+            Assert.Equal(23000 + 2 * 800, l.lengthMm, 9);
         }
 
         [Fact]

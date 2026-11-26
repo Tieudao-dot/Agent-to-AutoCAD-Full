@@ -142,6 +142,12 @@ namespace ClaudeCAD.Plugin.Core
         public static double MainHook(double d) =>
             Plain(d) ? Math.PI * (H8Numbers.PlainHookBendFactor * d + d) / 2 + H8Numbers.PlainHookStraightFactor * d : 0;
 
+        /// <summary>
+        /// Extra length at an anchored end of a main bar (mm): plain bar, its 180° hook; ribbed bar, its L bend of 10d
+        /// (skill ve-ket-cau: "thép gân bẻ L 10d khi neo").
+        /// </summary>
+        public static double AnchorEnd(double d) => Plain(d) ? MainHook(d) : H8Numbers.RibbedBendFactor * d;
+
         /// <summary>The straight end of a stirrup / tie hook (mm): max(6d, 75).</summary>
         public static double StirrupHook(double d) => Math.Max(H8Numbers.StirrupHookFactor * d, H8Numbers.StirrupHookMinMm);
 
@@ -206,6 +212,23 @@ namespace ClaudeCAD.Plugin.Core
         /// <summary>Splices of one bar of this length from stock bars.</summary>
         public static int Splices(double lengthMm) => lengthMm <= H8Numbers.StockLengthMm + 1e-9 ? 0 : (int)Math.Ceiling(lengthMm / H8Numbers.StockLengthMm) - 1;
 
+        /// <summary>
+        /// A bar longer than a stock bar: its splices and the length with their laps (40d beam / slab, 35d column) added; the laps
+        /// lengthen the bar, so the splices are counted again until they stay the same. element: "cột" / "column" or else.
+        /// </summary>
+        public static (int splices, double lapEach, double lengthMm) WithLaps(double lengthMm, double d, string element)
+        {
+            double lap = Lap(d, element == "cột" || element == "column" ? "column" : "beam");
+            int n = Splices(lengthMm);
+            for (int i = 0; i < 50; i++)
+            {
+                int m = Splices(lengthMm + n * lap);
+                if (m == n) break;
+                n = m;
+            }
+            return (n, lap, lengthMm + n * lap);
+        }
+
         // ------------------------------------------------------------ the bar kinds of an element (what is drawn and scheduled)
 
         public sealed class BarKind
@@ -217,9 +240,11 @@ namespace ClaudeCAD.Plugin.Core
         }
 
         private static string MainShape(double d) => Plain(d) ? "thẳng, 2 móc 180°" : "thẳng";
+        private static string AnchoredShape(double d) => Plain(d) ? "thẳng, 2 móc 180°" : $"bẻ L {Num(H8Numbers.RibbedBendFactor)}d hai đầu";
 
         /// <summary>
-        /// A beam span: bottom and top bars (span + an anchorage into each support, hooks on plain bars), stirrups by zones.
+        /// A beam span: bottom and top bars (span + an anchorage into each support, hooks on plain bars, an L bend of 10d on
+        /// ribbed bars), stirrups by zones.
         /// anchorMm: the anchorage asked (default 30d); a warning when under the least one.
         /// </summary>
         public static List<BarKind> BeamBars(double b, double h, double span, (int n, double d) bottom, (int n, double d) top,
@@ -235,13 +260,13 @@ namespace ClaudeCAD.Plugin.Core
                 double a = anchorMm ?? Anchor(d);
                 var w = CheckLength("anchor", a, d);
                 if (w != null && !warnings.Contains(w)) warnings.Add(w);
-                return span + 2 * a + 2 * MainHook(d);
+                return span + 2 * a + 2 * AnchorEnd(d);
             }
             var pos = StirrupPositions(span, endSpacing, midSpacing);
             return new List<BarKind>
             {
-                new BarKind { Role = "bottom", Element = "dầm", Dia = bottom.d, Count = bottom.n, LengthMm = Len(bottom.d), Shape = MainShape(bottom.d) },
-                new BarKind { Role = "top", Element = "dầm", Dia = top.d, Count = top.n, LengthMm = Len(top.d), Shape = MainShape(top.d) },
+                new BarKind { Role = "bottom", Element = "dầm", Dia = bottom.d, Count = bottom.n, LengthMm = Len(bottom.d), Shape = AnchoredShape(bottom.d) },
+                new BarKind { Role = "top", Element = "dầm", Dia = top.d, Count = top.n, LengthMm = Len(top.d), Shape = AnchoredShape(top.d) },
                 new BarKind { Role = "stirrup", Element = "dầm", Dia = stirrupDia, Count = pos.Count, LengthMm = StirrupLength(b, h, cover, stirrupDia), Shape = "đai kín, móc 135°", Spacing = endSpacing },
             };
         }
@@ -287,24 +312,37 @@ namespace ClaudeCAD.Plugin.Core
             public string Shape, Grade, Element;
         }
 
-        /// <summary>One row per mark (same mark: counts added), by mark number; lengths rounded, weights from the rounded length.</summary>
-        public static List<ScheduleRow> Schedule(IEnumerable<RebarMark> marks)
+        /// <summary>
+        /// One row per bar kind, by mark number: the same mark with the same Ø, length, shape and element adds its counts; the same
+        /// mark on another bar kind keeps its own row and is warned about (renumber), never merged. A bar longer than a stock
+        /// bar gets its laps added to its length (and weight), said in its shape. Lengths rounded, weights from the rounded length.
+        /// </summary>
+        public static List<ScheduleRow> Schedule(IEnumerable<RebarMark> marks, List<string> warnings = null)
         {
-            var rows = new Dictionary<int, ScheduleRow>();
+            var rows = new Dictionary<(int, double, double, string, string), ScheduleRow>();
             foreach (var m in marks)
             {
                 if (m == null || m.Count <= 0) continue;
-                if (!rows.TryGetValue(m.Mark, out var r))
-                    rows[m.Mark] = r = new ScheduleRow { Mark = m.Mark, Dia = m.Dia, LengthMm = RoundLength(m.LengthMm), Shape = m.Shape, Grade = Grade(m.Dia), Element = m.Element };
+                var key = (m.Mark, m.Dia, RoundLength(m.LengthMm), m.Shape ?? "", m.Element ?? "");
+                if (!rows.TryGetValue(key, out var r))
+                {
+                    var w = WithLaps(m.LengthMm, m.Dia, m.Element);
+                    string shape = m.Shape;
+                    if (w.splices > 0) shape = $"{m.Shape}; gồm {w.splices} nối chồng {Num(Math.Round(w.lapEach / m.Dia))}d = {Num(RoundLength(w.lapEach))}";
+                    rows[key] = r = new ScheduleRow { Mark = m.Mark, Dia = m.Dia, LengthMm = RoundLength(w.lengthMm), Shape = shape, Grade = Grade(m.Dia), Element = m.Element, Splices = w.splices };
+                }
                 r.Count += m.Count;
             }
+            foreach (var g in rows.Values.GroupBy(r => r.Mark).Where(g => g.Count() > 1))
+                warnings?.Add($"Bar mark {g.Key} is used for {g.Count()} different bar kinds ({string.Join("; ", g.Select(r => $"{r.Element} Ø{Num(r.Dia)} L={Num(r.LengthMm)}"))}): "
+                    + "each kept on its own row, not merged. Tell the user to renumber them (draw_rebar start_mark).");
             foreach (var r in rows.Values)
             {
                 r.TotalM = r.LengthMm * r.Count / 1000;
                 r.Kg = Math.Round(r.TotalM * KgPerM(r.Dia), H8Numbers.WeightDecimals);
-                r.Splices = Splices(r.LengthMm) * r.Count;
+                r.Splices *= r.Count;
             }
-            return rows.Values.OrderBy(r => r.Mark).ToList();
+            return rows.Values.OrderBy(r => r.Mark).ThenBy(r => r.Dia).ThenBy(r => r.LengthMm).ToList();
         }
 
         /// <summary>The table: a row per mark, then a total per diameter + grade, then the total weight (waste share null: no waste column).</summary>

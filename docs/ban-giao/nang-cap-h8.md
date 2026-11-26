@@ -29,17 +29,23 @@ ghi "số mặc định, kỹ sư đối chiếu TCVN hiện hành":
   - không nói cỡ thì dùng cỡ mẫu (1200 × 1200 đế 350; băng 1000 × 300, sườn 300 × 600) và báo "cỡ mẫu, kỹ sư quyết";
   - khối lượng bê tông lấy bằng `volume_schedule` có sẵn.
 - **`draw_rebar`** "Vẽ thép" (gói 2D / Full):
-  - `beam`: triển khai dầm (thanh dưới / trên chạy vào gối 30d, đai theo vùng 1/4 nhịp) và mặt cắt bên cạnh;
+  - `beam`: triển khai dầm (thanh dưới / trên chạy vào gối 30d; thép gân bẻ L 10d ở hai đầu, thép trơn móc 180°; đai theo
+    vùng 1/4 nhịp) và mặt cắt bên cạnh;
   - `column`: mặt cắt cột (thanh ở 4 góc rồi chia đều các cạnh, đai), chiều dài thanh = chiều cao + nối 35d;
   - `slab`: ô sàn, thanh tiêu biểu hai phương, số thanh theo khoảng cách;
   - **thép chủ khách phải nhập** (vd "2Ø18"); thiếu thì lời báo nói rõ "plugin không chọn thép";
   - đai / thép sàn không nói thì dùng thép mẫu và báo;
-  - mỗi loại thanh có số hiệu trong vòng tròn và chữ "2Ø18 L=6080";
+  - mỗi loại thanh có số hiệu trong vòng tròn và chữ "2Ø18 L=6440" (5000 + 2 × 30d + 2 × 10d);
   - thanh không vừa một hàng thì từ chối, không tự dồn;
-  - neo / nối dưới mức tối thiểu thì cảnh báo.
+  - neo / nối dưới mức tối thiểu thì cảnh báo;
+  - `start_mark` trùng số hiệu đã có trong bản vẽ thì cảnh báo; thanh dài hơn cây 11,7 m thì báo số mối nối chồng.
 - **`rebar_schedule`** "Bảng thống kê thép" (gói 2D / Full):
-  - mỗi số hiệu một dòng: cấu kiện, hình dạng, Ø, loại thép, dài 1 thanh (làm tròn 10 mm), số thanh, tổng dài, kg
+  - mỗi loại thanh một dòng: cấu kiện, hình dạng, Ø, loại thép, dài 1 thanh (làm tròn 10 mm), số thanh, tổng dài, kg
     (0,00617·d²), số mối nối (cây 11,7 m);
+  - thanh dài hơn 11,7 m: dài 1 thanh **cộng đoạn nối chồng** (40d dầm / sàn, 35d cột) và kg tính theo đó; cột hình dạng
+    ghi "gồm 1 nối chồng 35d = 700";
+  - một số hiệu dùng cho hai loại thanh khác nhau (khác Ø / dài / hình / cấu kiện): **giữ hai dòng riêng, không gộp**, và
+    trả `warnings` để Claude bảo khách đánh số lại. Cùng số hiệu, cùng loại thanh thì cộng số thanh;
   - dòng cộng theo đường kính, dòng tổng;
   - `table_position` chèn bảng vào bản vẽ; `excel` ghi file (thẻ F5);
   - hao hụt chỉ có khi khách nói %.
@@ -55,7 +61,7 @@ ghi "số mặc định, kỹ sư đối chiếu TCVN hiện hành":
 | `SelfTest.cs` | bước "Nâng cấp đợt H8…": móng đơn + móng băng, thép dầm 2Ø18 / 2Ø16, bảng thép (kg khớp 0,00617·d²·L), xóa hết |
 | `agent/src/tools/structure.ts` (mới), `index.ts`, `solids.ts`, `confirmation.ts`, `systemPrompt.ts`, `agent/skills.ts` | 3 lệnh (hoãn nạp), lệnh 3D, thẻ Excel, 2 dòng prompt (2D: thép; 3D: móng), skill mẫu 2D |
 | `skills/ve-ket-cau/SKILL.md` (mới) | quy trình, số mặc định, thép mẫu, layer |
-| test | `Core.Tests/NangCapH8Tests.cs` (7), `agent/test/nangcaph8.test.ts` (3); cập nhật số lệnh 3D (41 → 42) |
+| test | `Core.Tests/NangCapH8Tests.cs` (9), `agent/test/nangcaph8.test.ts` (3); cập nhật số lệnh 3D (41 → 42) |
 
 ## 3. Con số chờ chủ dự án duyệt (số thường)
 
@@ -75,7 +81,14 @@ ghi "số mặc định, kỹ sư đối chiếu TCVN hiện hành":
 - Dầm vẽ triển khai **và** mặt cắt trong một lần gọi. Dấu thống kê nằm trên triển khai, nên bảng không đếm hai lần.
 - Dấu thống kê nằm trên **thanh đầu tiên** của mỗi loại, ghi luôn số thanh. Xóa thanh đó thì loại thanh đó biến khỏi bảng.
   Xóa thanh khác thì bảng vẫn đếm đủ (đếm theo số lúc vẽ).
-- Thép gân neo thẳng vào gối 30d (không vẽ bẻ L 10d trên hình; số 10d có trong `H8Numbers`, chưa dùng khi vẽ).
+- Thép gân dầm: neo 30d rồi **bẻ L 10d** ở mỗi đầu (làm theo skill, số đã duyệt; sửa 26/11 sau khi thread F2 đọc trước
+  `c01e557` thấy code chưa dùng 10d). Chọn làm theo skill thay vì sửa skill vì 10d là số đã duyệt và cộng thêm thép (thống
+  kê không thiếu). Thanh dưới bẻ lên, thanh trên bẻ xuống. Chỉ áp cho dầm: thép cột là thanh nối (không neo), thép sàn mặc
+  định Ø8 trơn (móc 180°); thép sàn gân khách nhập vẫn tính thẳng.
+- Đoạn nối chồng của thanh dài hơn cây 11,7 m được cộng ở **bảng thép** (`rebar_schedule`), không cộng vào chữ "L=…" trên
+  hình (chữ trên hình là chiều dài hình học); `draw_rebar` báo trước số mối nối. Nối làm dài thanh nên số mối nối được đếm
+  lại tới khi không đổi.
+- Số hiệu trùng: không tự đánh số lại (sẽ lệch chữ trên hình), chỉ tách dòng và báo.
 - Móc 180° của thép trơn được tính vào chiều dài, không vẽ hình móc. Đai tính hai móc 135°, đoạn thẳng max(6d, 75).
 - Một mặt cắt chỉ một hàng thép dưới / một hàng trên. Không đủ chỗ thì báo, không tự xếp hai hàng.
 - Móng băng: lót không kéo dài thêm 100 mm ở hai đầu tuyến (chỉ hai bên).
@@ -89,14 +102,22 @@ ghi "số mặc định, kỹ sư đối chiếu TCVN hiện hành":
 
 ## 6. Test
 
-- Lõi: 1664 / 1664 (thêm 7 ở `NangCapH8Tests.cs`).
+- Lõi: 1666 / 1666 (thêm 9 ở `NangCapH8Tests.cs`; 2 test mới cho số hiệu trùng và nối chồng, test dầm thêm bẻ L 10d).
 - Trợ lý: 457 / 457 (thêm 3).
 - Build 3 target: qua.
 
 ## 7. CI
 
 - Lượt gộp: run 45831302439 trên `7d023db`: xanh, `# fail 0`.
-- H8: ghi ở dưới (≤ 2 lượt).
+- H8 lượt 1: run 45835715473 trên `c01e557` (bản trước khi sửa 3 lỗi): KQ_LUOT1.
+- H8 lượt 2: KQ_LUOT2.
+
+## 7b. Sửa sau khi đọc trước (26/11, thread F2 nêu 3 chỗ, cả 3 là lỗi thật)
+
+1. Số hiệu trùng: bảng gộp theo số hiệu, lấy Ø + dài của dòng đầu, khối lượng sai không báo. Sửa: khóa dòng theo (số hiệu,
+   Ø, dài, hình, cấu kiện), trùng số hiệu khác loại thì tách dòng + `warnings`; `draw_rebar` báo khi `start_mark` trùng.
+2. Thanh > 11,7 m không cộng nối chồng: thêm `RebarLogic.WithLaps`, bảng cộng nối chồng vào dài / kg, ghi trong hình dạng.
+3. Bẻ L 10d: làm theo skill (`RebarLogic.AnchorEnd`), vẽ chân L trên triển khai; xem "Quyết định tự chọn".
 
 ## 8. Chưa kiểm được
 

@@ -36,7 +36,7 @@ export function structureTools(b: ToolBridge): AnyTool[] {
     cadTool(b, 'draw_rebar',
       'Draw the reinforcement of a beam (elevation + section), a column section or a slab panel in 2D, with a mark bubble per bar kind for rebar_schedule. ' +
         'The main bars must come from the user ("dầm 2Ø18 dưới, 2Ø16 trên", "cột 8Ø20"): never choose them. Samples when not given: stirrups Ø6 a150 near the supports / a200 in the middle, ' +
-        'column ties Ø6 a200, slab Ø8 a200. Cover: slab 20, beam 25, column 25 mm; anchorage 30d, lap 40d (column 35d); plain bars (≤ Ø10, CB240-T) get 180° hooks, ribbed CB400-V; ' +
+        'column ties Ø6 a200, slab Ø8 a200. Cover: slab 20, beam 25, column 25 mm; anchorage 30d, lap 40d (column 35d); plain bars (≤ Ø10, CB240-T) get 180° hooks, ribbed CB400-V beam bars an L bend of 10d at each anchored end; ' +
         'scales 1:20 sections / 1:50 elevation and slab. These are defaults: the engineer checks them against the TCVN in force. A drawing aid, no structural design.',
       {
         element: z.enum(['beam', 'column', 'slab']),
@@ -59,8 +59,8 @@ export function structureTools(b: ToolBridge): AnyTool[] {
         start_mark: z.number().int().min(1).max(9999).optional().describe('First bar mark (default: after the highest in the drawing).'),
       }),
     cadTool(b, 'rebar_schedule',
-      'The rebar schedule from the bars drawn by draw_rebar: per mark (element, shape, Ø, grade, length of one bar rounded to 10 mm, count, total m, kg = 0.00617 × d² × m, splices of 11.7 m stock bars), ' +
-        'totals per diameter and grade, total weight. No waste unless the user gives waste_percent. table_position = the table in the drawing; excel = the .xlsx. Counted from the drawing, not a structural design.',
+      'The rebar schedule from the bars drawn by draw_rebar: per mark (element, shape, Ø, grade, length of one bar rounded to 10 mm, count, total m, kg = 0.00617 × d² × m, splices of 11.7 m stock bars with their laps added to the length and weight), ' +
+        'totals per diameter and grade, total weight. No waste unless the user gives waste_percent. table_position = the table in the drawing; excel = the .xlsx. Counted from the drawing, not a structural design. A mark used for two bar kinds keeps two rows and a warning: tell the user to renumber.',
       {
         handles: handles.max(20000).optional().describe('Only these bars (default: every bar of the drawing).'),
         waste_percent: z.number().min(0).max(100).optional().describe('Add a weight + waste column.'),

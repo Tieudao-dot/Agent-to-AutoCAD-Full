@@ -233,7 +233,8 @@ namespace ClaudeCAD.Plugin.Drawing
                 Conc = EnsureLayerF2(ctx, H8Numbers.ConcreteLayer, H8Numbers.ConcreteColor), Bar = EnsureLayerF2(ctx, H8Numbers.RebarLayer, H8Numbers.RebarColor),
                 TextL = EnsureLayerF2(ctx, H8Numbers.TextLayer, H8Numbers.TextColor),
             };
-            int mark = p.Has("start_mark") ? p.Int("start_mark", 1, 1, 9999) : RebarLogic.NextMark(ExistingMarks(ctx));
+            var existing = ExistingMarks(ctx);
+            int mark = p.Has("start_mark") ? p.Int("start_mark", 1, 1, 9999) : RebarLogic.NextMark(existing);
             List<RebarLogic.BarKind> kinds;
             // the record of a bar kind sits on its first drawn bar
             void Record(ObjectId id, RebarLogic.BarKind k, int m) =>
@@ -252,10 +253,22 @@ namespace ClaudeCAD.Plugin.Drawing
                 double cover = RebarLogic.Cover("beam", Math.Max(bottom.d, top.d));
                 // elevation: the beam (span × h) between two supports, the bars running into them
                 pen.Rect(x0, y0, U(span), U(h), pen.Conc);
-                double anchorB = (kinds[0].LengthMm - span - 2 * RebarLogic.MainHook(bottom.d)) / 2, anchorT = (kinds[1].LengthMm - span - 2 * RebarLogic.MainHook(top.d)) / 2;
+                double anchorB = (kinds[0].LengthMm - span - 2 * RebarLogic.AnchorEnd(bottom.d)) / 2, anchorT = (kinds[1].LengthMm - span - 2 * RebarLogic.AnchorEnd(top.d)) / 2;
                 double yb = y0 + U(cover + sd + bottom.d / 2), yt = y0 + U(h - cover - sd - top.d / 2);
-                var idB = pen.Add(Acad.MakePolyline(new List<double[]> { new[] { x0 - U(anchorB), yb }, new[] { x0 + U(span + anchorB), yb } }, false), pen.Bar);
-                var idT = pen.Add(Acad.MakePolyline(new List<double[]> { new[] { x0 - U(anchorT), yt }, new[] { x0 + U(span + anchorT), yt } }, false), pen.Bar);
+                // a ribbed bar ends in its L bend of 10d (the bottom bar bends up, the top bar down); a plain bar's hook is counted, not drawn
+                List<double[]> MainBar(double y, double a, double d, double dir)
+                {
+                    var v = new List<double[]> { new[] { x0 - U(a), y }, new[] { x0 + U(span + a), y } };
+                    if (!RebarLogic.Plain(d))
+                    {
+                        double leg = U(H8Numbers.RibbedBendFactor * d) * dir;
+                        v.Insert(0, new[] { x0 - U(a), y + leg });
+                        v.Add(new[] { x0 + U(span + a), y + leg });
+                    }
+                    return v;
+                }
+                var idB = pen.Add(Acad.MakePolyline(MainBar(yb, anchorB, bottom.d, 1), false), pen.Bar);
+                var idT = pen.Add(Acad.MakePolyline(MainBar(yt, anchorT, top.d, -1), false), pen.Bar);
                 Record(idB, kinds[0], mark); Record(idT, kinds[1], mark + 1);
                 var pos = RebarLogic.StirrupPositions(span, se, sm);
                 ObjectId first = ObjectId.Null;
@@ -318,6 +331,19 @@ namespace ClaudeCAD.Plugin.Drawing
                 pen.Mark(x0 + U(w / 3) + pen.Bubble, y0 + U(l * 0.7), mark + 1, $"{RebarLogic.SpacedLabel(by.d, by.s)} L={RebarLogic.Num(RebarLogic.RoundLength(kinds[1].LengthMm))} ({kinds[1].Count} thanh)");
             }
 
+            if (p.Has("start_mark"))
+            {
+                var taken = Enumerable.Range(mark, kinds.Count).Where(existing.Contains).ToList();
+                if (taken.Count > 0)
+                    warnings.Add($"Bar mark(s) {string.Join(", ", taken)} were already in the drawing: rebar_schedule keeps different bar kinds on their own rows but the marks repeat. Tell the user, or redraw with another start_mark.");
+            }
+            foreach (var k in kinds)
+            {
+                var wl = RebarLogic.WithLaps(k.LengthMm, k.Dia, k.Element);
+                if (wl.splices > 0)
+                    warnings.Add($"{k.Label} L={RebarLogic.Num(RebarLogic.RoundLength(k.LengthMm))} is longer than a stock bar of {RebarLogic.Num(H8Numbers.StockLengthMm)} mm: rebar_schedule adds {wl.splices} lap(s) of {RebarLogic.Num(RebarLogic.RoundLength(wl.lapEach))} mm per bar.");
+            }
+
             var res = new Dictionary<string, object>
             {
                 ["handles"] = pen.Handles,
@@ -353,7 +379,8 @@ namespace ClaudeCAD.Plugin.Drawing
             else
                 foreach (ObjectId id in ctx.ModelSpace)
                     if (ctx.Tr.GetObject(id, OpenMode.ForRead, false) is Entity e && ReadRebar(ctx.Tr, e) is RebarMark m) marks.Add(m);
-            var rows = RebarLogic.Schedule(marks);
+            var warnings = new List<string>();
+            var rows = RebarLogic.Schedule(marks, warnings);
             var waste = RebarLogic.WasteShare(p.Has("waste_percent") ? p.Num("waste_percent") : (double?)null, tool);
             var res = new Dictionary<string, object>
             {
@@ -366,6 +393,7 @@ namespace ClaudeCAD.Plugin.Drawing
                 ["note"] = "Counted from the drawing (bars drawn by draw_rebar), not a structural design; weight 0.00617 × d² kg/m; no waste unless asked.",
             };
             if (rows.Count == 0) { res["note"] = "No bar drawn by draw_rebar in this drawing."; return res; }
+            if (warnings.Count > 0) res["warnings"] = warnings.Cast<object>().ToList();
             if (waste.HasValue) res["waste_percent"] = waste.Value * 100;
             var table = RebarLogic.ScheduleTable(rows, waste);
             if (p.Has("table_position"))

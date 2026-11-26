@@ -17,7 +17,8 @@ Các chỗ ghi *(đối chiếu)* là số mặc định, **kỹ sư đối chi�
 1. Gọi `get_drawing_info` và `list_layers` để biết đơn vị, vùng bản vẽ đã có và các layer `S-*`.
 2. Hỏi người dùng thép chủ nếu chưa có (không tự chọn). Đai / thép sàn không nói thì dùng thép mẫu (mục 3) và nói rõ.
 3. `draw_rebar` cho từng cấu kiện: `element: "beam"` (triển khai + mặt cắt), `"column"` (mặt cắt, cần chiều cao cột
-   `length`), `"slab"` (ô sàn `width` × `length`). Mỗi loại thanh có số hiệu trong vòng tròn và chữ "2Ø18 L=5200", "Ø8a200".
+   `length`), `"slab"` (ô sàn `width` × `length`). Mỗi loại thanh có số hiệu trong vòng tròn và chữ "2Ø18 L=6440", "Ø8a200". Không dùng lại số hiệu đã có
+   (bảng thép tách dòng và báo trùng).
 4. `rebar_schedule` khi người dùng cần bảng: `table_position` để chèn bảng vào bản vẽ, `excel: true` khi muốn Excel. Không
    cộng hao hụt trừ khi người dùng nói % (`waste_percent`).
 5. Móng 3D (gói 3D / Full): `build_footing` (`kind: "pad"` móng đơn, `"strip"` móng băng). Không nói cỡ thì dùng cỡ mẫu và
@@ -29,8 +30,8 @@ Các chỗ ghi *(đối chiếu)* là số mặc định, **kỹ sư đối chi�
 | --- | --- |
 | Lớp bê tông bảo vệ | sàn 20, dầm 25, cột 25, móng có lót 40, móng không lót 70 *(đối chiếu)*; không nhỏ hơn đường kính thanh |
 | Neo / nối chồng | neo 30d; nối 40d (dầm, sàn), 35d (cột). Báo khi dưới mức tối thiểu: neo ≥ 15d và ≥ 200; nối ≥ 20d và ≥ 250 *(đối chiếu)* |
-| Móc | thép trơn (Ø ≤ 10, CB240-T): móc 180°, uốn trong 2,5d, thẳng 3d; đai: móc 135°, thẳng 6d và ≥ 75 *(đối chiếu)*; thép gân (CB400-V): bẻ L 10d khi neo |
-| Khối lượng | 0,00617 × d² kg/m; chiều dài thanh làm tròn 10 mm; kg 2 số lẻ; cây thép 11,7 m (đếm mối nối) |
+| Móc | thép trơn (Ø ≤ 10, CB240-T): móc 180°, uốn trong 2,5d, thẳng 3d; đai: móc 135°, thẳng 6d và ≥ 75 *(đối chiếu)*; thép gân (CB400-V): bẻ L 10d khi neo (đầu thanh dầm vào gối) |
+| Khối lượng | 0,00617 × d² kg/m; chiều dài thanh làm tròn 10 mm; kg 2 số lẻ; cây thép 11,7 m: thanh dài hơn thì đếm mối nối và cộng đoạn nối chồng vào chiều dài, khối lượng |
 | Đường kính | 6, 8, 10, 12, 14, 16, 18, 20, 22, 25, 28, 32 |
 | Tỉ lệ | mặt cắt dầm / cột 1:20; triển khai dầm, thép sàn 1:50; mặt bằng móng 1:100 *(đối chiếu TCVN 5572)* |
 
