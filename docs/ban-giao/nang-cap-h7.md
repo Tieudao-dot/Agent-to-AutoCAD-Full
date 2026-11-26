@@ -126,7 +126,8 @@ Thread `session_01D56HmFrL65iF9oJokvqXw5` (người viết). Nhánh `full/nang-c
 
 - Lượt 1: run 45819860494 trên `10ba68a`, **xanh**, log `# pass 446 / # fail 0`, lõi 1621, UI 38 / 38.
 - Lượt 2: run 45821183068 trên `03bc792` (số đã duyệt đưa vào mô tả / skill), **xanh**, `# fail 0`.
-- Lượt 3 (thêm, vì chốt độ dốc mới và 3 lỗi thread F2 báo, luồng chính giao sau lượt 2): ghi ở dưới.
+- Lượt 3 (thêm, vì chốt độ dốc mới và 3 lỗi thread F2 báo, luồng chính giao sau lượt 2): run 45823603185 trên `d545308`,
+  **xanh**, log `# pass 446 / # fail 0`, lõi 1624 / 1624, UI 38 / 38. Commit sau đó chỉ ghi kết quả này, code giữ nguyên `d545308`.
 
 ## 9. Chưa kiểm được
 
