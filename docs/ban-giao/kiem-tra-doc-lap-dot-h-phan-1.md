@@ -422,4 +422,37 @@ Thread sửa:
 
 ## Kết quả sửa và soát lại
 
-*(Luồng chính ghi khi các thread sửa xong và thread kiểm tra độc lập soát lại.)*
+### Lượt sửa 1 (26/11 18h10 → 18h33)
+
+- Phần H5 (thread đợt F2): `full/nang-cap-h-sua-kth-c` @ `5ce5296`, bàn giao `nang-cap-h-sua-kth-c.md`.
+- Phần H1 / H2 / H3 (thread Test & sửa F1): `full/nang-cap-h-sua-kth-b` @ `bf21eee`, bàn giao `nang-cap-h-sua-kth-b.md`.
+- Phần H4 + prompt (thread đợt F1): `b2e7549`, bàn giao `nang-cap-h-sua-kth-a.md`.
+- Gộp: `full/nang-cap-h-tong-the` @ `b7e408f` (code `0275e38`), CI 45810078065 xanh, `# pass 441 / # fail 0`, lõi 1605.
+- Sửa thêm 5 mục nghi vấn, đều là lỗi thật:
+  - macro chạy `batch_files` không thẻ;
+  - thời gian chờ 30 s của `export_drawing` / `compare_drawings` / `company_standard learn`;
+  - `compare.ts` khai chỉ đọc;
+  - khung nhìn layout mẫu;
+  - chọn khung tên.
+
+### Soát lại lượt 1 (thread kiểm tra độc lập, 18h55, ~$3)
+
+Chạy lại: lõi 1605 / 1605, trợ lý 441 / 441.
+
+| Mã | Kết quả |
+| --- | --- |
+| KTH-01, 03 → 14, 16 → 27 | Sửa đúng |
+| KTH-02 | Đúng phần chính (chờ 2 phút khi soát / đếm, 5 phút khi áp chuẩn / in PDF). Còn lại (nhẹ): quá hạn vẫn đi tiếp, chưa nói "có thể đã làm xong" → giao thread đợt F2 sửa nốt |
+| KTH-15 | Sửa đúng ca đã báo, nhưng sinh KTH-28 |
+| 5 nghi vấn | Sửa đúng |
+| Lưu ý nhỏ KTH-11 | Ô khung tên còn giá trị mặc định của mẫu vẫn tính là "đã điền" (không sửa, ghi để chủ dự án biết) |
+
+**KTH-28 · vừa · H3 (mới, sinh từ bản sửa KTH-15):**
+- **Lỗi:** polyline kín có hai đỉnh gần bằng nhau về x vẫn bị báo "bớt + thêm".
+- **Chỗ lỗi:** `Core/DrawingCompare.cs`, `CanonicalLoop` chọn đỉnh đầu bằng phép so khít, không theo dung sai.
+- **Chứng minh:** `(0,0)(4000,0)(4000,3000)(0.3,3000)` so với `(0.3,0)(4000,0)(4000,3000)(0,3000)` cho kết quả `removed | added`.
+- **Thread sửa:** Test & sửa F1, nhánh `kth-b`.
+
+### Lượt sửa 2
+
+*(Luồng chính ghi khi KTH-28 và phần còn lại của KTH-02 sửa xong, gộp, CI và soát lại.)*
