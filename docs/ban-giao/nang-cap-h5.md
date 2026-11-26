@@ -100,3 +100,6 @@ Không đặt giới hạn thời gian mỗi file: mỗi file là một lần g�
 - Thời gian thật với thư mục 100 – 200 file.
 
 ## 8. CI
+
+- Gộp: run 45792384874 (#85) trên `5184962`: xanh, `# pass 429 / # fail 0`, lõi 1564.
+- H5: run 45795177430 (#86) trên `a6ac65d` (commit code cuối): **xanh**, 1 / 2 lượt; log Windows `# pass 434 / # fail 0`, lõi 1572 / 1572. Commit sau đó chỉ là tài liệu (mục này).
