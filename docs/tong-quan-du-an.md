@@ -246,3 +246,4 @@ Sau đợt F + G (ước tính, đo ở thread test tổng thể đợt G; đợ
   - ~19h50 chủ dự án chốt thêm: ống thoát D60 dốc mặc định 2,5 %, D110+ 2 % (thread rà H7 phát hiện D60 2 % thấp hơn mức tối thiểu).
   - 20h07 rà H6 xong (5 lỗi); 20h35 rà H7 xong (6 lỗi); 20h36 H8 kết cấu bắt đầu (gộp H6-test + H7-test).
   - ~20h45 chủ dự án chốt H9: chữ vẽ vào bản vẽ giữ tiếng Việt khi chọn English (chỉ đổi giao diện và câu trả lời).
+  - 21h40 rà H8 xong (3 lỗi; `886e699`, CI 45840644593 xanh); 21h42 H9 tiếng Anh bắt đầu (thread đợt F1), thread Test & sửa F1 đọc trước để rà.
