@@ -39,8 +39,16 @@ Mọi test xác nhận cũ vẫn qua, kể cả các câu tự nhiên như "Vân
 | KTP-41 | Thêm `LOCKED_MSG` ("Máy này đã bị chủ plugin tạm khóa.") vào `L.ServerTexts` và bộ cài (`H9SrvKey10` / `H9Srv10`, `TrServer` xét cả mục 10). Test mới đọc **mọi** lời lỗi trong `Code.gs.template` (chuỗi trực tiếp, hằng `*_MSG`, câu ghép `'A' + giá trị + 'B'`) và đòi mỗi câu có trong `ServerTexts`, có bản tiếng Anh, có trong bộ cài. Chỉ đọc template | Test lõi `Every_error_text_of_the_activation_server_template_has_its_english` |
 | KTP-42 | `PluginApp.cs`: thêm `!settings.LanguageSaved` như `ChatController.cs` (cài đặt cũ chưa có ngôn ngữ thì lấy ngôn ngữ bộ cài) | Test lõi kiểm dòng |
 | KTP-43 | "Đã thêm" → "Added on" | Test lõi |
-| KTP-44 | Thêm "xoá" (kiểu dấu cũ), "xoá đi", "xoá luôn", "ghi đè", "thay thế", "overwrite", "replace", "ơi", "yeah", "alright", "👍" (chữ đệm, đứng riêng không tính); "được thôi", "ok thôi" là đồng ý; "thôi" đứng riêng vẫn là từ chối; giữ danh sách đóng | Test trợ lý: 14 câu "có" |
+| KTP-44 | Thêm "xoá" (kiểu dấu cũ), "xoá đi", "xoá luôn", "ghi đè", "thay thế", "overwrite", "yeah", "alright" (chữ đồng ý: đứng riêng là đồng ý); "replace", "ơi", "👍" (chữ đệm: đứng riêng không tính); "được thôi", "ok thôi" là đồng ý; "thôi" đứng riêng vẫn là từ chối; giữ danh sách đóng | Test trợ lý: 14 câu "có" |
 | KTP-47 (a) | Gõ riêng "thôi được" là đồng ý (trước đây ra không). "không sao" giờ là **không đồng ý** vì có chữ "không" (trước đây là đồng ý); sửa test cũ "Không sao, xóa đi" sang "không". Sửa chữ ở `docs/dot-h-cho-duyet.md`, `docs/ban-giao/nang-cap-h9.md` và bàn giao này | Test trợ lý |
+
+## Lượt 4: soát lại lượt 2 (gộp `83508ee`)
+
+| Mã | Đã sửa thế nào | Test |
+| --- | --- | --- |
+| KTP-49 | Bản sửa KTP-44 bỏ qua "thôi" sau ok / được cả khi có dấu phẩy hoặc có "đi" theo sau, nên "ok, thôi đi" ra đồng ý (chiều không an toàn). Giờ "thôi" chỉ được tính ở đúng hai dạng, đọc trên câu gốc trước khi cắt chữ: "thôi được" (chỉ cách nhau dấu cách), hoặc "được thôi" / "ok thôi" ở **cuối câu** (sau đó chỉ được có nhé / ạ). "thôi" còn lại không phải chữ đồng ý, nên câu ra không. Dấu phẩy (và ; : …) giữ thành một mốc ngăn, nên cụm đồng ý không còn nối qua dấu phẩy ("làm, đi" không phải "làm đi") | Test trợ lý: "ok, thôi đi", "ok thôi đi", "ok thoi di", "được thôi đi", "ok, thôi", "được, thôi", "làm, đi", "ok thôi, đừng" → không; "được thôi", "ok thôi nhé", "ok thôi", "thôi được", "Thôi được, xóa đi", "ok, xóa luôn" → có |
+| KTP-54 (a) | `docs/ban-giao/nang-cap-h9.md`: "ok, không sao" ghi là không đồng ý, đúng code | — |
+| KTP-54 (c) | Dòng KTP-44 ở trên: "yeah", "alright", "overwrite" là chữ đồng ý (đứng riêng là đồng ý); "replace", "ơi", "👍" là chữ đệm | — |
 
 ## Quyết định tự chọn
 
@@ -57,6 +65,7 @@ Không có.
 
 - Lượt 1 (`e6ea0c1`): lõi 1687 / 1687, trợ lý 466 / 466.
 - Lượt 2: lõi 1700 / 1700, trợ lý 467 / 467.
-- Lượt 3 (sau lần sửa cuối): lõi **1709 / 1709**, trợ lý **467 / 467** (`# fail 0`).
+- Lượt 3: lõi 1709 / 1709, trợ lý 467 / 467.
+- Lượt 4 (sau lần sửa cuối): lõi **1716 / 1716**, trợ lý **467 / 467** (`# fail 0`). Chỉ sửa `agent/` và tài liệu, không cần build lại plugin.
 - Build `net48`, `net8.0-windows`, `net10.0-windows` và project UI test: 0 lỗi.
 - UI test WPF chỉ chạy trên CI Windows.
