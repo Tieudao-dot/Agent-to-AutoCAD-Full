@@ -92,3 +92,5 @@ Số kỹ thuật (khách không thấy): đọc tối đa `G2Numbers.MaxScan` �
 - Bộ chuẩn có hàng trăm layer: thời gian học / áp.
 
 ## 8. CI
+
+Run 45786657864 (#82) trên `8e72fe6` (commit code cuối): **xanh**, 1 / 2 lượt. Log Windows: trợ lý `# pass 422`, `# fail 0`; lõi 1530 / 1530. Commit sau đó chỉ là tài liệu (mục này).
