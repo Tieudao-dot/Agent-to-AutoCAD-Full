@@ -84,7 +84,7 @@ Tất cả khớp. Mục "Số tiêu chuẩn phần 2" chỉ trỏ tới `docs/d
 
 ## 7. CI
 
-(ghi sau khi chạy)
+Run 45802392263 trên `9612510`: **xanh**, 1 / 2 lượt. Log Windows: trợ lý `# tests 436`, `# pass 436`, `# fail 0`; lõi 1581 / 1581; UI test và build 3 target qua. Commit sau đó chỉ ghi mục này, code giữ nguyên như `9612510`.
 
 ## 8. Chưa kiểm được
 
