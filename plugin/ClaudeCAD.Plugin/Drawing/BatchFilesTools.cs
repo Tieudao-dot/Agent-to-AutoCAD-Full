@@ -212,7 +212,7 @@ namespace ClaudeCAD.Plugin.Drawing
             row["backup"] = backup;
             var sub = new Dictionary<string, object>();
             foreach (var k in new[] { "company", "scale", "standard", "make_current" }) if (p.Has(k)) sub[k] = p.Get(k);
-            var temp = Path.Combine(Path.GetDirectoryName(file), ".claudecad-tam-" + Guid.NewGuid().ToString("N").Substring(0, 10) + ".dwg");
+            var temp = Path.Combine(Path.GetDirectoryName(file), BatchLogic.TempPrefix + Guid.NewGuid().ToString("N").Substring(0, 10) + ".dwg");
             var keepWorking = HostApplicationServices.WorkingDatabase;
             try
             {
@@ -264,9 +264,13 @@ namespace ClaudeCAD.Plugin.Drawing
             var before = dm.MdiActiveDocument;
             var here = OpenHere(file);
             Document doc = here;
+            // Test & sửa H5: the chat must not take these switches for the user's (it would stop the run at its first file)
+            BatchDocSwitches.MarkPath(file);
+            if (here != null) BatchDocSwitches.Mark(here);
             try
             {
                 if (doc == null) doc = DocumentCollectionExtension.Open(dm, file, true);
+                BatchDocSwitches.Mark(doc);
                 dm.MdiActiveDocument = doc;
                 var pdf = BatchLogic.PdfOf(file);
                 var q = new Dictionary<string, object>
@@ -282,6 +286,8 @@ namespace ClaudeCAD.Plugin.Drawing
             }
             finally
             {
+                try { if (doc != null && !doc.IsDisposed) BatchDocSwitches.Mark(doc); } catch (Exception) { } // the time restarts
+                BatchDocSwitches.MarkPath(file);
                 try { if (doc != null && here == null && !doc.IsDisposed) DocumentExtension.CloseAndDiscard(doc); } catch (Exception) { }
                 try { if (before != null && !before.IsDisposed) dm.MdiActiveDocument = before; } catch (Exception) { }
             }

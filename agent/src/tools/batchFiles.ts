@@ -36,8 +36,13 @@ export async function runBatch(b: ToolBridge, params: Record<string, unknown>, o
     if (o.signal?.aborted) { stopped = true; break; }
     b.status('batch_files', 'running', { summary: `file ${i + 1} / ${count} (Dừng để ngừng sau file đang làm)` });
     const r = await b.call('batch_files', { ...base, action: 'run', index: i, stamp });
-    if (stopsRun(r)) return r;
-    rows.push(r.ok ? (r.result as Row) : { index: i, status: 'error', reason: `${r.error.code}: ${r.error.message}`.slice(0, 300) });
+    if (stopsRun(r)) {
+      if (rows.length === 0) return r;
+      // Test & sửa H5: refused half way (e.g. a file was added to the folder, so the card no longer matches): the files
+      // already done are still reported, so the user knows which ones were changed
+      return partialResult(plan.id, rows, count, `${r.ok ? '' : `${r.error.code}: ${r.error.message}`}`.slice(0, 400));
+    }
+    rows.push(r.ok ? (r.result as Row) : { index: i, file: listed(p, i), status: 'error', reason: `${r.error.code}: ${r.error.message}`.slice(0, 300) });
   }
   const fin = await b.call('batch_files', { ...base, action: 'finish', stamp, rows, excel: excel === true });
   const summary = fin.ok ? (fin.result as Row) : { finish_error: fin.error.message };
@@ -50,6 +55,34 @@ export async function runBatch(b: ToolBridge, params: Record<string, unknown>, o
       done: rows.length,
       of: count,
       ...(stopped ? { stopped: `stopped by the user (Dừng) after ${rows.length} of ${count} files; the files not reached were not touched` } : {}),
+      files: short.slice(0, 200),
+    },
+  } as ToolResponse;
+}
+
+/** The name of file i as the plan listed it (the plan lists the first ones), else its number. */
+function listed(plan: Row, i: number): string {
+  const f = Array.isArray(plan.files) ? (plan.files as unknown[])[i] : undefined;
+  return typeof f === 'string' ? f : `#${i + 1}`;
+}
+
+function totals(rows: Row[]): Record<string, number> {
+  const t: Record<string, number> = { ok: 0, error: 0, skipped: 0 };
+  for (const r of rows) if (typeof r.status === 'string' && r.status in t) t[r.status]! += 1;
+  return t;
+}
+
+/** A run stopped by the plugin after some files: what was done, and why it stopped (no summary file is written). */
+export function partialResult(id: string, rows: Row[], count: number, why: string): ToolResponse {
+  const short = rows.map((r) => ({ file: r.file, status: r.status, ...(r.reason ? { reason: r.reason } : {}), ...(r.backup ? { backup: r.backup } : {}) }));
+  return {
+    id,
+    ok: true,
+    result: {
+      ...totals(rows),
+      done: rows.length,
+      of: count,
+      stopped: `the run stopped after ${rows.length} of ${count} files (${why}); the files listed here were done, the others were not touched. Tell the user, then plan again if they want the rest.`,
       files: short.slice(0, 200),
     },
   } as ToolResponse;

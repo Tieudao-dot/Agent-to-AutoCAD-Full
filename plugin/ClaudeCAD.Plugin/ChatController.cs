@@ -2749,6 +2749,8 @@ namespace ClaudeCAD.Plugin
 
         private void OnDocumentActivatedCore(object sender, DocumentCollectionEventArgs e)
         {
+            // Test & sửa H5: batch_files brings each drawing it prints to the front, then back: not the user switching drawings
+            if (_busy && e.Document != null && BatchDocSwitches.IsRuns(e.Document, DocPath(e.Document))) return;
             // an old version opened from the palette: no chat of its own
             if (_openingVersion.HasValue && e.Document != null && !_versionDocs.ContainsKey(e.Document) && e.Document != _transcriptDoc)
             {
@@ -2807,6 +2809,11 @@ namespace ClaudeCAD.Plugin
                 Logger.Error("palette action failed: " + what, ex);
                 try { Ui.AddNote($"Lỗi nội bộ ({what}): {ex.Message}. Xem log bằng lệnh CLAUDECHATLOG.", true); } catch { }
             }
+        }
+
+        private static string DocPath(Document d)
+        {
+            try { return d?.Name; } catch { return null; }
         }
 
         private static string SafeDocName(Document d)

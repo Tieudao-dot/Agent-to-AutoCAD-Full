@@ -79,4 +79,30 @@ describe('H5: batch_files', () => {
     assert.match((r as any).result.stopped, /after 2 of 5/);
     assert.equal(calls[calls.length - 1].action, 'finish');
   });
+
+  it('Test & sửa H5: refused half way, the files already done are still reported (and nothing else runs)', async () => {
+    const card = { id: 'e', ok: false, error: { code: 'INVALID_PARAMS', message: 'Confirmation required: batch_files would …' } } as ToolResponse;
+    const { b, calls } = fakeBridge(4, (i) => (i === 2 ? card : null));
+    const r = await runBatch(b, { task: 'standards', folder: 'C:/a', user_confirmed: ['T'] });
+    assert.ok(r.ok);
+    const res = (r as any).result;
+    assert.equal(res.done, 2);
+    assert.equal(res.ok, 2);
+    assert.match(res.stopped, /after 2 of 4/);
+    assert.match(res.stopped, /Confirmation required/);
+    assert.deepEqual(res.files.map((f: any) => f.file), ['f0.dwg', 'f1.dwg']);
+    assert.equal(calls.filter((c) => c.action === 'run').length, 3);
+    assert.ok(!calls.some((c) => c.action === 'finish'), 'the summary needs the card too: not called');
+  });
+
+  it('Test & sửa H5: a failing file keeps its name from the plan', async () => {
+    const { b } = fakeBridge(2, (i) => (i === 0 ? ({ id: 'e', ok: false, error: { code: 'ACAD_ERROR', message: 'x' } } as ToolResponse) : null));
+    const planned: ToolBridge = { ...b, call: async (t, p) => {
+      const r = await b.call(t, p);
+      if (p.action === 'plan' && r.ok) (r.result as any).files = ['ban-ve-a.dwg', 'ban-ve-b.dwg'];
+      return r;
+    } };
+    const r = await runBatch(planned, { task: 'check', folder: 'C:/a', user_confirmed: ['T'] });
+    assert.equal((r as any).result.files[0].file, 'ban-ve-a.dwg');
+  });
 });

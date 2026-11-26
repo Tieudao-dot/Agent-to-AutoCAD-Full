@@ -25,6 +25,54 @@ namespace ClaudeCAD.Plugin.Core
         public const int TopGroups = 3;
     }
 
+    /// <summary>
+    /// Test & sửa H5: the drawings batch_files itself opens / brings to the front to print them. The chat stops a turn when the
+    /// user switches to another drawing; a switch made by the run is not the user's and must not stop it (else a PDF run stops
+    /// at its first file). Kept by reference for a short time after the switch (AutoCAD may raise the event later).
+    /// </summary>
+    public static class BatchDocSwitches
+    {
+        /// <summary>Internal: how long (s) after its file is done a drawing switch of the run is still known as the run's.</summary>
+        public const int KeepSeconds = 30;
+        private static readonly object Gate = new object();
+        private static readonly List<(WeakReference doc, DateTime until)> Docs = new List<(WeakReference, DateTime)>();
+        public static Func<DateTime> Now = () => DateTime.UtcNow;
+
+        /// <summary>The run is switching to this drawing (call again when the file is done: the time restarts).</summary>
+        public static void Mark(object doc)
+        {
+            if (doc == null) return;
+            lock (Gate)
+            {
+                Docs.RemoveAll(x => !x.doc.IsAlive || x.until < Now() || ReferenceEquals(x.doc.Target, doc));
+                Docs.Add((new WeakReference(doc), Now().AddSeconds(KeepSeconds)));
+            }
+        }
+
+        private static readonly List<(string path, DateTime until)> Paths = new List<(string, DateTime)>();
+
+        /// <summary>The run is about to open this file (the drawing object is known only once it is open and active).</summary>
+        public static void MarkPath(string path)
+        {
+            if (string.IsNullOrWhiteSpace(path)) return;
+            lock (Gate)
+            {
+                Paths.RemoveAll(x => x.until < Now() || OtherDrawingLogic.SameFile(x.path, path));
+                Paths.Add((path, Now().AddSeconds(KeepSeconds)));
+            }
+        }
+
+        /// <summary>This activation was made by the run (not the user): the drawing, or the file it was opened from.</summary>
+        public static bool IsRuns(object doc, string docPath = null)
+        {
+            lock (Gate)
+                return (doc != null && Docs.Any(x => x.until >= Now() && ReferenceEquals(x.doc.Target, doc))) ||
+                       (docPath != null && Paths.Any(x => x.until >= Now() && OtherDrawingLogic.SameFile(x.path, docPath)));
+        }
+
+        public static void ClearForTests() { lock (Gate) { Docs.Clear(); Paths.Clear(); } }
+    }
+
     /// <summary>Nâng cấp đợt H5, AutoCAD-free part of batch_files: tasks, the list of files, the card token, backups, the summary.</summary>
     public static class BatchLogic
     {
@@ -83,11 +131,12 @@ namespace ClaudeCAD.Plugin.Core
                 if (string.IsNullOrWhiteSpace(folder)) throw ToolException.Invalid($"{Tool}: give the folder (or the list of files).");
                 void Walk(string dir, int depth)
                 {
-                    foreach (var f in filesOf(dir).Where(x => Takes(task, x))) all.Add(f);
+                    // Test & sửa H5: a temporary copy left by a stopped AutoCAD is never taken for the user's drawing
+                    foreach (var f in filesOf(dir).Where(x => Takes(task, x) && !IsOwnTemp(x))) all.Add(f);
                     if (!recursive || depth >= H5Numbers.MaxDepth) return;
                     foreach (var d in dirsOf(dir).OrderBy(x => x, StringComparer.OrdinalIgnoreCase))
                     {
-                        var name = Path.GetFileName(d.TrimEnd('\\', '/'));
+                        var name = NameOf(d.TrimEnd('\\', '/'));
                         if (name.Equals(H5Numbers.BackupFolder, StringComparison.OrdinalIgnoreCase) || name.StartsWith(".", StringComparison.Ordinal)) continue;
                         Walk(d, depth + 1);
                     }
@@ -97,6 +146,18 @@ namespace ClaudeCAD.Plugin.Core
             var sorted = all.OrderBy(x => x, StringComparer.OrdinalIgnoreCase).ToList();
             if (sorted.Count > H5Numbers.MaxFiles) { more = sorted.Count - H5Numbers.MaxFiles; sorted = sorted.Take(H5Numbers.MaxFiles).ToList(); }
             return sorted;
+        }
+
+        /// <summary>Test & sửa H5: the name of the temporary copy written before the swap (".claudecad-tam-….dwg").</summary>
+        public const string TempPrefix = ".claudecad-tam-";
+
+        public static bool IsOwnTemp(string path) => NameOf(path).StartsWith(TempPrefix, StringComparison.OrdinalIgnoreCase);
+
+        /// <summary>The last part of a path, split at '\\' or '/' (Windows paths, also when tested elsewhere).</summary>
+        public static string NameOf(string path)
+        {
+            var s = path ?? "";
+            return s.Substring(Math.Max(s.LastIndexOf('\\'), s.LastIndexOf('/')) + 1);
         }
 
         /// <summary>Why a file is left out before anything runs, or null. Writes also skip read-only and locked files.</summary>
