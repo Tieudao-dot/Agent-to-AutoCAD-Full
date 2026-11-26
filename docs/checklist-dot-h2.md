@@ -32,6 +32,11 @@ FBX do plugin tự ghi (không dùng lệnh `FBXEXPORT` của AutoCAD). Chưa ai
 3. **3ds Max** (Import › FBX): như trên. Ghi lại mọi cảnh báo của hộp thoại nhập FBX.
 4. Máy gói 2D: "xuất FBX": Claude nói FBX cần gói 3D / Full; DXF / DWG vẫn dùng được.
 5. Bản vẽ chỉ có hình 2D: "xuất FBX": Claude nói FBX chỉ lấy khối 3D, gợi ý DXF / DWG.
+6. *(Test & sửa H2)* Trong Blender / 3ds Max nhìn một khối hộp: các mặt **phẳng, sắc cạnh** (không bị tô bóng tròn như quả bóng).
+   Khối tròn (cột tròn) sẽ thấy từng mặt nhỏ: ghi lại nếu khó chịu.
+7. *(Test & sửa H2)* Máy gói 2D (hoặc Full chế độ 2D): Claude không đề nghị FBX; nhờ thẳng "xuất FBX" thì Claude nói FBX là phần 3D và
+   gợi ý DWG / DXF (3ds Max mở được DWG), không nói gì về "thuộc tính block".
+8. *(Test & sửa H2)* Khối 3D nằm trong block (vd block cửa 3D): không vào FBX; kết quả nói rõ chỉ lấy khối của Model.
 
 ## D. SketchUp (~5 phút, nếu có SketchUp)
 
@@ -43,6 +48,7 @@ FBX do plugin tự ghi (không dùng lệnh `FBXEXPORT` của AutoCAD). Chưa ai
 
 1. "Xuất DWG vào `\\máy-khác\thư-mục\a.dwg`" (máy khác chỗ lưu bản vẽ): Claude từ chối, nhờ chọn thư mục trên máy hoặc thư mục của bản vẽ.
 2. Bản vẽ chưa lưu bao giờ: file xuất vào thư mục Documents.
+3. *(Test & sửa H2)* Nhờ "xuất layer A-WALL và hai khối này" (vừa layer vừa handle): Claude được báo chọn một trong hai, không xuất thiếu.
 
 ## F. Tự kiểm
 

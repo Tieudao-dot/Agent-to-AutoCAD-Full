@@ -48,6 +48,13 @@ describe('H2: export_drawing', () => {
     assert.match(plugin('UI', 'ToolLabels.cs'), /\["export_drawing"\] = "Xuất DXF \/ DWG \/ FBX"/);
   });
 
+  it('Test & sửa H2: the 2D plan is not offered fbx; 3D and Full are', () => {
+    const fmt = (plan?: '2d' | '3d' | '2d3d') => ((buildTools(bridge, ['export_drawing'], plan)[0]!.inputSchema as any).format.options as string[]).slice().sort();
+    assert.deepEqual(fmt('2d'), ['dwg', 'dxf']);
+    assert.deepEqual(fmt('3d'), ['dwg', 'dxf', 'fbx']);
+    assert.deepEqual(fmt('2d3d'), ['dwg', 'dxf', 'fbx']);
+  });
+
   it('one line in the prompt of every plan', () => {
     for (const p of ['2d', '3d', '2d3d'] as const) assert.match(systemPromptFor(p), /export_drawing/);
   });

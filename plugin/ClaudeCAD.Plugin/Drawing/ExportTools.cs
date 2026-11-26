@@ -30,12 +30,14 @@ namespace ClaudeCAD.Plugin.Drawing
             var format = ExportLogic.FormatOf(p.Str("format"), tool);
             var (year, acad) = format == "fbx" ? ("", "") : ExportLogic.VersionOf(p.Str("version", null), tool);
             bool part = p.Has("handles") || p.Has("layers");
+            // Test & sửa H2: both would export the handles only, silently leaving the layers out
+            if (p.Has("handles") && p.Has("layers")) throw ToolException.Invalid($"{tool}: give handles or layers, not both.");
             string openPath = null;
             try { openPath = doc.IsNamedDrawing ? doc.Name : null; } catch (Exception) { }
             var file = ExportLogic.OutputPath(p.Str("output", null), format, DrawingFolder(ctx), DrawingStem(ctx), year, part, openPath, tool);
             // the network rule of trace_image (G5): this computer, or the network folder of the open drawing
             var refusal = TraceLogic.PathRefusal(file, openPath, OnNetworkDrive(file), SameDrive(file, openPath), tool);
-            if (refusal != null) throw ToolException.Invalid(refusal.Replace("drag the file into the chat (the chat copies it to this computer) or to copy it to this computer (e.g. Desktop)", "give a folder on this computer (e.g. Desktop) or the folder of the drawing"));
+            if (refusal != null) throw ToolException.Invalid(ExportLogic.WriteRefusal(refusal));
             if (Directory.Exists(file)) throw ToolException.Invalid($"{tool}: '{file}' is a folder; give a file name ending in .{format}.");
             if (!Directory.Exists(Path.GetDirectoryName(file))) throw ToolException.Invalid($"{tool}: folder '{Path.GetDirectoryName(file)}' does not exist.");
             RequireOverwriteCard(ctx, p, tool, file, File.Exists(file), $"{tool}: '{file}' already exists. Ask the user, then call again with overwrite: true, or give another file name.", "overwrite");
@@ -150,6 +152,7 @@ namespace ClaudeCAD.Plugin.Drawing
             var meshes = new List<FbxWriter.Mesh>();
             var temp = Path.Combine(Path.GetTempPath(), "claudecad-fbx-" + Guid.NewGuid().ToString("N").Substring(0, 12));
             int triangles = 0;
+            var empty = new List<string>();
             List<string> handles;
             Directory.CreateDirectory(temp);
             try
@@ -186,6 +189,8 @@ namespace ClaudeCAD.Plugin.Drawing
                         if (!File.Exists(stl)) throw ToolException.Invalid($"{tool}: AutoCAD made no mesh for {handles[i]}. Nothing was written.");
                         var tris = Solid3Logic.ReadStl(File.ReadAllBytes(stl)).Select(t => Unshift(t, shift)).ToList();
                         var mesh = FbxWriter.FromTriangles(solids[i].Layer + " " + handles[i], tris);
+                        // Test & sửa H2: a solid AutoCAD meshes to nothing (too small / broken) is left out and named, not written empty
+                        if (mesh.Triangles.Count == 0) { empty.Add(handles[i]); continue; }
                         var rgb = SolidRgb(tr, solids[i]);
                         mesh.R = rgb[0] / 255.0; mesh.G = rgb[1] / 255.0; mesh.B = rgb[2] / 255.0;
                         triangles += mesh.Triangles.Count;
@@ -193,6 +198,7 @@ namespace ClaudeCAD.Plugin.Drawing
                     }
                     tr.Abort(); // the moved copies are never kept: the drawing is not changed
                 }
+                if (meshes.Count == 0) throw ToolException.Invalid($"{tool}: AutoCAD made no triangles for the solids ({string.Join(", ", empty.Take(20))}). Nothing was written.");
                 var bytes = FbxWriter.Write(meshes);
                 try { File.WriteAllBytes(file, bytes); }
                 catch (Exception ex) { throw ToolException.Invalid($"{tool}: could not write '{file}' ({ex.Message})."); }
@@ -201,7 +207,7 @@ namespace ClaudeCAD.Plugin.Drawing
             {
                 try { Directory.Delete(temp, true); } catch (Exception) { }
             }
-            return new Dictionary<string, object>
+            var res = new Dictionary<string, object>
             {
                 ["file"] = file,
                 ["format"] = "fbx",
@@ -210,6 +216,8 @@ namespace ClaudeCAD.Plugin.Drawing
                 ["size_kb"] = Acad.R(new FileInfo(file).Length / 1024.0),
                 ["note"] = ExportLogic.Note("fbx", "", p.Has("handles") || p.Has("layers")) + " Tell the user where the file is.",
             };
+            if (empty.Count > 0) res["left_out"] = empty.Take(50).Cast<object>().ToList();
+            return res;
         }
 
         private static float[] Unshift(float[] t, double[] shift)

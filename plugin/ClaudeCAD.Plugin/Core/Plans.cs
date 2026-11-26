@@ -170,7 +170,6 @@ namespace ClaudeCAD.Plugin.Core
             ["array_rect"] = "levels",
         };
 
-        /// <summary>The 3D parameter of this call the plan does not have (array_rect levels above 1 on a plan without 3D), or null.</summary>
         /// <summary>Nâng cấp đợt H2: values of a Common tool's parameter that are 3D (export_drawing format fbx: 3D / Full).</summary>
         public static readonly IReadOnlyDictionary<string, (string param, string[] values)> ThreeDValues =
             new Dictionary<string, (string, string[])>(StringComparer.Ordinal)
@@ -178,6 +177,7 @@ namespace ClaudeCAD.Plugin.Core
                 ["export_drawing"] = ("format", new[] { "fbx" }),
             };
 
+        /// <summary>The 3D parameter of this call the plan does not have (array_rect levels above 1, export_drawing fbx, on a plan without 3D), or null.</summary>
         public static string Blocked3dParam(string plan, string tool, IDictionary<string, object> p)
         {
             if (tool != null && p != null && !Has3D(plan) && ThreeDValues.TryGetValue(tool, out var tv) && p.TryGetValue(tv.param, out var tvv) && tvv != null
@@ -233,6 +233,11 @@ namespace ClaudeCAD.Plugin.Core
                   $"{string.Join(" / ", tv.values)} properties from the 2D group. Leave them out (layer, color, linetype... are copied on every plan), " +
                   $"or tell the user in Vietnamese that this machine uses the \"{Label(plan)}\" plan and that the plugin owner can open the 2D group" +
                   (string.IsNullOrWhiteSpace(contact) ? "." : $" ({contact}).")
+            : ThreeDValues.TryGetValue(tool ?? "", out var v3) && v3.param == param
+                // Test & sửa H2: FBX on a plan without 3D (before: the block-attribute text)
+                ? $"{tool}: this machine's plan is \"{Label(plan)}\", which has no 3D, and {param} {string.Join(" / ", v3.values)} (the 3D solids as meshes) belongs to the 3D group. " +
+                  "Offer dwg or dxf instead (3ds Max opens DWG too), or tell the user in Vietnamese that this machine uses the " +
+                  $"\"{Label(plan)}\" plan and that the plugin owner can open the 3D group" + (string.IsNullOrWhiteSpace(contact) ? "." : $" ({contact}).")
             : ThreeDParams.TryGetValue(tool ?? "", out var p3) && p3 == param
                 ? $"{tool}: this machine's plan is \"{Label(plan)}\", which has no 3D, and '{param}' (copies stacked along Z) belongs to the 3D group. " +
                   "Leave levels out (one level), or tell the user in Vietnamese that this machine uses the " +
@@ -254,7 +259,7 @@ namespace ClaudeCAD.Plugin.Core
             {
                 var bp = Allowed(plan, tool) ? BlockedParam(plan, tool, p) : null;
                 string what = !Allowed(plan, tool) ? tool : bp == null ? null
-                    : tool + (Blocked3dParam(plan, tool, p) != null ? " (số tầng)" : BlockedTextValue(plan, tool, p) != null ? " (thuộc tính chữ / kích thước)"
+                    : tool + (Blocked3dParam(plan, tool, p) != null ? (ThreeDValues.ContainsKey(tool) ? " (FBX, phần 3D)" : " (số tầng)") : BlockedTextValue(plan, tool, p) != null ? " (thuộc tính chữ / kích thước)"
                         : TextParams.TryGetValue(tool, out var tp) && tp == "table_position" ? " (bảng trong bản vẽ)" : " (thuộc tính block)");
                 if (what != null && !list.Contains(what)) list.Add(what);
             }

@@ -94,6 +94,15 @@ namespace ClaudeCAD.Plugin.Core
             return full;
         }
 
+        /// <summary>
+        /// Test & sửa H2: the G5 network rule's refusal reworded for a file to WRITE: dragging a file into the chat does not
+        /// help an export (also in the device-path message), so the user picks a folder of this computer or of the drawing.
+        /// </summary>
+        public static string WriteRefusal(string refusal) => (refusal ?? "")
+            .Replace(TraceLogic.Advice, "Ask the user for a folder on this computer (e.g. Desktop) or the folder of the drawing.")
+            .Replace("Ask the user for the normal path of the file (e.g. C:\\…), or to drag the file into the chat.", "Ask the user for a normal folder path (e.g. C:\\…) on this computer or the folder of the drawing.")
+            .Replace(" are opened", " are used");
+
         /// <summary>What the result tells Claude about who can open the file.</summary>
         public static string Note(string format, string year, bool part)
         {
@@ -102,7 +111,7 @@ namespace ClaudeCAD.Plugin.Core
             {
                 case "dxf": return $"DXF version {year} ({Covers(year)} and most CAD programs).{p} The open drawing is unchanged (same file, same version).";
                 case "dwg": return $"A copy saved as DWG {year}, opened by {Covers(year)} and newer.{p} The open drawing is unchanged (same file, same version).";
-                default: return "FBX 7.4 (binary) of the 3D solids as meshes, in millimetres, Z up (3ds Max, Blender…). Only 3D solids are exported; lines, texts and 2D objects are not. Materials: the colour of each solid.";
+                default: return "FBX 7.4 (binary) of the 3D solids as meshes, in millimetres, Z up (3ds Max, Blender…). Only 3D solids of model space are exported (not those inside blocks); lines, texts and 2D objects are not. Materials: the colour of each solid.";
             }
         }
     }
@@ -265,6 +274,14 @@ namespace ClaudeCAD.Plugin.Core
                 var idx = new List<int>(m.Triangles.Count * 3);
                 foreach (var t in m.Triangles) { idx.Add(t[0]); idx.Add(t[1]); idx.Add(~t[2]); } // the last of a polygon: −(i + 1)
                 g.Child("PolygonVertexIndex").Ai(idx);
+                // Test & sửa H2: flat normals, one per corner (ByPolygonVertex). Without them each program makes its own, and the
+                // corners merged by FromTriangles would come out smoothed (a box shaded like a ball in 3ds Max)
+                var ln = g.Child("LayerElementNormal").I(0);
+                ln.Child("Version").I(101);
+                ln.Child("Name").S("");
+                ln.Child("MappingInformationType").S("ByPolygonVertex");
+                ln.Child("ReferenceInformationType").S("Direct");
+                ln.Child("Normals").Ad(FaceNormals(m));
                 var lm = g.Child("LayerElementMaterial").I(0);
                 lm.Child("Version").I(101);
                 lm.Child("Name").S("");
@@ -273,6 +290,9 @@ namespace ClaudeCAD.Plugin.Core
                 lm.Child("Materials").Ai(new[] { 0 });
                 var layer = g.Child("Layer").I(0);
                 layer.Child("Version").I(100);
+                var lne = layer.Child("LayerElement");
+                lne.Child("Type").S("LayerElementNormal");
+                lne.Child("TypedIndex").I(0);
                 var le = layer.Child("LayerElement");
                 le.Child("Type").S("LayerElementMaterial");
                 le.Child("TypedIndex").I(0);
@@ -319,6 +339,21 @@ namespace ClaudeCAD.Plugin.Core
                 w.Flush();
                 return ms.ToArray();
             }
+        }
+
+        /// <summary>Test & sửa H2: the normal of each triangle, repeated for its three corners (x, y, z each); a flat one is +Z.</summary>
+        public static List<double> FaceNormals(Mesh m)
+        {
+            var n = new List<double>(m.Triangles.Count * 9);
+            foreach (var t in m.Triangles)
+            {
+                double[] a = m.Vertices[t[0]], b = m.Vertices[t[1]], c = m.Vertices[t[2]];
+                double ux = b[0] - a[0], uy = b[1] - a[1], uz = b[2] - a[2], vx = c[0] - a[0], vy = c[1] - a[1], vz = c[2] - a[2];
+                double x = uy * vz - uz * vy, y = uz * vx - ux * vz, z = ux * vy - uy * vx, l = Math.Sqrt(x * x + y * y + z * z);
+                if (l < 1e-12) { x = 0; y = 0; z = 1; } else { x /= l; y /= l; z /= l; }
+                for (int k = 0; k < 3; k++) { n.Add(x); n.Add(y); n.Add(z); }
+            }
+            return n;
         }
 
         /// <summary>A name FBX keeps (no control characters, at most 100 characters).</summary>
