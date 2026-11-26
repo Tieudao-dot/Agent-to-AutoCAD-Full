@@ -92,6 +92,7 @@ namespace ClaudeCAD.Plugin.Drawing
             RegisterBatchFiles(d); // nâng cấp đợt H5: batch_files (Drawing/BatchFilesTools.cs)
             RegisterTerrain(d); // nâng cấp đợt H6: terrain (Drawing/TerrainTools.cs)
             RegisterMep(d); // nâng cấp đợt H7: draw_mep, mep_report (Drawing/MepTools.cs)
+            RegisterStructure(d); // nâng cấp đợt H8: build_footing, draw_rebar, rebar_schedule (Drawing/StructureTools.cs)
         }
 
         private static void RegisterSystem(ToolDispatcher d, ITurnHost host)

@@ -107,6 +107,8 @@ namespace ClaudeCAD.Plugin.Core
             Add(ToolGroup.TwoD, "trace_image");
             // nâng cấp đợt H4 (Drawing/CompanyStandardTools.cs): learn a company standard from a template (2D / Full, like setup_standards)
             Add(ToolGroup.TwoD, "company_standard");
+            // nâng cấp đợt H8 (Drawing/StructureTools.cs): rebar details and their schedule (2D / Full); footings are 3D
+            Add(ToolGroup.TwoD, "draw_rebar rebar_schedule");
             // nâng cấp đợt H2 (Drawing/ExportTools.cs): DXF / older DWG on every plan, FBX 3D / Full (ThreeDValues)
             Add(ToolGroup.Common, "export_drawing");
             // nâng cấp đợt H3 (Drawing/CompareTools.cs): compare with another file; 2D objects on 2D / Full, 3D solids on 3D / Full
@@ -133,7 +135,9 @@ namespace ClaudeCAD.Plugin.Core
                 // nâng cấp đợt F3 (Drawing/RenderTools.cs): materials, named views (+ a PNG with the materials)
                 "set_material named_view " +
                 // nâng cấp đợt H7 (Drawing/MepTools.cs): MEP pipes / ducts in 3D, their schedule and clash check
-                "draw_mep mep_report");
+                "draw_mep mep_report " +
+                // nâng cấp đợt H8 (Drawing/StructureTools.cs): pad / strip footings
+                "build_footing");
             return d;
         }
 

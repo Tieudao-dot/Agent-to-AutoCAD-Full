@@ -57,6 +57,7 @@
     <Compile Include="..\ClaudeCAD.Plugin\Core\BatchFiles.cs" Link="Core\BatchFiles.cs" />
     <Compile Include="..\ClaudeCAD.Plugin\Core\Terrain.cs" Link="Core\Terrain.cs" />
     <Compile Include="..\ClaudeCAD.Plugin\Core\Mep.cs" Link="Core\Mep.cs" />
+    <Compile Include="..\ClaudeCAD.Plugin\Core\Rebar.cs" Link="Core\Rebar.cs" />
     <Compile Include="..\ClaudeCAD.Plugin\Core\Solids3.cs" Link="Core\Solids3.cs" />
   </ItemGroup>
   <ItemGroup>

@@ -112,7 +112,9 @@ namespace ClaudeCAD.Plugin.Core
                 || name.StartsWith(F2Numbers.FrameLayer + "-", StringComparison.OrdinalIgnoreCase)
                 // Test & sửa H7: P-… / M-… / F-… are the MEP layers of the skill ve-mep (draw_mep draws on P-SUPL-3D, M-DUCT-3D, F-SPRK-3D…)
                 || name.StartsWith("P-", StringComparison.OrdinalIgnoreCase) || name.StartsWith("M-", StringComparison.OrdinalIgnoreCase)
-                || name.StartsWith("F-", StringComparison.OrdinalIgnoreCase);
+                || name.StartsWith("F-", StringComparison.OrdinalIgnoreCase)
+                // nâng cấp đợt H8: S-… are the structural layers (build_footing, draw_rebar: S-FOOT-3D, S-REBAR…)
+                || name.StartsWith("S-", StringComparison.OrdinalIgnoreCase);
         }
 
         /// <summary>The prefix of the standard in use ("KT" first, then "VN"), from the text styles of the drawing; null = not used.</summary>

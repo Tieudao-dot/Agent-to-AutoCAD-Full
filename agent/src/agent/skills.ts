@@ -44,7 +44,7 @@ export function enabledSkills(skillsDir: string | undefined): string[] {
  * which have no "plan: 2d" line: they still count as 2D, so the user has nothing to edit (decided 12/11/2026). A plan
  * line in the file always wins ("plan: all" loads a sample on every plan); the user's own skills are not touched.
  */
-export const SAMPLE_2D_SKILLS: readonly string[] = ['ve-kien-truc', 've-mep', 've-ha-tang'];
+export const SAMPLE_2D_SKILLS: readonly string[] = ['ve-kien-truc', 've-mep', 've-ha-tang', 've-ket-cau']; // ve-ket-cau: nâng cấp đợt H8
 
 /**
  * The service plan a skill needs, from its SKILL.md frontmatter: "plan: 3d" = only useful with the 3D tools (3D kiến

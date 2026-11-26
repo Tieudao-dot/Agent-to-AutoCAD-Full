@@ -330,6 +330,8 @@ namespace ClaudeCAD.Plugin.Core
             "build_railing", "build_beam", "build_stair", "build_roof",
             // nâng cấp đợt F2
             "insert_library_block",
+            // nâng cấp đợt H8: built from coordinates (they read no geometry of existing objects)
+            "build_footing", "draw_rebar",
         };
 
         /// <summary>Keep WCS on purpose: the UCS itself, views, layouts / paper space, files, settings.</summary>

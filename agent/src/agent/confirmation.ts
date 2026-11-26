@@ -367,7 +367,9 @@ export const F5_CARD_TOOLS = new Set(['plot_pdf', 'export_stl', 'export_drawing'
   // nâng cấp đợt H3: many revision clouds of a compare, the Excel list
   'compare_drawings',
   // nâng cấp đợt H7: the Excel file of the MEP schedule / clash list
-  'mep_report']);
+  'mep_report',
+  // nâng cấp đợt H8: the Excel file of the rebar schedule
+  'rebar_schedule']);
 
 function flaggedF5(params: Record<string, unknown>, g: GateState): Record<string, unknown> {
   const { [USER_CONFIRMED_PARAM]: _ignored, confirm_handles: asked, ...rest } = params;

@@ -14,6 +14,7 @@ import { companyStandardTools } from './companyStandard.js';
 import { batchFilesTools } from './batchFiles.js';
 import { terrainTools } from './terrain.js';
 import { mepTools } from './mep.js';
+import { structureTools } from './structure.js';
 import { batchTools } from './batch.js';
 import { blockTools } from './blocks.js';
 import { captureTools } from './capture.js';
@@ -86,6 +87,7 @@ export function buildTools(bridge: ToolBridge, allowed?: readonly string[], plan
     ...batchFilesTools(bridge), // nâng cấp đợt H5
     ...terrainTools(bridge), // nâng cấp đợt H6
     ...mepTools(bridge), // nâng cấp đợt H7
+    ...structureTools(bridge), // nâng cấp đợt H8
     ...systemTools(bridge),
   ];
   const kept = allowed ? all.filter((t) => new Set(allowed).has(t.name)) : all;

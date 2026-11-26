@@ -1338,6 +1338,61 @@ namespace ClaudeCAD.Plugin
                     : new SelfTestRules.Verdict(false, string.Join("; ", errs));
             });
 
+            // Nâng cấp đợt H8: a pad + a strip footing, a beam's bars (2Ø18 / 2Ø16), the schedule (weight = 0.00617·d²·L), all erased
+            Check("Nâng cấp đợt H8: kết cấu (móng đơn + móng băng, thép dầm 2Ø18 / 2Ø16, bảng thống kê thép)", () =>
+            {
+                var errs = new List<string>();
+                var made = new List<string>();
+                Dictionary<string, object> Run(Func<ToolContext, Params, object> h, string tool, Dictionary<string, object> d, bool write)
+                {
+                    using (doc.LockDocument())
+                    using (var tr = doc.TransactionManager.StartTransaction())
+                    {
+                        var r = (Dictionary<string, object>)h(new ToolContext(doc, tr, write, null), new Params(tool, d));
+                        tr.Commit();
+                        return r;
+                    }
+                }
+                List<object> Pt(double x, double y) => new List<object> { x, y };
+                try
+                {
+                    var pad = Run(DrawingService.BuildFooting, "build_footing", new Dictionary<string, object> { ["kind"] = "pad", ["positions"] = new List<object> { Pt(400000, 0) } }, true);
+                    made.AddRange(((List<object>)pad["handles"]).Cast<string>());
+                    var strip = Run(DrawingService.BuildFooting, "build_footing", new Dictionary<string, object> { ["kind"] = "strip", ["path_points"] = new List<object> { Pt(405000, 0), Pt(410000, 0), Pt(410000, 4000) } }, true);
+                    made.AddRange(((List<object>)strip["handles"]).Cast<string>());
+                    if (Convert.ToDouble(pad["volume_m3"]) <= 0 || Convert.ToDouble(strip["volume_m3"]) <= 0) errs.Add("móng không có thể tích");
+                    if (!pad.ContainsKey("sample_sizes")) errs.Add("không báo cỡ mẫu");
+                    var beam = Run(DrawingService.DrawRebar, "draw_rebar", new Dictionary<string, object>
+                        { ["element"] = "beam", ["position"] = Pt(400000, 10000), ["width"] = 220.0, ["height"] = 400.0, ["span"] = 5000.0, ["bottom"] = "2Ø18", ["top"] = "2Ø16", ["start_mark"] = 901 }, true);
+                    made.AddRange(((List<object>)beam["handles"]).Cast<string>());
+                    var s = Run(DrawingService.RebarSchedule, "rebar_schedule", new Dictionary<string, object> { ["handles"] = new List<object>(((List<object>)beam["handles"]).Cast<object>()) }, false);
+                    var rows = ((List<object>)s["rows"]).Cast<Dictionary<string, object>>().ToList();
+                    var b18 = rows.FirstOrDefault(r => Convert.ToInt32(r["mark"]) == 901);
+                    if (b18 == null) errs.Add("bảng thiếu thanh 901 (2Ø18)");
+                    else
+                    {
+                        double want = Math.Round(Convert.ToDouble(b18["length_mm"]) / 1000 * Convert.ToInt32(b18["count"]) * RebarLogic.KgPerM(18), 2);
+                        if (Math.Abs(Convert.ToDouble(b18["kg"]) - want) > 0.011) errs.Add($"khối lượng 2Ø18 {b18["kg"]} kg (cần {want})");
+                    }
+                    if (rows.Count != 3) errs.Add($"bảng có {rows.Count} dòng (cần 3: dưới, trên, đai)");
+                    return errs.Count == 0
+                        ? new SelfTestRules.Verdict(true, $"móng {pad["volume_m3"]} + {strip["volume_m3"]} m³; {rows.Count} loại thanh, {s["total_kg"]} kg")
+                        : new SelfTestRules.Verdict(false, string.Join("; ", errs));
+                }
+                finally
+                {
+                    using (doc.LockDocument())
+                    using (var tr = doc.TransactionManager.StartTransaction())
+                    {
+                        foreach (var h in made)
+                        {
+                            try { tr.GetObject(doc.Database.GetObjectId(false, new Handle(Convert.ToInt64(h, 16)), 0), OpenMode.ForWrite).Erase(); } catch (Exception) { }
+                        }
+                        tr.Commit();
+                    }
+                }
+            });
+
             // Nâng cấp đợt H7: an L drain route (one elbow), a branch from it (a tee), the schedule, the check against a beam
             Check("Nâng cấp đợt H7: ống MEP 3D (tuyến chữ L có co, nhánh có tê, thống kê, soát va chạm với dầm)", () =>
             {

@@ -152,6 +152,9 @@ namespace ClaudeCAD.Plugin.UI
             ["terrain"] = "Hạ tầng: điểm đo, đồng mức, trắc", // nâng cấp đợt H6
             ["draw_mep"] = "Vẽ ống MEP 3D", // nâng cấp đợt H7
             ["mep_report"] = "Thống kê / soát ống MEP", // nâng cấp đợt H7
+            ["build_footing"] = "Dựng móng", // nâng cấp đợt H8
+            ["draw_rebar"] = "Vẽ thép", // nâng cấp đợt H8
+            ["rebar_schedule"] = "Bảng thống kê thép", // nâng cấp đợt H8
             ["volume_schedule"] = "Bảng khối lượng",
             ["setup_standards"] = "Thiết lập style chuẩn",
             ["create_sheet"] = "Tạo trang in có khung tên",

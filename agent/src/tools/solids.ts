@@ -4,6 +4,7 @@ import { PLAN3D_TOOL_NAMES, plan3dTools } from './plan3d.js';
 import { SOLID3_TOOL_NAMES, STAIR_ROOF_TOOL_NAMES, solid3Tools, solidTable } from './solids3.js';
 import { RENDER_TOOL_NAMES, renderTools } from './render.js';
 import { MEP_TOOL_NAMES } from './mep.js';
+import { FOOTING_TOOL_NAMES } from './structure.js';
 
 /** The 3D tools: only machines on the 3D or Full plan load them (the plugin labels them ToolGroup.ThreeD). */
 export const SOLID_TOOL_NAMES = [
@@ -22,6 +23,8 @@ export const SOLID_TOOL_NAMES = [
   ...RENDER_TOOL_NAMES,
   // nâng cấp đợt H7 (mep.ts, registered in index.ts)
   ...MEP_TOOL_NAMES,
+  // nâng cấp đợt H8 (structure.ts, registered in index.ts)
+  ...FOOTING_TOOL_NAMES,
 ] as const;
 
 /**
