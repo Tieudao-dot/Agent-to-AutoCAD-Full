@@ -179,6 +179,8 @@ namespace ClaudeCAD.Plugin.Core
 
         public static char? Delimiter(IList<string> lines)
         {
+            // Sửa KTP-12: "P1 1234012,5 567045,25 12,35": columns split by spaces, the commas are decimal commas
+            if (CommasAreDecimal(lines)) return lines.Take(20).Any(l => l.Contains('\t')) ? '\t' : (char?)null;
             char? best = null; int bestScore = 0;
             foreach (var d in new[] { '\t', ';', ',' })
             {
@@ -192,14 +194,31 @@ namespace ClaudeCAD.Plugin.Core
             return best;
         }
 
+        /// <summary>Sửa KTP-12: every line has several space-separated words and each comma sits inside a number ("12,35").</summary>
+        public static bool CommasAreDecimal(IList<string> lines)
+        {
+            var sample = lines.Where(l => l.Trim().Length > 0).Take(20).ToList();
+            if (sample.Count == 0 || !sample.Any(l => l.Contains(','))) return false;
+            foreach (var l in sample)
+            {
+                var words = Regex.Split(l.Trim(), @"\s+");
+                if (words.Length < 2) return false;
+                if (words.Any(w => w.Contains(',') && !Regex.IsMatch(w, @"^[+-]?\d+,\d+$"))) return false;
+            }
+            return true;
+        }
+
         public static List<List<string>> ParseText(string text)
         {
-            var lines = (text ?? "").Replace("\r\n", "\n").Replace('\r', '\n').Split('\n').Where(l => l.Trim().Length > 0).ToList();
-            var d = Delimiter(lines);
+            // Sửa KTP-23: blank lines are kept as empty rows, so "row N" in the result is line N of the file
+            var all = (text ?? "").Replace("\r\n", "\n").Replace('\r', '\n').Split('\n').ToList();
+            while (all.Count > 0 && all[all.Count - 1].Trim().Length == 0) all.RemoveAt(all.Count - 1);
+            var d = Delimiter(all.Where(l => l.Trim().Length > 0).ToList());
             var rows = new List<List<string>>();
-            foreach (var l in lines)
+            foreach (var l in all)
             {
-                if (d == null) rows.Add(Regex.Split(l.Trim(), @"\s+").ToList());
+                if (l.Trim().Length == 0) rows.Add(new List<string>());
+                else if (d == null) rows.Add(Regex.Split(l.Trim(), @"\s+").ToList());
                 else rows.Add(SplitQuoted(l, d.Value));
             }
             // a decimal comma ("1234,567") only when the separator is not a comma
@@ -246,6 +265,9 @@ namespace ClaudeCAD.Plugin.Core
                     var rows = new List<List<string>>();
                     foreach (XmlNode row in sd.GetElementsByTagName("row"))
                     {
+                        // Sửa KTP-23: the row number of the sheet (r), so "row N" is row N in Excel
+                        if (int.TryParse(row.Attributes?["r"]?.Value, NumberStyles.Integer, CultureInfo.InvariantCulture, out int rn))
+                            while (rows.Count < rn - 1) rows.Add(new List<string>());
                         var cells = new List<string>();
                         foreach (XmlNode c in row.ChildNodes)
                         {
@@ -261,7 +283,7 @@ namespace ClaudeCAD.Plugin.Core
                             else val = v ?? "";
                             cells.Add(val.Trim());
                         }
-                        if (cells.Any(x => x.Length > 0)) rows.Add(cells);
+                        rows.Add(cells);
                     }
                     return rows;
                 }
@@ -306,8 +328,21 @@ namespace ClaudeCAD.Plugin.Core
 
         public static bool TryNumber(string s, out double v)
         {
-            s = (s ?? "").Trim().Replace(" ", "");
+            s = NumberText(s);
             return double.TryParse(s, NumberStyles.Float, CultureInfo.InvariantCulture, out v) && !double.IsNaN(v) && !double.IsInfinity(v);
+        }
+
+        /// <summary>
+        /// Sửa KTP-10 / 11: a number as Vietnamese Excel writes it: spaces / no-break spaces between groups ("1 234 012,5"),
+        /// dots between groups of three before a decimal comma ("1.234.012,500"), a decimal comma ("12,35"; also a text cell of
+        /// an .xlsx). One dot alone stays a decimal point ("12.350").
+        /// </summary>
+        public static string NumberText(string s)
+        {
+            s = (s ?? "").Trim().Replace(" ", "").Replace("\u00A0", "").Replace("\u202F", "");
+            if (Regex.IsMatch(s, @"^[+-]?\d{1,3}(\.\d{3})+,\d+$") || Regex.IsMatch(s, @"^[+-]?\d{1,3}(\.\d{3}){2,}$")) s = s.Replace(".", "");
+            if (Regex.IsMatch(s, @"^[+-]?\d+,\d+$")) s = s.Replace(',', '.');
+            return s;
         }
 
         /// <summary>Lower case, no Vietnamese marks, đ → d ("Cao độ" → "cao do").</summary>
@@ -319,7 +354,9 @@ namespace ClaudeCAD.Plugin.Core
             return Regex.Replace(sb.ToString(), @"\s*\(.*?\)\s*", " ").Trim();
         }
 
-        private static readonly string[] NameKeys = { "ten", "ten diem", "diem", "stt", "so hieu", "ma diem", "name", "point", "pt", "id", "so tt", "tt" };
+        private static readonly string[] NameKeys = { "ten", "ten diem", "diem", "so hieu", "ma diem", "name", "point", "pt", "ten moc", "moc" };
+        /// <summary>Sửa KTP-22: a row number column names the points only when there is no name column.</summary>
+        private static readonly string[] RowNumberKeys = { "stt", "so tt", "tt", "id", "no", "no." };
         private static readonly string[] XKeys = { "x", "toa do x", "northing", "n" };
         private static readonly string[] YKeys = { "y", "toa do y", "easting", "e" };
         private static readonly string[] ZKeys = { "z", "h", "cao do", "do cao", "elevation", "elev", "cao do h", "cao do z" };
@@ -334,6 +371,7 @@ namespace ClaudeCAD.Plugin.Core
             for (int r = 0; r < Math.Min(rows.Count, 10); r++)
             {
                 var c = new Columns();
+                int rowNumber = -1;
                 for (int i = 0; i < rows[r].Count; i++)
                 {
                     var k = Plain(rows[r][i]);
@@ -343,7 +381,9 @@ namespace ClaudeCAD.Plugin.Core
                     else if (c.Z < 0 && ZKeys.Contains(k)) c.Z = i;
                     else if (c.Name < 0 && NameKeys.Contains(k)) c.Name = i;
                     else if (c.Code < 0 && CodeKeys.Contains(k)) c.Code = i;
+                    else if (rowNumber < 0 && RowNumberKeys.Contains(k)) rowNumber = i;
                 }
+                if (c.Name < 0) c.Name = rowNumber;
                 if (c.X >= 0 && c.Y >= 0) { cols = c; return r; }
             }
             return -1;
@@ -362,7 +402,8 @@ namespace ClaudeCAD.Plugin.Core
             {
                 c = given;
                 f.Columns = "as given";
-                if (rows.Count > 0 && !TryNumber(Cell(rows[0], c.X), out _)) start = 1;
+                int firstRow = rows.ToList().FindIndex(r => r.Any(x => !string.IsNullOrWhiteSpace(x)));
+                if (firstRow >= 0 && !TryNumber(Cell(rows[firstRow], c.X), out _)) start = firstRow + 1;
             }
             else
             {
@@ -371,14 +412,17 @@ namespace ClaudeCAD.Plugin.Core
                 else
                 {
                     var first = rows.FirstOrDefault(r => r.Count >= 2) ?? new List<string>();
+                    bool numberedName = FirstColumnIsName(rows, true), numberedName3 = FirstColumnIsName(rows, false);
                     int n = first.Count;
                     bool firstNumber = TryNumber(Cell(first, 0), out _);
                     if (n == 2) c = new Columns { X = 0, Y = 1 };
+                    // Sửa KTP-09: "number name, X, Y" (real coordinates after a small whole number) before "X, Y, Z"
+                    else if (n == 3 && firstNumber && numberedName3) c = new Columns { Name = 0, X = 1, Y = 2 };
                     else if (n == 3 && firstNumber) c = new Columns { X = 0, Y = 1, Z = 2 };
                     // Test & sửa H6: "X, Y, Z, code" (a text code after three numbers) is not "name, X, Y, Z"
                     else if (n == 4 && firstNumber && !TryNumber(Cell(first, 3), out _)) c = new Columns { X = 0, Y = 1, Z = 2, Code = 3 };
                     // four or more numbers: a first column of row numbers (1, 2, 3…) is the name, else it is X
-                    else if (n >= 4 && firstNumber && !LooksLikeRowNumbers(rows)) c = new Columns { X = 0, Y = 1, Z = 2, Code = n >= 4 && !TryNumber(Cell(first, 3), out _) ? 3 : -1 };
+                    else if (n >= 4 && firstNumber && !numberedName) c = new Columns { X = 0, Y = 1, Z = 2, Code = n >= 4 && !TryNumber(Cell(first, 3), out _) ? 3 : -1 };
                     else if (n == 3) c = new Columns { Name = 0, X = 1, Y = 2 };
                     else c = new Columns { Name = 0, X = 1, Y = 2, Z = 3, Code = n >= 5 ? 4 : -1 };
                     f.Columns = "by position (no header row)";
@@ -390,6 +434,7 @@ namespace ClaudeCAD.Plugin.Core
             for (int r = start; r < rows.Count; r++)
             {
                 var row = rows[r];
+                if (row.All(x => string.IsNullOrWhiteSpace(x))) continue; // a blank line / row
                 if (!TryNumber(Cell(row, c.X), out double x) || !TryNumber(Cell(row, c.Y), out double y))
                 {
                     f.Skipped.Add($"row {r + 1}: X / Y is not a number");
@@ -414,6 +459,28 @@ namespace ClaudeCAD.Plugin.Core
             var swapped = LooksSwapped(f.Points);
             if (swapped != null) f.Warnings.Add(swapped);
             return f;
+        }
+
+        /// <summary>
+        /// Sửa KTP-08 / 09: the first column names the points: row numbers (1, 2, 3…), or small whole numbers (1, 4, 9, 15…: under
+        /// RealCoordinateM) before real VN-2000 coordinates in the next two columns (on most rows).
+        /// </summary>
+        public static bool FirstColumnIsName(IList<List<string>> rows, bool rowNumbers = true)
+        {
+            // three columns "1 2 3" may as well be X, Y, Z: there only real coordinates after the number decide
+            if (rowNumbers && LooksLikeRowNumbers(rows)) return true;
+            var data = rows.Where(r => r.Count >= 3 && TryNumber(Cell(r, 0), out _)).Take(50).ToList();
+            if (data.Count == 0) return false;
+            int hits = 0;
+            foreach (var r in data)
+            {
+                TryNumber(Cell(r, 0), out double a);
+                bool small = Math.Abs(a - Math.Round(a)) < 1e-9 && Math.Abs(a) < H6Numbers.RealCoordinateM;
+                bool real = TryNumber(Cell(r, 1), out double b) && TryNumber(Cell(r, 2), out double c2)
+                    && Math.Abs(b) >= H6Numbers.RealCoordinateM && Math.Abs(c2) >= H6Numbers.RealCoordinateM;
+                if (small && real) hits++;
+            }
+            return hits >= data.Count * 0.8;
         }
 
         /// <summary>Test & sửa H6: the first column holds whole numbers going up one by one (an STT column).</summary>
@@ -512,7 +579,7 @@ namespace ClaudeCAD.Plugin.Core
             double span = Math.Max(xs.Max() - xs.Min(), ys.Max() - ys.Min());
             if (span <= 0) throw ToolException.Invalid("terrain: the points are all at one place.");
             var order = Enumerable.Range(0, n).OrderBy(i => xs[i]).ThenBy(i => ys[i]).ToArray();
-            double big = span * 20;
+            double big = span * 1000; // Sửa KTP (nghi vấn): a small super triangle loses hull triangles (max_edge 0)
             var vx = new double[n + 3]; var vy = new double[n + 3];
             Array.Copy(xs, vx, n); Array.Copy(ys, vy, n);
             vx[n] = -big; vy[n] = -big; vx[n + 1] = big; vy[n + 1] = -big; vx[n + 2] = 0; vy[n + 2] = big;
@@ -820,8 +887,9 @@ namespace ClaudeCAD.Plugin.Core
                     double inKm = s.Ch - Math.Floor(s.Ch / H6Numbers.StakeKmM + 1e-9) * H6Numbers.StakeKmM;
                     regular = "H" + Math.Round(inKm / H6Numbers.Stake100M).ToString("0", CultureInfo.InvariantCulture); s.Kind = "h";
                 }
-                else if (kind == "start") { regular = "Đầu"; }
-                else if (kind == "end") { regular = "Cuối"; }
+                // Sửa KTP-26: a vertex on the start / end stake keeps "Đầu" / "Cuối" ("Cuối/Đ2", not "C43/Đ2")
+                else if (kind.StartsWith("start", StringComparison.Ordinal)) { regular = "Đầu"; s.Kind = "start"; }
+                else if (kind.StartsWith("end", StringComparison.Ordinal)) { regular = "Cuối"; s.Kind = "end"; }
                 else if (kind.StartsWith("vertex", StringComparison.Ordinal)) { regular = null; s.Kind = "vertex"; }
                 else { detail++; regular = "C" + detail.ToString(CultureInfo.InvariantCulture); s.Kind = "detail"; }
                 s.Name = regular == null ? vertex : (vertex != null ? regular + "/" + vertex : regular);
@@ -1008,12 +1076,19 @@ namespace ClaudeCAD.Plugin.Core
             var s = samples.Where(p => p.z.HasValue).Select(p => (p.off, z: p.z.Value)).ToList();
             if (s.Count <= 2) return s;
             var keep = new List<(double off, double z)> { s[0] };
+            int last = 0;
             for (int i = 1; i + 1 < s.Count; i++)
             {
-                var a = keep[keep.Count - 1]; var b = s[i + 1];
-                double t = (s[i].off - a.off) / (b.off - a.off);
-                double zl = a.z + t * (b.z - a.z);
-                if (Math.Abs(s[i].z - zl) > flat) keep.Add(s[i]);
+                // Sửa KTP-25: dropping s[i] is fine only if every sample since the last kept one stays on the chord to s[i + 1]
+                // (checking s[i] alone let small differences add up past the flatness)
+                var a = s[last]; var b = s[i + 1];
+                bool flatAll = true;
+                for (int j = last + 1; j <= i && flatAll; j++)
+                {
+                    double t = (s[j].off - a.off) / (b.off - a.off);
+                    if (Math.Abs(s[j].z - (a.z + t * (b.z - a.z))) > flat) flatAll = false;
+                }
+                if (!flatAll) { keep.Add(s[i]); last = i; }
             }
             keep.Add(s[s.Count - 1]);
             return keep;

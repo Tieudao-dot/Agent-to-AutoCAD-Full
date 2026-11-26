@@ -63,7 +63,8 @@ Không có lỗi chéo nặng. Các lỗi của từng đợt đã sửa ở lư
 
 ## 7. CI
 
-*(ghi sau khi chạy)*
+Run 45857510577 trên `8c46a8e` (commit code cuối): **xanh**, log Windows trợ lý `# pass 466 / # fail 0`, lõi `Failed: 0, Passed:
+1687`. Commit sau đó chỉ là tài liệu (mục này). Một lượt CI (giới hạn 2).
 
 ## 8. Chưa kiểm được
 

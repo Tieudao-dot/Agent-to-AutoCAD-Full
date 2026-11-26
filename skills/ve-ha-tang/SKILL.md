@@ -68,7 +68,7 @@ Ví dụ (gốc cục bộ X0 = 1 234 000, Y0 = 567 000; điểm M1 X = 1 234 01
 
 Bản vẽ hỗ trợ: kỹ sư vẫn kiểm; lệnh **không tính khối lượng đào đắp**.
 
-- Nhập điểm: `terrain` action `import_points` với file CSV / TXT / .xlsx (khách kéo vào chat). Tọa độ thật VN-2000: hỏi khách vẽ theo tọa độ thật (`origin: "real"`) hay gốc cục bộ (`"auto"` hoặc `[X, Y]`). Chỉ đổi trục (X = Bắc → y, Y = Đông → x), m × 1000, không đổi múi chiếu. Cao độ điểm đo 3 số lẻ.
+- Nhập điểm: `terrain` action `import_points` với file CSV / TXT / .xlsx (khách kéo vào chat). Tọa độ thật VN-2000: hỏi khách vẽ theo tọa độ thật (`origin: "real"`) hay gốc cục bộ (`"auto"` hoặc `[X, Y]`). Chỉ đổi trục (X = Bắc → y, Y = Đông → x), mét đổi theo đơn vị bản vẽ (× 1000 khi bản vẽ mm, giữ nguyên khi bản vẽ m), không đổi múi chiếu. Cao độ điểm đo 3 số lẻ.
 - Đồng mức: action `contours`. Khoảng cao đều mặc định theo tỉ lệ mặt bằng: 1:500 → 0,5 m; 1:1000 → 1 m (vùng bằng có thể 0,5 m); 1:2000 → 1 m. Cứ 5 đường con có 1 đường cái nét đậm có ghi số.
 - Lý trình mặt bằng: action `stations`, vạch mỗi 50 m (mục 4).
 - Trắc dọc: action `profile`, tỉ lệ ngang 1:1000, đứng 1:100; MSS là số mét chẵn thấp hơn cao độ nhỏ nhất ít nhất 2 m; cọc chi tiết 20 m, cọc H mỗi 100 m, cọc Km mỗi 1 000 m, thêm cọc đầu / cuối / đỉnh. Đường thiết kế: `design` [[lý trình, cao độ], …].
