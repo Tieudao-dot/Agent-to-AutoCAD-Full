@@ -116,6 +116,10 @@ export function timeoutFor(tool: string, params: Record<string, unknown>, base =
     const calls = Array.isArray(params.calls) ? (params.calls as Array<{ tool?: unknown; params?: unknown }>) : [];
     ms = base + calls.length * 100;
     if (calls.some((c) => (typeof c?.tool === 'string' && (SLOW_TOOLS.has(c.tool) || CAPTURE_TOOLS.has(c.tool))) || slowBuild(c?.tool, c?.params))) ms = Math.max(ms, 120_000);
+  } else if (tool === 'export_drawing') {
+    ms = Math.max(base, MAX_TIMEOUT_MS); // nghi vấn KTH: Wblock + SaveAs of a big drawing, an FBX of 2 000 solids
+  } else if (tool === 'compare_drawings' || (tool === 'company_standard' && params.action === 'learn')) {
+    ms = Math.max(base, BATCH_READ_MS); // nghi vấn KTH: another drawing of up to 200 MB opened next to this one
   } else if (tool === 'batch_files' && batchTimeout(params) !== undefined) {
     ms = Math.max(base, batchTimeout(params)!);
   } else if (SLOW_TOOLS.has(tool) || CAPTURE_TOOLS.has(tool) || slowBuild(tool, params)) {

@@ -160,4 +160,11 @@ describe('Sửa KTH-01 / 02: batch_files on the real path', () => {
     assert.equal(BATCH_WRITE_MS, 5 * 60_000);
     assert.equal(timeoutFor('batch_files', { action: 'plan', task: 'pdf' }, 30_000), 30_000);
   });
+
+  it('nghi vấn KTH: export_drawing, compare_drawings and company_standard learn are slow tools too', () => {
+    assert.equal(timeoutFor('export_drawing', { format: 'fbx' }, 30_000), 5 * 60_000);
+    assert.equal(timeoutFor('compare_drawings', { file: 'C:/a.dwg' }, 30_000), 120_000);
+    assert.equal(timeoutFor('company_standard', { action: 'learn', file: 'C:/a.dwt' }, 30_000), 120_000);
+    assert.equal(timeoutFor('company_standard', { action: 'list' }, 30_000), 30_000);
+  });
 });

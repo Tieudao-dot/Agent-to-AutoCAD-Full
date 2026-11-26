@@ -197,16 +197,29 @@ namespace ClaudeCAD.Plugin.Core
         /// <summary>Where the backup of a file goes: &lt;root&gt;\_sao-luu-claudecad\&lt;stamp&gt;\&lt;path under root&gt; (or its name).</summary>
         public static string BackupPath(string root, string stamp, string file)
         {
-            string rel = Path.GetFileName(file);
+            // Sửa KTH-03: a file outside the folder (or without one) is backed up next to itself, so two files of one name in
+            // two folders never share a backup
+            var b = BackupBase(root, file);
+            var f = Path.GetFullPath(file);
+            var rel = b.Equals(Path.GetDirectoryName(f), StringComparison.OrdinalIgnoreCase) ? Path.GetFileName(f) : f.Substring(b.TrimEnd('\\', '/').Length + 1);
+            return Path.Combine(b, H5Numbers.BackupFolder, stamp, rel);
+        }
+
+        /// <summary>The folder whose _sao-luu-claudecad holds a file's backup: the chosen folder when the file is inside it, else the file's own.</summary>
+        public static string BackupBase(string root, string file)
+        {
+            var f = Path.GetFullPath(file);
             if (!string.IsNullOrEmpty(root))
             {
-                var r = Path.GetFullPath(root).TrimEnd('\\', '/') + Path.DirectorySeparatorChar;
-                var f = Path.GetFullPath(file);
-                if (f.StartsWith(r, StringComparison.OrdinalIgnoreCase)) rel = f.Substring(r.Length);
+                var r = Path.GetFullPath(root).TrimEnd('\\', '/');
+                if (f.StartsWith(r + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase)) return r;
             }
-            var baseDir = string.IsNullOrEmpty(root) ? Path.GetDirectoryName(file) : root;
-            return Path.Combine(baseDir, H5Numbers.BackupFolder, stamp, rel);
+            return Path.GetDirectoryName(f);
         }
+
+        /// <summary>Sửa KTH-06: where the backups of a run go (one folder, or each file's own when they are in several).</summary>
+        public static List<string> BackupFolders(string root, IEnumerable<string> files, string stamp) =>
+            files.Select(f => Path.Combine(BackupBase(root, f), H5Numbers.BackupFolder, stamp)).Distinct(StringComparer.OrdinalIgnoreCase).ToList();
 
         /// <summary>The PDF of a drawing: next to it, same name.</summary>
         public static string PdfOf(string file) => Path.ChangeExtension(file, ".pdf");
