@@ -47,7 +47,7 @@ hộp đo như cũ.
 | --- | --- | --- |
 | KTP-51 (bản sửa KTP-38 làm hỏng một ca của KTP-14) hai tuyến nối đầu gấp góc bị báo "chạm" (mẩu nêm ở hai đầu phẳng) | `MepLogic.JointOnly`: cặp chung một đầu là mối nối, **trừ khi** hai ống đi ra cùng hướng từ đầu chung (lệch dưới `H7Numbers.SameWayDeg` = 30°: vẽ trùng / chồng một đoạn), khi đó mới báo nếu khối chồng | `Ktp51…`: 90°, 45°, đi thẳng tiếp → mối nối dù khối chạm (nêm); trùng, chồng một đoạn, quay lại lệch ~10° → báo |
 | KTP-54 (d) tài liệu | Mục 1b ghi thêm dầm dốc vào chỗ còn đo bằng hộp bao | — |
-| Khe thép cột (chủ dự án đang duyệt) | `H8Numbers.ColumnBarMinClearMm = 0` (chỉ ≥ d như hiện tại); `ColumnBars(…, minClearMm)` so khe thông thủy với max(d, số đó); lời báo nói khe có / cần. Duyệt xong chỉ đổi một số | `NangCapH8Tests.Ktp_…`: không sàn (16Ø20 trong cột 300 lọt) và có sàn 50 (16Ø20 bị từ chối, 12Ø20 lọt; Ø32 lấy theo d) |
+| Khe thép cột | **Số đã duyệt 27/11 (chủ dự án chốt):** `H8Numbers.ColumnBarMinClearMm = 50`; `ColumnBars(…, minClearMm)` so khe thông thủy với max(d, 50); lời báo nói khe có / cần và gợi ý bớt thanh hoặc tăng cạnh cột. Skill, `dot-h-so-tieu-chuan.md`, checklist H8 ghi số này (checklist nhờ kỹ sư xác nhận theo TCVN 5574 bản đang dùng) | `NangCapH8Tests.Ktp_…`: 12Ø25 / cột 300 (khe 46) từ chối; 8Ø20 / 300 nhận; biên khe đúng 50 (cột 312) nhận, 311 từ chối; Ø32 lấy theo d |
 
 Số kỹ thuật thêm (khách không thấy): `SameWayDeg = 30` (dưới góc này hai ống từ một đầu chung coi là chồng lên nhau).
 

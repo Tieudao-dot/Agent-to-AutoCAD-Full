@@ -65,8 +65,8 @@ namespace ClaudeCAD.Plugin.Core
         /// max(d, 25 mm), top bars max(d, 30 mm).
         /// </summary>
         public const double BottomBarMinClearMm = 25, TopBarMinClearMm = 30;
-        /// <summary>Column bars (cast upright): the least clear gap between two bars of a side, against max(d, it). Chờ chủ dự án duyệt: 0 = only d.</summary>
-        public const double ColumnBarMinClearMm = 0;
+        /// <summary>Column bars (cast upright): the least clear gap between two bars of a side, max(d, 50 mm) (chủ dự án chốt 27/11/2026, TCVN).</summary>
+        public const double ColumnBarMinClearMm = 50;
         /// <summary>Layers: footings, lean concrete (3D); concrete outline, bars, texts (2D details).</summary>
         public const string FootingLayer = "S-FOOT-3D", LeanLayer = "S-LEAN-3D", ConcreteLayer = "S-CONC", RebarLayer = "S-REBAR", TextLayer = "S-REBAR-TEXT";
         public const short FootingColor = 8, LeanColor = 9, ConcreteColor = 7, RebarColor = 1, TextColor = 7;
@@ -222,13 +222,13 @@ namespace ClaudeCAD.Plugin.Core
             // share the rest between the two pairs of sides by their length
             int alongB = (int)Math.Round(rest / 2.0 * (b / (b + h))) , alongH = rest / 2 - alongB;
             // Test & sửa H8: bars along a side at least one bar apart (clear), like the beam rows; and at least ColumnBarMinClearMm
-            // (chờ chủ dự án duyệt: 0 = only the bar)
+            // (50 mm, chủ dự án chốt 27/11)
             double need = Math.Max(barDia, minClearMm ?? H8Numbers.ColumnBarMinClearMm);
             foreach (var (count, side) in new[] { (alongB, b), (alongH, h) })
             {
                 double gap = (side - 2 * e) / (count + 1);
                 if (gap - barDia < need - 1e-9)
-                    throw ToolException.Invalid($"{DrawTool}: {n}Ø{Num(barDia)} do not fit round a {Num(b)} × {Num(h)} column (the clear gap between bars would be {Num(gap - barDia)} mm, at least {Num(need)} mm is needed): ask the user for fewer bars or a bigger section.");
+                    throw ToolException.Invalid($"{DrawTool}: {n}Ø{Num(barDia)} do not fit round a {Num(b)} × {Num(h)} column (the clear gap between bars would be {Num(gap - barDia)} mm, at least {Num(need)} mm is needed): ask the user for fewer bars or a bigger column side.");
             }
             for (int i = 1; i <= alongB; i++) { double x = e + (b - 2 * e) * i / (alongB + 1); pts.Add(new[] { x, e }); pts.Add(new[] { x, h - e }); }
             for (int i = 1; i <= alongH; i++) { double y = e + (h - 2 * e) * i / (alongH + 1); pts.Add(new[] { e, y }); pts.Add(new[] { b - e, y }); }
