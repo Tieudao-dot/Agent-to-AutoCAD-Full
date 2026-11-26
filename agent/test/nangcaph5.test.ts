@@ -4,7 +4,8 @@
  */
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
-import { F5_CARD_TOOLS } from '../src/agent/confirmation.js';
+import { F5_CARD_TOOLS, applyUserConfirmation } from '../src/agent/confirmation.js';
+import { BATCH_WRITE_MS, timeoutFor } from '../src/ipc/rpc.js';
 import { systemPromptFor } from '../src/agent/systemPrompt.js';
 import type { ToolResponse } from '../src/ipc/protocol.js';
 import { runBatch, stopsRun } from '../src/tools/batchFiles.js';
@@ -104,5 +105,59 @@ describe('H5: batch_files', () => {
     } };
     const r = await runBatch(planned, { task: 'check', folder: 'C:/a', user_confirmed: ['T'] });
     assert.equal((r as any).result.files[0].file, 'ban-ve-a.dwg');
+  });
+});
+
+describe('Sửa KTH-01 / 02: batch_files on the real path', () => {
+  const TOKEN = 'ABCDEF0123456789';
+  /** A bridge like index.ts: each plugin call goes through applyUserConfirmation (the card of the turn), then a fake plugin. */
+  function realBridge(approved: string[]) {
+    const seen: Array<Record<string, unknown>> = [];
+    const g = { userText: 'Đồng ý', answersQuestion: true, confirmedByButton: approved.length > 0, cardConfirmed: new Set(approved) };
+    const b: ToolBridge = {
+      status: () => {},
+      call: async (tool: string, raw: Record<string, unknown>) => {
+        const params = applyUserConfirmation(tool, raw, g as any);
+        seen.push(params);
+        if (params.action === 'plan') return { id: 'p', ok: true, result: { count: 2, stamp: '20261126-110000', confirm_token: TOKEN } } as ToolResponse;
+        const ok = Array.isArray(params.user_confirmed) && (params.user_confirmed as string[]).includes(TOKEN);
+        if (!ok) return { id: 'r', ok: false, error: { code: 'INVALID_PARAMS', message: 'Confirmation required: batch_files would check 2 drawing(s)' } } as ToolResponse;
+        if (params.action === 'run') return { id: 'r', ok: true, result: { file: `f${params.index}.dwg`, status: 'ok' } } as ToolResponse;
+        return { id: 'f', ok: true, result: { ok: 2 } } as ToolResponse;
+      },
+    };
+    return { b, seen };
+  }
+
+  it('Claude sends confirm_handles after Đồng ý: every file runs', async () => {
+    const { b, seen } = realBridge([TOKEN]);
+    const r = await runBatch(b, { task: 'check', folder: 'C:/a', confirm_handles: [TOKEN] });
+    assert.ok(r.ok);
+    assert.deepEqual(seen.map((s) => s.action), ['plan', 'run', 'run', 'finish']);
+    assert.ok(seen.every((s) => s.confirm_handles === undefined)); // the bridge sends user_confirmed instead
+    assert.equal((r as any).result.done, 2);
+  });
+
+  it('confirm_handles that were not on an approved card: refused at the first file, nothing done', async () => {
+    const { b, seen } = realBridge([]);
+    const r = await runBatch(b, { task: 'standards', folder: 'C:/a', confirm_handles: [TOKEN] });
+    assert.ok(!r.ok);
+    assert.match((r as any).error.message, /Confirmation required/);
+    assert.equal(seen.filter((s) => s.action === 'run').length, 1);
+  });
+
+  it('without confirm_handles: the plan only', async () => {
+    const { b, seen } = realBridge([TOKEN]);
+    await runBatch(b, { task: 'pdf', folder: 'C:/a' });
+    assert.deepEqual(seen.map((s) => s.action), ['plan']);
+  });
+
+  it('one file has the time of a slow tool, not 30 s', () => {
+    assert.equal(timeoutFor('batch_files', { action: 'run', task: 'check' }, 30_000), 120_000);
+    assert.equal(timeoutFor('batch_files', { action: 'run', task: 'blocks' }, 30_000), 120_000);
+    assert.equal(timeoutFor('batch_files', { action: 'run', task: 'standards' }, 30_000), BATCH_WRITE_MS);
+    assert.equal(timeoutFor('batch_files', { action: 'run', task: 'pdf' }, 30_000), BATCH_WRITE_MS);
+    assert.equal(BATCH_WRITE_MS, 5 * 60_000);
+    assert.equal(timeoutFor('batch_files', { action: 'plan', task: 'pdf' }, 30_000), 30_000);
   });
 });

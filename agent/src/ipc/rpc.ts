@@ -94,6 +94,17 @@ const BUILD_TOOLS = new Set(['build_3d_from_plan', 'build_railing', 'build_beam'
 const slowBuild = (tool: unknown, params: unknown): boolean =>
   typeof tool === 'string' && BUILD_TOOLS.has(tool) && (params as { dry_run?: unknown } | undefined)?.dry_run !== true;
 const MAX_TIMEOUT_MS = 5 * 60_000;
+/**
+ * Sửa KTH-02: batch_files runs ONE file per call: reading it (check / blocks) as a slow tool, writing it (standards: backup,
+ * set up, save, swap) or printing it (pdf: open, plot every layout, close) up to the cap of the slow tools. plan / finish
+ * keep the default.
+ */
+const BATCH_READ_MS = 120_000;
+export const BATCH_WRITE_MS = MAX_TIMEOUT_MS;
+export function batchTimeout(params: Record<string, unknown>): number | undefined {
+  if (params.action !== 'run') return undefined;
+  return params.task === 'standards' || params.task === 'pdf' ? BATCH_WRITE_MS : BATCH_READ_MS;
+}
 
 /**
  * Per-call timeout: one 30 s limit for everything made a 500-call batch or a PDF plot of a big drawing
@@ -105,6 +116,8 @@ export function timeoutFor(tool: string, params: Record<string, unknown>, base =
     const calls = Array.isArray(params.calls) ? (params.calls as Array<{ tool?: unknown; params?: unknown }>) : [];
     ms = base + calls.length * 100;
     if (calls.some((c) => (typeof c?.tool === 'string' && (SLOW_TOOLS.has(c.tool) || CAPTURE_TOOLS.has(c.tool))) || slowBuild(c?.tool, c?.params))) ms = Math.max(ms, 120_000);
+  } else if (tool === 'batch_files' && batchTimeout(params) !== undefined) {
+    ms = Math.max(base, batchTimeout(params)!);
   } else if (SLOW_TOOLS.has(tool) || CAPTURE_TOOLS.has(tool) || slowBuild(tool, params)) {
     ms = Math.max(base, 120_000);
   }
