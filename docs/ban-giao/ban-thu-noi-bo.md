@@ -57,7 +57,13 @@ phát hành được. Tên bản ghi **"nâng cấp 7"**.
 - dòng "Kích hoạt" trong ⚙ / tự kiểm, câu hết hạn, câu "không tự cập nhật" có hai thứ tiếng;
 - tên bản ("Agent to AutoCAD Full: BẢN THỬ NỘI BỘ nâng cấp 7 (hết hạn 10/12/2026)") giữ tiếng Việt ở cả hai ngôn ngữ.
 
-**Tải.** Mục "Bản 7 — lượt CI" ngay dưới.
+**Tải (bản 7 — lượt CI).** Lượt **#111**, run `45876397319`, commit `24f3b0d` (mã + tài liệu bản 7; commit sau chỉ ghi
+link này), `release: "false"`: **xanh**. Log: trợ lý `# pass 467 / # fail 0`, lõi 1733/1733 (`Failed: 0`), UI test WPF
+41 test qua; bước phát hành bỏ qua.
+- Trang run: <https://github.com/Tieudao-dot/Agent-to-AutoCAD-Full/actions/runs/45876397319>
+- Artifact **`AgentToAutoCADFull-ThuNoiBo-nang-cap-7-0.9.4`** (id `15146375314`, 141 575 382 byte ≈ 142 MB, trong có
+  `AgentToAutoCADFull-ThuNoiBo-Setup.exe`), tải được tới **24/02/2027**. Link tải thẳng (cần đăng nhập GitHub):
+  <https://github.com/Tieudao-dot/Agent-to-AutoCAD-Full/actions/runs/45876397319/artifacts/15146375314>
 
 ### Bản 7 › Cài đè lên bản 6 (hoặc bản cũ hơn)
 
