@@ -6,7 +6,7 @@
 
 *13/11/2026 · thread "Bộ cài thử nội bộ" · xuất phát từ `full/test-tong-the` @ `19944df`. Chủ dự án chốt 13/11/2026.*
 
-> **Bản mới nhất (26/11/2026): bản 6, `AgentToAutoCADFull-ThuNoiBo-nang-cap-6-0.9.4`** (mục "Bản 6" ngay dưới). Đủ
+> **Bản mới nhất (26/11/2026): bản 6, `AgentToAutoCADFull-ThuNoiBo-nang-cap-6-0.9.4`** (lượt CI #91, mục "Bản 6" ngay dưới). Đủ
 > đợt F + G + **đợt H phần 1**. Cài đè lên bản 5 (hoặc bản cũ hơn): **skill cũ tự được thay, không phải xóa tay.**
 > Bản 3, 4, 5 bỏ.
 >
@@ -46,7 +46,13 @@ sửa hết 28 lỗi kiểm tra độc lập KTH-01 → 28), không xung đột:
 Thiết lập bản thử giữ nguyên: không kích hoạt, luôn gói Full, **vẫn hết hạn sau 10/12/2026**, không tự cập nhật, không
 phát hành được. Tên bản ghi **"nâng cấp 6"**: "Agent to AutoCAD Full: BẢN THỬ NỘI BỘ nâng cấp 6 (hết hạn 10/12/2026)".
 
-**Tải.** Mục "Bản 6 — lượt CI" ngay dưới.
+**Tải (bản 6 — lượt CI).** Lượt **#91**, run `45815996979`, commit `bd65f07` (mã + tài liệu bản 6; commit sau chỉ ghi
+link này), `release: "false"`: **xanh** (~9 phút). Log: trợ lý `# pass 443 / # fail 0`, lõi 1618/1618, UI test WPF 38
+test qua; bước phát hành bỏ qua.
+- Trang run: <https://github.com/Tieudao-dot/Agent-to-AutoCAD-Full/actions/runs/45815996979>
+- Artifact **`AgentToAutoCADFull-ThuNoiBo-nang-cap-6-0.9.4`** (id `15114863910`, 141 457 402 byte ≈ 141 MB, trong có
+  `AgentToAutoCADFull-ThuNoiBo-Setup.exe`), tải được tới **24/02/2027**. Link tải thẳng (cần đăng nhập GitHub):
+  <https://github.com/Tieudao-dot/Agent-to-AutoCAD-Full/actions/runs/45815996979/artifacts/15114863910>
 
 ### Bản 6 › Cài đè lên bản 5 (hoặc bản cũ hơn)
 
