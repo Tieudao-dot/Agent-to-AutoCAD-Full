@@ -108,4 +108,9 @@ Báo cáo `docs/ban-giao/kiem-tra-doc-lap-dot-h-phan-1.md`: 27 lỗi KTH (2 nặ
 - Checklist H4 thêm F9 → F13; các thread B / C đã cập nhật checklist H1 / H5 và khối tương ứng trong checklist tổng.
 - Test sau gộp: lõi **1605 / 1605**, trợ lý **441 / 441**, build 3 target qua.
 - CI: run 45810078065 trên `0275e38`: **xanh**, 1 / 2 lượt; log Windows `# tests 441`, `# pass 441`, `# fail 0`; lõi 1605 / 1605; UI test và build 3 target qua. Commit sau đó chỉ ghi dòng này, code giữ nguyên như `0275e38`.
+- **Lượt soát lại** của thread kiểm tra độc lập (trên `b7e408f`): 26/27 lỗi và 5 nghi vấn sửa đúng. Còn hai việc, đã sửa và gộp:
+  - **KTH-28** (mới, H3): bản sửa KTH-15 chọn đỉnh đầu polyline kín bằng so khít, nay theo dung sai. `full/nang-cap-h-sua-kth-b` @ `815715a`;
+  - **nốt KTH-02** (H5): gặp hết giờ thì dừng lượt, nói file đó có thể đã làm xong. `full/nang-cap-h-sua-kth-c` @ `c9bed1e`.
+- **Hạn chế còn lại của KTH-28:** phòng vừa đổi hình vừa có hai đỉnh chênh x dưới dung sai có thể ra "bớt + thêm" thay vì "đổi". Hiếm gặp.
+- CI lượt 2: ghi dưới.
 
