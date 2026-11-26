@@ -50,3 +50,14 @@ Khoảng cao đều và cọc 20 m: kỹ sư đối chiếu TCVN hiện hành tr
 | D1 | "Tính khối lượng đào đắp" | Claude nói lệnh này không tính khối lượng; bản vẽ là hỗ trợ, kỹ sư kiểm |
 | D2 | *(máy khác)* Máy gói 3D | Không có lệnh này; Claude nói việc này thuộc phần 2D |
 | D3 | Bật **Chỉ xem**, "nhập điểm" | Claude nói Chỉ xem đang bật, không vẽ gì |
+
+## E. Thêm ở Test & sửa H6 (~10 phút)
+
+| # | Làm gì | Thấy gì là đạt |
+| --- | --- | --- |
+| E1 | *(H6T-3)* Bản vẽ mới đặt đơn vị **mét** (`INSUNITS` = 6), nhập cùng file điểm, vẽ đồng mức, trắc dọc | Điểm, đồng mức, trắc đúng kích thước (đo `DIST` hai điểm cách 10 m ra 10, không ra 10 000); chữ cao độ đọc được như ở bản vẽ mm |
+| E2 | *(H6T-1)* File CSV lưu từ Excel tiếng Việt cũ (mã Windows-1258) có tiêu đề "Tên điểm; Cao độ" | Tên điểm có dấu đúng; Claude nhận cột cao độ theo tiêu đề |
+| E3 | *(H6T-1)* Trong Excel: File › Save As › **Unicode Text (.txt)**, rồi nhập file .txt đó | Đọc đủ điểm như file .xlsx |
+| E4 | *(H6T-2)* File không có dòng tiêu đề, 4 cột: X, Y, Z, mã (vd `1234012.5,567045.25,12.35,TN`) | X / Y / Z đúng cột (không lấy X làm tên điểm) |
+| E5 | *(H6T-4)* Bản vẽ đã chạy "thiết lập style chuẩn", nhập điểm + đồng mức, rồi "soát bản vẽ" | Không báo các layer `C-…` của hạ tầng là layer ngoài chuẩn |
+| E6 | *(H6T-5)* Ghi lý trình mặt bằng (50 m) rồi vẽ trắc dọc | Trên mặt bằng vạch 50 m chỉ ghi lý trình (vd `Km0+050.00`), không có tên `C…`; tên `C1, C2…` chỉ ở trắc dọc / trắc ngang (cọc 20 m); cọc H, Km, đỉnh vẫn có tên |

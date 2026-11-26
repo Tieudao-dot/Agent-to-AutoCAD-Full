@@ -49,8 +49,32 @@ namespace ClaudeCAD.Plugin.Core
         public static double BigTitleMm = 5;
         /// <summary>VN-2000: only the axes are swapped (X = North → AutoCAD y; Y = East → AutoCAD x); no projection change.</summary>
         public static bool AxisSwap = true;
-        /// <summary>Metres → drawing units (the drawing is in mm).</summary>
+        /// <summary>
+        /// Metres → drawing units: 1000 in a mm drawing. Test & sửa H6: set for each call from the drawing's units (INSUNITS: a
+        /// drawing in metres gets 1), see <see cref="ForDrawing"/>; 1000 between calls.
+        /// </summary>
         public static double UnitsPerMetre = 1000;
+
+        /// <summary>Test & sửa H6: a size on paper (mm) at a print scale, in drawing units (2,5 mm at 1:500 = 1250 in mm, 1,25 in m).</summary>
+        public static double Paper(double mm, int scale) => mm * scale * UnitsPerMetre / 1000;
+
+        /// <summary>
+        /// Test & sửa H6: UnitsPerMetre of a drawing from its mm per unit (mm 1000, cm 100, m 1, inch 39.37…), for one call:
+        /// <c>using (H6Numbers.ForDrawing(mmPerUnit)) …</c> restores the default after it.
+        /// </summary>
+        public static IDisposable ForDrawing(double mmPerUnit)
+        {
+            double keep = UnitsPerMetre;
+            UnitsPerMetre = mmPerUnit > 0 ? 1000 / mmPerUnit : 1000;
+            return new Restore(() => UnitsPerMetre = keep);
+        }
+
+        private sealed class Restore : IDisposable
+        {
+            private Action _a;
+            public Restore(Action a) { _a = a; }
+            public void Dispose() { _a?.Invoke(); _a = null; }
+        }
 
         // ---------------------------------------------------------------- số thường (chờ duyệt chung ở bàn giao)
         public static int MaxPoints = 10000;
@@ -140,8 +164,15 @@ namespace ClaudeCAD.Plugin.Core
         /// <summary>UTF-8 (with or without BOM), else the Windows code page of Vietnamese files (1258), else Latin.</summary>
         public static string DecodeText(byte[] data)
         {
+            // Test & sửa H6: Excel's "Unicode Text (.txt)" is UTF-16 with a byte order mark
+            if (data.Length >= 2 && data[0] == 0xFF && data[1] == 0xFE) return Encoding.Unicode.GetString(data, 2, data.Length - 2);
+            if (data.Length >= 2 && data[0] == 0xFE && data[1] == 0xFF) return Encoding.BigEndianUnicode.GetString(data, 2, data.Length - 2);
             try { return new UTF8Encoding(false, true).GetString(data).TrimStart('﻿'); }
             catch (DecoderFallbackException) { }
+#if NETCOREAPP
+            // Test & sửa H6: .NET 8 / 10 (AutoCAD 2025+) know the Windows code pages only once their provider is registered
+            try { Encoding.RegisterProvider(CodePagesEncodingProvider.Instance); } catch (Exception) { }
+#endif
             try { return Encoding.GetEncoding(1258).GetString(data); } catch (Exception) { }
             return Encoding.GetEncoding("iso-8859-1").GetString(data);
         }
@@ -344,6 +375,10 @@ namespace ClaudeCAD.Plugin.Core
                     bool firstNumber = TryNumber(Cell(first, 0), out _);
                     if (n == 2) c = new Columns { X = 0, Y = 1 };
                     else if (n == 3 && firstNumber) c = new Columns { X = 0, Y = 1, Z = 2 };
+                    // Test & sửa H6: "X, Y, Z, code" (a text code after three numbers) is not "name, X, Y, Z"
+                    else if (n == 4 && firstNumber && !TryNumber(Cell(first, 3), out _)) c = new Columns { X = 0, Y = 1, Z = 2, Code = 3 };
+                    // four or more numbers: a first column of row numbers (1, 2, 3…) is the name, else it is X
+                    else if (n >= 4 && firstNumber && !LooksLikeRowNumbers(rows)) c = new Columns { X = 0, Y = 1, Z = 2, Code = n >= 4 && !TryNumber(Cell(first, 3), out _) ? 3 : -1 };
                     else if (n == 3) c = new Columns { Name = 0, X = 1, Y = 2 };
                     else c = new Columns { Name = 0, X = 1, Y = 2, Z = 3, Code = n >= 5 ? 4 : -1 };
                     f.Columns = "by position (no header row)";
@@ -379,6 +414,18 @@ namespace ClaudeCAD.Plugin.Core
             var swapped = LooksSwapped(f.Points);
             if (swapped != null) f.Warnings.Add(swapped);
             return f;
+        }
+
+        /// <summary>Test & sửa H6: the first column holds whole numbers going up one by one (an STT column).</summary>
+        public static bool LooksLikeRowNumbers(IList<List<string>> rows)
+        {
+            var v = rows.Take(50).Select(r => TryNumber(Cell(r, 0), out double d) ? (double?)d : null).Where(d => d.HasValue).Select(d => d.Value).ToList();
+            if (v.Count < 2) return v.Count == 1 && Math.Abs(v[0] - Math.Round(v[0])) < 1e-9 && v[0] < 1000;
+            // whole numbers going up one by one (1, 2, 3… or 101, 102…): row numbers, not coordinates
+            for (int i = 0; i < v.Count; i++) if (Math.Abs(v[i] - Math.Round(v[i])) > 1e-9) return false;
+            int steps = 0;
+            for (int i = 1; i < v.Count; i++) if (Math.Abs(v[i] - v[i - 1] - 1) < 1e-9) steps++;
+            return steps >= (v.Count - 1) * 0.8;
         }
 
         private static string Show(int i) => i < 0 ? "-" : SurveyReaderColumn(i);
@@ -782,6 +829,21 @@ namespace ClaudeCAD.Plugin.Core
             return list;
         }
 
+        /// <summary>
+        /// Test & sửa H6: the text of a chainage tick on the plan: "H1 Km0+100.00". A detail tick ("C…") shows its chainage only when
+        /// the plan step is not the detail stake step (C-numbers belong to the 20 m stakes of the long / cross sections).
+        /// </summary>
+        public static string PlanLabel(Stake st, double step)
+        {
+            bool sameAsSections = Math.Abs(step - H6Numbers.StakeDetailM) < 1e-9;
+            if (st.Kind == "detail" && !sameAsSections)
+            {
+                int slash = (st.Name ?? "").IndexOf('/');
+                return slash >= 0 ? $"{st.Name.Substring(slash + 1)} {Chainage(st.Ch)}" : Chainage(st.Ch); // keep "Đ1" of "C3/Đ1"
+            }
+            return $"{st.Name} {Chainage(st.Ch)}";
+        }
+
         /// <summary>The datum (MSS): whole metres at least DatumMarginM below the lowest level.</summary>
         public static double Datum(IEnumerable<double?> levels, double margin = -1)
         {
@@ -859,7 +921,7 @@ namespace ClaudeCAD.Plugin.Core
         {
             if (scaleH <= 0 || scaleV <= 0) throw ToolException.Invalid("terrain: scales must be more than 0.");
             double k = H6Numbers.UnitsPerMetre, ex = (double)scaleH / scaleV;
-            double th = H6Numbers.TextMm * scaleH, rowH = H6Numbers.ProfileRowMm * scaleH, labelW = H6Numbers.ProfileLabelMm * scaleH;
+            double th = H6Numbers.Paper(H6Numbers.TextMm, scaleH), rowH = H6Numbers.Paper(H6Numbers.ProfileRowMm, scaleH), labelW = H6Numbers.Paper(H6Numbers.ProfileLabelMm, scaleH);
             bool hasDesign = design != null && design.Any(z => z.HasValue);
             double dat = datum ?? Stations.Datum(ground.Concat(hasDesign ? design : new double?[0]));
             var rows = new List<string>();
@@ -920,10 +982,10 @@ namespace ClaudeCAD.Plugin.Core
                 }
             }
             double titleY = maxY + th * (hasDesign ? 5 : 3);
-            P.Add(Prim.Txt(T, (bx + x1) / 2, titleY, title, H6Numbers.BigTitleMm * scaleH));
-            P.Add(Prim.Txt(T, (bx + x1) / 2, titleY - H6Numbers.BigTitleMm * scaleH * 1.4,
-                $"Tỉ lệ ngang 1:{scaleH}, tỉ lệ đứng 1:{scaleV}", H6Numbers.TitleMm * scaleH));
-            d.Width = x1 - bx; d.Height = titleY + H6Numbers.BigTitleMm * scaleH - by;
+            P.Add(Prim.Txt(T, (bx + x1) / 2, titleY, title, H6Numbers.Paper(H6Numbers.BigTitleMm, scaleH)));
+            P.Add(Prim.Txt(T, (bx + x1) / 2, titleY - H6Numbers.Paper(H6Numbers.BigTitleMm, scaleH) * 1.4,
+                $"Tỉ lệ ngang 1:{scaleH}, tỉ lệ đứng 1:{scaleV}", H6Numbers.Paper(H6Numbers.TitleMm, scaleH)));
+            d.Width = x1 - bx; d.Height = titleY + H6Numbers.Paper(H6Numbers.BigTitleMm, scaleH) - by;
             return d;
         }
 
@@ -960,7 +1022,7 @@ namespace ClaudeCAD.Plugin.Core
         /// <summary>One cross section, the centre line at x = cx, the bottom of its table at y = by. Same scale both ways.</summary>
         public static SectionDrawing Cross(Stake st, IList<(double off, double z)> pts, double halfWidth, double cx, double by, int scale, double? datum)
         {
-            double k = H6Numbers.UnitsPerMetre, th = H6Numbers.TextMm * scale, rowH = H6Numbers.CrossRowMm * scale, labelW = H6Numbers.CrossLabelMm * scale;
+            double k = H6Numbers.UnitsPerMetre, th = H6Numbers.Paper(H6Numbers.TextMm, scale), rowH = H6Numbers.Paper(H6Numbers.CrossRowMm, scale), labelW = H6Numbers.Paper(H6Numbers.CrossLabelMm, scale);
             var d = new SectionDrawing();
             if (pts.Count == 0) return d;
             double dat = datum ?? Stations.Datum(pts.Select(p => (double?)p.z));
@@ -986,8 +1048,8 @@ namespace ClaudeCAD.Plugin.Core
             double yc = Y(maxZ) + th * 2;
             P.Add(Prim.Line(H6Numbers.LayerDesign.name, cx, top, cx, yc)); // the centre line (tim tuyến)
             P.Add(Prim.Txt(T, bx + th * 0.5, top + th, "MSS " + Stations.Level(dat, H6Numbers.DecSection), th, 0, 1));
-            P.Add(Prim.Txt(T, cx, yc + th * 2, $"Cọc {st.Name}  {Stations.Chainage(st.Ch)}", H6Numbers.TitleMm * scale));
-            d.Width = right - bx; d.Height = yc + th * 3 + H6Numbers.TitleMm * scale - by;
+            P.Add(Prim.Txt(T, cx, yc + th * 2, $"Cọc {st.Name}  {Stations.Chainage(st.Ch)}", H6Numbers.Paper(H6Numbers.TitleMm, scale)));
+            d.Width = right - bx; d.Height = yc + th * 3 + H6Numbers.Paper(H6Numbers.TitleMm, scale) - by;
             return d;
         }
     }

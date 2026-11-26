@@ -8,6 +8,7 @@ using Xunit;
 namespace ClaudeCAD.Core.Tests
 {
     /// <summary>Nâng cấp đợt H6 (hạ tầng): docs/ban-giao/nang-cap-h6.md.</summary>
+    [Collection("H6Numbers")] // Test & sửa H6: H6Numbers.UnitsPerMetre is changed for a call in NangCapH6TestSuaTests
     public class NangCapH6Tests
     {
         private static string Src(params string[] parts) =>

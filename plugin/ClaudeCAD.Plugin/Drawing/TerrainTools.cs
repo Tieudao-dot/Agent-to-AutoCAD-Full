@@ -31,13 +31,19 @@ namespace ClaudeCAD.Plugin.Drawing
             var action = p.Str("action").Trim().ToLowerInvariant();
             if (!TerrainActions.Contains(action)) throw ToolException.Invalid($"{tool}: action must be one of {string.Join(", ", TerrainActions)}.");
             ctx.RequireWritable(tool);
-            switch (action)
+            // Test & sửa H6: metres → drawing units from the drawing's units (a drawing in metres is common for civil works)
+            double mmPerUnit = 1;
+            try { mmPerUnit = FloorPlanLogic.MmPerUnit(Convert.ToInt32(ctx.Db.Insunits), out _); } catch (Exception) { }
+            using (H6Numbers.ForDrawing(mmPerUnit))
             {
-                case "import_points": return ImportSurvey(ctx, p);
-                case "contours": return DrawContours(ctx, p);
-                case "stations": return DrawStations(ctx, p);
-                case "profile": return DrawProfile(ctx, p);
-                default: return DrawCrossSections(ctx, p);
+                switch (action)
+                {
+                    case "import_points": return ImportSurvey(ctx, p);
+                    case "contours": return DrawContours(ctx, p);
+                    case "stations": return DrawStations(ctx, p);
+                    case "profile": return DrawProfile(ctx, p);
+                    default: return DrawCrossSections(ctx, p);
+                }
             }
         }
 
@@ -74,7 +80,7 @@ namespace ClaudeCAD.Plugin.Drawing
                 throw ToolException.Invalid($"{tool}: the points have real VN-2000 coordinates (hundreds of thousands of metres). Ask the user once: " +
                     "draw at the real coordinates (origin \"real\"), or from a local origin (origin \"auto\" = the lowest X / Y rounded down to 100 m, or [X, Y]). Nothing was drawn.");
             int scale = PlanScale(p);
-            double th = H6Numbers.TextMm * scale;
+            double th = H6Numbers.Paper(H6Numbers.TextMm, scale);
             bool labels = p.Bool("labels", true), names = p.Bool("names", true);
             var lp = EnsureLayerH6(ctx, p.Str("points_layer", H6Numbers.LayerPoint.name), H6Numbers.LayerPoint.color);
             var ll = EnsureLayerH6(ctx, H6Numbers.LayerLevel.name, H6Numbers.LayerLevel.color);
@@ -150,7 +156,7 @@ namespace ClaudeCAD.Plugin.Drawing
             double interval = p.Has("interval") ? p.Positive("interval") : H6Numbers.ContourIntervalFor(scale);
             int major = p.Int("major_every", H6Numbers.MajorEvery, 0, 100);
             var tin = SurveyTin(ctx, p, out int n);
-            double k = H6Numbers.UnitsPerMetre, th = H6Numbers.TextMm * scale;
+            double k = H6Numbers.UnitsPerMetre, th = H6Numbers.Paper(H6Numbers.TextMm, scale);
             var lines = Contouring.Trace(tin, interval * k, major);
             var lmin = EnsureLayerH6(ctx, H6Numbers.LayerMinor.name, H6Numbers.LayerMinor.color);
             var lmaj = EnsureLayerH6(ctx, H6Numbers.LayerMajor.name, H6Numbers.LayerMajor.color, LineWeight.LineWeight035);
@@ -229,7 +235,7 @@ namespace ClaudeCAD.Plugin.Drawing
             int scale = PlanScale(p);
             double step = p.Has("step") ? p.Positive("step") : H6Numbers.PlanTickM;
             var stakes = Stations.Stakes(a.Length, a.Vertices, a.Start, step);
-            double k = H6Numbers.UnitsPerMetre, th = H6Numbers.TextMm * scale, half = H6Numbers.PlanTickMm * scale / 2;
+            double k = H6Numbers.UnitsPerMetre, th = H6Numbers.Paper(H6Numbers.TextMm, scale), half = H6Numbers.Paper(H6Numbers.PlanTickMm, scale) / 2;
             var ls = EnsureLayerH6(ctx, H6Numbers.LayerStation.name, H6Numbers.LayerStation.color);
             foreach (var st in stakes)
             {
@@ -240,7 +246,10 @@ namespace ClaudeCAD.Plugin.Drawing
                 Acad.Add(ctx, line, null, defaults: false);
                 var tp = pt + nrm * (half + th * 0.4);
                 double rot = Contouring.Readable(Math.Atan2(nrm.Y, nrm.X));
-                AddH6Text(ctx, ls, tp.X, tp.Y, $"{st.Name} {Stations.Chainage(st.Ch)}", th, rot, Math.Abs(rot - Math.Atan2(nrm.Y, nrm.X)) < 1e-9 ? 1 : 2);
+                // Test & sửa H6: "C1, C2…" are the 20 m detail stakes of the sections; a plan tick at another step shows its
+                // chainage only, so a name never means two places
+                string label = Stations.PlanLabel(st, step);
+                AddH6Text(ctx, ls, tp.X, tp.Y, label, th, rot, Math.Abs(rot - Math.Atan2(nrm.Y, nrm.X)) < 1e-9 ? 1 : 2);
             }
             return new Dictionary<string, object>
             {
@@ -290,7 +299,7 @@ namespace ClaudeCAD.Plugin.Drawing
             var all = ground.Concat(dz ?? new List<double?>()).Where(z => z.HasValue).Select(z => z.Value).ToList();
             if (all.Count == 0) throw ToolException.Invalid("terrain: no stake of the alignment is on the surface (the alignment is outside the survey points).");
             if (datum.HasValue && datum.Value > all.Min()) throw ToolException.Invalid($"terrain: datum {datum} is above the lowest level {all.Min():0.00}: give a lower datum or none.");
-            var (bx, by) = PlaceBelow(ctx, p, H6Numbers.GapMm * sh * 4);
+            var (bx, by) = PlaceBelow(ctx, p, H6Numbers.Paper(H6Numbers.GapMm, sh) * 4);
             var title = p.Str("title", "TRẮC DỌC TUYẾN");
             var draw = SectionLayout.Profile(stakes, ground, dz, bx, by, sh, sv, datum, title, design == null ? null : Stations.Grades(design));
             if (!Params.TryPoint(p.Get("position"), out _))
@@ -357,11 +366,11 @@ namespace ClaudeCAD.Plugin.Drawing
             }
             if (sections.Count == 0) throw ToolException.Invalid("terrain: no cross section is on the surface (the alignment is outside the survey points).");
             // one grid: SectionsPerColumn per column, top to bottom, by chainage
-            var (bx, by) = PlaceBelow(ctx, p, H6Numbers.GapMm * sc * 4);
+            var (bx, by) = PlaceBelow(ctx, p, H6Numbers.Paper(H6Numbers.GapMm, sc) * 4);
             var drawn = sections.Select(s => SectionLayout.Cross(s.st, s.pts, half, 0, 0, sc, null)).ToList();
-            double cellW = drawn.Max(d => d.Width) + H6Numbers.GapMm * sc, cellH = drawn.Max(d => d.Height) + H6Numbers.GapMm * sc;
+            double cellW = drawn.Max(d => d.Width) + H6Numbers.Paper(H6Numbers.GapMm, sc), cellH = drawn.Max(d => d.Height) + H6Numbers.Paper(H6Numbers.GapMm, sc);
             int per = Math.Max(1, H6Numbers.SectionsPerColumn);
-            double labelW = H6Numbers.CrossLabelMm * sc;
+            double labelW = H6Numbers.Paper(H6Numbers.CrossLabelMm, sc);
             for (int i = 0; i < drawn.Count; i++)
             {
                 int col = i / per, row = i % per;
