@@ -233,3 +233,94 @@ con rà song song, mỗi tác vụ build và chạy test thử trên bản sao.
     là không đồng ý.
   - **Móc 180° thép trơn (KTP-21):** theo quy ước thường dùng +6,25d mỗi móc. Giữ nguyên số đã duyệt (uốn 2,5d, đoạn thẳng 3d).
   - **KTP-07:** chỉ thêm bản dịch câu báo lỗi của máy chủ kích hoạt trong plugin / bộ cài, không sửa máy chủ.
+
+## Soát lại lượt 1 (27/11 00h19, trên `5611f3f`, code `0d5da4c`)
+
+Thread kiểm tra độc lập soát lại, so với `8c46a8e`. Cách soát: 3 tác vụ con đọc diff và viết test thử trên bản chép. H9 chạy
+`isConfirmation` thật với khoảng 230 câu; H7 / H8 có 8 test thử, so khe hở với cách đo vét điểm; H6 có 26 test thử.
+
+Kết quả test: lõi 1708 / 1708, trợ lý 467 / 467, build 3 bản 0 lỗi. Test UI WPF (KTP-01) dựa vào CI 45863381169 xanh.
+
+**Tổng: 31 sửa đúng, 5 chưa đủ (KTP-04, 07, 12, 24, 31), 0 sai, 12 lỗi mới (KTP-37 → 48).**
+
+### KTP chưa đủ
+
+| KTP | Còn thiếu |
+| --- | --- |
+| 04 (nhẹ) | Câu hỏi bằng "à" không có "?" vẫn ra đồng ý: "ok à", "đồng ý à", "đồng ý rồi à", "ok xóa hết rồi à". Lý do: `'à'` nằm trong `FILLERS` (`confirmation.ts:254`) |
+| 07 | Thiếu câu `LOCKED_MSG` ("Máy này đã bị chủ plugin tạm khóa."), xem KTP-41 |
+| 12 | File có một dòng chỉ một chữ (vd "SODIEM") vẫn chọn nhầm `,`, xem KTP-39 |
+| 24 (nhẹ) | `skills/ve-ha-tang/SKILL.md:11` và `:18` còn ghi "nhân 1000" / "x_cad = Y × 1000". Test chỉ tìm "m × 1000" nên không bắt |
+| 31 | Nhịp 101–199 mm vẫn lỗi thô, xem KTP-40 |
+
+### Các KTP sửa đúng (điểm đáng ghi)
+
+- **KTP-13:** 83 ca ngẫu nhiên so với đo vét điểm, không ca nào báo khe lớn hơn thực. Ống gió đứng vẫn tính nửa đường chéo:
+  báo khe nhỏ hơn thực, an toàn.
+- **KTP-17:** khi đã nâng bán kính mặc định mà đoạn quá ngắn, lời báo vẫn bảo "use a smaller bend_radius".
+- **KTP-29:** `under_beams: false` kèm điểm 3D cũng bị từ chối, vì code chỉ kiểm có tham số, không kiểm giá trị.
+- **KTP-20:** thread chọn khe thông thủy ≥ d, không có ngưỡng 25 mm. Đây là số tiêu chuẩn, chờ chủ dự án chốt.
+- **KTP-35:** "Cả hai" còn ở `Plans.cs:397` và `DrawingSet.cs:101, 118`; dựa vào bảng đổi tên nút, chấp nhận được.
+- **KTP-19:** đai dầm a150 / a200 (trái / phải, bước giữa):
+
+  | Nhịp | Đai trái / phải | Bước giữa |
+  | --- | --- | --- |
+  | 3000 | 5 / 5 | 188,9 |
+  | 4000 | 7 / 7 | 190,9 |
+  | 7000 | 12 / 12 | 200 |
+
+- **KTP-21:** sàn 3000 × 4000 → 3060 / 4060; dầm 2Ø10 nhịp 5000 → 5725; cột cao 3300 → 3775.
+- **Lỗi nặng C tự tìm (`Alignment.At`):** có thật, sửa đúng; thiếu test thật (KTP-47b). Nghi vấn còn lại: cọc cuối có thể vượt
+  chiều dài thật 1 ulp (khoảng 1 % số tuyến). Gợi ý kẹp theo `GetDistanceAtParameter(EndParam)`.
+
+### Lỗi mới
+
+| Mã | Mức | Mảng | Chỗ | Lỗi | Gợi ý |
+| --- | --- | --- | --- | --- | --- |
+| KTP-37 | Vừa | H6 (do sửa 23) | `Terrain.cs:371` `FindHeader` | Chỉ dò tiêu đề trong 10 hàng đầu, mà nay hàng trống được giữ nên chiếm chỗ. Tên bảng ở hàng 1, tiêu đề ở hàng 12 → lấy cột theo vị trí, có thể sai cột | Đếm 10 hàng không rỗng |
+| KTP-38 | Vừa | H7 (do sửa 14) | `MepTools.cs:385` | Cặp ống chung một đầu bị bỏ qua trước khi kiểm khối chạm. Ống vẽ trùng hai lần hoặc chồng một phần không còn bị báo | `if (!hit && EndToEnd) continue` |
+| KTP-39 | Nhẹ–vừa | H6 (12 còn hở) | `Terrain.cs` `CommasAreDecimal` | Một dòng < 2 chữ trong 20 dòng đầu là trả false, nên X = 5567045 sai mà không cảnh báo | Bỏ qua dòng một chữ |
+| KTP-40 | Nhẹ | H8 (31 còn hở) | `Rebar.cs:179-180` | Nhịp 101–199: `left` rỗng, ném `ArgumentOutOfRangeException` | Khi `left` rỗng thêm đai ở `first` |
+| KTP-41 | Nhẹ–vừa | H9 (07 chưa đủ) | `Lang.cs` `ServerTexts`, `ClaudeCAD.iss` `TrServer` | Thiếu `LOCKED_MSG`; test chỉ kiểm một chiều | Thêm câu; test đọc mọi chuỗi lỗi trong template |
+| KTP-42 | Nhẹ | H9 | `PluginApp.cs:44` | Thiếu `\|\| !settings.LanguageSaved` như `ChatController.cs:140`. Máy có cài đặt cũ cài bản mới chọn English thì dòng "đã nạp" và bong bóng vẫn tiếng Việt | Thêm điều kiện |
+| KTP-43 | Nhẹ | H9 | `LangEn.cs:568` | "Đã thêm 12/11/2026" dịch thành "Already added" | "Added on" |
+| KTP-44 | Nhẹ (an toàn) | H9 (do sửa 02) | `confirmation.ts:234, 254-255` | "xoá" (dấu kiểu cũ) không có trong danh sách: "ok xoá đi", "đồng ý xoá" ra không đồng ý. Cũng ra không đồng ý: "được thôi", "ok thôi", "ok bạn ơi", "đồng ý thay thế", "ok ghi đè", "yes overwrite", "yeah", "fine", "alright", "👍" | Thêm `xoá`, `xoa`; cân nhắc "ghi đè", "thay thế", "overwrite", "ơi" |
+| KTP-45 | Nhẹ–vừa | H7 (nghi vấn B) | `MepTools.cs` `PipeBoxGap` | Dầm chéo có hộp bao mặt bằng rộng; ống đứng qua sàn trong hộp đó bị báo "sát 0 mm" dù không chạm. `under_beams` với dầm chéo có thể chọn nhầm dầm | Đo theo khối dầm thật, hoặc hộp chữ nhật theo trục dầm |
+| KTP-46 | Nhẹ | H7 (nghi vấn B) | `MepTools.cs:376` | Hai nhánh vào cùng một điểm ống chính: hai tê trùng nhau, `clash` báo "chạm" giữa hai tê | Bỏ qua cặp tê cùng ống chính, hoặc ghi vào "Giới hạn" |
+| KTP-47 | Nhẹ | Tài liệu | `dot-h-cho-duyet.md`, bàn giao A / C, checklist P2-H6, `checklist-dot-h6.md` | (a) Tài liệu ghi "thôi được", "không sao" là đồng ý, nhưng gõ riêng thì ra không đồng ý. (b) Bàn giao C ghi "SelfTest sẽ báo" lỗi `Alignment.At`: sai. (c) Checklist không có mục thử tay cho bản sửa H6. (d) Thiếu quyết định tự chọn KTP-12, 22, 26 | Sửa chữ; thêm SelfTest "cọc cuối cách điểm cuối polyline < 1 mm"; thêm mục checklist |
+| KTP-48 | Nhẹ (có từ trước) | H6 | `Terrain.cs` đọc `.txt` | Tiêu đề "Tên điểm  X  Y  Z": tên 2 chữ làm lệch cột, ra 0 điểm | Ghép tiêu đề theo từ khóa, hoặc tách bằng ≥ 2 khoảng trắng |
+
+### Ba nghi vấn B để lại
+
+1. Hộp bao dầm chéo: có báo sai, ghi thành KTP-45.
+2. Tê:
+   - nhánh gần dọc trục ống chính: chỉ là chuyện hình vẽ, không ghi lỗi;
+   - hai nhánh vào cùng một điểm: ghi thành KTP-46.
+3. Móc đai 135°: không phải lỗi rõ. Code không cộng phần cong nhưng góc vuông lại tính dư, hai phần gần bù nhau, lệch khoảng
+   ±2–3 %. Đổi cách tính thì kỹ sư / chủ dự án chốt.
+
+### Cần chủ dự án chốt
+
+- **KTP-20:** khe hở giữa hai thanh thép dầm. Hiện chỉ đòi ≥ d; TCVN 5574 thường đòi max(d, 25 mm) với thép dưới, max(d, 30 mm)
+  với thép trên.
+
+### Chưa kiểm được
+
+- **Trên AutoCAD thật:** co / tê, móng băng, cọc cuối, dòng "đã nạp" bằng English.
+- **Bộ cài Inno thật.**
+- **File `.xlsx` thật** do Excel tiếng Việt lưu.
+
+Lượt soát mất khoảng 25 phút. Chi phí cả thread khoảng $25,6.
+
+### Lượt sửa 2 (luồng chính ghi, 27/11 00h25)
+
+- **Chia việc:**
+  - **A**, nhánh `full/nang-cap-h-sua-ktp-a`: KTP-04, 41, 42, 43, 44, 47a.
+  - **B**, nhánh `full/nang-cap-h-sua-ktp-b`: KTP-38, 40, 45, 46, hai điểm nhỏ ở KTP-17 / 29, chuẩn bị KTP-20.
+  - **C**, ngay trên `full/nang-cap-h-tong-the-2`: KTP-37, 39, 48, 24, cọc cuối, 47 b / c / d, rồi gộp hai nhánh kia và chạy CI.
+- **Quyết định luồng chính tự chọn:**
+  - **KTP-40:** khi nhịp ngắn thì đặt một đai ở đầu; giữ nhịp tối thiểu 100 mm, không đổi số khách gặp.
+  - **KTP-44:** thêm "xoá / xoa", "ghi đè", "thay thế", "overwrite", "replace", "ơi", "yeah", "alright", "fine", "👍" vào danh sách đồng ý.
+    "được thôi" và "ok thôi" là đồng ý; "thôi" đứng riêng là từ chối.
+  - **KTP-47a:** gõ riêng "thôi được" là đồng ý; "không sao" là không đồng ý, vì có chữ "không".
+- **Hỏi chủ dự án:** KTP-20, khe hở giữa hai thanh thép dầm.
