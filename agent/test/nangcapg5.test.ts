@@ -46,7 +46,7 @@ describe('G5: looks at a traced picture', () => {
 
   it('a new user message starts the count again (session)', () => {
     const src = fs.readFileSync(path.join(repo, 'agent', 'src', 'agent', 'session.ts'), 'utf8');
-    assert.match(src, /sendMessage\(msg: UserMessage\): void \{\n\s+resetTraceViews\(\);/);
+    assert.match(src, /sendMessage\(msg: UserMessage\): void \{\r?\n\s+resetTraceViews\(\);/);
   });
 });
 

@@ -40,12 +40,18 @@ jobs:
             8.0.x
             10.0.x
 
+      # A pwsh step fails only on the exit code of its LAST native command (GitHub adds `exit $LASTEXITCODE` at the
+      # end), so a failing `npm test` followed by a passing `npm run build` used to leave the step green. Every native
+      # command of a multi-command step checks its own exit code (Sửa CI đợt H, docs/ban-giao/nang-cap-h-sua-ci.md).
       - name: Sidecar - install, test (IPC over Windows named pipes), build
         working-directory: agent
         run: |
           npm ci
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           npm test
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           npm run build
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
       - name: Plugin core unit tests
         run: dotnet test plugin/ClaudeCAD.Core.Tests -c Release
@@ -148,7 +154,9 @@ jobs:
       - name: Setup.exe (Inno Setup)
         run: |
           choco install innosetup --no-progress -y
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           & "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe" /DAppVersion=${{ steps.ver.outputs.version }} installer\ClaudeCAD.iss
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           Copy-Item installer\install.ps1 bundle\out\install.ps1
 
       - uses: actions/upload-artifact@v4
