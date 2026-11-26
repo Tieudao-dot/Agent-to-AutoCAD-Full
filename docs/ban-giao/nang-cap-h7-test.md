@@ -57,4 +57,6 @@ sửa của thread viết, nét 2D không còn tính).
 
 ## 7. CI
 
-*(ghi sau khi chạy)*
+- Run 45827309929 trên `8e2bc58` (H7T-01 … 05): **xanh**, log Windows `# pass 446 / # fail 0`, lõi 1629 / 1629.
+- Run 45829061569 trên `4ebdf21` (thêm H7T-06, commit code cuối): **xanh**, log Windows `# pass 446 / # fail 0`, lõi 1630 / 1630.
+  Commit sau đó chỉ là tài liệu (mục này).
