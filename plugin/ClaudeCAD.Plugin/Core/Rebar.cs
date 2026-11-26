@@ -198,6 +198,13 @@ namespace ClaudeCAD.Plugin.Core
             int rest = n - 4;
             // share the rest between the two pairs of sides by their length
             int alongB = (int)Math.Round(rest / 2.0 * (b / (b + h))) , alongH = rest / 2 - alongB;
+            // Test & sửa H8: bars along a side at least one bar apart (clear), like the beam rows
+            foreach (var (count, side) in new[] { (alongB, b), (alongH, h) })
+            {
+                double gap = (side - 2 * e) / (count + 1);
+                if (gap - barDia < barDia - 1e-9)
+                    throw ToolException.Invalid($"{DrawTool}: {n}Ø{Num(barDia)} do not fit round a {Num(b)} × {Num(h)} column (less than one bar between them): ask the user for fewer bars or a bigger section.");
+            }
             for (int i = 1; i <= alongB; i++) { double x = e + (b - 2 * e) * i / (alongB + 1); pts.Add(new[] { x, e }); pts.Add(new[] { x, h - e }); }
             for (int i = 1; i <= alongH; i++) { double y = e + (h - 2 * e) * i / (alongH + 1); pts.Add(new[] { e, y }); pts.Add(new[] { b - e, y }); }
             return pts;
@@ -235,8 +242,12 @@ namespace ClaudeCAD.Plugin.Core
         {
             public string Role, Shape, Element;
             public double Dia, LengthMm, Spacing;
+            /// <summary>Test & sửa H8: the spacing in the middle of a beam span (stirrups by zones), 0 when the same.</summary>
+            public double MidSpacing;
             public int Count;
-            public string Label => Spacing > 0 ? SpacedLabel(Dia, Spacing) : $"{Count}Ø{Num(Dia)}";
+            public string Label => Spacing > 0
+                ? (MidSpacing > 0 && Math.Abs(MidSpacing - Spacing) > 1e-9 ? $"{SpacedLabel(Dia, Spacing)}/a{Num(MidSpacing)}" : SpacedLabel(Dia, Spacing))
+                : $"{Count}Ø{Num(Dia)}";
         }
 
         private static string MainShape(double d) => Plain(d) ? "thẳng, 2 móc 180°" : "thẳng";
@@ -267,7 +278,7 @@ namespace ClaudeCAD.Plugin.Core
             {
                 new BarKind { Role = "bottom", Element = "dầm", Dia = bottom.d, Count = bottom.n, LengthMm = Len(bottom.d), Shape = AnchoredShape(bottom.d) },
                 new BarKind { Role = "top", Element = "dầm", Dia = top.d, Count = top.n, LengthMm = Len(top.d), Shape = AnchoredShape(top.d) },
-                new BarKind { Role = "stirrup", Element = "dầm", Dia = stirrupDia, Count = pos.Count, LengthMm = StirrupLength(b, h, cover, stirrupDia), Shape = "đai kín, móc 135°", Spacing = endSpacing },
+                new BarKind { Role = "stirrup", Element = "dầm", Dia = stirrupDia, Count = pos.Count, LengthMm = StirrupLength(b, h, cover, stirrupDia), Shape = "đai kín, móc 135°", Spacing = endSpacing, MidSpacing = midSpacing },
             };
         }
 

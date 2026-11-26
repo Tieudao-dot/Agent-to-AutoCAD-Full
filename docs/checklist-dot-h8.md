@@ -37,6 +37,12 @@ AutoCAD 2022–2027. Phần A, B cần máy gói 2D hoặc Full; phần C cần 
 6. Vẽ hai dầm cùng `start_mark` 901 nhưng thép khác (2Ø18 và 2Ø20): Claude báo số hiệu trùng; bảng có hai dòng 901
    riêng (không gộp), Claude đề nghị đánh số lại.
 
+## Test & sửa H8 (~3 phút)
+
+1. "Vẽ thép dầm 220x400 nhịp 5000, 2Ø18 dưới, 2Ø16 trên": in khung nhìn tỉ lệ 1:50 thì mặt cắt bên cạnh đọc đúng **1:20** (đo
+   bằng thước: bề rộng 220 mm ra 11 mm trên giấy); chữ đai ghi "a150/a200"; thanh Ø18 L=6440.
+2. "Vẽ mặt cắt cột 300x300 20Ø25": Claude báo không đủ chỗ, nhờ bớt thanh hoặc tăng cỡ cột.
+
 ## C. Móng 3D (~5 phút, gói 3D / Full)
 
 1. "Dựng móng đơn tại (0,0) và (4000,0)" (không nói cỡ): móng 1200 × 1200 đế 350 trên `S-FOOT-3D`, bê tông lót dày 100,

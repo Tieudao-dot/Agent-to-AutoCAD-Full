@@ -283,12 +283,15 @@ namespace ClaudeCAD.Plugin.Drawing
                 pen.Mark(x0 + U(span / 2), y0 - pen.Bubble * 1.5, mark, RebarLogic.Label(kinds[0].Count, kinds[0].Dia, kinds[0].LengthMm));
                 pen.Mark(x0 + U(span / 2), y0 + U(h) + pen.Bubble * 1.5, mark + 1, RebarLogic.Label(kinds[1].Count, kinds[1].Dia, kinds[1].LengthMm));
                 pen.Mark(x0 + U(span / 8), y0 + U(h) + pen.Bubble * 3, mark + 2, $"Ø{RebarLogic.Num(sd)}a{RebarLogic.Num(se)}/a{RebarLogic.Num(sm)} L={RebarLogic.Num(RebarLogic.RoundLength(kinds[2].LengthMm))} ({kinds[2].Count} cái)");
-                // the section beside it
+                // the section beside it. Test & sửa H8: drawn enlarged scale / SectionScale times, so printed with the elevation at
+                // 1:scale it reads at its own 1:SectionScale (the label said 1:20 while it was drawn at the elevation's scale)
+                double k = (double)scale / H8Numbers.SectionScale;
+                double S(double mm) => U(mm) * k;
                 double sx0 = x0 + U(span) + U(Math.Max(1000, 3 * h)), sy0 = y0;
-                pen.Rect(sx0, sy0, U(b), U(h), pen.Conc);
-                pen.Rect(sx0 + U(cover + sd / 2), sy0 + U(cover + sd / 2), U(b - 2 * cover - sd), U(h - 2 * cover - sd), pen.Bar);
-                foreach (var bx in RebarLogic.BarPositions(bottom.n, b, cover, sd, bottom.d)) pen.Dot(sx0 + U(bx), sy0 + U(cover + sd + bottom.d / 2), U(bottom.d));
-                foreach (var bx in RebarLogic.BarPositions(top.n, b, cover, sd, top.d)) pen.Dot(sx0 + U(bx), sy0 + U(h - cover - sd - top.d / 2), U(top.d));
+                pen.Rect(sx0, sy0, S(b), S(h), pen.Conc);
+                pen.Rect(sx0 + S(cover + sd / 2), sy0 + S(cover + sd / 2), S(b - 2 * cover - sd), S(h - 2 * cover - sd), pen.Bar);
+                foreach (var bx in RebarLogic.BarPositions(bottom.n, b, cover, sd, bottom.d)) pen.Dot(sx0 + S(bx), sy0 + S(cover + sd + bottom.d / 2), S(bottom.d));
+                foreach (var bx in RebarLogic.BarPositions(top.n, b, cover, sd, top.d)) pen.Dot(sx0 + S(bx), sy0 + S(h - cover - sd - top.d / 2), S(top.d));
                 pen.Text(sx0, sy0 - pen.TextH * 3, $"MẶT CẮT 1:{H8Numbers.SectionScale}  {RebarLogic.Num(b)}×{RebarLogic.Num(h)}  {kinds[0].Label} dưới, {kinds[1].Label} trên");
             }
             else if (element == "column")
