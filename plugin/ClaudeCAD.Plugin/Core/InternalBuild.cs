@@ -14,7 +14,7 @@ namespace ClaudeCAD.Plugin.Core
     public static class InternalBuild
     {
         /// <summary>The name people see everywhere in this build (palette title, ⚙, self-test, Windows app list).</summary>
-        public const string Label = "Agent to AutoCAD Full: BẢN THỬ NỘI BỘ nâng cấp 5 (hết hạn 10/12/2026)";
+        public const string Label = "Agent to AutoCAD Full: BẢN THỬ NỘI BỘ nâng cấp 6 (hết hạn 10/12/2026)";
 
         /// <summary>The last day the build works (Vietnam date, dd/MM/yyyy).</summary>
         public const string LastDayText = "10/12/2026";

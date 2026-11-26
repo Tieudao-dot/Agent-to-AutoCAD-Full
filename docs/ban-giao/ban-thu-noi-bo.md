@@ -6,7 +6,11 @@
 
 *13/11/2026 · thread "Bộ cài thử nội bộ" · xuất phát từ `full/test-tong-the` @ `19944df`. Chủ dự án chốt 13/11/2026.*
 
-> **Bản mới nhất (26/11/2026): bản 5, `AgentToAutoCADFull-ThuNoiBo-nang-cap-5-0.9.4`** (lượt CI #73, mục "Bản 5" ngay dưới). Đủ
+> **Bản mới nhất (26/11/2026): bản 6, `AgentToAutoCADFull-ThuNoiBo-nang-cap-6-0.9.4`** (mục "Bản 6" ngay dưới). Đủ
+> đợt F + G + **đợt H phần 1**. Cài đè lên bản 5 (hoặc bản cũ hơn): **skill cũ tự được thay, không phải xóa tay.**
+> Bản 3, 4, 5 bỏ.
+>
+> **Bản 5 (26/11/2026), `AgentToAutoCADFull-ThuNoiBo-nang-cap-5-0.9.4`** (lượt CI #73, mục "Bản 5" ngay dưới). Đủ
 > đợt F (F1 → F5) + đợt G (G1 → G5). Bản 3, bản 4 bỏ. **Cài đè lên bản 3: phải làm thêm một bước tay cho skill** (xem
 > "Bản 5 › Skill").
 >
@@ -26,6 +30,59 @@
 > - file còn bị giữ thì bảo khởi động lại máy rồi chạy lại.
 >
 > Các bộ cài cũ (`…-0.9.4` lượt #16, `…-nang-cap-0.9.4` lượt #32): **đừng dùng nữa**.
+
+## Bản 6 (26/11/2026): đợt F + G + H phần 1
+
+**Gồm gì mới so với bản 5.** Gộp nhánh tích hợp đợt H phần 1 `full/nang-cap-h-tong-the` @ `1ad6cec` (code `93096dc`, đã
+sửa hết 28 lỗi kiểm tra độc lập KTH-01 → 28), không xung đột:
+- **H1:** skill tự nâng cấp khi cài bản mới mà vẫn giữ bản khách đã sửa; `trace_image` đọc thẳng PDF scan; soát nhiều
+  tầng;
+- **H2:** xuất DXF / DWG đời cũ / FBX;
+- **H3:** so sánh hai bản vẽ;
+- **H4:** học chuẩn công ty từ bản vẽ mẫu (khung tên, layer, style);
+- **H5:** làm nhiều file một lúc (có sao lưu bản gốc trước khi sửa);
+- sửa CI: bước nhiều lệnh dừng ngay khi một lệnh hỏng (trước đây `npm test` hỏng mà bước vẫn xanh).
+
+Thiết lập bản thử giữ nguyên: không kích hoạt, luôn gói Full, **vẫn hết hạn sau 10/12/2026**, không tự cập nhật, không
+phát hành được. Tên bản ghi **"nâng cấp 6"**: "Agent to AutoCAD Full: BẢN THỬ NỘI BỘ nâng cấp 6 (hết hạn 10/12/2026)".
+
+**Tải.** Mục "Bản 6 — lượt CI" ngay dưới.
+
+### Bản 6 › Cài đè lên bản 5 (hoặc bản cũ hơn)
+
+1. Đóng AutoCAD (bộ cài nhắc bằng tiếng Việt nếu AutoCAD còn mở).
+2. Giải nén zip, chạy `AgentToAutoCADFull-ThuNoiBo-Setup.exe`, Next tới hết. Không cần gỡ bản cũ.
+3. **Không phải xóa skill bằng tay nữa** (khác bản 5).
+   - Bộ cài để sẵn bản skill mới trong thư mục `skills-ban-moi`.
+   - Lần đầu mở khung chat, plugin tự thay skill cậu **chưa sửa** bằng bản mới.
+   - Skill nào cậu **đã sửa** thì giữ nguyên, bản mới đặt cạnh tên `SKILL.ban-moi.md`; khung chat báo một dòng.
+   - Plugin nhận ra skill "chưa sửa" bằng cách so với mọi bản skill đã từng phát hành, kể cả của bản thử 3, 4, 5.
+4. Mở AutoCAD, gõ `CLAUDECHAT`:
+   - thanh trên cùng ghi "… nâng cấp 6 …";
+   - bấm **Chat mới** một lần.
+5. Lịch sử chat, cài đặt, macro, đăng nhập Claude được giữ.
+
+### Bản 6 › Tự kiểm và thử gì trước
+
+- Gõ `CLAUDECHATSELFTEST`: các dòng "Nâng cấp đợt H2 … H5" đều ✓, dòng G5 có thêm câu "PDF: Windows đọc thẳng trang PDF
+  được".
+- Theo `docs/checklist-tong-the.md`: làm khối **"Đợt H phần 1", mục H0** trước (~40 phút: xuất FBX mở bằng Blender / 3ds
+  Max, áp chuẩn cho cả thư mục bản sao, vẽ lại từ PDF scan, skill khi cài đè, học chuẩn công ty), rồi H1 → H6. Tiếp đó
+  khối "Đợt G" (mục G0 trước) và "Đợt F" như bản 5.
+- Tiêu đề khối H trong checklist ghi "bộ cài thử bản 5": đúng ra là bản 6 (bản 5 chưa có đợt H).
+- Mục H0-5 (skill khi cài đè) thử được ngay khi cài bản 6 lên máy đang có bản 5: sửa một dòng trong
+  `skills\ve-kien-truc\SKILL.md` **trước** khi chạy bộ cài.
+- Không thử được trên bản thử: mục cần máy gói 2D / 3D hoặc máy chưa kích hoạt.
+
+### Bản 6 › Kỹ thuật
+
+- Gộp `1ad6cec` không xung đột. Thêm: dòng kiểm `$LASTEXITCODE` sau `node bundle/make-bundle.mjs` trong bước bundle riêng
+  của bản thử (theo cách sửa CI đợt H); nhãn "nâng cấp 6"; `WelcomeLabel2` ghi "(nâng cấp 6: đợt F + G + H phần 1)";
+  artifact `-nang-cap-6`.
+- Phần bộ cài của H1 (`[InstallDelete]` và `[Files]` cho `skills-ban-moi`) không đụng phần riêng bản thử.
+- `SkillSync` chạy lúc mở khung chat, không phụ thuộc trạng thái kích hoạt.
+- Test: lõi **1618/1618** (gồm 10 test bản thử), trợ lý **443/443**, build 3 target xanh. Không loại trừ test nào.
+- Chưa kiểm được: chưa chạy bộ cài trên Windows thật, chưa chạy trên AutoCAD thật.
 
 ## Bản 5 (26/11/2026): đợt F + đợt G
 

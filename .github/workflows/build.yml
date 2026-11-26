@@ -103,6 +103,7 @@ jobs:
       - name: Bundle (bản thử nội bộ, no update link)
         run: |
           node bundle/make-bundle.mjs --node-dir $env:NODE_DIR
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           if (Test-Path bundle/out/ClaudeCAD.bundle/Contents/update-config.json) { Write-Error "the bản thử nội bộ must not carry an update link"; exit 1 }
           $act = Get-Content bundle/out/ClaudeCAD.bundle/Contents/activation.json -Raw | ConvertFrom-Json
           if (-not [string]::IsNullOrWhiteSpace($act.url)) { Write-Error "the bản thử nội bộ must not carry an activation service url"; exit 1 }
@@ -163,7 +164,7 @@ jobs:
 
       - uses: actions/upload-artifact@v4
         with:
-          name: AgentToAutoCADFull-ThuNoiBo-nang-cap-5-${{ steps.ver.outputs.version }}
+          name: AgentToAutoCADFull-ThuNoiBo-nang-cap-6-${{ steps.ver.outputs.version }}
           path: |
             bundle/out/AgentToAutoCADFull-ThuNoiBo-Setup.exe
           if-no-files-found: error

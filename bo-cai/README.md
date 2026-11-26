@@ -2,8 +2,8 @@
 
 > **Nhánh `full/ban-thu-noi-bo` = BẢN THỬ NỘI BỘ** (chỉ chủ dự án dùng, không gửi cho ai, hết hạn 10/12/2026, không
 > bao giờ gộp vào nhánh khác): bộ cài `AgentToAutoCADFull-ThuNoiBo-Setup.exe` lấy ở mục Artifacts của lượt CI, không
-> kích hoạt, gói Full, không tự cập nhật. Bản mới nhất: **bản 5** (`AgentToAutoCADFull-ThuNoiBo-nang-cap-5-0.9.4`,
-> có đợt F + đợt G; cài đè lên bản cũ thì xóa 4 thư mục skill cũ trước, xem mục "Bản 5 › Skill"). Cách tải và cài:
+> kích hoạt, gói Full, không tự cập nhật. Bản mới nhất: **bản 6** (`AgentToAutoCADFull-ThuNoiBo-nang-cap-6-0.9.4`,
+> đợt F + G + H phần 1; cài đè lên bản cũ, skill tự được thay). Cách tải và cài:
 > [`../docs/ban-giao/ban-thu-noi-bo.md`](../docs/ban-giao/ban-thu-noi-bo.md).
 
 > **Bản Agent to AutoCAD Full chưa có bộ cài riêng.** Các link tải bên dưới vẫn là bộ cài ClaudeCAD của dự án gốc

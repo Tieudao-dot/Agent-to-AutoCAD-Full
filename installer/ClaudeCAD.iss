@@ -12,7 +12,7 @@
 ; sent anywhere, plan Full, expires after 10/12/2026 (the plugin is built with BAN_THU_NOI_BO). Same AppId / folders.
 #define BanThuNoiBo
 #ifdef BanThuNoiBo
-  #define AppDisplayName "Agent to AutoCAD Full: BẢN THỬ NỘI BỘ nâng cấp 5 (hết hạn 10/12/2026)"
+  #define AppDisplayName "Agent to AutoCAD Full: BẢN THỬ NỘI BỘ nâng cấp 6 (hết hạn 10/12/2026)"
 #else
 #define AppDisplayName "Agent to AutoCAD Full"
 #endif
@@ -106,7 +106,7 @@ Filename: "{#ClaudeExe}"; Parameters: "auth login --claudeai"; Description: "Đ�
 
 [Messages]
 #ifdef BanThuNoiBo
-WelcomeLabel2=ĐÂY LÀ BẢN THỬ NỘI BỘ (nâng cấp 5: đợt F + đợt G), chỉ dành cho chủ dự án, không gửi cho ai.%n%n- Không cần kích hoạt, mở sẵn đủ 2D + 3D (gói Full).%n- Dùng được tới hết ngày 10/12/2026; từ 11/12/2026 khung chat không mở trợ lý nữa.%n- Không tự cập nhật.%n- Nếu máy đang có ClaudeCAD, bản này sẽ thay nó (giữ lịch sử chat, cài đặt và đăng nhập Claude). Bộ cài chính thức sau này cài đè lên được.%n%nBấm Next để cài tiếp.
+WelcomeLabel2=ĐÂY LÀ BẢN THỬ NỘI BỘ (nâng cấp 6: đợt F + G + H phần 1), chỉ dành cho chủ dự án, không gửi cho ai.%n%n- Không cần kích hoạt, mở sẵn đủ 2D + 3D (gói Full).%n- Dùng được tới hết ngày 10/12/2026; từ 11/12/2026 khung chat không mở trợ lý nữa.%n- Không tự cập nhật.%n- Nếu máy đang có ClaudeCAD, bản này sẽ thay nó (giữ lịch sử chat, cài đặt và đăng nhập Claude). Bộ cài chính thức sau này cài đè lên được.%n%nBấm Next để cài tiếp.
 #endif
 ; TT-01: should a file still be in use while copying, the retry box is Vietnamese too
 AbortRetryIgnoreSelectAction=Chọn cách xử lý
