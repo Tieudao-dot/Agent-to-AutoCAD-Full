@@ -12,7 +12,7 @@ export function terrainTools(b: ToolBridge): AnyTool[] {
   return [
     cadTool(b, 'terrain',
       'Infrastructure / survey drawings (hạ tầng), a drawing aid: the engineer checks it; no cut / fill volumes. ' +
-        'import_points {file}: survey sheet .csv / .txt / .xlsx (columns from the header X / Y / Z / Tên / Mã, or by position name, X, Y, Z); VN-2000: X = North → drawing y, Y = East → drawing x, m × 1000, ' +
+        'import_points {file}: survey sheet .csv / .txt / .xlsx (columns from the header X / Y / Z / Tên / Mã, or by position name, X, Y, Z); VN-2000: X = North → drawing y, Y = East → drawing x, metres in the drawing units (× 1000 in a mm drawing), ' +
         'points at their level on C-SURVEY-PT with level and name texts. Real coordinates: ask the user, then origin "real" / "auto" / [X, Y]. ' +
         'contours: from those points (TIN), major lines labelled. stations {alignment_handle}: chainage ticks on the plan. ' +
         'profile {alignment_handle}: long section with its table (design: [[chainage, level], …] optional). cross_sections {alignment_handle}: at the stakes. ' +
@@ -37,7 +37,7 @@ export function terrainTools(b: ToolBridge): AnyTool[] {
         alignment_handle: handle.optional().describe('stations / profile / cross_sections: the centre line (polyline / line / arc).'),
         start_chainage: z.number().optional().describe('Chainage of the start of the alignment in metres (default 0).'),
         step: z.number().positive().optional().describe('Stake spacing in metres.'),
-        position: wcsPoint.optional().describe('profile / cross_sections: lower-left corner (WCS, mm); default below the drawing.'),
+        position: wcsPoint.optional().describe('profile / cross_sections: lower-left corner (WCS, drawing units); default below the drawing.'),
         scale_h: z.number().int().min(1).optional().describe('profile: horizontal scale 1:n.'),
         scale_v: z.number().int().min(1).optional().describe('profile: vertical scale 1:n.'),
         datum: z.number().optional().describe('profile: datum level (mức so sánh) in metres.'),

@@ -113,7 +113,9 @@ namespace ClaudeCAD.Plugin.Drawing
                 ["read_rows"] = rows.Count,
                 ["columns"] = f.Columns,
                 ["with_level"] = f.HasZ,
-                ["axes"] = swap ? "VN-2000: X (North) → drawing y, Y (East) → drawing x, metres × 1000 (only the axes are swapped, no projection change)" : "not swapped: X → drawing x, Y → drawing y, metres × 1000",
+                // Sửa KTP-24: the factor follows the drawing units (mm × 1000, m × 1…)
+                ["axes"] = (swap ? "VN-2000: X (North) → drawing y, Y (East) → drawing x" : "not swapped: X → drawing x, Y → drawing y")
+                    + $", metres × {H6Numbers.UnitsPerMetre.ToString("0.####", CultureInfo.InvariantCulture)} (drawing units)" + (swap ? " (only the axes are swapped, no projection change)" : ""),
                 ["origin"] = new List<object> { x0, y0 },
                 ["layer"] = p.Str("points_layer", H6Numbers.LayerPoint.name),
                 ["note"] = "Points are at their level (Z). terrain contours / profile / cross_sections read them from this layer. Remind the user this is a drawing aid: the engineer checks it.",
@@ -205,10 +207,22 @@ namespace ClaudeCAD.Plugin.Drawing
             public double Start; public string Handle;
             public (Point3d p, Vector3d t) At(double s)
             {
-                s = Math.Max(0, Math.Min(Length, s));
+                // Sửa KTP (thêm): Length is in metres, s in drawing units: clamp to the length in drawing units (clamping to
+                // the metres put every stake of a mm drawing within its first metre)
+                double len = Length * H6Numbers.UnitsPerMetre;
+                s = Math.Max(0, Math.Min(len, s));
                 var pt = Curve.GetPointAtDist(s);
                 var d = Curve.GetFirstDerivative(Curve.GetParameterAtPoint(pt));
                 var t = new Vector3d(d.X, d.Y, 0);
+                // Sửa KTP (nghi vấn): at a vertex the cross section is square to the bisector of the two segments, not the next one
+                double e = Math.Min(len / 1000, 1e-3 * H6Numbers.UnitsPerMetre);
+                if (Vertices.Any(v => Math.Abs(v * H6Numbers.UnitsPerMetre - s) < 1e-6 * H6Numbers.UnitsPerMetre) && s > e && s < len - e)
+                {
+                    var d0 = Curve.GetFirstDerivative(Curve.GetParameterAtPoint(Curve.GetPointAtDist(s - e)));
+                    var d1 = Curve.GetFirstDerivative(Curve.GetParameterAtPoint(Curve.GetPointAtDist(s + e)));
+                    var a0 = new Vector3d(d0.X, d0.Y, 0); var a1 = new Vector3d(d1.X, d1.Y, 0);
+                    if (a0.Length > 1e-12 && a1.Length > 1e-12) { var bis = a0.GetNormal() + a1.GetNormal(); if (bis.Length > 1e-9) t = bis; }
+                }
                 t = t.Length > 1e-12 ? t.GetNormal() : Vector3d.XAxis;
                 return (new Point3d(pt.X, pt.Y, 0), t);
             }
@@ -277,6 +291,7 @@ namespace ClaudeCAD.Plugin.Drawing
             if (Params.TryPoint(p.Get("position"), out var pos)) return (pos[0], pos[1]);
             try
             {
+                ctx.Db.UpdateExt(true); // Sửa KTP (nghi vấn): EXTMIN / EXTMAX are only refreshed on a regen
                 var ext = ctx.Db.Extmax; var mn = ctx.Db.Extmin;
                 if (ext.X > mn.X) return (mn.X, mn.Y - gap);
             }
@@ -339,7 +354,8 @@ namespace ClaudeCAD.Plugin.Drawing
             if (p.Has("stakes"))
             {
                 var want = new HashSet<string>((p.Get("stakes") as List<object> ?? new List<object>()).Select(o => Convert.ToString(o, CultureInfo.InvariantCulture)), StringComparer.OrdinalIgnoreCase);
-                stakes = stakes.Where(s => want.Contains(s.Name)).ToList();
+                // Sửa KTP (nghi vấn): "Đ1" also finds "C3/Đ1"
+                stakes = stakes.Where(s => want.Contains(s.Name) || (s.Name ?? "").Split('/').Any(want.Contains)).ToList();
                 if (stakes.Count == 0) throw ToolException.Invalid("terrain: none of the stakes named is on the alignment (names like Km0, H1, C3, Đ1).");
             }
             if (stakes.Count > H6Numbers.MaxSections)
