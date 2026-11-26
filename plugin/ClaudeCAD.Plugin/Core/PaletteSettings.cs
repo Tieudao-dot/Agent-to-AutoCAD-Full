@@ -31,6 +31,11 @@ namespace ClaudeCAD.Plugin.Core
         public bool DeferTools = true;      // nâng cấp đợt F5: ⚙ "Nạp gọn lệnh" (F4 deferred tools); CLAUDECAD_DEFER_TOOLS / tool-search-off still win
         /// <summary>Nâng cấp đợt H9: "vi" (default) | "en" — the palette and Claude's answers (drawn texts stay Vietnamese).</summary>
         public string Language = L.Vi;
+        /// <summary>
+        /// Test & sửa H9: the settings file holds a language (picked in ⚙, or saved by an H9 plugin). False for a new machine and
+        /// for a file of an older version: then the installer's choice (Contents\language.txt) is used.
+        /// </summary>
+        public bool LanguageSaved; // not written by ToJson: it says what the file held
         public string WorkMode = WorkModeLogic.Both; // nâng cấp đợt F1: Full machines only — "both" | "2d" | "3d" (WorkModeLogic)
         public List<string> History = new List<string>(); // feature 10, newest last
 
@@ -113,6 +118,7 @@ namespace ClaudeCAD.Plugin.Core
             s.DeferTools = Bool("defer_tools", true);
             s.WorkMode = WorkModeLogic.Normalize(Str("work_mode", WorkModeLogic.Both));
             s.Language = L.Normalize(Str("language", L.Vi));
+            s.LanguageSaved = d.ContainsKey("language");
             if (d.TryGetValue("history", out var h) && h is List<object> hl) s.History = hl.OfType<string>().Take(MaxHistory).ToList();
             if (d.TryGetValue("last_skills", out var ls) && ls is List<object> lsl) s.LastSkills = SkillSelection.Clean(lsl.OfType<string>());
             return s;

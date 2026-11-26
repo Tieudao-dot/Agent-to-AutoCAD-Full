@@ -102,6 +102,24 @@ describe('nâng cấp đợt H9: English', () => {
     assert.ok(isConfirmation('ok, không sao')); // "không sao" (no problem) is not a refusal
   });
 
+  it('Test & sửa H9: every error line of the session table has its English (it reaches tr() through a variable)', () => {
+    const src = fs.readFileSync(path.join(srcDir, 'agent', 'session.ts'), 'utf8');
+    const table = src.slice(src.indexOf('const ERROR_TEXT'), src.indexOf('};', src.indexOf('const ERROR_TEXT')));
+    const texts = [...table.matchAll(/:\s*'((?:[^'\\]|\\.)*)'/g)].map((m) => m[1]!.replace(/\\'/g, "'"));
+    assert.ok(texts.length >= 10);
+    for (const t of texts) assert.ok(hasEnglish(t), t);
+  });
+
+  it('Test & sửa H9: the hard answers — curly apostrophes, every "n\'t", a condition or an exception are no', () => {
+    for (const no of [
+      'yes but don’t delete', 'yes but don\'t delete', 'ok, cancel that', 'không, đừng xóa', 'ok I can’t say', 'yes, won\'t hurt?',
+      'sure, never mind', 'ok nevermind', 'yes, except the doors', 'ok but keep the walls', 'go ahead instead with the doors',
+      'đồng ý nhưng giữ tường', 'ok xóa hết trừ cửa', 'đồng ý, khoan đã', 'ok“ cancel ”',
+    ]) assert.ok(!isConfirmation(no), no);
+    for (const yes of ['sure, go ahead', 'yes, delete it', 'OK', 'đồng ý', 'có, xóa đi', 'go ahead and erase them', 'yes please'])
+      assert.ok(isConfirmation(yes), yes);
+  });
+
   it('a changed language restarts Claude with the same conversation and the new instruction; the same one does not', async () => {
     const starts: any[] = [];
     const init = { type: 'system', subtype: 'init', session_id: 's1', model: 'claude-opus-5-5', apiKeySource: 'oauth', tools: [], skills: [] } as unknown as SDKMessage;

@@ -198,13 +198,17 @@ namespace ClaudeCAD.Core.Tests
             Assert.Equal(L.En, PaletteSettings.FromJson(s.ToJson()).Language);
             Assert.Equal(L.Vi, PaletteSettings.FromJson("{\"language\":\"de\"}").Language);
             Assert.Equal(L.Vi, PaletteSettings.FromJson("{}").Language); // a settings file of an older version
+            // Test & sửa H9: an older file holds no language, so an upgrade takes the installer's choice; a saved one is kept
+            Assert.False(PaletteSettings.FromJson("{\"theme\":\"dark\"}").LanguageSaved);
+            Assert.True(PaletteSettings.FromJson("{\"language\":\"vi\"}").LanguageSaved);
+            Assert.True(PaletteSettings.FromJson(s.ToJson()).LanguageSaved);
         }
 
         [Fact]
         public void The_palette_applies_the_language_at_once_and_tells_the_assistant()
         {
             var ctl = Src("plugin", "ClaudeCAD.Plugin", "ChatController.cs");
-            Assert.Contains("if (_firstRun) _settings.Language = InstallerLanguage();", ctl);
+            Assert.Contains("if (_firstRun || !_settings.LanguageSaved) _settings.Language = InstallerLanguage();", ctl);
             Assert.Contains("L.Lang = _settings.Language;", ctl);
             Assert.Contains("if (oldLang != _settings.Language) OnLanguageChanged(oldLang, _settings.Language);", ctl);
             Assert.Contains("Ui.Relabel(from, to);", ctl);
@@ -234,6 +238,19 @@ namespace ClaudeCAD.Core.Tests
             Assert.Contains("\"BẢNG THỐNG KÊ THÉP\"", Src("plugin", "ClaudeCAD.Plugin", "Drawing", "StructureTools.cs"));
             var doc = Src("bo-cai", "README.md");
             Assert.Contains("English chỉ đổi giao diện và câu trả lời, chữ trên bản vẽ giữ tiếng Việt", doc);
+        }
+
+        [Fact]
+        public void Only_the_palette_files_translate_so_no_drawing_code_can_turn_english()
+        {
+            // Test & sửa H9: a drawn text stays Vietnamese in both languages, so Tr is allowed only in the files that show the
+            // palette (the list above) and in the self-test / tool labels; a new Tr in drawing code fails here
+            var allowed = new HashSet<string>(Translated.Concat(new[] { "SelfTest.cs", "UI/ToolLabels.cs", "Core/Lang.cs" }).Select(r => r.Replace('/', Path.DirectorySeparatorChar)));
+            var found = PluginFiles()
+                .Select(f => f.Substring(Plugin.Length).TrimStart(Path.DirectorySeparatorChar))
+                .Where(rel => !allowed.Contains(rel) && Regex.IsMatch(File.ReadAllText(Path.Combine(Plugin, rel)), "\\b(L\\.)?Tr\\("))
+                .ToList();
+            Assert.True(found.Count == 0, "Tr ngoài các file khung chat (chữ bản vẽ phải giữ tiếng Việt):\n" + string.Join("\n", found));
         }
 
         // ------------------------------------------------------------ installer

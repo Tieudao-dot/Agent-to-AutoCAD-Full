@@ -135,7 +135,9 @@ namespace ClaudeCAD.Plugin
         public ChatController()
         {
             // nâng cấp đợt H9: the language comes first, every text below is shown in it
-            if (_firstRun) _settings.Language = InstallerLanguage();
+            // Test & sửa H9: also a settings file of an older version (no "language" yet): an upgrade takes the installer's choice;
+            // a language picked in ⚙ is kept by every later install
+            if (_firstRun || !_settings.LanguageSaved) _settings.Language = InstallerLanguage();
             L.Lang = _settings.Language;
             _ipc = new IpcServer(IpcServer.DefaultPipeName());
             _sidecar = new SidecarManager(_ipc.PipeName);

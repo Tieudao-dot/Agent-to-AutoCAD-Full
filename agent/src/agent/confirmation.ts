@@ -240,7 +240,10 @@ const ANYWHERE = new Set(['ok', 'okay', 'oke', 'okie', 'yes', 'yep', 'confirm', 
 /** Accepted only as the first word ("có, xóa đi" yes; "có bao nhiêu..." / "có thể xóa..." no). */
 const LEADING = new Set(['có', 'ừ', 'ừm', 'uh', 'y', 'đúng', 'được', 'duoc', 'chuẩn', 'vâng', 'dạ']);
 /** A refusal when among the first words ("Đừng tiếp tục", "Chưa đồng ý", "khỏi xóa"); "không sao" is not one. */
-const NEGATIONS = new Set(['không', 'khong', 'đừng', 'dừng', 'chưa', 'chua', 'khỏi', 'khoi', 'hủy', 'huy', 'no', 'nope', 'not', 'don', 'dont', 'stop', 'cancel', 'wait']);
+const NEGATIONS = new Set(['không', 'khong', 'đừng', 'dừng', 'chưa', 'chua', 'khỏi', 'khoi', 'hủy', 'huy', 'no', 'nope', 'not', 'don', 'dont', 'stop', 'cancel', 'wait',
+  // Test & sửa H9: every "n't" ("can't", "won't", "isn't": the apostrophe splits off "t"), never / nevermind, and the words of a
+  // condition or an exception ("yes but…", "đồng ý nhưng giữ tường", "ok trừ cửa"): an answer with a condition is unsure = no
+  't', 'never', 'nevermind', 'but', 'except', 'instead', 'nhưng', 'nhung', 'trừ', 'tru', 'khoan']);
 const FIRST_WORDS = 3;
 
 /**
@@ -252,7 +255,8 @@ export function isConfirmation(text: string | undefined): boolean {
   if (!text) return false;
   const t = text.toLowerCase().normalize('NFC').trim();
   if (t.endsWith('?')) return false; // "…thì ok không?" asks back
-  const tokens = t.split(/[\s,.!?;:()"'…-]+/u).filter(Boolean);
+  // Test & sửa H9: curly quotes too (a phone or a Mac writes "don’t"), so the "n't" splits like the straight one
+  const tokens = t.split(/[\s,.!?;:()"'‘’“”…-]+/u).filter(Boolean);
   if (tokens.length === 0 || tokens.length > 12) return false; // confirmations are short replies
   // nâng cấp đợt H9: a refusal word anywhere makes it no ("yes but don't delete the walls", "ok, không xóa tường") — unsure = no
   for (let i = 0; i < tokens.length; i++) {

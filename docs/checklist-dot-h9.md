@@ -21,6 +21,8 @@ Nhánh `full/nang-cap-h9`. Chưa thử trên AutoCAD thật. Bàn giao: [`docs/b
 - [ ] B3. Chữ đang gõ dở trong ô nhập và chữ trong ghi chú dự án không bị đổi.
 - [ ] B4. Đổi về Tiếng Việt: mọi chữ trên về lại tiếng Việt.
 - [ ] B5. Đóng mở AutoCAD: ngôn ngữ đã chọn được giữ.
+- [ ] B6. (Test & sửa H9) Máy đang dùng bản trước H9 (chưa từng có ô Ngôn ngữ), cài bản H9 và chọn English ở bộ cài:
+  khung chat mở bằng English. Sau đó chọn Tiếng Việt trong ⚙, cài lại và chọn English: khung chat **vẫn** Tiếng Việt.
 
 ## C. Claude trả lời
 
@@ -28,6 +30,8 @@ Nhánh `full/nang-cap-h9`. Chưa thử trên AutoCAD thật. Bàn giao: [`docs/b
   bước tiến độ, nút gợi ý, thẻ kế hoạch tiếng Anh.
 - [ ] C2. Đang chat dở bằng tiếng Việt, đổi sang English, gửi tin tiếp: Claude trả lời tiếng Anh và vẫn nhớ cuộc chat.
 - [ ] C3. Xóa > 20 đối tượng: thẻ xác nhận tiếng Anh (Yes / No); gõ "yes" là làm, gõ "no" là không làm.
+- [ ] C3b. (Test & sửa H9) Cũng việc xóa đó, gõ câu có điều kiện: "yes but don’t delete the walls" (dấu nháy cong của
+  điện thoại / Mac), "đồng ý nhưng giữ tường", "ok xóa hết trừ cửa": Claude **không** xóa, hỏi lại.
 - [ ] C4. "Vẽ bảng thống kê block", "tạo tờ A3 có khung tên", "ra bộ hồ sơ" khi đang English: **chữ trên bản vẽ vẫn tiếng
   Việt** (tiêu đề bảng, khung tên, tên tờ); câu trả lời tiếng Anh.
 - [ ] C5. Xuất Excel khi đang English: tiêu đề cột trong file vẫn tiếng Việt.
