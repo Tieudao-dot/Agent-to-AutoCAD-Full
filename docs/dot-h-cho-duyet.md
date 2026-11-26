@@ -350,7 +350,7 @@ Không có số mới khách thấy (H9 và Test & sửa H9).
 | 12 | **Xuất chat ra Markdown theo ngôn ngữ giao diện lúc xuất** (luồng chính chọn 26/11) | Đây là chữ giao diện, không phải chữ trên bản vẽ |
 | 13 | Câu dặn Claude "tell the user in Vietnamese" đổi thành "in the user's language" / "in the language of the user" | Prompt gốc nói ngôn ngữ của khách là tiếng Việt, trừ khi phần "# Language" ở cuối nói khác. Rẻ, không phải nhánh hai bản prompt |
 | 14 | `install.ps1` (cài bằng PowerShell cho người quản trị) giữ tiếng Việt | Dùng cho người cài hộ nhiều máy, không phải khách |
-| 11 | Claude nhận thêm "yes, ok, sure, proceed, go ahead, do it…" là đồng ý; "no, not, don't, stop, cancel, wait" là không. **Từ phủ định ở bất kỳ đâu trong câu là không đồng ý** (cả tiếng Việt: "ok, nhưng đừng xóa tường" = không; "không sao" vẫn là đồng ý) | Không chắc thì không đồng ý. Luật khối 3D vẫn chỉ nhận nút trên thẻ |
+| 11 | Claude nhận thêm "yes, ok, sure, proceed, go ahead, do it…" là đồng ý; "no, not, don't, stop, cancel, wait" là không. **Từ phủ định ở bất kỳ đâu trong câu là không đồng ý** (cả tiếng Việt: "ok, nhưng đừng xóa tường" = không; sửa KTP-47 26/11: "không sao" cũng là không, Claude hỏi lại) | Không chắc thì không đồng ý. Luật khối 3D vẫn chỉ nhận nút trên thẻ |
 
 ## Test tổng thể đợt H phần 2
 
@@ -375,7 +375,7 @@ Không có số mới khách thấy (H9 và Test & sửa H9).
 | *(H7)* `under_beams` | theo từng đoạn tuyến (dầm trên đoạn nào thì đoạn đó) | |
 | *(H6, KTP-08 / 09)* File không tiêu đề, cột 1 là số nguyên nhỏ trước tọa độ thật | cột 1 là tên điểm | cho cột bằng `columns` |
 | *(H6, KTP-10)* Số "1.234" (một dấu chấm) | là số thập phân 1,234; chỉ ≥ 2 nhóm hoặc nhóm + phẩy thập phân mới là dấu nghìn | |
-| *(KTP-02 → 04, H9)* Xác nhận gõ tay | **danh sách đóng**: chỉ đồng ý khi mọi chữ trong câu là chữ đồng ý, chữ của cụm đồng ý ("xóa đi", "go ahead") hoặc chữ đệm (nhé, ạ, please…). Câu có chữ khác ("ko", "nếu", "if", "thôi", "chờ", "later", "❌"…) là không chắc = không đồng ý, Claude hỏi lại; "thôi được", "không sao" vẫn là đồng ý | thêm chữ đệm vào `FILLERS` (`agent/src/agent/confirmation.ts`) khi thử thật thấy thiếu |
+| *(KTP-02 → 04, H9)* Xác nhận gõ tay | **danh sách đóng**: chỉ đồng ý khi mọi chữ trong câu là chữ đồng ý, chữ của cụm đồng ý ("xóa đi", "go ahead") hoặc chữ đệm (nhé, ạ, please…). Câu có chữ khác ("ko", "nếu", "if", "thôi", "chờ", "later", "❌"…) là không chắc = không đồng ý, Claude hỏi lại. "thôi được", "được thôi", "ok thôi" là đồng ý; "thôi" đứng riêng và "không sao" là không (sửa KTP-47, 26/11) | thêm chữ đệm vào `FILLERS` (`agent/src/agent/confirmation.ts`) khi thử thật thấy thiếu |
 | *(KTP-07, H9)* Câu lỗi từ máy chủ kích hoạt khi English | máy chủ không đổi; plugin và bộ cài dịch 8 câu lỗi cố định, câu lạ hiện nguyên văn | `L.ServerTexts` |
 | *(KTP-05, H9)* Ngôn ngữ lúc AutoCAD vừa nạp plugin | đặt theo cài đặt (máy mới: ngôn ngữ chọn ở bộ cài) trước dòng "đã nạp…" | |
 

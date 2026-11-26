@@ -265,6 +265,10 @@ vietnamese.H9SrvKey09=). Kiểm tra lại key, hoặc xin key mới.
 english.H9SrvKey09=). Kiểm tra lại key, hoặc xin key mới.
 vietnamese.H9Srv09=). Kiểm tra lại key, hoặc xin key mới.
 english.H9Srv09=). Check the key, or ask for a new one.
+vietnamese.H9SrvKey10=Máy này đã bị chủ plugin tạm khóa.
+english.H9SrvKey10=Máy này đã bị chủ plugin tạm khóa.
+vietnamese.H9Srv10=Máy này đã bị chủ plugin tạm khóa.
+english.H9Srv10=The plugin owner has locked this PC.
 
 [Code]
 
@@ -276,8 +280,8 @@ var
 begin
   Result := S;
   if ActiveLanguage() <> 'english' then exit;
-  for I := 1 to 6 do
-    if S = CustomMessage(Format('H9SrvKey%.2d', [I])) then
+  for I := 1 to 10 do
+    if ((I <= 6) or (I = 10)) and (S = CustomMessage(Format('H9SrvKey%.2d', [I]))) then
     begin
       Result := CustomMessage(Format('H9Srv%.2d', [I]));
       exit;
