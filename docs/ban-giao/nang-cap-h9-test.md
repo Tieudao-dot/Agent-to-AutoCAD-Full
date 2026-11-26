@@ -58,7 +58,7 @@ Không có số mới.
 
 ## 6. CI
 
-- Lượt 1: ghi ở dưới.
+- Lượt 1: run 45854163617 trên `7834e43`: xanh, trợ lý `# pass 466 / # fail 0`, lõi `Failed: 0, Passed: 1682`, UI test WPF 40 / 40 (có 2 test English). Dùng 1 lượt.
 
 ## 7. Chưa kiểm được
 
