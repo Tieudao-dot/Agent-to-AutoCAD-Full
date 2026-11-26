@@ -271,20 +271,27 @@ export function isConfirmation(text: string | undefined): boolean {
   if (!text) return false;
   const t = text.toLowerCase().normalize('NFC').trim();
   if (t.endsWith('?')) return false; // "…thì ok không?" asks back
-  // Test & sửa H9: curly quotes too (a phone or a Mac writes "don’t"), so the "n't" splits like the straight one
-  const tokens = t.split(/[\s,.!?;:()"'‘’“”…-]+/u).filter(Boolean);
+  // KTP-49: "thôi" counts only in the two exact "fine then" forms — "thôi được" (space only), or "được thôi" / "ok thôi" at the
+  // very end (polite words may follow). A comma between, or anything after ("ok, thôi", "ok thôi đi" = stop), leaves "thôi"
+  // in the reply, and "thôi" is no yes-word: no
+  const s1 = t
+    .replace(/(^|\s)(thôi|thoi) (được|duoc)(?=$|[\s,.!])/gu, '$1$3')
+    .replace(/(^|\s)(được|duoc|ok|oke|okay) (thôi|thoi)((?:\s+(?:nhé|nhe|nha|ạ))*)[\s.!]*$/u, '$1$2$4');
+  // Test & sửa H9: curly quotes too (a phone or a Mac writes "don’t"), so the "n't" splits like the straight one.
+  // KTP-49: a comma (or ; : …) is kept as a "|" mark so a yes-phrase never spans it ("làm, đi" is not "làm đi")
+  const marked = s1.replace(/[,;:…]+/gu, ' | ').split(/[\s.!?()"'‘’“”-]+/u).filter(Boolean);
+  const tokens = marked.filter((w) => w !== '|');
   if (tokens.length === 0 || tokens.length > 12) return false; // confirmations are short replies
   // nâng cấp đợt H9: a refusal word anywhere makes it no ("yes but don't delete the walls", "ok, không xóa tường") — unsure = no
   // KTP-47 (a): any refusal word makes it no, "không sao" too (safer: the user is asked again or presses the card)
   if (tokens.some((w) => NEGATIONS.has(w))) return false;
-  // KTP-04 / 44: "thôi" alone is a refusal ("dạ thôi", "ừ thôi" = no thanks); "thôi được", "được thôi", "ok thôi" (fine then) are a yes
-  const thoi = (w: string) => w === 'thôi' || w === 'thoi';
-  const fine = (w: string | undefined) => w === 'được' || w === 'duoc' || w === 'ok' || w === 'oke' || w === 'okay';
-  const plain = tokens.filter((w, i) => !(thoi(w) && ((tokens[i + 1] === 'được' || tokens[i + 1] === 'duoc') || fine(tokens[i - 1]))));
-  if (plain.length === 0 || plain.some((w) => !ALLOWED.has(w))) return false;
-  for (let i = 0; i < Math.min(plain.length, FIRST_WORDS); i++) {
-    if (PHRASES.some((ph) => ph.every((w, k) => plain[i + k] === w))) return true;
-    if (ANYWHERE.has(plain[i]!)) return true;
+  const plain = tokens;
+  if (plain.some((w) => !ALLOWED.has(w))) return false;
+  // the first three words: a yes-phrase (within one part of the reply) or a yes-word
+  const firsts = marked.map((w, i) => i).filter((i) => marked[i] !== '|').slice(0, FIRST_WORDS);
+  for (const i of firsts) {
+    if (PHRASES.some((ph) => ph.every((w, k) => marked[i + k] === w))) return true;
+    if (ANYWHERE.has(marked[i]!)) return true;
   }
   const first = plain[0]!;
   if (!LEADING.has(first)) return false;

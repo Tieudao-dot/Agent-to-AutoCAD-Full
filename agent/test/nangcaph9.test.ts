@@ -133,6 +133,11 @@ describe('nâng cấp đợt H9: English', () => {
       'confirm', 'delete it', 'do it', 'sounds good', 'that is fine', '“ok”', '‘yes’', 'ừ', 'vâng', 'dạ', 'tiếp tục đi', 'yeah'])
       assert.ok(isConfirmation(yes), yes);
     // sửa KTP-A lượt 3: "à" asks back (KTP-04); the older spelling "xoá", overwrite / replace, "ơi", "được thôi" (KTP-44); "thôi được" alone (KTP-47)
+    // KTP-49: "thôi" only in "thôi được" or "được thôi" / "ok thôi" at the end; a comma or "đi" after = stop; a yes-phrase never spans a comma
+    for (const no of ['ok, thôi đi', 'ok thôi đi', 'ok thoi di', 'được thôi đi', 'ok, thôi', 'được, thôi', 'làm, đi', 'ok thôi, đừng'])
+      assert.ok(!isConfirmation(no), no);
+    for (const yes of ['được thôi', 'ok thôi nhé', 'ok thôi', 'thôi được', 'Thôi được, xóa đi', 'ok, xóa luôn'])
+      assert.ok(isConfirmation(yes), yes);
     for (const no of ['ok à', 'đồng ý à', 'đồng ý rồi à', 'ok xóa hết rồi à', 'thôi', 'không sao'])
       assert.ok(!isConfirmation(no), no);
     for (const yes of ['ok xoá đi', 'đồng ý xoá', 'xoá đi', 'được thôi', 'ok thôi', 'thôi được', 'ghi đè đi', 'ok ghi đè', 'thay thế đi', 'overwrite',
