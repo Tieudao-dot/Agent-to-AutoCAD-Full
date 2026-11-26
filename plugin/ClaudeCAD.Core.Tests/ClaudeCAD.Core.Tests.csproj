@@ -55,6 +55,7 @@
     <Compile Include="..\ClaudeCAD.Plugin\Core\DrawingCompare.cs" Link="Core\DrawingCompare.cs" />
     <Compile Include="..\ClaudeCAD.Plugin\Core\CompanyStandard.cs" Link="Core\CompanyStandard.cs" />
     <Compile Include="..\ClaudeCAD.Plugin\Core\BatchFiles.cs" Link="Core\BatchFiles.cs" />
+    <Compile Include="..\ClaudeCAD.Plugin\Core\Mep.cs" Link="Core\Mep.cs" />
     <Compile Include="..\ClaudeCAD.Plugin\Core\Solids3.cs" Link="Core\Solids3.cs" />
   </ItemGroup>
   <ItemGroup>

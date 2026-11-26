@@ -32,7 +32,8 @@ namespace ClaudeCAD.Core.Tests
             }
             // phase 1 + phase 2 (Solid2Tests.Phase2) + phase 3 (Plan3dToolTests.Phase3)
             // + nâng cấp đợt A (NangCapATests.NewPlanTools) + đợt D (NangCapDTests.NewTools) + đợt E (NangCapETests.NewTools)
-            Assert.Equal(Tools3d.Length + Solid2Tests.Phase2.Length + Plan3dToolTests.Phase3.Length + NangCapATests.NewPlanTools.Length + NangCapDTests.NewTools.Length + NangCapETests.NewTools.Length + NangCapF3RenderTests.NewTools.Length,
+            Assert.Equal(Tools3d.Length + Solid2Tests.Phase2.Length + Plan3dToolTests.Phase3.Length + NangCapATests.NewPlanTools.Length + NangCapDTests.NewTools.Length + NangCapETests.NewTools.Length + NangCapF3RenderTests.NewTools.Length +
+                NangCapH7Tests.NewTools.Length, // nâng cấp đợt H7
                 PlanLogic.Groups.Count(kv => kv.Value == ToolGroup.ThreeD));
             // the self-check picture stays in every plan
             Assert.Equal(ToolGroup.Common, PlanLogic.GroupOf("capture_view"));

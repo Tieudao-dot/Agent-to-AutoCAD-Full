@@ -381,6 +381,8 @@ namespace ClaudeCAD.Plugin.Core
             ["build_railing"] = new[] { "base_z" },
             ["build_stair"] = new[] { "base_z" },
             ["build_beam"] = new[] { "top_z" },
+            // nâng cấp đợt H7: the centre line height of a route given in plan
+            ["draw_mep"] = new[] { "elevation" },
         };
 
         /// <summary>The mode of one call (a few tools depend on their params: from existing objects → Ref).</summary>

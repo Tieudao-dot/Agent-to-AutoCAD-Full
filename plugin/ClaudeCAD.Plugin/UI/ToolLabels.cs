@@ -149,6 +149,8 @@ namespace ClaudeCAD.Plugin.UI
             ["export_drawing"] = "Xuất DXF / DWG / FBX",
             ["company_standard"] = "Chuẩn công ty", // nâng cấp đợt H4
             ["batch_files"] = "Làm nhiều file", // nâng cấp đợt H5
+            ["draw_mep"] = "Vẽ ống MEP 3D", // nâng cấp đợt H7
+            ["mep_report"] = "Thống kê / soát ống MEP", // nâng cấp đợt H7
             ["volume_schedule"] = "Bảng khối lượng",
             ["setup_standards"] = "Thiết lập style chuẩn",
             ["create_sheet"] = "Tạo trang in có khung tên",

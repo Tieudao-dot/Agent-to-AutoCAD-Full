@@ -129,7 +129,9 @@ namespace ClaudeCAD.Plugin.Core
                 // nâng cấp đợt E (Drawing/StairRoofTools.cs): stairs, roofs
                 "build_stair build_roof " +
                 // nâng cấp đợt F3 (Drawing/RenderTools.cs): materials, named views (+ a PNG with the materials)
-                "set_material named_view");
+                "set_material named_view " +
+                // nâng cấp đợt H7 (Drawing/MepTools.cs): MEP pipes / ducts in 3D, their schedule and clash check
+                "draw_mep mep_report");
             return d;
         }
 
