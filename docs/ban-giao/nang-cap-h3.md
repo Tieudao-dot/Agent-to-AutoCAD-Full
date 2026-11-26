@@ -177,7 +177,7 @@ Mọi số ở `H3Numbers` (`Core/DrawingCompare.cs`) và `OtherDrawingNumbers` 
 ## 9. CI
 
 - Commit gộp + phần dùng chung: run 45782279919 trên `98eecf1`, **xanh**, log `# fail 0` (trợ lý 419/419, lõi 1520/1520).
-- H3: (ghi sau khi chạy).
+- H3: run 45784702090 trên `d5b74a0`, **xanh**, log `# fail 0` (trợ lý 423/423, lõi 1530/1530, UI test và build 3 target qua). Các commit sau chỉ sửa tài liệu, code giữ nguyên như `d5b74a0`.
 
 ## 10. Chưa kiểm được
 
