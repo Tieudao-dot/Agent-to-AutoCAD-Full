@@ -82,6 +82,10 @@ cho khách.
   - móc đai 135° ≥ 75 mm.
 
   Có người đối chiếu bản TCVN chính thức thì chỉ sửa một chỗ trong `H6Numbers` / `H7Numbers` / `H8Numbers`.
+- **26/11 ~19h50, chủ dự án chốt thêm cho H7 (độ dốc ống thoát): "Ống nhỏ 2,5 %, ống lớn 2 %".**
+  - Lý do: thread rà phát hiện D60 dốc mặc định 2 % thấp hơn mức tối thiểu 2,5 % của cỡ này, nên ống nào vẽ ra cũng bị cảnh báo.
+  - Từ nay độ dốc mặc định = max(2 %, mức tối thiểu theo cỡ). D60 → 2,5 %; D110 trở lên → 2 %.
+  - Mức tối thiểu theo cỡ giữ như bảng.
 - **Giới hạn nói với khách giữ nguyên:**
   - bản vẽ hỗ trợ, kỹ sư vẫn kiểm;
   - không tính thủy lực / kết cấu;
