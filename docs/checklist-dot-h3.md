@@ -39,6 +39,12 @@ AutoCAD 2022–2027, máy gói 2D hoặc Full, khoảng 30 phút.
 3. Khoanh lại rồi xóa layer `X-SO-SANH` (lệnh LAYDEL hoặc Layer Properties): hết dấu, bản vẽ còn nguyên.
 4. Bản vẽ khác nhiều (vd so với một mặt bằng khác hẳn): Claude hiện **thẻ xác nhận** trước khi vẽ hơn 50 đám mây. Bấm "Không
    đồng ý": không vẽ gì.
+5. *(Test & sửa H3)* Khoanh lần hai mà chưa xóa mây cũ: Claude **nói rõ** mây cũ còn trên layer `X-SO-SANH` và mây mới vẽ
+   chồng lên. Khóa layer `X-SO-SANH` rồi khoanh lại: Claude báo layer đang khóa, **không** hiện thẻ trước.
+6. *(Test & sửa H3)* Hai bản vẽ mới tạo từ **cùng một file mẫu** nhưng vẽ khác nhau (vd hai phương án): Claude nói khớp
+   **theo hình học**, không báo "đổi" tràn lan.
+7. *(Test & sửa H3)* So một file cũ **không đặt đơn vị** (INSUNITS = 0) với bản đang mở đặt mét: Claude ghi chú "không đổi đơn
+   vị" và kết quả không lệch 1000 lần.
 
 ## C. Excel và giới hạn (~5 phút)
 

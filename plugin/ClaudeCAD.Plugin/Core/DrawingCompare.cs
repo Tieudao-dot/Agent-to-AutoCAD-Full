@@ -49,6 +49,10 @@ namespace ClaudeCAD.Plugin.Core
         public Dictionary<string, string> Props = new Dictionary<string, string>(StringComparer.Ordinal);
         /// <summary>3D solid: its volume (compared with H3Numbers.VolumeShare), else null.</summary>
         public double? Volume;
+        /// <summary>Test & sửa H3: sizes compared within the tolerance (dimension value, polyline width), not as text.</summary>
+        public Dictionary<string, double> Sizes = new Dictionary<string, double>(StringComparer.Ordinal);
+        /// <summary>Test & sửa H3: areas compared like volumes (H3Numbers.VolumeShare), not as text.</summary>
+        public Dictionary<string, double> Areas = new Dictionary<string, double>(StringComparer.Ordinal);
         public double[] Min, Max;
     }
 
@@ -82,6 +86,54 @@ namespace ClaudeCAD.Plugin.Core
             foreach (var it in open) if (it.Handle != null) kinds[it.Handle] = it.Kind;
             int same = other.Count(it => it.Handle != null && kinds.TryGetValue(it.Handle, out var k) && k == it.Kind);
             return same / (double)other.Count;
+        }
+
+        /// <summary>
+        /// Test & sửa H3: the match asked and its differences. In auto, many shared handles are not enough (two drawings started
+        /// from one template, or numbered from the same start, share handles without being one file): handle is kept only when
+        /// it keeps at least as many objects unchanged as geometry does (a revision keeps most objects as they were under their
+        /// handle; two unrelated drawings sharing handles keep none).
+        /// </summary>
+        public static List<DiffRow> Run(IList<CmpItem> other, IList<CmpItem> open, string asked, double tol, bool otherIsNew, out string mode)
+        {
+            mode = MatchMode(asked, other, open);
+            var rows = Compare(other, open, mode, tol, otherIsNew);
+            bool auto = string.IsNullOrWhiteSpace(asked) || asked.Trim().Equals("auto", StringComparison.OrdinalIgnoreCase);
+            if (auto && mode == "handle")
+            {
+                var geo = Compare(other, open, "geometry", tol, otherIsNew);
+                int oldCount = (otherIsNew ? open : other).Count;
+                if (Unchanged(geo, oldCount) > Unchanged(rows, oldCount)) { mode = "geometry"; rows = geo; }
+            }
+            return rows;
+        }
+
+        /// <summary>Objects of the old drawing found unchanged: the old ones neither removed nor changed.</summary>
+        private static int Unchanged(List<DiffRow> rows, int oldCount)
+        {
+            var c = Counts(rows);
+            return oldCount - c["removed"] - c["changed"];
+        }
+
+        /// <summary>
+        /// Test & sửa H3: the factor from the other file's units to the open drawing's (INSUNITS codes). When either drawing
+        /// has no unit (0) or one not known, nothing is converted and the note says so (a unitless old file in metres against
+        /// a new one set to metres would else be 1000 times off).
+        /// </summary>
+        public static double UnitFactor(int openIns, int otherIns, out string note)
+        {
+            note = null;
+            if (openIns == otherIns) return 1;
+            bool known(int u) => u == 1 || u == 2 || u == 4 || u == 5 || u == 6 || u == 14;
+            double openMm = FloorPlanLogic.MmPerUnit(openIns, out var openName), otherMm = FloorPlanLogic.MmPerUnit(otherIns, out var otherName);
+            if (!known(openIns) || !known(otherIns))
+            {
+                note = $"The two drawings have different unit settings (open drawing: {openName}, other file: {otherName}); one has no unit, so nothing was converted. If its sizes look 10 / 1000 times off, ask the user which unit it was drawn in.";
+                return 1;
+            }
+            double f = otherMm / openMm;
+            note = $"The other file uses other units ({otherName}, the open drawing {openName}): its sizes were converted (× {f.ToString("0.######", CultureInfo.InvariantCulture)}).";
+            return f;
         }
 
         /// <summary>The differences: the other file is the old one unless otherIsNew (then "added" means only in the other file).</summary>
@@ -184,6 +236,16 @@ namespace ClaudeCAD.Plugin.Core
                 what.Add("geometry" + Moved(o, n));
             if (!SameVolume(o.Volume, n.Volume))
                 what.Add($"volume {Fmt(o.Volume)} → {Fmt(n.Volume)}");
+            foreach (var k in o.Sizes.Keys.Union(n.Sizes.Keys).OrderBy(k => k, StringComparer.Ordinal))
+            {
+                double? a = o.Sizes.TryGetValue(k, out var x) ? x : (double?)null, b = n.Sizes.TryGetValue(k, out var y) ? y : (double?)null;
+                if (a.HasValue != b.HasValue || (a.HasValue && Math.Abs(a.Value - b.Value) > tol * (1 + 1e-9))) what.Add($"{k} {Fmt(a)} → {Fmt(b)}");
+            }
+            foreach (var k in o.Areas.Keys.Union(n.Areas.Keys).OrderBy(k => k, StringComparer.Ordinal))
+            {
+                double? a = o.Areas.TryGetValue(k, out var x) ? x : (double?)null, b = n.Areas.TryGetValue(k, out var y) ? y : (double?)null;
+                if (!SameVolume(a, b)) what.Add($"{k} {Fmt(a)} → {Fmt(b)}");
+            }
             if (!string.Equals(o.Layer ?? "", n.Layer ?? "", StringComparison.OrdinalIgnoreCase)) what.Add($"layer {o.Layer} → {n.Layer}");
             foreach (var k in o.Props.Keys.Union(n.Props.Keys).OrderBy(k => k, StringComparer.Ordinal))
             {

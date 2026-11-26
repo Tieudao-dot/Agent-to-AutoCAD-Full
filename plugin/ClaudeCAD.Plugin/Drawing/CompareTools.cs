@@ -36,7 +36,8 @@ namespace ClaudeCAD.Plugin.Drawing
             string openName = SafeString(() => ctx.Doc.Name);
 
             double openMm = 1;
-            try { openMm = FloorPlanLogic.MmPerUnit(Convert.ToInt32(ctx.Db.Insunits), out _); } catch (Exception) { }
+            int openIns = 0;
+            try { openIns = Convert.ToInt32(ctx.Db.Insunits); openMm = FloorPlanLogic.MmPerUnit(openIns, out _); } catch (Exception) { }
             double tol = p.Num("tolerance", H3Numbers.ToleranceMm) / openMm;
             if (!(tol > 0)) throw ToolException.Invalid($"{tool}: tolerance must be more than 0 (mm).");
 
@@ -52,8 +53,11 @@ namespace ClaudeCAD.Plugin.Drawing
                     throw ToolException.Invalid($"{tool}: '{od.Path}' is the open drawing itself. Ask the user which other file (older / newer version) to compare with.");
                 otherInfo = od.Info();
                 otherFull = od.Path;
-                double f = od.MmPerUnit / openMm;
-                if (Math.Abs(f - 1) > 1e-9) notes.Add($"The other file uses other units ({od.MmPerUnit} mm per unit, the open drawing {openMm}): its sizes were converted.");
+                int otherIns = openIns;
+                try { otherIns = Convert.ToInt32(od.Db.Insunits); } catch (Exception) { }
+                // Test & sửa H3: a drawing without a unit is never converted (DrawingCompareLogic.UnitFactor)
+                double f = DrawingCompareLogic.UnitFactor(openIns, otherIns, out var unitNote);
+                if (unitNote != null) notes.Add(unitNote);
                 using (var tr = od.Db.TransactionManager.StartTransaction())
                 {
                     var ents = od.ModelEntities(tr, H3Numbers.MaxObjects, out otherTotal);
@@ -73,8 +77,8 @@ namespace ClaudeCAD.Plugin.Drawing
             if (!with2d) notes.Add("This plan compares 3D solids only (2D objects are left out).");
             if (!with3d) notes.Add("3D solids are not compared on this plan.");
 
-            string mode = DrawingCompareLogic.MatchMode(p.Str("match", "auto"), other, open);
-            var rows = DrawingCompareLogic.Compare(other, open, mode, tol, otherIsNew);
+            // Test & sửa H3: in auto, handle only when it does not find more differences than geometry (one template, two drawings)
+            var rows = DrawingCompareLogic.Run(other, open, p.Str("match", "auto"), tol, otherIsNew, out var mode);
             var counts = DrawingCompareLogic.Counts(rows);
             var res = new Dictionary<string, object>
             {
@@ -82,7 +86,7 @@ namespace ClaudeCAD.Plugin.Drawing
                 ["match"] = mode,
                 ["match_note"] = mode == "handle"
                     ? $"Matched by handle: the two drawings come from one file ({DrawingCompareLogic.SameOriginShare(other, open):P0} of the handles of the other file are here)."
-                    : "Matched by geometry (kind, position and size within the tolerance): the two drawings are not copies of one file, or match was asked.",
+                    : "Matched by geometry (kind, position and size within the tolerance): the two drawings are not copies of one file (or share handles only by chance), or match was asked.",
                 ["other_is"] = otherIsNew ? "new" : "old",
                 ["tolerance_mm"] = tol * openMm,
                 ["compared"] = new Dictionary<string, object> { ["open"] = open.Count, ["other"] = other.Count, ["open_total"] = openTotal, ["other_total"] = otherTotal },
@@ -102,11 +106,21 @@ namespace ClaudeCAD.Plugin.Drawing
                     notes.Add($"Too many differences to ring with clouds (more than {H3Numbers.MaxClouds} clouds): nothing was drawn. Use excel for the list, or compare a smaller part.");
                 else
                 {
+                    // Test & sửa H3: a locked / frozen layer is refused before the card is asked; earlier clouds and an off layer are said
+                    var layers = (LayerTable)ctx.Tr.GetObject(ctx.Db.LayerTableId, OpenMode.ForRead);
+                    if (layers.Has(H3Numbers.Layer) && !layers[H3Numbers.Layer].IsErased)
+                    {
+                        var had = (LayerTableRecord)ctx.Tr.GetObject(layers[H3Numbers.Layer], OpenMode.ForRead);
+                        if (had.IsLocked || had.IsFrozen) throw ToolException.Invalid($"{tool}: layer {H3Numbers.Layer} is locked or frozen: ask the user to unlock / thaw it (or delete it) and call again.");
+                        if (had.IsOff) notes.Add($"Layer {H3Numbers.Layer} is turned off: the clouds are drawn but not seen until the user turns it on.");
+                        int earlier = 0;
+                        foreach (ObjectId id in ms)
+                            if (ctx.Tr.GetObject(id, OpenMode.ForRead, false) is Entity me && string.Equals(me.Layer, H3Numbers.Layer, StringComparison.OrdinalIgnoreCase)) earlier++;
+                        if (earlier > 0) notes.Add($"{earlier} objects of an earlier compare are still on layer {H3Numbers.Layer} (not removed): the new clouds are drawn over them. Tell the user; deleting the layer's objects first gives a clean mark.");
+                    }
                     if (clouds.Count > H3Numbers.CardAboveClouds)
                         RequireCard(ctx, p, tool, $"draw {clouds.Count} revision clouds on layer {H3Numbers.Layer}", new[] { DrawingCompareLogic.MarkToken(otherFull, clouds.Count) });
                     var layerId = EnsureLayerF2(ctx, H3Numbers.Layer, 7, true);
-                    var lt = (LayerTableRecord)ctx.Tr.GetObject(layerId, OpenMode.ForRead);
-                    if (lt.IsLocked || lt.IsFrozen) throw ToolException.Invalid($"{tool}: layer {H3Numbers.Layer} is locked or frozen: ask the user to unlock / thaw it (or delete it) and call again.");
                     var made = new List<object>();
                     foreach (var c in clouds)
                     {
@@ -164,7 +178,7 @@ namespace ClaudeCAD.Plugin.Drawing
                     it.Nums = xy.ToArray();
                     it.Exact = (pl.Closed ? "c|" : "o|") + string.Join(",", b);
                     if (!pl.Closed && string.Join(",", rb) == string.Join(",", b)) it.Alt = rx.ToArray(); // the same bulges read backwards
-                    it.Props["width"] = R(pl.ConstantWidth * f);
+                    it.Sizes["width"] = pl.ConstantWidth * f; // Test & sửa H3: within the tolerance
                     break;
                 }
                 case DBText t:
@@ -188,12 +202,19 @@ namespace ClaudeCAD.Plugin.Drawing
                 }
                 case Dimension d:
                     it.Kind = "dim"; it.Nums = P(d.TextPosition);
-                    try { it.Props["value"] = R(d.Measurement * (d is LineAngularDimension2 || d is Point3AngularDimension ? 1 : f)); } catch (Exception) { }
+                    // Test & sửa H3: a length within the tolerance (no "3000 → 3000.0001" from rounding / units); an angle as text
+                    try
+                    {
+                        bool angle = d is LineAngularDimension2 || d is Point3AngularDimension;
+                        if (angle) it.Props["value"] = R(d.Measurement);
+                        else it.Sizes["value"] = d.Measurement * f;
+                    }
+                    catch (Exception) { }
                     it.Props["text"] = d.DimensionText; break;
                 case Hatch h:
                     it.Kind = "hatch"; it.Nums = it.Min != null ? it.Min.Concat(it.Max).ToArray() : new double[0];
                     it.Props["pattern"] = h.PatternName;
-                    try { it.Props["area"] = R(h.Area * f * f); } catch (Exception) { }
+                    try { it.Areas["area"] = h.Area * f * f; } catch (Exception) { } // Test & sửa H3: like a volume, not as text
                     break;
                 case Solid3d s:
                     it.Kind = "solid"; it.Nums = it.Min != null ? it.Min.Concat(it.Max).ToArray() : new double[0];
