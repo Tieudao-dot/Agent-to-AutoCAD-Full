@@ -218,6 +218,7 @@ namespace ClaudeCAD.Core.Tests
             var ui = Src("plugin", "ClaudeCAD.Plugin", "UI", "ChatControl.cs");
             Assert.Contains("_language = MakeCombo(L.Languages.Select(L.Label).ToArray(), double.NaN);", ui);
             Assert.Contains("_settings.Language = L.Languages[Math.Max(0, _language.SelectedIndex)];", ui);
+            Assert.Contains("_language.SelectionChanged += (s, e) => OnSettingsUi();", ui); // sửa KTP-A: picking a language does something
             // the welcome card's ids stay Vietnamese, only their display goes through Tr
             Assert.Contains("var act = Find(\"Kích hoạt\");", ui);
             Assert.Contains("Tr(name) + (", ui);

@@ -946,6 +946,7 @@ namespace ClaudeCAD.Plugin.UI
             _model.SelectionChanged += (s, e) => OnSettingsUi();
             _effort.SelectionChanged += (s, e) => OnSettingsUi();
             _theme.SelectionChanged += (s, e) => OnSettingsUi();
+            _language.SelectionChanged += (s, e) => OnSettingsUi(); // KTP: the language list reaches the controller (it did not before)
             _notify.Checked += (s, e) => OnSettingsUi();
             _notify.Unchecked += (s, e) => OnSettingsUi();
             return border;

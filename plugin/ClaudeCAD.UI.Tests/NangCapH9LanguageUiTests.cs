@@ -87,6 +87,31 @@ namespace ClaudeCAD.UI.Tests
         });
 
         [Fact]
+        public void Picking_english_in_the_list_reaches_the_controller() => Sta(() =>
+        {
+            // sửa KTP-A: the list had no SelectionChanged, so picking English did nothing
+            try
+            {
+                L.Lang = L.Vi;
+                var c = Open();
+                PaletteSettings got = null;
+                c.SettingsChanged += s => got = s;
+                Field<ComboBox>(c, "_language").SelectedIndex = 1;
+                Pump();
+                Assert.NotNull(got);
+                Assert.Equal(L.En, got.Language);
+                got = null;
+                Field<ComboBox>(c, "_language").SelectedIndex = 0;
+                Pump();
+                Assert.Equal(L.Vi, got?.Language);
+            }
+            finally
+            {
+                L.Lang = L.Vi;
+            }
+        });
+
+        [Fact]
         public void A_palette_opened_in_english_is_english() => Sta(() =>
         {
             try

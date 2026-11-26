@@ -100,6 +100,12 @@ describe('nâng cấp đợt H9: English', () => {
     for (const no of ["yes but don't delete the walls", 'ok, but not the doors', 'go ahead, stop after the first', 'đồng ý, nhưng đừng xóa tường', 'ok xóa đi, khoan, không'])
       assert.ok(!isConfirmation(no), no);
     assert.ok(isConfirmation('ok, không sao')); // "không sao" (no problem) is not a refusal
+    // sửa KTP-A (kiểm tra độc lập phần 2): short forms of "không", "chẳng / chả", "… đâu", a condition: never a yes
+    for (const no of ['ko đồng ý', 'k đồng ý', 'kg đồng ý', 'hok đồng ý', 'chẳng đồng ý', 'chả đồng ý', 'có đồng ý đâu', 'đồng ý nếu giữ tường',
+      'yes if you keep the walls', 'ok unless doors', 'ok as long as the doors stay', 'đồng ý với điều kiện giữ cửa', 'ok xóa tường', 'thôi'])
+      assert.ok(!isConfirmation(no), no);
+    for (const yes of ['ok', 'đồng ý', 'yes', 'làm đi', 'go ahead', 'ok xóa luôn', 'Mình cũng đồng ý', 'thôi được rồi làm đi'])
+      assert.ok(isConfirmation(yes), yes);
   });
 
   it('Test & sửa H9: every error line of the session table has its English (it reaches tr() through a variable)', () => {

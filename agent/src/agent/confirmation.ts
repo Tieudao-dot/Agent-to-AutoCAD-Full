@@ -245,11 +245,23 @@ const NEGATIONS = new Set(['không', 'khong', 'đừng', 'dừng', 'chưa', 'chu
   // condition or an exception ("yes but…", "đồng ý nhưng giữ tường", "ok trừ cửa"): an answer with a condition is unsure = no
   't', 'never', 'nevermind', 'but', 'except', 'instead', 'nhưng', 'nhung', 'trừ', 'tru', 'khoan']);
 const FIRST_WORDS = 3;
+/**
+ * Sửa KTP-A (kiểm tra độc lập phần 2, 26/11/2026): a confirmation is a short, plain yes and nothing else. Every word must be a
+ * yes-word, a word of a yes-phrase or a polite / filler word below; any other word ("ko", "chẳng", "đâu", "nếu", "if",
+ * "unless", "giữ tường"…) makes the answer unsure, and unsure = no (Claude asks again or the card is used).
+ */
+const FILLERS = new Set([
+  'đi', 'di', 'luôn', 'luon', 'nhé', 'nhe', 'nha', 'nhá', 'ạ', 'a', 'à', 'vậy', 'vay', 'thế', 'the', 'thì', 'rồi', 'roi', 'đó', 'do', 'này', 'nay',
+  'hết', 'het', 'tất', 'tat', 'cả', 'ca', 'em', 'anh', 'chị', 'chi', 'bạn', 'ban', 'cậu', 'cau', 'tớ', 'mình', 'minh', 'làm', 'lam', 'xóa', 'xoa',
+  'thôi', 'thoi', 'cũng', 'cung', 'please', 'pls', 'thanks', 'thank', 'you', 'all', 'them', 'it', 'and', 'go', 'ahead', 'on', 'fine', 'good',
+  'great', 'right', 'now',
+]);
+const ALLOWED = new Set<string>([...ANYWHERE, ...LEADING, ...FILLERS, ...PHRASES.flat()]);
 
 /**
- * True if the user's message reads as an explicit confirmation: a short reply (≤ 12 words), not a question,
- * no refusal word among its first words, and a yes-word or phrase starting within its first three words, matched
- * as whole words ("xóa điểm cao độ" is not "xóa đi").
+ * True if the user's message reads as an explicit confirmation: a short reply (≤ 12 words), not a question, no refusal
+ * word, only yes / filler words (sửa KTP-A: anything else is unsure = no), and a yes-word or phrase starting within its
+ * first three words, matched as whole words ("xóa điểm cao độ" is not "xóa đi").
  */
 export function isConfirmation(text: string | undefined): boolean {
   if (!text) return false;
@@ -262,6 +274,9 @@ export function isConfirmation(text: string | undefined): boolean {
   for (let i = 0; i < tokens.length; i++) {
     if (NEGATIONS.has(tokens[i]!) && !(tokens[i] === 'không' && tokens[i + 1] === 'sao') && !(tokens[i] === 'khong' && tokens[i + 1] === 'sao')) return false;
   }
+  // sửa KTP-A: "không sao" is the one refusal word allowed (it means "no problem"); then every word must be a yes / filler word
+  const plain = tokens.filter((w, i) => !((w === 'không' || w === 'khong') && tokens[i + 1] === 'sao') && !(w === 'sao' && (tokens[i - 1] === 'không' || tokens[i - 1] === 'khong')));
+  if (plain.length === 0 || plain.some((w) => !ALLOWED.has(w))) return false;
   for (let i = 0; i < Math.min(tokens.length, FIRST_WORDS); i++) {
     if (PHRASES.some((ph) => ph.every((w, k) => tokens[i + k] === w))) return true;
     if (ANYWHERE.has(tokens[i]!)) return true;
