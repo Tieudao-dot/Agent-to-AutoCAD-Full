@@ -4,6 +4,10 @@
 số đề xuất và tự chọn cách làm rẻ, an toàn, đổi lại được. File này để chủ dự án duyệt một lần ở báo cáo cuối chuỗi. Số
 nào muốn đổi thì nói, sửa nhanh vì mỗi đợt để số ở một chỗ.*
 
+**26/11/2026: chủ dự án chọn "thử thật rồi duyệt".** Bản thử dùng các số đề xuất dưới đây. Chủ dự án thử bộ cài thử
+bản 5, số nào chưa hợp thì báo luồng chính; thử xong luồng chính mới ghi "đã duyệt" kèm ngày. Tới lúc đó các số vẫn
+là **chờ duyệt**.
+
 "Theo thông lệ" nghĩa là cách vẽ phổ biến, thread không chắc đó là số của tiêu chuẩn nào.
 
 ## Đã chốt trong ngày 25/11 (không cần duyệt lại)

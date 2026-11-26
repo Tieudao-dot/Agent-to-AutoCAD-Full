@@ -4,6 +4,10 @@ Chủ dự án chọn "chạy liền như đợt F" cho đợt G (25/11/2026 ~20
 gom các số và các điểm tự chọn để cậu duyệt **một lần** ở báo cáo cuối chuỗi. Số nào cậu muốn đổi thì chỉ sửa một chỗ
 (cột "Ở đâu").
 
+**26/11/2026: chủ dự án chọn "thử thật rồi duyệt".** Bản thử dùng các số đề xuất dưới đây. Chủ dự án thử bộ cài thử
+bản 5, số nào chưa hợp thì báo luồng chính; thử xong luồng chính mới ghi "đã duyệt" kèm ngày. Tới lúc đó các số vẫn
+là **chờ duyệt**.
+
 Luồng chính ghi file này theo báo cáo của từng đợt. **Thread test tổng thể đợt G đã soát từng dòng so với code (26/11)**: các
 số khớp code; đã sửa mô tả G4 / G5 cho đúng sau các lần rà và thêm mục "Test tổng thể đợt G" ở cuối.
 
