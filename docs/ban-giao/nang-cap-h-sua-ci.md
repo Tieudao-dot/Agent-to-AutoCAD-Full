@@ -65,7 +65,7 @@ kiểm này sang, và chạy lại xem `npm test` có xanh thật trên nhánh �
 
 ## 5. CI
 
-(điền sau khi chạy)
+- Run 45778275884 trên `554307b`, **xanh** (1 lượt). Log trợ lý `# tests 409`, `# pass 409`, `# fail 0`; lõi 1445 / 1445; UI test, build 3 target, bộ cài đều qua. Commit sau chỉ ghi kết quả này, code giữ nguyên như `554307b`.
 
 ## 6. Con số chờ chủ dự án duyệt / Quyết định tự chọn
 
