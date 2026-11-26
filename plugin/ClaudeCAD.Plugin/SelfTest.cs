@@ -1338,6 +1338,71 @@ namespace ClaudeCAD.Plugin
                     : new SelfTestRules.Verdict(false, string.Join("; ", errs));
             });
 
+            // Nâng cấp đợt H7: an L drain route (one elbow), a branch from it (a tee), the schedule, the check against a beam
+            Check("Nâng cấp đợt H7: ống MEP 3D (tuyến chữ L có co, nhánh có tê, thống kê, soát va chạm với dầm)", () =>
+            {
+                var errs = new List<string>();
+                var made = new List<string>();
+                Dictionary<string, object> Run(Func<ToolContext, Params, object> h, string tool, Dictionary<string, object> d, bool write)
+                {
+                    using (doc.LockDocument())
+                    using (var tr = doc.TransactionManager.StartTransaction())
+                    {
+                        var r = (Dictionary<string, object>)h(new ToolContext(doc, tr, write, null), new Params(tool, d));
+                        tr.Commit();
+                        return r;
+                    }
+                }
+                List<object> Pts(params double[] xy) { var l = new List<object>(); for (int i = 0; i + 1 < xy.Length; i += 2) l.Add(new List<object> { xy[i], xy[i + 1] }); return l; }
+                try
+                {
+                    // a beam across the route (300 wide, 500 deep, its centre at the pipe height)
+                    using (doc.LockDocument())
+                    using (var tr = doc.TransactionManager.StartTransaction())
+                    {
+                        var ms = (BlockTableRecord)tr.GetObject(SymbolUtilityServices.GetBlockModelSpaceId(doc.Database), OpenMode.ForWrite);
+                        var bm = new Solid3d();
+                        bm.SetDatabaseDefaults(doc.Database);
+                        bm.CreateBox(300, 4000, 500);
+                        bm.TransformBy(Matrix3d.Displacement(new Vector3d(302000, 0, 3000)));
+                        ms.AppendEntity(bm);
+                        tr.AddNewlyCreatedDBObject(bm, true);
+                        made.Add(bm.Handle.ToString());
+                        tr.Commit();
+                    }
+                    var a = Run(DrawingService.DrawMep, "draw_mep", new Dictionary<string, object>
+                        { ["system"] = "drain", ["use"] = "wc", ["points"] = Pts(300000, 0, 304000, 0, 304000, 2000), ["elevation"] = 3000.0 }, true);
+                    var ha = ((List<object>)a["handles"]).Cast<string>().ToList();
+                    made.AddRange(ha);
+                    if (Convert.ToInt32(a["elbows"]) != 1) errs.Add($"tuyến chữ L có {a["elbows"]} co (cần 1)");
+                    var b = Run(DrawingService.DrawMep, "draw_mep", new Dictionary<string, object>
+                        { ["system"] = "drain", ["use"] = "floor", ["points"] = Pts(300500, 0, 300500, -1500), ["elevation"] = 2990.0, ["connect_to"] = ha[0] }, true);
+                    made.AddRange(((List<object>)b["handles"]).Cast<string>());
+                    if (!b.ContainsKey("tee")) errs.Add("nhánh không có tê");
+                    var s = Run(DrawingService.MepReport, "mep_report", new Dictionary<string, object> { ["action"] = "schedule" }, false);
+                    var rows = ((List<object>)s["rows"]).Cast<Dictionary<string, object>>().ToList();
+                    if (!rows.Any(r => (string)r["size"] == "D" + MepLogic.Num(H7Numbers.DrainWcMm) && Convert.ToInt32(r["elbows"]) == 1)) errs.Add("thống kê thiếu dòng ống chính có 1 co");
+                    if (rows.Sum(r => Convert.ToInt32(r["tees"])) != 1) errs.Add("thống kê không đếm được 1 tê");
+                    var c = Run(DrawingService.MepReport, "mep_report", new Dictionary<string, object> { ["action"] = "clash", ["other_handles"] = new List<object> { made[0] } }, false);
+                    if (Convert.ToInt32(c["clashes"]) < 1) errs.Add("không thấy ống chạm dầm");
+                    return errs.Count == 0
+                        ? new SelfTestRules.Verdict(true, $"ống chính {a["length_m"]} m, {a["elbows"]} co; nhánh có tê; {rows.Count} dòng thống kê; {c["clashes"]} chỗ chạm dầm, {c["close"]} chỗ sát")
+                        : new SelfTestRules.Verdict(false, string.Join("; ", errs));
+                }
+                finally
+                {
+                    using (doc.LockDocument())
+                    using (var tr = doc.TransactionManager.StartTransaction())
+                    {
+                        foreach (var h in made)
+                        {
+                            try { tr.GetObject(doc.Database.GetObjectId(false, new Handle(Convert.ToInt64(h, 16)), 0), OpenMode.ForWrite).Erase(); } catch (Exception) { }
+                        }
+                        tr.Commit();
+                    }
+                }
+            });
+
             // Nâng cấp đợt H5: two copies of this drawing in a folder: plan, check both (read only), set up the standard in
             // both (a backup first, then the file written); the card token is needed; the open drawing is unchanged
             Check("Nâng cấp đợt H5: làm nhiều file (soát 2 file, áp chuẩn 2 file có sao lưu, cần thẻ)", () =>
