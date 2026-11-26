@@ -237,6 +237,60 @@ namespace ClaudeCAD.Core.Tests
             Assert.Contains("b.r.Route == a.r.Route || b.r.Link == a.r.Route || a.r.Link == b.r.Route", Src("plugin", "ClaudeCAD.Plugin", "Drawing", "MepTools.cs"));
         }
 
+        // ------------------------------------------------------------ chốt thêm 26/11 ~19h50, thread F2's reading
+
+        [Fact]
+        public void A_default_drain_is_never_warned_small_ones_fall_2_5_big_ones_2()
+        {
+            Assert.Equal(2.5, MepLogic.DefaultSlope(H7Numbers.DrainFloorMm)); // D60
+            Assert.Equal(2, MepLogic.DefaultSlope(H7Numbers.DrainWcMm));      // D110
+            Assert.Equal(2, MepLogic.DefaultSlope(200));
+            Assert.Equal(2, MepLogic.DefaultSlope(40)); // under the table: the default
+            foreach (var d in MepLogic.SystemOf("drain").Uses.Values.Concat(new[] { 50.0, 75, 90, 100, 125, 150, 160, 200, 250 }))
+                Assert.True(MepLogic.DefaultSlope(d) >= (MepLogic.MinSlope(d) ?? 0), $"D{d}: the default is never under the least slope");
+            Assert.Contains("p.Num(\"slope\", MepLogic.DefaultSlope(sa))", Src("plugin", "ClaudeCAD.Plugin", "Drawing", "MepTools.cs"));
+        }
+
+        [Fact]
+        public void A_duct_keeps_its_width_axis_round_a_riser_and_back()
+        {
+            // along x, up, then along y: the width axis turns with each elbow, never swapped on the riser
+            var pcs = MepLogic.Layout(new List<double[]> { new[] { 0.0, 0, 3000 }, new[] { 3000.0, 0, 3000 }, new[] { 3000.0, 0, 6000 }, new[] { 3000.0, 3000, 6000 } }, 400);
+            var pipes = pcs.Where(x => x.Kind == "pipe").ToList();
+            Near(new[] { 0.0, 1, 0 }, pipes[0].W);
+            Near(new[] { 0.0, 1, 0 }, pipes[1].W); // the riser: same width axis as the run before (Section alone gave x: a 90° twist)
+            foreach (var e in pcs.Where(x => x.Kind == "elbow"))
+            {
+                int i = pcs.IndexOf(e);
+                Near(pcs[i - 1].W, e.W);
+                Near(MepLogic.Rotate(e.W, e.Axis, e.Angle), pcs[i + 1].W, 1e-9); // the end of the elbow meets the next piece
+            }
+            Assert.Equal(0, MepLogic.Dot(pipes[2].W, MepLogic.Unit(MepLogic.Sub(pipes[2].B, pipes[2].A))), 9);
+            var (w, _) = MepLogic.SectionOf(new[] { 0.0, 0, 1 }, pipes[1].W);
+            Near(new[] { 0.0, 1, 0 }, w);
+            Assert.Contains("PipeSolid(pc.A, pc.B, sys.Rect, sa / f, sb / f, 1, pc.W)", Src("plugin", "ClaudeCAD.Plugin", "Drawing", "MepTools.cs"));
+        }
+
+        [Fact]
+        public void A_slanted_pipe_is_measured_from_its_axis_not_its_box()
+        {
+            // a pipe from (0,0) to (1000,1000), D50, and a column 100 × 100 near the empty corner of its box
+            double r = 25;
+            var gap = MepLogic.PipeBoxGap(new[] { 0.0, 0, 0 }, new[] { 1000.0, 1000, 0 }, r, new[] { 800.0, 0, -100 }, new[] { 900.0, 100, 100 });
+            Assert.Equal(700 / Math.Sqrt(2) - r, gap, 3); // far from the pipe, though the boxes overlap
+            Assert.Equal(0, MepLogic.BoxGap(new[] { 0.0, 0, -25 }, new[] { 1000.0, 1000, 25 }, new[] { 800.0, 0, -100 }, new[] { 900.0, 100, 100 }));
+            Assert.Equal(30 - r, MepLogic.PipeBoxGap(new[] { 0.0, 0, 0 }, new[] { 1000.0, 0, 0 }, r, new[] { 400.0, 30, -50 }, new[] { 500.0, 300, 50 }), 6);
+            // two pipes crossing 100 apart in height, D50 each: gap 50
+            Assert.Equal(50, MepLogic.PipePipeGap(new[] { 0.0, 0, 0 }, new[] { 1000.0, 0, 0 }, 25, new[] { 500.0, -500, 100 }, new[] { 500.0, 500, 100 }, 25), 6);
+            // parallel, 80 apart: 30
+            Assert.Equal(30, MepLogic.PipePipeGap(new[] { 0.0, 0, 0 }, new[] { 1000.0, 0, 0 }, 25, new[] { 0.0, 80, 0 }, new[] { 1000.0, 80, 0 }, 25), 6);
+            var t = Src("plugin", "ClaudeCAD.Plugin", "Drawing", "MepTools.cs");
+            Assert.Contains("MepLogic.PipePipeGap(a.r.A, a.r.B, Reach(a.r, f), b.r.A, b.r.B, Reach(b.r, f))", t);
+            Assert.Contains("MepLogic.PipeBoxGap(a.r.A, a.r.B, Reach(a.r, f)", t);
+            // only 3D solids count towards the limit (a drawing full of 2D lines still has every pipe read)
+            Assert.Equal(2, System.Text.RegularExpressions.Regex.Matches(t, @"if \(!id\.ObjectClass\.IsDerivedFrom\(SolidClass\)\) continue;").Count);
+        }
+
         // ------------------------------------------------------------ numbers waiting for approval stay in one place
 
         [Fact]

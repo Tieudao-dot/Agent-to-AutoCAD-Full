@@ -85,7 +85,8 @@ namespace ClaudeCAD.Plugin.Drawing
 
             // heights: the points' own z, or one elevation (mm, the centre line), or under the beams; a drain falls by its slope
             double half = (sys.Rect ? sb : sa) / 2 / f;
-            double? slope = sys.Slopes ? p.Num("slope", H7Numbers.DrainSlopePercent) : (p.Has("slope") ? p.Num("slope") : (double?)null);
+            // approved 26/11/2026: a drain's default slope is never under the least slope of its size (D60 2.5 %, D110 2 %)
+            double? slope = sys.Slopes ? p.Num("slope", MepLogic.DefaultSlope(sa)) : (p.Has("slope") ? p.Num("slope") : (double?)null);
             if (slope.HasValue && (slope < 0 || slope > 100)) throw ToolException.Invalid($"{tool}: slope must be 0 – 100 (%).");
             if (given3d && p.Has("slope")) throw ToolException.Invalid($"{tool}: the points already give their heights (x, y, z): leave out slope, or give the points in plan (x, y) with elevation and slope.");
             if (!given3d)
@@ -132,7 +133,7 @@ namespace ClaudeCAD.Plugin.Drawing
             int elbows = 0;
             foreach (var pc in pieces)
             {
-                var solid = pc.Kind == "pipe" ? PipeSolid(pc.A, pc.B, sys.Rect, sa / f, sb / f, 1) : ElbowSolid(pc, sys.Rect, sa / f, sb / f);
+                var solid = pc.Kind == "pipe" ? PipeSolid(pc.A, pc.B, sys.Rect, sa / f, sb / f, 1, pc.W) : ElbowSolid(pc, sys.Rect, sa / f, sb / f);
                 var id = AddSolid(ctx, solid, layerP);
                 var ent = (Entity)ctx.Tr.GetObject(id, OpenMode.ForWrite);
                 WriteMep(ctx.Tr, ent, new MepRecord
@@ -183,11 +184,11 @@ namespace ClaudeCAD.Plugin.Drawing
         }
 
         /// <summary>A straight round pipe (or rectangular duct) A → B (drawing units), its section × oversize.</summary>
-        private static Solid3d PipeSolid(double[] a, double[] b, bool rect, double s1, double s2, double oversize)
+        private static Solid3d PipeSolid(double[] a, double[] b, bool rect, double s1, double s2, double oversize, double[] carriedW = null)
         {
             var dir = MepLogic.Sub(b, a);
             double len = MepLogic.Norm(dir);
-            var (w, h) = MepLogic.Section(dir);
+            var (w, h) = MepLogic.SectionOf(dir, carriedW); // a duct keeps the width axis of the route (no twist on a riser)
             var z = MepLogic.Unit(dir);
             var mid = MepLogic.Mul(MepLogic.Add(a, b), 0.5);
             return Build(s =>
@@ -202,7 +203,7 @@ namespace ClaudeCAD.Plugin.Drawing
         /// <summary>An elbow: its section at the start, turned about the elbow's axis through its centre.</summary>
         private static Solid3d ElbowSolid(MepPiece e, bool rect, double s1, double s2)
         {
-            var (w, h) = MepLogic.Section(e.StartDir);
+            var (w, h) = MepLogic.SectionOf(e.StartDir, e.W);
             var c = new Point3d(e.Start[0], e.Start[1], e.Start[2]);
             var curves = new DBObjectCollection();
             if (rect)
@@ -237,6 +238,7 @@ namespace ClaudeCAD.Plugin.Drawing
             int n = 0;
             foreach (ObjectId id in ctx.ModelSpace)
             {
+                if (!id.ObjectClass.IsDerivedFrom(SolidClass)) continue; // 2D lines and texts are not counted (only solids)
                 if (++n > H7Numbers.MaxSolids) break;
                 if (!(ctx.Tr.GetObject(id, OpenMode.ForRead, false) is Solid3d s)) continue;
                 var ex = EntityInfo.Extents(s);
@@ -270,6 +272,7 @@ namespace ClaudeCAD.Plugin.Drawing
             int read = 0;
             foreach (ObjectId id in ctx.ModelSpace)
             {
+                if (!id.ObjectClass.IsDerivedFrom(SolidClass)) continue; // only the 3D solids count towards the limit
                 if (++read > H7Numbers.MaxSolids) break;
                 if (!(ctx.Tr.GetObject(id, OpenMode.ForRead, false) is Solid3d s)) continue;
                 var r = ReadMep(ctx.Tr, s);
@@ -277,7 +280,7 @@ namespace ClaudeCAD.Plugin.Drawing
                 else others.Add((Acad.H(id), s));
             }
             var res = new Dictionary<string, object> { ["action"] = action, ["mep_solids"] = mep.Count };
-            if (read > H7Numbers.MaxSolids) res["note_limit"] = $"Only the first {H7Numbers.MaxSolids} objects of the drawing were read.";
+            if (read > H7Numbers.MaxSolids) res["note_limit"] = $"Only the first {H7Numbers.MaxSolids} 3D solids of the drawing were read.";
             if (action == "schedule")
             {
                 var rows = MepLogic.Schedule(mep.Select(x => x.r.Mark));
@@ -324,6 +327,12 @@ namespace ClaudeCAD.Plugin.Drawing
                     if (!eb.HasValue) continue;
                     double gap = MepLogic.BoxGap(P3(ea.Value.MinPoint), P3(ea.Value.MaxPoint), P3(eb.Value.MinPoint), P3(eb.Value.MaxPoint));
                     if (gap >= clearance) continue;
+                    // a straight pipe: the real gap from its axis (a slanted pipe's box is much bigger than the pipe)
+                    if (IsStraight(a.r))
+                        gap = IsStraight(b.r)
+                            ? MepLogic.PipePipeGap(a.r.A, a.r.B, Reach(a.r, f), b.r.A, b.r.B, Reach(b.r, f))
+                            : MepLogic.PipeBoxGap(a.r.A, a.r.B, Reach(a.r, f), P3(eb.Value.MinPoint), P3(eb.Value.MaxPoint));
+                    if (gap >= clearance) continue;
                     checkedPairs++;
                     bool hit;
                     try { hit = a.s.CheckInterference(b.s); } catch (Autodesk.AutoCAD.Runtime.Exception) { hit = false; }
@@ -344,7 +353,7 @@ namespace ClaudeCAD.Plugin.Drawing
             res["clearance_mm"] = Acad.R(clearance * f);
             res["pairs_checked"] = checkedPairs;
             res["found"] = found;
-            res["note"] = "clash = the solids overlap; close = closer than the clearance (measured between their boxes, so a slanted pipe may show close when it is a little further). Beams / columns are the solids on layers with BEAM / COL / DAM / COT / S- unless other_handles is given.";
+            res["note"] = "clash = the solids overlap; close = closer than the clearance (a straight pipe: from its centre line to the beam's box or the other pipe; elbows and tees: between boxes). Beams / columns are the solids on layers with BEAM / COL / DAM / COT / S- unless other_handles is given.";
             if (found.Count > 0)
                 ExportExcel(ctx, p, tool, () =>
                 {
@@ -357,5 +366,13 @@ namespace ClaudeCAD.Plugin.Drawing
         }
 
         private static double[] P3(Point3d q) => new[] { q.X, q.Y, q.Z };
+
+        private static readonly Autodesk.AutoCAD.Runtime.RXClass SolidClass = Autodesk.AutoCAD.Runtime.RXObject.GetClass(typeof(Solid3d));
+
+        private static bool IsStraight(MepRecord r) => r != null && r.Mark.Kind == "pipe" && r.A != null && r.B != null && MepLogic.Dist(r.A, r.B) > 0;
+
+        /// <summary>The half size of a pipe's section (drawing units): its radius; a duct, half its diagonal (on the safe side).</summary>
+        private static double Reach(MepRecord r, double f) =>
+            (r.Mark.Shape == "rect" ? Math.Sqrt(r.Mark.Size1 * r.Mark.Size1 + r.Mark.Size2 * r.Mark.Size2) : r.Mark.Size1) / 2 / f;
     }
 }

@@ -62,6 +62,8 @@ Thread `session_01D56HmFrL65iF9oJokvqXw5` (người viết). Nhánh `full/nang-c
 - `SupplyBranchMm` 25, `SupplyMainMm` 32;
 - `DrainFloorMm` 60, `DrainWcMm` 110, `VentMm` 60;
 - `DrainSlopePercent` 2, `MinDrainSlope` (D50 2,5 %, D100 1,2 %, D125 1 %, D150 0,7 %, D200 0,5 %);
+- **chốt thêm 26/11 ~19h50 (đã duyệt 26/11):** "ống nhỏ 2,5 %, ống lớn 2 %": độ dốc mặc định = max(2 %, mức tối thiểu theo cỡ)
+  (`MepLogic.DefaultSlope`): D60 dốc 2,5 %, D110 trở lên 2 %. Không ống mặc định nào bị cảnh báo;
 - `TopBelowBeamMm` 100, `TopBelowSlabMm` 300;
 - `PipeBendFactor` 1,5, `DuctBendFactor` 1;
 - `ClearanceMm` 50;
@@ -91,11 +93,20 @@ Thread `session_01D56HmFrL65iF9oJokvqXw5` (người viết). Nhánh `full/nang-c
   Chiều dài lấy theo dấu lúc vẽ. Khách kéo giãn ống bằng lệnh AutoCAD thì thống kê không đổi; vẽ lại bằng `draw_mep` thì đúng.
 - Chiều dài co tính theo đường tim (bán kính × góc), cộng vào chiều dài của cỡ ống đó.
 - Tê đếm vào hệ và cỡ của **nhánh**.
-- Soát "sát" đo giữa hai hộp bao. Ống nằm ngang / thẳng đứng thì đúng. Ống chéo có thể báo "sát" khi thật ra xa hơn một chút;
-  lời báo nói rõ điều này.
+- Soát "sát": ống thẳng đo từ trục (đúng cả khi chéo); co / tê đo giữa hai hộp bao. Ống gió lấy nửa đường chéo mặt cắt
+  (về phía an toàn).
 - Dầm / cột tìm theo tên layer (BEAM / COL / DAM / COT / S-). Khách dùng tên khác thì chỉ khối qua `other_handles`.
 - `under_beams`: dầm tìm theo tên layer BEAM / DAM, sàn theo SLAB / SAN; lấy đáy thấp nhất trong vùng tuyến đi qua.
 - Không tính độ dốc cho ống cấp nước / PCCC / ống gió, trừ khi khách cho `slope`.
+
+## 5b. Sửa sau khi thread đợt F2 đọc trước (26/11)
+
+| Chỗ | Lỗi | Sửa | Test (`NangCapH7Tests.cs`) |
+| --- | --- | --- | --- |
+| Độ dốc mặc định | Ống thoát D60 mặc định dốc 2 %, thấp hơn mức tối thiểu 2,5 % của cỡ, nên ống nào vẽ ra cũng bị cảnh báo | `MepLogic.DefaultSlope` (chủ dự án chốt 26/11) | `A_default_drain_is_never_warned…` |
+| Ống gió xoắn ở đoạn đứng | Mặt cắt mỗi đoạn tính riêng: đoạn đứng lấy bề rộng theo trục x, đoạn trước theo y, nên xoắn 90° so với co | Trục bề rộng (`MepPiece.W`) được mang dọc tuyến: xoay theo từng co, chiếu lên mỗi đoạn (`SectionOf`) | `A_duct_keeps_its_width_axis…` |
+| `mep_report` bỏ sót ống | Giới hạn 5 000 đếm cả nét 2D, chữ…: bản vẽ nhiều nét 2D thì ống phía sau không được đọc | Chỉ đếm khối 3D (`ObjectClass.IsDerivedFrom(Solid3d)`), cả ở `under_beams` | soi mã nguồn |
+| "Sát 0 mm" với ống chéo | Khe hở đo giữa hai hộp bao: hộp của ống chéo rất to, nên chồng lên dầm ở xa | Ống thẳng: đo từ trục ống tới hộp dầm (`PipeBoxGap`), hoặc giữa hai trục ống (`PipePipeGap`), trừ bán kính. Co / tê vẫn đo bằng hộp | `A_slanted_pipe_is_measured…` |
 
 ## 6. Token lúc mở chat
 
@@ -105,7 +116,7 @@ Thread `session_01D56HmFrL65iF9oJokvqXw5` (người viết). Nhánh `full/nang-c
 
 ## 7. Test
 
-- Lõi: 1621 / 1621 (thêm 14 ở `NangCapH7Tests.cs`).
+- Lõi: 1624 / 1624 (thêm 17 ở `NangCapH7Tests.cs`).
 - Trợ lý: 446 / 446 (thêm 3 ở `nangcaph7.test.ts`).
 - Build net48, net8.0-windows, net10.0-windows: qua.
 - Test hình học kiểm: co nối liền hai ống (xoay điểm đầu theo trục co đúng tới điểm đầu ống sau), cả khi rẽ lên / xuống và
@@ -113,7 +124,9 @@ Thread `session_01D56HmFrL65iF9oJokvqXw5` (người viết). Nhánh `full/nang-c
 
 ## 8. CI
 
-(điền sau khi chạy)
+- Lượt 1: run 45819860494 trên `10ba68a`, **xanh**, log `# pass 446 / # fail 0`, lõi 1621, UI 38 / 38.
+- Lượt 2: run 45821183068 trên `03bc792` (số đã duyệt đưa vào mô tả / skill), **xanh**, `# fail 0`.
+- Lượt 3 (thêm, vì chốt độ dốc mới và 3 lỗi thread F2 báo, luồng chính giao sau lượt 2): ghi ở dưới.
 
 ## 9. Chưa kiểm được
 

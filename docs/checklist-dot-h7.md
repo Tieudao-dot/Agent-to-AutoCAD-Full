@@ -3,7 +3,7 @@
 Máy gói 3D hoặc Full, AutoCAD 2022–2027. Bản vẽ có sẵn vài dầm 3D (vd dựng bằng "dựng dầm 220x400 theo trục…") hoặc tự
 vẽ một khối hộp trên layer `A-BEAM-3D`.
 
-*Số mặc định (đã duyệt 26/11/2026): PPR D25 / D32; uPVC D60 / D110, thông hơi D60; dốc 2 %; đỉnh ống cách đáy dầm 100 mm*
+*Số mặc định (đã duyệt 26/11/2026): PPR D25 / D32; uPVC D60 / D110, thông hơi D60; dốc 2 % (D60: 2,5 %); đỉnh ống cách đáy dầm 100 mm*
 *(đáy sàn 300 mm); co 1,5D (ống gió 1 lần bề rộng); khoảng hở 50 mm. Thấy số nào chưa hợp thì ghi lại để chỉnh trong `H7Numbers`.*
 
 ## A. Đi ống tròn (~8 phút)
@@ -16,13 +16,14 @@ vẽ một khối hộp trên layer `A-BEAM-3D`.
    - xoay góc nhìn (`3DORBIT` hoặc "xem phối cảnh tây nam") thấy co nối liền hai đoạn, không hở, không chồng.
 3. "Đi ống cấp nước D25 từ (1000,0) tới (1000,-2000), cao độ 3000, nối vào ống vừa vẽ": nếu điểm đầu nằm trên ống kia,
    Claude vẽ **tê** ở chỗ nối (khối hơi to hơn ống chính). Không nằm trên ống thì Claude báo rõ.
-4. "Đi ống thoát nước độ dốc 0,5%": Claude **cảnh báo** độ dốc thấp hơn mức tối thiểu của cỡ ống.
+4. "Đi ống thoát nước độ dốc 0,5%": Claude **cảnh báo** độ dốc thấp hơn mức tối thiểu của cỡ ống. Ống thoát sàn D60 không nói
+   độ dốc: dốc 2,5 %, **không** có cảnh báo.
 5. "Đi ống PCCC từ … tới …" mà **không nói cỡ**: Claude hỏi cỡ ống (không tự chọn).
 
 ## B. Ống gió (~5 phút)
 
 1. "Đi ống gió cấp 400x300 từ (0,5000) tới (6000,5000) rồi lên tới (6000,5000,4000), cao độ 3200": ống hộp chữ nhật trên
-   `M-DUCT-3D`, mặt rộng nằm ngang, co hộp ở chỗ rẽ lên.
+   `M-DUCT-3D`, mặt rộng nằm ngang, co hộp ở chỗ rẽ lên; đoạn đứng **không xoắn** so với co (mặt rộng liền mạch).
 2. "Đi ống gió hồi" mà không nói cỡ: Claude hỏi cỡ.
 
 ## C. Đi dưới dầm, UCS (~4 phút)
@@ -36,7 +37,7 @@ vẽ một khối hộp trên layer `A-BEAM-3D`.
 2. "Xuất thống kê ống ra Excel": file `.xlsx` cạnh bản vẽ; gọi lại lần hai thì Claude hỏi **thẻ ghi đè**.
 3. "Thống kê ống có cộng hao hụt 5%": thêm cột "Chiều dài + hao hụt 5%".
 4. "Soát ống va chạm với dầm cột": Claude kể chỗ **chạm** và chỗ **sát** (dưới khoảng hở), có handle hai bên; ống của cùng
-   một tuyến, hay nhánh với ống chính của nó, không bị báo.
+   một tuyến, hay nhánh với ống chính của nó, không bị báo. Một ống đi chéo qua phòng, xa cột: **không** bị báo "sát".
 5. Máy gói 2D: hỏi "đi ống cấp nước 3D" → Claude nói gói này không có lệnh 3D.
 
 ## E. Giới hạn nói rõ với khách

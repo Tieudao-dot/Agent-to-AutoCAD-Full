@@ -22,7 +22,7 @@ export function mepTools(b: ToolBridge): AnyTool[] {
     cadTool(b, 'draw_mep',
       'Draw a pipe or duct route in 3D ("đi ống cấp nước…", "đi ống gió…"): straight pieces, an elbow at each corner, on the layer of its system. ' +
         'Only the size the user gives (or the default of the use: supply / hot branch D25, main D32; drain floor D60, wc / stack D110; vent D60) is drawn: the plugin never sizes pipes or works out flows; fire pipes and ducts need the size from the user. ' +
-        'A drain falls 2 % by default (the result warns below the least slope of its size); elbows 1.5 × D (ducts 1 × width); connect_to = a pipe of another route the first point is on (draws a tee). ' +
+        'A drain falls 2 % by default, or the least slope of its size when more (D60 2.5 %); the result warns below that least slope; elbows 1.5 × D (ducts 1 × width); connect_to = a pipe of another route the first point is on (draws a tee). ' +
         'Returns the handles and the length; check with capture_view, then mep_report.',
       {
         system: z.enum(SYSTEMS).describe('supply = cấp nước, hot = nước nóng, drain = thoát nước, vent = thông hơi, fire = PCCC, duct_supply / duct_return = ống gió cấp / hồi.'),

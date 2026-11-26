@@ -17,7 +17,11 @@ namespace ClaudeCAD.Plugin.Core
         // ---- standard numbers, approved 26/11/2026 (docs/dot-h-so-tieu-chuan.md, H7)
         /// <summary>Default sizes (mm, outside diameter) when the user gives none: supply branch / main, drain floor / WC + stack, vent.</summary>
         public const double SupplyBranchMm = 25, SupplyMainMm = 32, DrainFloorMm = 60, DrainWcMm = 110, VentMm = 60;
-        /// <summary>Default slope of a drain (%), and the least slope by size (mm → %): below it the result warns.</summary>
+        /// <summary>
+        /// Default slope of a drain (%), and the least slope by size (mm → %): below it the result warns. The default of a size is
+        /// the larger of the two (approved 26/11/2026: "ống nhỏ 2,5 %, ống lớn 2 %": D60 falls 2.5 %, D110 and up 2 %), so no
+        /// default drain is warned about.
+        /// </summary>
         public const double DrainSlopePercent = 2;
         public static readonly (double size, double percent)[] MinDrainSlope = { (50, 2.5), (100, 1.2), (125, 1.0), (150, 0.7), (200, 0.5) };
         /// <summary>under_beams: the top of a pipe / duct this far under the lowest beam above it (mm); without a beam, under the slab.</summary>
@@ -65,6 +69,8 @@ namespace ClaudeCAD.Plugin.Core
         public double[] A, B;
         public double[] Start, Center, Axis, StartDir;
         public double Angle, Radius;
+        /// <summary>The width axis of the section at the start (a duct's width): carried along the route so a duct never twists.</summary>
+        public double[] W;
         /// <summary>Centre-line length (drawing units).</summary>
         public double Length;
     }
@@ -139,6 +145,9 @@ namespace ClaudeCAD.Plugin.Core
             return r;
         }
 
+        /// <summary>The default slope (%) of a drain of this size: DrainSlopePercent, or its least slope when that is more.</summary>
+        public static double DefaultSlope(double sizeMm) => Math.Max(H7Numbers.DrainSlopePercent, MinSlope(sizeMm) ?? 0);
+
         /// <summary>The bend radius (drawing units) of a route.</summary>
         public static double BendRadius(MepSystem s, double a, double mmPerUnit, double? givenMm) =>
             (givenMm ?? (s.Rect ? H7Numbers.DuctBendFactor * a : H7Numbers.PipeBendFactor * a)) / (mmPerUnit > 0 ? mmPerUnit : 1);
@@ -200,6 +209,8 @@ namespace ClaudeCAD.Plugin.Core
                 };
             }
             var pieces = new List<MepPiece>();
+            // the width axis, carried through the route: level at the start, turned with each elbow (a duct never twists on a riser)
+            var w = Section(Sub(clean[1], clean[0])).w;
             for (int i = 0; i < n - 1; i++)
             {
                 double len = Dist(clean[i], clean[i + 1]);
@@ -208,8 +219,16 @@ namespace ClaudeCAD.Plugin.Core
                 var d = Unit(Sub(clean[i + 1], clean[i]));
                 var a = Add(clean[i], Mul(d, trim[i]));
                 var b = Sub(clean[i + 1], Mul(d, trim[i + 1]));
-                if (Dist(a, b) > 1e-9) pieces.Add(new MepPiece { Kind = "pipe", A = a, B = b, Length = Dist(a, b) });
-                if (i + 1 < n - 1) pieces.Add(elbows[i + 1]);
+                w = Unit(Sub(w, Mul(d, Dot(w, d)))); // across this segment
+                if (Norm(w) < 1e-9) w = Section(d).w;
+                if (Dist(a, b) > 1e-9) pieces.Add(new MepPiece { Kind = "pipe", A = a, B = b, Length = Dist(a, b), W = w });
+                if (i + 1 < n - 1)
+                {
+                    var e = elbows[i + 1];
+                    e.W = w;
+                    pieces.Add(e);
+                    w = Rotate(w, e.Axis, e.Angle);
+                }
             }
             return pieces;
         }
@@ -221,6 +240,20 @@ namespace ClaudeCAD.Plugin.Core
             var w = Cross(new[] { 0.0, 0, 1 }, z);
             if (Norm(w) < 1e-9) w = new[] { 1.0, 0, 0 }; // a vertical pipe: width along x
             w = Unit(w);
+            return (w, Unit(Cross(z, w)));
+        }
+
+        /// <summary>v turned by angle about the unit axis k (right hand, like Solid3d.Revolve).</summary>
+        public static double[] Rotate(double[] v, double[] k, double angle) =>
+            Add(Add(Mul(v, Math.Cos(angle)), Mul(Cross(k, v), Math.Sin(angle))), Mul(k, Dot(k, v) * (1 - Math.Cos(angle))));
+
+        /// <summary>The section axes of a piece: its carried width axis when it has one, else level (Section).</summary>
+        public static (double[] w, double[] h) SectionOf(double[] dir, double[] carried)
+        {
+            if (carried == null) return Section(dir);
+            var z = Unit(dir);
+            var w = Unit(Sub(carried, Mul(z, Dot(carried, z))));
+            if (Norm(w) < 1e-9) return Section(dir);
             return (w, Unit(Cross(z, w)));
         }
 
@@ -316,6 +349,57 @@ namespace ClaudeCAD.Plugin.Core
             }
             return Math.Sqrt(s);
         }
+
+        /// <summary>Distance from point p to a box (0 inside).</summary>
+        public static double PointBox(double[] p, double[] min, double[] max)
+        {
+            double s = 0;
+            for (int k = 0; k < 3; k++) { double d = Math.Max(0, Math.Max(min[k] - p[k], p[k] - max[k])); s += d * d; }
+            return Math.Sqrt(s);
+        }
+
+        /// <summary>
+        /// The gap between a straight pipe (axis a → b, radius r) and a box (a beam, a column): the distance from the axis to the
+        /// box minus r (0 when they touch). The distance along the axis is convex: found by halving the search.
+        /// </summary>
+        public static double PipeBoxGap(double[] a, double[] b, double r, double[] min, double[] max)
+        {
+            double lo = 0, hi = 1;
+            double F(double t) => PointBox(Add(a, Mul(Sub(b, a), t)), min, max);
+            for (int i = 0; i < 80; i++)
+            {
+                double m1 = lo + (hi - lo) / 3, m2 = hi - (hi - lo) / 3;
+                if (F(m1) <= F(m2)) hi = m2; else lo = m1;
+            }
+            double d = Math.Min(F((lo + hi) / 2), Math.Min(F(0), F(1)));
+            return Math.Max(0, d - r);
+        }
+
+        /// <summary>The gap between two straight pipes (axes and radii): the shortest distance between the axes minus both radii.</summary>
+        public static double PipePipeGap(double[] a1, double[] b1, double r1, double[] a2, double[] b2, double r2)
+        {
+            // closest points of two segments (Ericson, Real-Time Collision Detection 5.1.9)
+            var d1 = Sub(b1, a1); var d2 = Sub(b2, a2); var rr = Sub(a1, a2);
+            double a = Dot(d1, d1), e = Dot(d2, d2), f = Dot(d2, rr), s, t;
+            if (a <= 1e-12 && e <= 1e-12) return Math.Max(0, Dist(a1, a2) - r1 - r2);
+            if (a <= 1e-12) { s = 0; t = Clamp(f / e); }
+            else
+            {
+                double c = Dot(d1, rr);
+                if (e <= 1e-12) { t = 0; s = Clamp(-c / a); }
+                else
+                {
+                    double bb = Dot(d1, d2), den = a * e - bb * bb;
+                    s = den > 1e-12 ? Clamp((bb * f - c * e) / den) : 0;
+                    t = (bb * s + f) / e;
+                    if (t < 0) { t = 0; s = Clamp(-c / a); }
+                    else if (t > 1) { t = 1; s = Clamp((bb - c) / a); }
+                }
+            }
+            return Math.Max(0, Dist(Add(a1, Mul(d1, s)), Add(a2, Mul(d2, t))) - r1 - r2);
+        }
+
+        private static double Clamp(double x) => Math.Max(0, Math.Min(1, x));
 
         /// <summary>A layer that holds beams or columns (the solids pipes are checked against by default).</summary>
         public static bool IsStructureLayer(string layer)
