@@ -225,3 +225,26 @@ Sau đợt F + G (ước tính, đo ở thread test tổng thể đợt G; đợ
     chạy cùng lúc từ `547d6af`.
   - 14h31 H2 viết xong (`export_drawing`), 14h43 H1 viết xong; giao rà chéo (H2: thread đợt F2, H1: thread Test & sửa F1).
     Thread H1 phát hiện CI Windows bỏ qua test trợ lý hỏng (3 test, có từ bản chốt G và bản 5); giao thread đợt F1 sửa.
+  - 14h58 sửa CI xong (`554307b`, `# fail 0`). 15h00 gộp H1 + H2 + sửa CI (`98eecf1`); H3 (so hai bản vẽ, thread đợt
+    F1) và H4 (chuẩn công ty, thread đợt F2) chạy cùng lúc. 16h04 gộp H3 + H4 rà xong (`5184962`), giao H5 (làm nhiều file
+    một lúc, thread đợt F2). 17h21 rà H5 xong. Các lượt rà sửa tổng 27 lỗi (H1 4, H2 6, H3 4, H4 9, H5 4).
+  - 16h13 danh sách số tiêu chuẩn phần 2: [`dot-h-so-tieu-chuan.md`](dot-h-so-tieu-chuan.md), chờ chủ dự án duyệt.
+  - 17h33 test tổng thể phần 1 xong (thread đợt F1): 2 lỗi chéo + 1 lỗi tài liệu, `full/nang-cap-h-tong-the` @ `aa5753c`
+    (code `9612510`, CI 45802392263 xanh, `# fail 0`, lõi 1581, trợ lý 436). Token lúc mở chat tăng ~0,1–0,2k.
+  - 17h46 mở thread kiểm tra độc lập đợt H phần 1 (`session_01D56HmH63NM9pSxbHQh6Ckv`, agent mới, chỉ ghi lỗi KTH-xx).
+  - 18h05 kiểm tra độc lập báo 27 lỗi (2 nặng ở H5, 13 vừa, 12 nhẹ): [`ban-giao/kiem-tra-doc-lap-dot-h-phan-1.md`](ban-giao/kiem-tra-doc-lap-dot-h-phan-1.md).
+    18h10 chia ba thread sửa: đợt F2 phần H5, Test & sửa F1 phần H1 / H2 / H3, đợt F1 phần H4 + prompt, gộp và CI.
+  - 18h33 sửa xong 27 lỗi + 5 nghi vấn đúng là lỗi; nhánh tích hợp `b7e408f` (code `0275e38`, CI 45810078065 xanh, `# fail 0`).
+    18h35 nhờ thread kiểm tra độc lập soát lại; 18h36 giao thread Bộ cài thử nội bộ chuẩn bị bản 6.
+  - 19h01 soát lại lượt 2: 28 / 28 lỗi KTH sửa đúng, 0 lỗi mở. Nhánh chốt phần 1 `full/nang-cap-h-tong-the` @ `76ecfae` (code `93096dc`,
+    CI 45813679683 xanh, lõi 1608, trợ lý 443).
+  - 19h05 bộ cài thử bản 6 (`5ab2fab`, CI 45815996979 xanh, 141 MB); link gửi thread "Lưu trữ bộ cài". Phần 1 khoảng 5 giờ 10 phút,
+    ~$135. Báo cáo: [`bao-cao-dot-h-phan-1-26-11.md`](bao-cao-dot-h-phan-1-26-11.md). Chờ chủ dự án: duyệt số phần 1, thử bản 6.
+  - 19h03 phần 2 bắt đầu: H6 hạ tầng (thread đợt F2) và H7 MEP 3D (thread Test & sửa F1) cùng lúc từ `76ecfae`, làm phần không dính
+    số tiêu chuẩn; số tiêu chuẩn chờ chủ dự án duyệt.
+  - ~19h20 chủ dự án duyệt số tiêu chuẩn phần 2: "Dùng hết số đề xuất" ([`dot-h-so-tieu-chuan.md`](dot-h-so-tieu-chuan.md) mục "Kết quả duyệt"); đã chuyển xuống H6, H7.
+  - ~19h50 chủ dự án chốt thêm: ống thoát D60 dốc mặc định 2,5 %, D110+ 2 % (thread rà H7 phát hiện D60 2 % thấp hơn mức tối thiểu).
+  - 20h07 rà H6 xong (5 lỗi); 20h35 rà H7 xong (6 lỗi); 20h36 H8 kết cấu bắt đầu (gộp H6-test + H7-test).
+  - ~20h45 chủ dự án chốt H9: chữ vẽ vào bản vẽ giữ tiếng Việt khi chọn English (chỉ đổi giao diện và câu trả lời).
+  - 21h40 rà H8 xong (3 lỗi; `886e699`, CI 45840644593 xanh); 21h42 H9 tiếng Anh bắt đầu (thread đợt F1), thread Test & sửa F1 đọc trước để rà.
+  - 22h40 H9 tiếng Anh viết xong (`60a2047`, CI 45850823367 xanh sau 1 lượt đỏ vì test CRLF); 22h42 thread Test & sửa F1 bắt đầu rà H9.
