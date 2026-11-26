@@ -65,6 +65,8 @@ namespace ClaudeCAD.Plugin.Core
         /// max(d, 25 mm), top bars max(d, 30 mm).
         /// </summary>
         public const double BottomBarMinClearMm = 25, TopBarMinClearMm = 30;
+        /// <summary>Column bars (cast upright): the least clear gap between two bars of a side, against max(d, it). Chờ chủ dự án duyệt: 0 = only d.</summary>
+        public const double ColumnBarMinClearMm = 0;
         /// <summary>Layers: footings, lean concrete (3D); concrete outline, bars, texts (2D details).</summary>
         public const string FootingLayer = "S-FOOT-3D", LeanLayer = "S-LEAN-3D", ConcreteLayer = "S-CONC", RebarLayer = "S-REBAR", TextLayer = "S-REBAR-TEXT";
         public const short FootingColor = 8, LeanColor = 9, ConcreteColor = 7, RebarColor = 1, TextColor = 7;
@@ -210,7 +212,7 @@ namespace ClaudeCAD.Plugin.Core
         }
 
         /// <summary>Positions of n column bars round a b × h section: the 4 corners first, then the rest along the sides (even counts).</summary>
-        public static List<double[]> ColumnBars(int n, double b, double h, double cover, double tieDia, double barDia)
+        public static List<double[]> ColumnBars(int n, double b, double h, double cover, double tieDia, double barDia, double? minClearMm = null)
         {
             if (n < 4) throw ToolException.Invalid($"{DrawTool}: a column needs at least 4 bars (one in each corner).");
             if (n % 2 != 0) throw ToolException.Invalid($"{DrawTool}: give an even number of column bars (both sides alike).");
@@ -219,12 +221,14 @@ namespace ClaudeCAD.Plugin.Core
             int rest = n - 4;
             // share the rest between the two pairs of sides by their length
             int alongB = (int)Math.Round(rest / 2.0 * (b / (b + h))) , alongH = rest / 2 - alongB;
-            // Test & sửa H8: bars along a side at least one bar apart (clear), like the beam rows
+            // Test & sửa H8: bars along a side at least one bar apart (clear), like the beam rows; and at least ColumnBarMinClearMm
+            // (chờ chủ dự án duyệt: 0 = only the bar)
+            double need = Math.Max(barDia, minClearMm ?? H8Numbers.ColumnBarMinClearMm);
             foreach (var (count, side) in new[] { (alongB, b), (alongH, h) })
             {
                 double gap = (side - 2 * e) / (count + 1);
-                if (gap - barDia < barDia - 1e-9)
-                    throw ToolException.Invalid($"{DrawTool}: {n}Ø{Num(barDia)} do not fit round a {Num(b)} × {Num(h)} column (less than one bar between them): ask the user for fewer bars or a bigger section.");
+                if (gap - barDia < need - 1e-9)
+                    throw ToolException.Invalid($"{DrawTool}: {n}Ø{Num(barDia)} do not fit round a {Num(b)} × {Num(h)} column (the clear gap between bars would be {Num(gap - barDia)} mm, at least {Num(need)} mm is needed): ask the user for fewer bars or a bigger section.");
             }
             for (int i = 1; i <= alongB; i++) { double x = e + (b - 2 * e) * i / (alongB + 1); pts.Add(new[] { x, e }); pts.Add(new[] { x, h - e }); }
             for (int i = 1; i <= alongH; i++) { double y = e + (h - 2 * e) * i / (alongH + 1); pts.Add(new[] { e, y }); pts.Add(new[] { b - e, y }); }

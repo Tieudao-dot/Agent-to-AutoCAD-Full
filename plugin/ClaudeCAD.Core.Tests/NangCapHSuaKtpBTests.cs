@@ -147,6 +147,22 @@ namespace ClaudeCAD.Core.Tests
         }
 
         [Fact]
+        public void Ktp51_two_routes_turning_at_a_shared_end_are_a_joint_even_when_the_solid_check_finds_the_wedge()
+        {
+            double tol = H7Numbers.JoinToleranceMm;
+            var a1 = new[] { 0.0, 0, 3000 }; var b1 = new[] { 4000.0, 0, 3000 };
+            // (0,0)→(4000,0) then (4000,0)→(4000,3000): the flat ends overlap in a wedge (overlap = true), still a joint
+            Assert.True(MepLogic.JointOnly(true, a1, b1, b1, new[] { 4000.0, 3000, 3000 }, tol));
+            Assert.True(MepLogic.JointOnly(true, a1, b1, b1, new[] { 6000.0, 2000, 3000 }, tol)); // 45°
+            Assert.True(MepLogic.JointOnly(true, a1, b1, b1, new[] { 8000.0, 0, 3000 }, tol));    // straight on
+            // the same way from the shared end: drawn twice / over a part of it → reported
+            Assert.False(MepLogic.JointOnly(true, a1, b1, a1, b1, tol));
+            Assert.False(MepLogic.JointOnly(true, a1, b1, new[] { 2000.0, 0, 3000 }, b1, tol));
+            Assert.False(MepLogic.JointOnly(true, a1, b1, b1, new[] { 1000.0, 500, 3000 }, tol)); // back over it at a few degrees
+            Assert.True(MepLogic.JointOnly(false, a1, b1, a1, b1, tol)); // no overlap found: nothing to report anyway
+        }
+
+        [Fact]
         public void Ktp46_two_branches_into_one_point_of_a_main_pipe_are_one_joint()
         {
             Assert.True(MepLogic.SameMainJoint("tee", "main1", "tee", "main1"));

@@ -1290,7 +1290,8 @@ AutoCAD thứ hai). Khoảng 30 phút. "Đạt" là thấy đúng như cột ph�
 9. *(sửa KTP-17)* Ống gió 200x500 rẽ lên đứng: co dùng bán kính 500 (cạnh cao) và Claude nói vì sao. Ống D110 với
    "bán kính co 20": Claude báo bán kính phải lớn hơn 55.
 10. *(sửa lượt 2: KTP-38)* Vẽ cùng một ống hai lần (hoặc ống thứ hai chồng lên một đoạn ống thứ nhất): "soát va chạm" báo
-   **chạm**. Hai tuyến nối đầu nhau vẫn **không** bị báo.
+   **chạm**. Hai tuyến nối đầu nhau vẫn **không** bị báo, kể cả nối **gấp góc** *(sửa lượt 3: KTP-51)*: vẽ (0,0)→(4000,0)
+   rồi tuyến thứ hai (4000,0)→(4000,3000) (90°), hoặc đi chéo 45° từ điểm cuối: "soát va chạm" không báo "chạm" ở mối nối.
 11. *(KTP-45)* Dầm 3D xoay 45° trên layer `S-BEAM`, ống đứng D110 đặt cách mép dầm khoảng 500: **không** bị báo "sát 0 mm".
    "Đi ống dưới dầm" theo tuyến chạy song song cạnh dầm chéo (không đi qua dưới dầm): Claude không lấy cao độ dầm đó.
 12. *(KTP-46)* Hai nhánh cùng nối vào một điểm của ống chính: "soát va chạm" **không** báo chạm giữa hai tê.

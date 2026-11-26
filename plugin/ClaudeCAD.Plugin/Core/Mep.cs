@@ -34,6 +34,8 @@ namespace ClaudeCAD.Plugin.Core
         public const double JoinToleranceMm = 1;
         /// <summary>KTP-45: a solid is taken as a (turned) box when the box round its corners has its volume within this share.</summary>
         public const double BoxVolumeShare = 0.02;
+        /// <summary>KTP-51: two pipes from one shared end closer than this angle (°) run over each other (a pipe drawn twice), not a joint.</summary>
+        public const double SameWayDeg = 30;
         /// <summary>Lengths in the schedule: metres with this many decimals.</summary>
         public const int LengthDecimals = 2;
         /// <summary>The 3D layers of a system: its 2D layer + this ("P-DRAIN" → "P-DRAIN-3D").</summary>
@@ -570,10 +572,24 @@ namespace ClaudeCAD.Plugin.Core
         }
 
         /// <summary>
-        /// KTP-38: a pair skipped as a joint (two routes meeting end to end) only when the solids do not overlap: a pipe drawn twice,
-        /// or two pipes overlapping along their length, share an end and still clash.
+        /// KTP-38 / KTP-51: a pair sharing an end is a joint (skipped) when the two pipes go out from that end in different ways: a
+        /// route going on straight, or turning (90°, 45°…), where the flat ends of the two pipes overlap in a small wedge that the solid
+        /// check finds. Two pipes going out the same way (within SameWayDeg: a pipe drawn twice, or one over a part of the other) are
+        /// no joint: they are reported when the solids overlap.
         /// </summary>
-        public static bool JointOnly(bool overlap, double[] a1, double[] b1, double[] a2, double[] b2, double tol) => !overlap && EndToEnd(a1, b1, a2, b2, tol);
+        public static bool JointOnly(bool overlap, double[] a1, double[] b1, double[] a2, double[] b2, double tol)
+        {
+            foreach (var (x, xo) in new[] { (a1, b1), (b1, a1) })
+                foreach (var (y, yo) in new[] { (a2, b2), (b2, a2) })
+                {
+                    if (Dist(x, y) > tol) continue;
+                    var u = Sub(xo, x); var v = Sub(yo, y);
+                    if (Norm(u) < 1e-12 || Norm(v) < 1e-12) continue;
+                    bool sameWay = Dot(Unit(u), Unit(v)) > Math.Cos(H7Numbers.SameWayDeg * Math.PI / 180);
+                    return sameWay ? !overlap : true;
+                }
+            return false;
+        }
 
         /// <summary>KTP-46: two fittings where branches join one main pipe (tees, or a tee and a branch of the same main) are one joint, not a clash.</summary>
         public static bool SameMainJoint(string kindA, string linkA, string kindB, string linkB) =>

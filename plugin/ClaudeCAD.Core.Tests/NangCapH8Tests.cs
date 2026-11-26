@@ -193,6 +193,12 @@ namespace ClaudeCAD.Core.Tests
             // a big bar: max(d, 30) = d = 32; a clear gap of 31 is refused though it is over 30, 33 fits
             Assert.Contains("at least 32 mm", Assert.Throws<ToolException>(() => RebarLogic.BarPositions(2, 157, 25, 6, 32, H8Numbers.TopBarMinClearMm)).Message);
             Assert.Equal(2, RebarLogic.BarPositions(2, 159, 25, 6, 32, H8Numbers.TopBarMinClearMm).Count);
+            // column bars (chờ chủ dự án duyệt): no floor now (only d), and the same rows with a floor of 50 for the proof
+            Assert.Equal(0, H8Numbers.ColumnBarMinClearMm);
+            Assert.Equal(16, RebarLogic.ColumnBars(16, 300, 300, 25, 6, 20).Count);                                  // clear 34.5 ≥ 20
+            Assert.Contains("at least 50 mm", Assert.Throws<ToolException>(() => RebarLogic.ColumnBars(16, 300, 300, 25, 6, 20, 50)).Message);
+            Assert.Equal(12, RebarLogic.ColumnBars(12, 300, 300, 25, 6, 20, 50).Count);                              // clear 52.7 ≥ 50
+            Assert.Throws<ToolException>(() => RebarLogic.ColumnBars(8, 200, 200, 25, 6, 32, 20));                   // max(d, 20) = 32
             // a beam with 4Ø16 at the bottom of a 200 wide section is refused by BeamBars
             Assert.Throws<ToolException>(() => RebarLogic.BeamBars(200, 400, 5000, (4, 16), (2, 12), 6, 150, 200, null, new List<string>()));
             Assert.Equal(3, RebarLogic.BeamBars(200, 400, 5000, (3, 16), (2, 12), 6, 150, 200, null, new List<string>()).Count);

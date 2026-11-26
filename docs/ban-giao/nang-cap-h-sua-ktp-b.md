@@ -37,8 +37,19 @@ AutoCAD thật.
 
 Số kỹ thuật thêm (khách không thấy): `H7Numbers.BoxVolumeShare = 0.02` (khối được coi là hộp khi thể tích khớp trong 2 %).
 
-Lượt 2 để lại: co / tê (không phải ống thẳng) cạnh dầm chéo vẫn đo bằng hộp bao (có thể báo "sát" thừa); dầm cong / không dạng
+Lượt 2 để lại: co / tê (không phải ống thẳng) cạnh dầm chéo vẫn đo bằng hộp bao (có thể báo "sát" thừa); **dầm dốc (nghiêng
+trong mặt đứng) cũng đo bằng hộp bao** (hộp xoay theo mặt bằng của nó lớn hơn khối nhiều nên không qua bước khớp thể tích; KTP-54); dầm cong / không dạng
 hộp đo như cũ.
+
+## 1c. Lượt 3 (sau khi kiểm tra độc lập soát lại lượt 2, 26/11; gộp `full/nang-cap-h-tong-the-2` @ `83508ee` trước)
+
+| Lỗi | Sửa | Test |
+| --- | --- | --- |
+| KTP-51 (bản sửa KTP-38 làm hỏng một ca của KTP-14) hai tuyến nối đầu gấp góc bị báo "chạm" (mẩu nêm ở hai đầu phẳng) | `MepLogic.JointOnly`: cặp chung một đầu là mối nối, **trừ khi** hai ống đi ra cùng hướng từ đầu chung (lệch dưới `H7Numbers.SameWayDeg` = 30°: vẽ trùng / chồng một đoạn), khi đó mới báo nếu khối chồng | `Ktp51…`: 90°, 45°, đi thẳng tiếp → mối nối dù khối chạm (nêm); trùng, chồng một đoạn, quay lại lệch ~10° → báo |
+| KTP-54 (d) tài liệu | Mục 1b ghi thêm dầm dốc vào chỗ còn đo bằng hộp bao | — |
+| Khe thép cột (chủ dự án đang duyệt) | `H8Numbers.ColumnBarMinClearMm = 0` (chỉ ≥ d như hiện tại); `ColumnBars(…, minClearMm)` so khe thông thủy với max(d, số đó); lời báo nói khe có / cần. Duyệt xong chỉ đổi một số | `NangCapH8Tests.Ktp_…`: không sàn (16Ø20 trong cột 300 lọt) và có sàn 50 (16Ø20 bị từ chối, 12Ø20 lọt; Ø32 lấy theo d) |
+
+Số kỹ thuật thêm (khách không thấy): `SameWayDeg = 30` (dưới góc này hai ống từ một đầu chung coi là chồng lên nhau).
 
 ## 2. Nghi vấn đã xem
 
