@@ -51,7 +51,9 @@ AutoCAD 2022–2027. Phần A, B cần máy gói 2D hoặc Full; phần C cần 
 
 1. *(KTP-19)* Dầm nhịp 5000, đai Ø6a150/a200: đai đầu tiên và đai cuối cùng đều cách gối **50**; hai đầu dầm có số đai a150
    bằng nhau; đoạn giữa chia đều (khoảng cách không quá 200).
-2. *(KTP-20)* "5Ø20 trong dầm rộng 200": Claude báo **không đủ chỗ** (khe hở giữa hai thanh phải ít nhất bằng một thanh).
+2. *(KTP-20, số chủ dự án chốt 27/11)* "Vẽ thép dầm 200x400 nhịp 5 m, 4Ø16 dưới, 2Ø12 trên": Claude báo **không đủ chỗ** (khe hở
+   giữa hai thanh thép dưới phải ≥ max(d, 25 mm), thép trên ≥ max(d, 30 mm)), gợi ý bớt thanh hoặc tăng bề rộng dầm. "3Ø16
+   dưới" thì vẽ được.
 3. *(KTP-31)* "Vẽ thép dầm nhịp 50": Claude báo nhịp quá ngắn (ít nhất 100 mm), không ra lỗi lạ của AutoCAD.
    *(lượt 2: KTP-40)* "Vẽ thép dầm nhịp 150": vẽ được, 2 đai cách mỗi gối 50, không lỗi.
 4. *(KTP-18)* "Dựng móng băng theo trục (0,0) → (6000,0) **không sườn**": móng băng phẳng, không lỗi.

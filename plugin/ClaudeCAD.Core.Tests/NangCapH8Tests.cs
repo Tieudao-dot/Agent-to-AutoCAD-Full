@@ -181,15 +181,21 @@ namespace ClaudeCAD.Core.Tests
                 var pos = RebarLogic.StirrupPositions(span, 150, 200);
                 Assert.Equal(new[] { 50, span - 50 }, pos.ToArray());
             }
-            // KTP-20: no floor yet (the numbers wait for the owner): the clear gap only has to be one bar
-            Assert.Equal(0, H8Numbers.BottomBarMinClearMm);
-            Assert.Equal(0, H8Numbers.TopBarMinClearMm);
-            Assert.Equal(5, RebarLogic.BarPositions(5, 220, 25, 6, 14).Count); // clear 22 ≥ 14
-            // …and with the proposed floor (25 bottom, 30 top, against max(d, floor)) the same row is refused
-            Assert.Throws<ToolException>(() => RebarLogic.BarPositions(5, 220, 25, 6, 14, 25));
-            Assert.Equal(4, RebarLogic.BarPositions(4, 220, 25, 6, 18, 25).Count); // clear 28.7 ≥ 25 (bottom)
-            Assert.Throws<ToolException>(() => RebarLogic.BarPositions(4, 220, 25, 6, 18, 30));      // but < 30 (top)
-            Assert.Throws<ToolException>(() => RebarLogic.BarPositions(2, 120, 25, 6, 32, 25));      // a big bar: max(d, floor) = d
+            // KTP-20 (chủ dự án chốt 27/11, TCVN): clear gap bottom ≥ max(d, 25), top ≥ max(d, 30)
+            Assert.Equal(25, H8Numbers.BottomBarMinClearMm);
+            Assert.Equal(30, H8Numbers.TopBarMinClearMm);
+            var ex = Assert.Throws<ToolException>(() => RebarLogic.BarPositions(4, 200, 25, 6, 16, H8Numbers.BottomBarMinClearMm)); // clear 24.7 < 25
+            Assert.Contains("fewer bars or a wider beam", ex.Message);
+            Assert.Contains("at least 25 mm", ex.Message);
+            Assert.Equal(3, RebarLogic.BarPositions(3, 200, 25, 6, 16, H8Numbers.BottomBarMinClearMm).Count);             // clear 45
+            Assert.Equal(4, RebarLogic.BarPositions(4, 220, 25, 6, 18, H8Numbers.BottomBarMinClearMm).Count);             // bottom: 28.7 ≥ 25
+            Assert.Throws<ToolException>(() => RebarLogic.BarPositions(4, 220, 25, 6, 18, H8Numbers.TopBarMinClearMm));   // top: 28.7 < 30
+            // a big bar: max(d, 30) = d = 32; a clear gap of 31 is refused though it is over 30, 33 fits
+            Assert.Contains("at least 32 mm", Assert.Throws<ToolException>(() => RebarLogic.BarPositions(2, 157, 25, 6, 32, H8Numbers.TopBarMinClearMm)).Message);
+            Assert.Equal(2, RebarLogic.BarPositions(2, 159, 25, 6, 32, H8Numbers.TopBarMinClearMm).Count);
+            // a beam with 4Ø16 at the bottom of a 200 wide section is refused by BeamBars
+            Assert.Throws<ToolException>(() => RebarLogic.BeamBars(200, 400, 5000, (4, 16), (2, 12), 6, 150, 200, null, new List<string>()));
+            Assert.Equal(3, RebarLogic.BeamBars(200, 400, 5000, (3, 16), (2, 12), 6, 150, 200, null, new List<string>()).Count);
             // KTP-20: the clear gap is at least one bar: 5Ø20 in a beam 200 wide no longer fits
             Assert.Contains("do not fit in one row", Assert.Throws<ToolException>(() => RebarLogic.BarPositions(5, 200, 25, 6, 20)).Message);
             Assert.Equal(3, RebarLogic.BarPositions(3, 200, 25, 6, 20).Count);

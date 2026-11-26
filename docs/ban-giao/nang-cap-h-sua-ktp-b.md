@@ -33,7 +33,7 @@ AutoCAD thật.
 | KTP-46 hai nhánh vào cùng một điểm ống chính: "chạm" giữa hai tê | Bỏ qua cặp tê cùng ống chính, và cặp tê với ống nhánh của cùng ống chính (`MepLogic.SameMainJoint`) | `Ktp46…` |
 | KTP-17 lời báo "use a smaller bend_radius" | Lời báo đoạn quá ngắn: nối dài đoạn (dời điểm) hoặc bỏ góc đó; nói rõ bán kính nhỏ hơn nửa tiết diện bị từ chối | `Ktp17_29…` |
 | KTP-29 `under_beams: false` kèm điểm 3D bị từ chối | Chỉ từ chối khi `under_beams` là `true` (hoặc có `elevation`) | `Ktp17_29…` (soát mã nguồn) |
-| KTP-20 chuẩn bị số (chủ dự án đang duyệt) | `H8Numbers.BottomBarMinClearMm` / `TopBarMinClearMm` = 0 (chỉ ≥ d như hiện tại); `BarPositions(…, minClearMm)` so với max(d, số đó). Duyệt xong chỉ đổi hai số | `NangCapH8Tests.Ktp_…`: không sàn (5Ø14 trong dầm 220 lọt) và có sàn 25 / 30 (5Ø14 bị từ chối; 4Ø18: dưới lọt, trên bị từ chối) |
+| KTP-20 khe hở thép dầm | **Số đã duyệt 27/11 (chủ dự án chốt theo TCVN):** `H8Numbers.BottomBarMinClearMm = 25`, `TopBarMinClearMm = 30`; `BarPositions(…, minClearMm)` so khe hở thông thủy với max(d, số đó). Lời báo nói khe hở có / cần và gợi ý bớt thanh hoặc tăng bề rộng dầm. Skill `ve-ket-cau` thêm dòng này | `NangCapH8Tests.Ktp_…`: 4Ø16 / 200 từ chối, 3Ø16 / 200 nhận; 4Ø18 / 220 dưới nhận, trên từ chối; Ø32 lấy theo d (khe 31 từ chối, 33 nhận) |
 
 Số kỹ thuật thêm (khách không thấy): `H7Numbers.BoxVolumeShare = 0.02` (khối được coi là hộp khi thể tích khớp trong 2 %).
 

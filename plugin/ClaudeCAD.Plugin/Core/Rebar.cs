@@ -61,10 +61,10 @@ namespace ClaudeCAD.Plugin.Core
         /// <summary>KTP-31: the shortest beam span drawn (mm); less is refused with a plain message.</summary>
         public const double MinSpanMm = 100;
         /// <summary>
-        /// KTP-20 (chờ chủ dự án duyệt, 26/11/2026): the least clear gap between two bars of one row (mm), bottom and top rows. The clear
-        /// gap is always at least one bar (d); 0 here = no other floor. The proposal under review: bottom 25, top 30 (then max(d, it)).
+        /// KTP-20 (chủ dự án chốt 27/11/2026, TCVN): the least clear gap between two bars of one row of a beam: bottom bars
+        /// max(d, 25 mm), top bars max(d, 30 mm).
         /// </summary>
-        public const double BottomBarMinClearMm = 0, TopBarMinClearMm = 0;
+        public const double BottomBarMinClearMm = 25, TopBarMinClearMm = 30;
         /// <summary>Layers: footings, lean concrete (3D); concrete outline, bars, texts (2D details).</summary>
         public const string FootingLayer = "S-FOOT-3D", LeanLayer = "S-LEAN-3D", ConcreteLayer = "S-CONC", RebarLayer = "S-REBAR", TextLayer = "S-REBAR-TEXT";
         public const short FootingColor = 8, LeanColor = 9, ConcreteColor = 7, RebarColor = 1, TextColor = 7;
@@ -203,8 +203,9 @@ namespace ClaudeCAD.Plugin.Core
             if (n == 1) return new List<double> { b / 2 };
             double gap = (last - first) / (n - 1);
             // KTP-20: the clear gap between two bars (centre to centre less one bar) must be at least one bar, and at least
-            // minClearMm (BottomBarMinClearMm / TopBarMinClearMm; 0 = no floor, chủ dự án đang duyệt)
-            if (gap - barDia < Math.Max(barDia, minClearMm) - 1e-9) throw ToolException.Invalid($"{DrawTool}: {n}Ø{Num(barDia)} do not fit in one row of {Num(b)} mm (less than one bar between them): ask the user for fewer bars or a wider section.");
+            // minClearMm (BottomBarMinClearMm 25 / TopBarMinClearMm 30, chủ dự án chốt 27/11)
+            double need = Math.Max(barDia, minClearMm);
+            if (gap - barDia < need - 1e-9) throw ToolException.Invalid($"{DrawTool}: {n}Ø{Num(barDia)} do not fit in one row of {Num(b)} mm (the clear gap between bars would be {Num(gap - barDia)} mm, at least {Num(need)} mm is needed): ask the user for fewer bars or a wider beam.");
             return Enumerable.Range(0, n).Select(i => first + i * gap).ToList();
         }
 
