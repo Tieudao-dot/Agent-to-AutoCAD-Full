@@ -94,6 +94,78 @@ namespace ClaudeCAD.Core.Tests
             Assert.Contains("leave out elevation and under_beams", tools);
         }
 
+        private static List<double[]> TurnedBeamCorners(double cx, double cy, double angleDeg, double len, double w, double z0, double z1)
+        {
+            double a = angleDeg * Math.PI / 180, ux = Math.Cos(a), uy = Math.Sin(a);
+            var r = new List<double[]>();
+            foreach (var z in new[] { z0, z1 })
+                foreach (var (sl, sw) in new[] { (-1, -1), (1, -1), (1, 1), (-1, 1) })
+                    r.Add(new[] { cx + sl * len / 2 * ux - sw * w / 2 * uy, cy + sl * len / 2 * uy + sw * w / 2 * ux, z });
+            return r;
+        }
+
+        [Fact]
+        public void Ktp45_a_beam_at_an_angle_is_measured_by_its_own_turned_box()
+        {
+            var box = MepLogic.FitPlanBox(TurnedBeamCorners(0, 0, 45, 4000, 300, 2600, 3000));
+            Assert.Equal(2000, box.HalfL, 6);
+            Assert.Equal(150, box.HalfW, 6);
+            Assert.Equal(2600, box.Zmin, 6);
+            // a riser D110 beside the beam: 500√2 from its axis, so 707 − 150 − 55 = 502 mm, not "sát 0" from the world box
+            var a = new[] { 500.0, -500, 0 }; var b = new[] { 500.0, -500, 3000 };
+            Assert.Equal(500 * Math.Sqrt(2) - 150 - 55, MepLogic.SectionPlanBoxGap(a, b, false, 110, 0, box), 6);
+            Assert.Equal(500 * Math.Sqrt(2) - 150 - 55, MepLogic.PipePlanBoxGap(a, b, 55, box), 6);
+            double hw = 2000 / Math.Sqrt(2) + 150 / Math.Sqrt(2);
+            Assert.Equal(0, MepLogic.PipeBoxGap(a, b, 55, new[] { -hw, -hw, 2600 }, new[] { hw, hw, 3000 }), 6); // the old way
+            // a level beam along x: the turned box is its plain box
+            var flat = MepLogic.FitPlanBox(TurnedBeamCorners(1000, 0, 0, 4000, 300, 2600, 3000));
+            Assert.Equal(2000, flat.HalfL, 6);
+            Assert.Equal(1000, flat.Cx, 6);
+            // under_beams: a route that passes beside the beam is not under it, one across it is
+            Assert.False(MepLogic.SegmentOverPlanBox(new[] { 500.0, -500 }, new[] { 2000.0, 1000 }, box)); // parallel, 707 off the axis
+            Assert.True(MepLogic.SegmentOverPlanBox(new[] { -1000.0, 1000 }, new[] { 1000.0, -1000 }, box)); // across it
+            Assert.Contains("MepLogic.SegmentOverPlanBox(plan[i - 1], plan[i], turned)", Src("plugin", "ClaudeCAD.Plugin", "Drawing", "MepTools.cs"));
+        }
+
+        [Fact]
+        public void Ktp38_a_pipe_drawn_twice_or_overlapping_still_clashes_and_two_routes_end_to_end_do_not()
+        {
+            double tol = H7Numbers.JoinToleranceMm;
+            var a1 = new[] { 0.0, 0, 3000 }; var b1 = new[] { 4000.0, 0, 3000 };
+            // the same pipe twice: shares its ends, the solids overlap → reported
+            Assert.False(MepLogic.JointOnly(true, a1, b1, a1, b1, tol));
+            // overlapping along its length from a shared end (0 → 2000 inside 0 → 4000) → reported
+            Assert.False(MepLogic.JointOnly(true, a1, b1, a1, new[] { 2000.0, 0, 3000 }, tol));
+            // a route going on from the end of another: touching, no overlap → a joint
+            Assert.True(MepLogic.JointOnly(false, a1, b1, b1, new[] { 4000.0, 3000, 3000 }, tol));
+            // no shared end: never a joint
+            Assert.False(MepLogic.JointOnly(false, a1, b1, new[] { 5000.0, 0, 3000 }, new[] { 8000.0, 0, 3000 }, tol));
+            var tools = Src("plugin", "ClaudeCAD.Plugin", "Drawing", "MepTools.cs");
+            Assert.Contains("if (endToEnd && MepLogic.JointOnly(hit,", tools);
+            Assert.True(tools.IndexOf("if (endToEnd && MepLogic.JointOnly(hit,", StringComparison.Ordinal) > tools.IndexOf("hit = a.s.CheckInterference(b.s)", StringComparison.Ordinal),
+                "the joint is skipped only after the solid check");
+        }
+
+        [Fact]
+        public void Ktp46_two_branches_into_one_point_of_a_main_pipe_are_one_joint()
+        {
+            Assert.True(MepLogic.SameMainJoint("tee", "main1", "tee", "main1"));
+            Assert.True(MepLogic.SameMainJoint("tee", "main1", "pipe", "main1")); // a tee and the other branch's first pipe
+            Assert.False(MepLogic.SameMainJoint("pipe", "main1", "pipe", "main1")); // two branch pipes: still checked
+            Assert.False(MepLogic.SameMainJoint("tee", "main1", "tee", "main2"));
+            Assert.False(MepLogic.SameMainJoint("tee", null, "tee", null));
+            Assert.Contains("MepLogic.SameMainJoint(a.r.Mark.Kind, a.r.Link, b.r.Mark.Kind, b.r.Link)", Src("plugin", "ClaudeCAD.Plugin", "Drawing", "MepTools.cs"));
+        }
+
+        [Fact]
+        public void Ktp17_29_round_two_messages_and_a_false_under_beams()
+        {
+            var e = Assert.Throws<ToolException>(() => MepLogic.Layout(new List<double[]> { new[] { 0.0, 0, 0 }, new[] { 100.0, 0, 0 }, new[] { 100.0, 100, 0 }, new[] { 200.0, 100, 0 } }, 165));
+            Assert.Contains("lengthen it (move the points apart) or leave that corner out", e.Message);
+            Assert.DoesNotContain("use a smaller bend_radius", e.Message);
+            Assert.Contains("p.Bool(\"under_beams\", false)))", Src("plugin", "ClaudeCAD.Plugin", "Drawing", "MepTools.cs"));
+        }
+
         [Fact]
         public void A_structure_layer_is_named_so_s_dash_only_as_its_prefix()
         {

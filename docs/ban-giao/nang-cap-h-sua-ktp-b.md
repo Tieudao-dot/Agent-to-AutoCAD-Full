@@ -23,14 +23,31 @@ AutoCAD thật.
 | KTP-21 móc 180° thép trơn cộng 8,5d | **Luồng chính chọn 26/11:** cộng **6,25d** mỗi móc (quy ước thường dùng; số đã duyệt uốn 2,5d, đoạn thẳng 3d giữ nguyên). `H8Numbers.PlainHookAddFactor = 6.25`. Sàn 3000 × 4000 Ø8a200: L = 3060 (như tính tay) | `Ktp_…`, test cũ sửa số |
 | KTP-31 nhịp < 100 mm ra lỗi AutoCAD thô | `H8Numbers.MinSpanMm = 100` (số luồng chính đưa trong tin giao việc): báo rõ | `Ktp_…` |
 
+## 1b. Lượt 2 (sau khi kiểm tra độc lập soát lại, 26/11; gộp `full/nang-cap-h-tong-the-2` @ `5611f3f` trước)
+
+| Lỗi | Sửa | Test |
+| --- | --- | --- |
+| KTP-38 (do bản sửa KTP-14) ống vẽ trùng / chồng một đoạn không còn bị báo | Cặp chung một đầu chỉ được bỏ qua **sau** khi kiểm khối chạm và khối không chồng nhau (`MepLogic.JointOnly`) | `Ktp38…`: ống trùng, chồng một đoạn → báo; nối đầu → không |
+| KTP-40 (= KTP-31 còn hở) nhịp 101–199 làm `StirrupPositions` ném lỗi | Vùng đầu trống thì đặt đai ở 50 (luồng chính chọn); nhịp tối thiểu 100 giữ nguyên | `NangCapH8Tests.Ktp_…`: nhịp 101 / 150 / 199 → 2 đai, cách mỗi gối 50 |
+| KTP-45 dầm chéo lấy hộp bao mặt bằng: ống đứng cạnh dầm bị "sát 0 mm", `under_beams` chọn nhầm dầm | Khối dầm / cột có dạng hộp (hộp quanh các đỉnh có thể tích khớp khối trong 2 %) được đo bằng **hộp xoay theo trục dầm** (`MepLogic.FitPlanBox`, `SectionPlanBoxGap`, `PipePlanBoxGap`). `under_beams` chỉ lấy dầm mà một đoạn tuyến đi qua dưới hộp xoay (`SegmentOverPlanBox`). Khối không dạng hộp vẫn đo bằng hộp bao như cũ | `Ktp45…`: dầm 45°, ống đứng D110 cách trục 500√2 → 502 mm (cách cũ 0) |
+| KTP-46 hai nhánh vào cùng một điểm ống chính: "chạm" giữa hai tê | Bỏ qua cặp tê cùng ống chính, và cặp tê với ống nhánh của cùng ống chính (`MepLogic.SameMainJoint`) | `Ktp46…` |
+| KTP-17 lời báo "use a smaller bend_radius" | Lời báo đoạn quá ngắn: nối dài đoạn (dời điểm) hoặc bỏ góc đó; nói rõ bán kính nhỏ hơn nửa tiết diện bị từ chối | `Ktp17_29…` |
+| KTP-29 `under_beams: false` kèm điểm 3D bị từ chối | Chỉ từ chối khi `under_beams` là `true` (hoặc có `elevation`) | `Ktp17_29…` (soát mã nguồn) |
+| KTP-20 chuẩn bị số (chủ dự án đang duyệt) | `H8Numbers.BottomBarMinClearMm` / `TopBarMinClearMm` = 0 (chỉ ≥ d như hiện tại); `BarPositions(…, minClearMm)` so với max(d, số đó). Duyệt xong chỉ đổi hai số | `NangCapH8Tests.Ktp_…`: không sàn (5Ø14 trong dầm 220 lọt) và có sàn 25 / 30 (5Ø14 bị từ chối; 4Ø18: dưới lọt, trên bị từ chối) |
+
+Số kỹ thuật thêm (khách không thấy): `H7Numbers.BoxVolumeShare = 0.02` (khối được coi là hộp khi thể tích khớp trong 2 %).
+
+Lượt 2 để lại: co / tê (không phải ống thẳng) cạnh dầm chéo vẫn đo bằng hộp bao (có thể báo "sát" thừa); dầm cong / không dạng
+hộp đo như cũ.
+
 ## 2. Nghi vấn đã xem
 
 | Nghi vấn | Kết quả |
 | --- | --- |
 | `IsStructureLayer` nhận quá rộng | Sửa: "S-" chỉ khi đứng đầu tên layer (trước đây "A-WALLS-NEW" cũng là kết cấu). BEAM / COL / DAM / COT giữ như cũ |
 | `under_beams` tuyến chữ L | Sửa: chỉ tính dầm nằm trên **một đoạn** của tuyến, không phải dầm trong hộp bao cả tuyến |
-| Hộp bao dầm chéo | Để lại: dầm chéo có hộp bao to, `under_beams` / "sát" với co, tê có thể lấy dầm không ở ngay trên. Ống thẳng soát "sát" đã đo theo trục |
-| Tê nhánh gần dọc trục; hai nhánh vào cùng điểm | Để lại: vẽ được, tê chồng nhau; khách thấy trên hình |
+| Hộp bao dầm chéo | Sửa ở lượt 2 (KTP-45) cho ống thẳng và `under_beams`; co / tê vẫn đo bằng hộp bao |
+| Tê nhánh gần dọc trục; hai nhánh vào cùng điểm | Hai nhánh cùng điểm: sửa ở lượt 2 (KTP-46, không báo chạm giữa hai tê). Tê gần dọc trục: để lại |
 | Bảng thép thiếu dòng tổng theo loại thép | Sửa: thêm dòng "Cộng CB240-T" / "Cộng CB400-V" sau các dòng "Cộng Ø…" |
 | Đai móc 135° chưa cộng phần cong | Để lại: chiều dài đai = chu vi tim + 2 đoạn thẳng max(6d, 75) (số đã duyệt), phần cong 135° không cộng. Cần đổi thì chủ dự án chốt số |
 
@@ -44,7 +61,7 @@ AutoCAD thật.
 
 ## 4. Test
 
-- Lõi 1695 / 1695 (thêm 8: `NangCapHSuaKtpBTests.cs` 7, `NangCapH8Tests` 1; sửa số ở test H8 cũ: móc 6,25d, đai đối xứng,
+- Lõi (lượt 1) 1695 / 1695; **lượt 2: lõi 1712 / 1712, trợ lý 467 / 467 (`# fail 0`), build 3 target 0 lỗi**. Lượt 1 thêm 8: `NangCapHSuaKtpBTests.cs` 7, `NangCapH8Tests` 1; sửa số ở test H8 cũ: móc 6,25d, đai đối xứng,
   dòng cộng theo loại thép).
 - Trợ lý 466 / 466 (`# fail 0`).
 - Build `net48` / `net8.0-windows` / `net10.0-windows`: 0 lỗi.

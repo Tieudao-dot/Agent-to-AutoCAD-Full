@@ -85,7 +85,8 @@ namespace ClaudeCAD.Plugin.Drawing
             // KTP-29: all the points in plan (x, y) or all with their height (x, y, z); a mix, or z with elevation / under_beams, is refused
             if (!given3d && raw != null && raw.Any(x => x is List<object> l && l.Count >= 3))
                 throw ToolException.Invalid($"{tool}: some points have a height (x, y, z) and some not (x, y): give all of them as x, y, z, or all as x, y with elevation.");
-            if (given3d && (p.Has("elevation") || p.Has("under_beams")))
+            // KTP-29 lượt 2: under_beams: false with 3D points is no conflict (only a true one is)
+            if (given3d && (p.Has("elevation") || p.Bool("under_beams", false)))
                 throw ToolException.Invalid($"{tool}: the points already give their heights (x, y, z): leave out elevation and under_beams, or give the points in plan (x, y).");
             var warnings = new List<string>();
 
@@ -284,18 +285,23 @@ namespace ClaudeCAD.Plugin.Drawing
                 if (!ex.HasValue) continue;
                 var mn = ex.Value.MinPoint; var mx = ex.Value.MaxPoint;
                 if (mx.X < x0 || mn.X > x1 || mx.Y < y0 || mn.Y > y1) continue;
-                // KTP (nghi vấn): an L route's box holds beams that no segment passes under: only a beam over a segment counts
+                var l = (s.Layer ?? "").ToUpperInvariant();
+                bool isBeam = l.Contains("BEAM") || l.Contains("DAM"), isSlab = !isBeam && (l.Contains("SLAB") || l.Contains("SAN"));
+                if (!isBeam && !isSlab) continue;
+                // KTP (nghi vấn) / KTP-45: only a beam a segment passes under counts (an L route's box, or a beam at an angle whose
+                // box in world axes covers much more than the beam)
+                var turned = BeamBox(null, s, null);
                 bool over = false;
                 for (int i = 1; i < plan.Count && !over; i++)
                 {
+                    if (turned != null) { over = MepLogic.SegmentOverPlanBox(plan[i - 1], plan[i], turned); continue; }
                     double sx0 = Math.Min(plan[i - 1][0], plan[i][0]), sx1 = Math.Max(plan[i - 1][0], plan[i][0]);
                     double sy0 = Math.Min(plan[i - 1][1], plan[i][1]), sy1 = Math.Max(plan[i - 1][1], plan[i][1]);
                     over = !(mx.X < sx0 || mn.X > sx1 || mx.Y < sy0 || mn.Y > sy1);
                 }
                 if (!over) continue;
-                var l = (s.Layer ?? "").ToUpperInvariant();
-                if (l.Contains("BEAM") || l.Contains("DAM")) { beam = beam.HasValue ? Math.Min(beam.Value, mn.Z) : mn.Z; beamBottoms.Add(mn.Z); }
-                else if (l.Contains("SLAB") || l.Contains("SAN")) slab = slab.HasValue ? Math.Min(slab.Value, mn.Z) : mn.Z;
+                if (isBeam) { beam = beam.HasValue ? Math.Min(beam.Value, mn.Z) : mn.Z; beamBottoms.Add(mn.Z); }
+                else slab = slab.HasValue ? Math.Min(slab.Value, mn.Z) : mn.Z;
             }
             if (beam.HasValue)
             {
@@ -367,6 +373,7 @@ namespace ClaudeCAD.Plugin.Drawing
             var found = new List<object>();
             int clashes = 0, close = 0, checkedPairs = 0;
             var seen = new HashSet<string>(StringComparer.Ordinal);
+            var boxes = new Dictionary<string, MepLogic.PlanBox>(StringComparer.Ordinal);
             foreach (var a in mep)
             {
                 var ea = EntityInfo.Extents(a.s);
@@ -381,24 +388,31 @@ namespace ClaudeCAD.Plugin.Drawing
                     if (!eb.HasValue) continue;
                     double gap = MepLogic.BoxGap(P3(ea.Value.MinPoint), P3(ea.Value.MaxPoint), P3(eb.Value.MinPoint), P3(eb.Value.MaxPoint));
                     if (gap >= clearance) continue;
-                    // KTP-14: two routes meeting end to end (one going on from the other, a size change) are joined, not close
-                    if (IsStraight(a.r) && IsStraight(b.r) && MepLogic.EndToEnd(a.r.A, a.r.B, b.r.A, b.r.B, H7Numbers.JoinToleranceMm / f)) continue;
+                    // KTP-46: two branches into one point of a main pipe: their tees (and a tee with the other branch) are one joint
+                    if (b.r != null && MepLogic.SameMainJoint(a.r.Mark.Kind, a.r.Link, b.r.Mark.Kind, b.r.Link)) continue;
+                    // KTP-14 / KTP-38: two routes meeting end to end are a joint, but only when the solids do not overlap (below)
+                    bool endToEnd = IsStraight(a.r) && IsStraight(b.r) && MepLogic.EndToEnd(a.r.A, a.r.B, b.r.A, b.r.B, H7Numbers.JoinToleranceMm / f);
+                    // KTP-45: a beam drawn at an angle is measured by its own turned box, not its box in world axes
+                    var bb = b.r == null ? BeamBox(b.h, b.s, boxes) : null;
                     double boxGap = gap;
                     // a straight pipe: the gap from its axis (a slanted pipe's box is much bigger than the pipe). This one gates the
                     // solid check, so a duct reaches by half its diagonal here (it never skips a real clash)
                     if (IsStraight(a.r))
                         gap = Math.Max(boxGap, IsStraight(b.r)
                             ? MepLogic.PipePipeGap(a.r.A, a.r.B, Reach(a.r, f), b.r.A, b.r.B, Reach(b.r, f))
+                            : bb != null ? MepLogic.PipePlanBoxGap(a.r.A, a.r.B, Reach(a.r, f), bb)
                             : MepLogic.PipeBoxGap(a.r.A, a.r.B, Reach(a.r, f), P3(eb.Value.MinPoint), P3(eb.Value.MaxPoint)));
                     if (gap >= clearance) continue;
                     checkedPairs++;
                     bool hit;
                     try { hit = a.s.CheckInterference(b.s); } catch (Autodesk.AutoCAD.Runtime.Exception) { hit = false; }
                     if (hit) { var v = OverlapVolume(a.s, b.s); if (!v.HasValue || v.Value <= 0) hit = false; }
+                    if (endToEnd && MepLogic.JointOnly(hit, a.r.A, a.r.B, b.r.A, b.r.B, H7Numbers.JoinToleranceMm / f)) continue;
                     // KTP-13: no overlap: the gap reported is from the real section (a duct under a beam: half its height up)
                     if (!hit && IsStraight(a.r))
                         gap = Math.Max(boxGap, IsStraight(b.r)
                             ? MepLogic.SectionSectionGap(a.r.A, a.r.B, a.r.Mark.Shape == "rect", a.r.Mark.Size1 / f, a.r.Mark.Size2 / f, b.r.A, b.r.B, b.r.Mark.Shape == "rect", b.r.Mark.Size1 / f, b.r.Mark.Size2 / f)
+                            : bb != null ? MepLogic.SectionPlanBoxGap(a.r.A, a.r.B, a.r.Mark.Shape == "rect", a.r.Mark.Size1 / f, a.r.Mark.Size2 / f, bb)
                             : MepLogic.SectionBoxGap(a.r.A, a.r.B, a.r.Mark.Shape == "rect", a.r.Mark.Size1 / f, a.r.Mark.Size2 / f, P3(eb.Value.MinPoint), P3(eb.Value.MaxPoint)));
                     var kind = MepLogic.ClashKind(hit, gap, clearance);
                     if (kind == null) continue;
@@ -429,6 +443,28 @@ namespace ClaudeCAD.Plugin.Drawing
         }
 
         private static double[] P3(Point3d q) => new[] { q.X, q.Y, q.Z };
+
+        /// <summary>
+        /// KTP-45: the turned box of a beam / column solid shaped like a box (its corners give a box in plan whose volume is the
+        /// solid's, within BoxVolumeShare), else null (a curved or odd solid: its box in world axes is used, as before). Cached by handle.
+        /// </summary>
+        private static MepLogic.PlanBox BeamBox(string h, Solid3d s, Dictionary<string, MepLogic.PlanBox> cache)
+        {
+            if (cache != null && h != null && cache.TryGetValue(h, out var known)) return known;
+            MepLogic.PlanBox box = null;
+            try
+            {
+                var pts = new List<double[]>();
+                using (var brep = new Autodesk.AutoCAD.BoundaryRepresentation.Brep(s))
+                    foreach (var v in brep.Vertices) using (v) { var q = v.Point; pts.Add(new[] { q.X, q.Y, q.Z }); }
+                var fit = pts.Count >= 8 && pts.Count <= 64 ? MepLogic.FitPlanBox(pts) : null;
+                double vol = s.MassProperties.Volume;
+                if (fit != null && vol > 0 && Math.Abs(fit.Area * (fit.Zmax - fit.Zmin) - vol) <= H7Numbers.BoxVolumeShare * vol) box = fit;
+            }
+            catch (Exception) { box = null; }
+            if (cache != null && h != null) cache[h] = box;
+            return box;
+        }
 
         private static readonly Autodesk.AutoCAD.Runtime.RXClass SolidClass = Autodesk.AutoCAD.Runtime.RXObject.GetClass(typeof(Solid3d));
 

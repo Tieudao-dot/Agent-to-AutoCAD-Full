@@ -291,8 +291,8 @@ namespace ClaudeCAD.Plugin.Drawing
                 double sx0 = x0 + U(span) + U(Math.Max(1000, 3 * h)), sy0 = y0;
                 pen.Rect(sx0, sy0, S(b), S(h), pen.Conc);
                 pen.Rect(sx0 + S(cover + sd / 2), sy0 + S(cover + sd / 2), S(b - 2 * cover - sd), S(h - 2 * cover - sd), pen.Bar);
-                foreach (var bx in RebarLogic.BarPositions(bottom.n, b, cover, sd, bottom.d)) pen.Dot(sx0 + S(bx), sy0 + S(cover + sd + bottom.d / 2), S(bottom.d));
-                foreach (var bx in RebarLogic.BarPositions(top.n, b, cover, sd, top.d)) pen.Dot(sx0 + S(bx), sy0 + S(h - cover - sd - top.d / 2), S(top.d));
+                foreach (var bx in RebarLogic.BarPositions(bottom.n, b, cover, sd, bottom.d, H8Numbers.BottomBarMinClearMm)) pen.Dot(sx0 + S(bx), sy0 + S(cover + sd + bottom.d / 2), S(bottom.d));
+                foreach (var bx in RebarLogic.BarPositions(top.n, b, cover, sd, top.d, H8Numbers.TopBarMinClearMm)) pen.Dot(sx0 + S(bx), sy0 + S(h - cover - sd - top.d / 2), S(top.d));
                 pen.Text(sx0, sy0 - pen.TextH * 3, $"MẶT CẮT 1:{H8Numbers.SectionScale}  {RebarLogic.Num(b)}×{RebarLogic.Num(h)}  {kinds[0].Label} dưới, {kinds[1].Label} trên");
             }
             else if (element == "column")

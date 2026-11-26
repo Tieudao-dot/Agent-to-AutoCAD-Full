@@ -53,6 +53,7 @@ AutoCAD 2022–2027. Phần A, B cần máy gói 2D hoặc Full; phần C cần 
    bằng nhau; đoạn giữa chia đều (khoảng cách không quá 200).
 2. *(KTP-20)* "5Ø20 trong dầm rộng 200": Claude báo **không đủ chỗ** (khe hở giữa hai thanh phải ít nhất bằng một thanh).
 3. *(KTP-31)* "Vẽ thép dầm nhịp 50": Claude báo nhịp quá ngắn (ít nhất 100 mm), không ra lỗi lạ của AutoCAD.
+   *(lượt 2: KTP-40)* "Vẽ thép dầm nhịp 150": vẽ được, 2 đai cách mỗi gối 50, không lỗi.
 4. *(KTP-18)* "Dựng móng băng theo trục (0,0) → (6000,0) **không sườn**": móng băng phẳng, không lỗi.
 
 ## C. Móng 3D (~5 phút, gói 3D / Full)

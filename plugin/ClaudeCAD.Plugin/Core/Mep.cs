@@ -32,6 +32,8 @@ namespace ClaudeCAD.Plugin.Core
         public const double ClearanceMm = 50;
         /// <summary>KTP-14: two pipe ends closer than this (mm) are one joint (a route going on from another), not a clash.</summary>
         public const double JoinToleranceMm = 1;
+        /// <summary>KTP-45: a solid is taken as a (turned) box when the box round its corners has its volume within this share.</summary>
+        public const double BoxVolumeShare = 0.02;
         /// <summary>Lengths in the schedule: metres with this many decimals.</summary>
         public const int LengthDecimals = 2;
         /// <summary>The 3D layers of a system: its 2D layer + this ("P-DRAIN" → "P-DRAIN-3D").</summary>
@@ -223,7 +225,7 @@ namespace ClaudeCAD.Plugin.Core
             {
                 double len = Dist(clean[i], clean[i + 1]);
                 if (trim[i] + trim[i + 1] > len + 1e-9)
-                    throw ToolException.Invalid($"{tool}: the segment from point {i + 1} to point {i + 2} is too short for its bends ({Math.Round(len, 1)} long, the bends need {Math.Round(trim[i] + trim[i + 1], 1)}): use a smaller bend_radius or move the points.");
+                    throw ToolException.Invalid($"{tool}: the segment from point {i + 1} to point {i + 2} is too short for its bends ({Math.Round(len, 1)} long, the bends need {Math.Round(trim[i] + trim[i + 1], 1)}): lengthen it (move the points apart) or leave that corner out (KTP-17: a bend_radius not more than half the section is refused, so a smaller one may not be possible).");
                 var d = Unit(Sub(clean[i + 1], clean[i]));
                 var a = Add(clean[i], Mul(d, trim[i]));
                 var b = Sub(clean[i + 1], Mul(d, trim[i + 1]));
@@ -480,6 +482,102 @@ namespace ClaudeCAD.Plugin.Core
             if (d < 1e-12) return 0;
             return Math.Max(0, d - SectionReach(a1, b1, rect1, s11, s12, n) - SectionReach(a2, b2, rect2, s21, s22, Mul(n, -1)));
         }
+
+        /// <summary>
+        /// KTP-45: a box turned in plan (a beam drawn at an angle): its centre in plan, its unit length axis, half length / half
+        /// width along its axes, and its height range. The box of a level beam along x is the same as its plain box.
+        /// </summary>
+        public sealed class PlanBox
+        {
+            public double Cx, Cy, Ux, Uy, HalfL, HalfW, Zmin, Zmax;
+            public double Area => 4 * HalfL * HalfW;
+            /// <summary>A world point in the box's frame (x along its axis, y across, z unchanged).</summary>
+            public double[] ToLocal(double[] q) => new[] { (q[0] - Cx) * Ux + (q[1] - Cy) * Uy, -(q[0] - Cx) * Uy + (q[1] - Cy) * Ux, q.Length > 2 ? q[2] : 0 };
+            public double[] Min => new[] { -HalfL, -HalfW, Zmin };
+            public double[] Max => new[] { HalfL, HalfW, Zmax };
+        }
+
+        /// <summary>
+        /// KTP-45: the smallest box turned in plan round the points (the corners of a solid): the convex hull in plan, then the
+        /// rectangle of least area on one of its edges. Null for fewer than 3 points in plan.
+        /// </summary>
+        public static PlanBox FitPlanBox(IList<double[]> pts)
+        {
+            if (pts == null || pts.Count < 3) return null;
+            var hull = Hull(pts.Select(q => (q[0], q[1])).Distinct().ToList());
+            if (hull.Count < 3) return null;
+            PlanBox best = null;
+            for (int i = 0; i < hull.Count; i++)
+            {
+                var (x0, y0) = hull[i]; var (x1, y1) = hull[(i + 1) % hull.Count];
+                double len = Math.Sqrt(Sq(x1 - x0) + Sq(y1 - y0));
+                if (len < 1e-12) continue;
+                double ux = (x1 - x0) / len, uy = (y1 - y0) / len;
+                double lo = double.MaxValue, hi = double.MinValue, wlo = double.MaxValue, whi = double.MinValue;
+                foreach (var (x, y) in hull)
+                {
+                    double a = x * ux + y * uy, w = -x * uy + y * ux;
+                    lo = Math.Min(lo, a); hi = Math.Max(hi, a); wlo = Math.Min(wlo, w); whi = Math.Max(whi, w);
+                }
+                double area = (hi - lo) * (whi - wlo);
+                if (best == null || area < best.Area - 1e-9)
+                {
+                    double ca = (lo + hi) / 2, cw = (wlo + whi) / 2;
+                    best = new PlanBox { Ux = ux, Uy = uy, Cx = ca * ux - cw * uy, Cy = ca * uy + cw * ux, HalfL = (hi - lo) / 2, HalfW = (whi - wlo) / 2 };
+                }
+            }
+            if (best == null) return null;
+            // the length axis along the longer side (a beam's axis)
+            if (best.HalfW > best.HalfL) { var (ux, uy) = (best.Ux, best.Uy); best.Ux = uy; best.Uy = -ux; var t = best.HalfL; best.HalfL = best.HalfW; best.HalfW = t; }
+            best.Zmin = pts.Min(q => q.Length > 2 ? q[2] : 0);
+            best.Zmax = pts.Max(q => q.Length > 2 ? q[2] : 0);
+            return best;
+        }
+
+        private static List<(double x, double y)> Hull(List<(double x, double y)> p)
+        {
+            p.Sort((a, b) => a.x != b.x ? a.x.CompareTo(b.x) : a.y.CompareTo(b.y));
+            if (p.Count < 3) return p;
+            double Cr((double x, double y) o, (double x, double y) a, (double x, double y) b) => (a.x - o.x) * (b.y - o.y) - (a.y - o.y) * (b.x - o.x);
+            var h = new List<(double x, double y)>();
+            foreach (var q in p) { while (h.Count >= 2 && Cr(h[h.Count - 2], h[h.Count - 1], q) <= 1e-12) h.RemoveAt(h.Count - 1); h.Add(q); }
+            int lower = h.Count + 1;
+            for (int i = p.Count - 2; i >= 0; i--) { var q = p[i]; while (h.Count >= lower && Cr(h[h.Count - 2], h[h.Count - 1], q) <= 1e-12) h.RemoveAt(h.Count - 1); h.Add(q); }
+            h.RemoveAt(h.Count - 1);
+            return h;
+        }
+
+        /// <summary>KTP-45: the gap from a straight pipe / duct to a turned box (measured in the box's frame; a turn in plan keeps a duct's width level).</summary>
+        public static double SectionPlanBoxGap(double[] a, double[] b, bool rect, double size1, double size2, PlanBox box) =>
+            SectionBoxGap(box.ToLocal(a), box.ToLocal(b), rect, size1, size2, box.Min, box.Max);
+
+        /// <summary>KTP-45: as PipeBoxGap (a round reach), against a turned box.</summary>
+        public static double PipePlanBoxGap(double[] a, double[] b, double r, PlanBox box) => PipeBoxGap(box.ToLocal(a), box.ToLocal(b), r, box.Min, box.Max);
+
+        /// <summary>KTP-45: a route segment in plan passes over the turned box (crosses or touches its rectangle in plan).</summary>
+        public static bool SegmentOverPlanBox(double[] p0, double[] p1, PlanBox box)
+        {
+            var a = box.ToLocal(new[] { p0[0], p0[1], 0 }); var b = box.ToLocal(new[] { p1[0], p1[1], 0 });
+            double t0 = 0, t1 = 1, dx = b[0] - a[0], dy = b[1] - a[1];
+            foreach (var (pp, q) in new[] { (-dx, a[0] + box.HalfL), (dx, box.HalfL - a[0]), (-dy, a[1] + box.HalfW), (dy, box.HalfW - a[1]) })
+            {
+                if (Math.Abs(pp) < 1e-12) { if (q < -1e-9) return false; continue; }
+                double r = q / pp;
+                if (pp < 0) t0 = Math.Max(t0, r); else t1 = Math.Min(t1, r);
+                if (t0 > t1 + 1e-12) return false;
+            }
+            return true;
+        }
+
+        /// <summary>
+        /// KTP-38: a pair skipped as a joint (two routes meeting end to end) only when the solids do not overlap: a pipe drawn twice,
+        /// or two pipes overlapping along their length, share an end and still clash.
+        /// </summary>
+        public static bool JointOnly(bool overlap, double[] a1, double[] b1, double[] a2, double[] b2, double tol) => !overlap && EndToEnd(a1, b1, a2, b2, tol);
+
+        /// <summary>KTP-46: two fittings where branches join one main pipe (tees, or a tee and a branch of the same main) are one joint, not a clash.</summary>
+        public static bool SameMainJoint(string kindA, string linkA, string kindB, string linkB) =>
+            linkA != null && linkA == linkB && (kindA == "tee" || kindB == "tee");
 
         /// <summary>KTP-14: two pipes meet end to end (one route going on from another, or a size change): an end of one is an end of the other.</summary>
         public static bool EndToEnd(double[] a1, double[] b1, double[] a2, double[] b2, double tol)
