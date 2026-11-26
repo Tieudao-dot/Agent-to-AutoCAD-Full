@@ -61,8 +61,8 @@ Không có số mới khách thấy. Số kỹ thuật: số thứ tự "tăng 1
 - Lõi **1635 / 1635** (thêm 8 test).
 - Trợ lý **447 / 447**.
 - Build `net48`, `net8.0-windows`, `net10.0-windows`: qua.
-- CI: ghi ở mục 8.
+- CI: xanh (mục 8).
 
 ## 8. CI
 
-(ghi sau khi chạy)
+Run **45824175827** trên `c9f2c6b`: xanh. Lõi 1635 / 1635, trợ lý `# tests 447`, `# pass 447`, `# fail 0`, UI test WPF 38 / 38. 1 lượt CI.
