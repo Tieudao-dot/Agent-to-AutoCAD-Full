@@ -126,12 +126,33 @@ namespace ClaudeCAD.Plugin.Core
         {
             var k = EstimateLogic.Key(name);
             var s = Regex.Replace(k, "[^a-z0-9]+", "-").Trim('-');
+            // Sửa KTH-13: letters outside a-z (Chinese, Japanese, Thai…) would all be dropped: their own short code keeps two
+            // such names apart ("株式会社" and "東京建築" were both "chuan")
+            if (k.Any(ch => char.IsLetterOrDigit(ch) && !(ch >= 'a' && ch <= 'z') && !(ch >= '0' && ch <= '9')))
+            {
+                ulong h = 14695981039346656037UL;
+                foreach (byte b in Encoding.UTF8.GetBytes(k)) { h ^= b; h *= 1099511628211UL; }
+                s = (s.Length == 0 ? "chuan" : s) + "-" + h.ToString("x16", CultureInfo.InvariantCulture).Substring(0, 8);
+            }
             if (s.Length == 0) return "chuan";
             // Test & sửa H4: a name Windows keeps for devices (CON, NUL, COM1…) cannot be a folder
             return Regex.IsMatch(s, "^(con|prn|aux|nul|com[0-9]|lpt[0-9])$") ? s + "-chuan" : s;
         }
 
         public static string FolderOf(string root, string name) => Path.Combine(root, Slug(name));
+
+        /// <summary>
+        /// Sửa KTH-13: two names are one standard when they differ only in case, accents, spaces, '-', '_' or '.'
+        /// ("Công ty ABC" = "CONG TY ABC" = "cong-ty-abc"), not when other signs differ ("C++" ≠ "C#", "Đ&Đ" ≠ "D D") although
+        /// those share a folder.
+        /// </summary>
+        public static bool SameName(string a, string b) => EstimateLogic.Key(a) == EstimateLogic.Key(b);
+
+        /// <summary>Sửa KTH-13: the refusal when the folder of this name holds another standard (null = the same one).</summary>
+        public static string OtherNameRefusal(CompanyStandard stored, string name, string tool) =>
+            stored == null || SameName(stored.Name, name) ? null
+                : $"{tool}: the name '{name}' is kept in the same folder as the company standard '{stored.Name}' ({Slug(name)}), so it cannot be told apart. " +
+                  "Use that name to mean that standard, or give this one a name that differs in letters or digits (e.g. add the city).";
 
         // ------------------------------------------------------------ the store
 
@@ -160,12 +181,17 @@ namespace ClaudeCAD.Plugin.Core
         {
             var f = Path.Combine(FolderOf(root, name), DataFile);
             if (!File.Exists(f)) return null;
-            try { return FromJson(File.ReadAllText(f, Encoding.UTF8)); }
+            CompanyStandard s;
+            try { s = FromJson(File.ReadAllText(f, Encoding.UTF8)); }
             catch (Exception ex) when (!(ex is ToolException))
             {
                 throw ToolException.Invalid($"{tool}: the saved company standard '{name}' is damaged ({Path.Combine(FolderOf(root, name), DataFile)}: {ex.Message}). " +
                     "Learn it again from the template (company_standard learn with the same name) or delete it (company_standard delete).");
             }
+            // Sửa KTH-13: another standard sharing the folder is never used in its place
+            var other = OtherNameRefusal(s, name, tool);
+            if (other != null) throw ToolException.Invalid(other);
+            return s;
         }
 
         /// <summary>Test & sửa H4: the folder of that name holds a standard.json that cannot be read.</summary>
@@ -258,6 +284,20 @@ namespace ClaudeCAD.Plugin.Core
                 .Take(H4Numbers.MaxHeights).Select(g => g.Key).ToList();
         }
 
+        /// <summary>Sửa KTH-09: the styles every AutoCAD drawing has (AutoCAD makes them; they cannot all be deleted).</summary>
+        public static readonly string[] DefaultTextStyles = { "Standard", "Annotative" };
+        public static readonly string[] DefaultDimStyles = { "Standard", "ISO-25", "Annotative" };
+        public static readonly string[] DefaultMLeaderStyles = { "Standard", "Annotative" };
+
+        /// <summary>
+        /// Sửa KTH-09: a default style of AutoCAD is the company's only when the template uses it (an object, or a kept style
+        /// built on it) or has it current; else it is not learnt, so "chữ kiểu Standard" is reported as outside the standard.
+        /// </summary>
+        public static bool KeepStyle(string name, string[] defaults, ICollection<string> used, string current) =>
+            !defaults.Any(d => string.Equals(d, name, StringComparison.OrdinalIgnoreCase))
+            || string.Equals(name, current, StringComparison.OrdinalIgnoreCase)
+            || (used != null && used.Any(u => string.Equals(u, name, StringComparison.OrdinalIgnoreCase)));
+
         /// <summary>Keeps at most max items, and a note saying how many were left out.</summary>
         public static List<T> Cap<T>(List<T> items, int max, string what, List<string> notes)
         {
@@ -274,6 +314,8 @@ namespace ClaudeCAD.Plugin.Core
             if (string.IsNullOrEmpty(layer) || layer.Contains("|") || layer == "0") return true;
             if (string.Equals(layer, "Defpoints", StringComparison.OrdinalIgnoreCase) || string.Equals(layer, G5Numbers.Layer, StringComparison.OrdinalIgnoreCase)) return true;
             if (Util2DLogic.IsDerivedViewLayer(layer)) return true;
+            // Sửa KTH-12: the frame / viewport layers create_sheet company puts its title block and viewport on
+            if (string.Equals(layer, F2Numbers.FrameLayer, StringComparison.OrdinalIgnoreCase) || string.Equals(layer, F2Numbers.ViewportLayer, StringComparison.OrdinalIgnoreCase)) return true;
             return s.Layers.Any(l => string.Equals(l.Name, layer, StringComparison.OrdinalIgnoreCase));
         }
 

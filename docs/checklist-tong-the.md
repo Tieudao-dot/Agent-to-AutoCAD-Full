@@ -1084,6 +1084,11 @@ chụp màn hình và ghi số thứ tự.*
 | F6 | "Tạo tờ in A1 theo chuẩn ABC" khi file mẫu là A3 | Claude nói khung tên công ty đặt theo tờ A3 của mẫu nên có thể lệch khỏi khung, gợi ý dùng A3 |
 | F7 | Sau C1 (soát theo chuẩn ABC), nói "sửa các kiểu chữ sai" | Claude không sửa bằng kiểu VN; nếu vẫn gọi sửa thì lệnh từ chối, "Nothing was changed" |
 | F8 | File mẫu đơn vị **mét**, bản vẽ đang mở mm: "áp chuẩn" | Claude báo kiểu kích thước / ghi chú của mẫu theo mét (cỡ chữ cần xem lại), cỡ chữ chuẩn đổi đúng ra mm |
+| F9 | *(Sửa KTH-09)* File mẫu không dùng kiểu chữ "Standard"; học rồi, trong bản vẽ đang mở gõ một dòng chữ kiểu Standard, "soát theo chuẩn ABC" | Dòng chữ đó bị báo **kiểu ngoài bộ chuẩn**; "xem chuẩn ABC" không liệt kê Standard / ISO-25 (ghi chú số kiểu mặc định đã bỏ) |
+| F10 | *(Sửa KTH-10)* Bản vẽ có hơn 50 layer khác màu so với chuẩn ABC, "áp chuẩn ABC" | Thẻ hỏi 50 layer đầu; Đồng ý xong Claude nói còn bao nhiêu và hỏi tiếp, không báo lỗi "too many" |
+| F11 | *(Sửa KTH-11)* "Tạo tờ in theo chuẩn ABC, tên dự án Nhà phố Q7" | Claude chỉ báo ô **thật sự** đã điền (tên ô của khung tên ABC), kể các ô còn trống; tên ô gõ sai thì Claude nói không có ô đó |
+| F12 | *(Sửa KTH-12)* Sau F11, "soát theo chuẩn ABC" | Không báo layer KHUNG / KHUNG-VP là layer lạ |
+| F13 | *(Sửa KTH-13)* Học một bộ tên "C++", rồi "soát theo chuẩn C#" | Claude báo tên "C#" trùng thư mục với bộ "C++", không dùng bộ "C++" thay |
 
 ## H5. Làm nhiều file một lúc (~30 phút; mục của `checklist-dot-h5.md`)
 

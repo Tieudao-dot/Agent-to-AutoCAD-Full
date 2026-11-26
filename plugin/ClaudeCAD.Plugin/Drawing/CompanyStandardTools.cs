@@ -220,12 +220,28 @@ namespace ClaudeCAD.Plugin.Drawing
             var bt = (BlockTable)tr.GetObject(db.BlockTableId, OpenMode.ForRead);
             var ms = (BlockTableRecord)tr.GetObject(bt[BlockTableRecord.ModelSpace], OpenMode.ForRead);
             int n = 0;
+            // Sửa KTH-09: the styles the template's objects use (model space and layouts)
+            var usedText = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            var usedDim = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            var usedMl = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            void Uses(Entity e)
+            {
+                try
+                {
+                    if (e is DBText t0) usedText.Add(NameOfId(t0.TextStyleId));
+                    else if (e is MText m0) usedText.Add(NameOfId(m0.TextStyleId));
+                    else if (e is Dimension d0) usedDim.Add(NameOfId(d0.DimensionStyle));
+                    else if (e is MLeader l0) { var st = tr.GetObject(l0.MLeaderStyle, OpenMode.ForRead) as Autodesk.AutoCAD.DatabaseServices.MLeaderStyle; if (st != null) usedMl.Add(st.Name); }
+                }
+                catch (Exception) { }
+            }
             foreach (ObjectId id in ms)
             {
                 if (++n > G2Numbers.MaxScan) break;
                 var e = tr.GetObject(id, OpenMode.ForRead, false) as Entity;
                 if (e is DBText dt) heights.Add(dt.Height);
                 else if (e is MText mt) heights.Add(mt.TextHeight);
+                if (e != null) Uses(e);
             }
             s.TextHeights = CompanyStandardLogic.TopHeights(heights);
 
@@ -243,12 +259,19 @@ namespace ClaudeCAD.Plugin.Drawing
                 var space = (BlockTableRecord)tr.GetObject(lo.BlockTableRecordId, OpenMode.ForRead);
                 bool first = true;
                 double best = 0;
+                // Sửa KTH (nghi vấn H4), like G2: the layout's own viewport is the first of GetViewports when AutoCAD has the list;
+                // without it (a layout never opened) only a viewport as big as the whole paper is taken for it
+                ObjectId own = ObjectId.Null;
+                try { var vps = lo.GetViewports(); if (vps != null && vps.Count > 0) own = vps[0]; } catch (Exception) { }
                 foreach (ObjectId id in space)
                 {
                     var e = tr.GetObject(id, OpenMode.ForRead, false) as Entity;
+                    if (e != null && !(e is Viewport)) Uses(e);
                     if (e is Viewport vp)
                     {
-                        if (first) { first = false; continue; } // the paper-space viewport of the layout itself
+                        bool isOwn = !own.IsNull ? id == own : first && vp.Width >= w * 0.98 && vp.Height >= h * 0.98;
+                        first = false;
+                        if (isOwn) continue; // the paper-space viewport of the layout itself
                         if (vp.Width * vp.Height > best) { best = vp.Width * vp.Height; paper.Viewport = new[] { vp.CenterPoint.X, vp.CenterPoint.Y, vp.Width, vp.Height }; }
                     }
                     else if (e is BlockReference br && s.TitleBlocks.Count < H4Numbers.MaxTitleBlocks)
@@ -268,6 +291,18 @@ namespace ClaudeCAD.Plugin.Drawing
                 }
                 if (s.Papers.Count < H4Numbers.MaxTitleBlocks) s.Papers.Add(paper);
             }
+            // Sửa KTH (nghi vấn H4): the title block is the block with the most fields (a revision mark has one or two), first
+            s.TitleBlocks = s.TitleBlocks.Select((t, i) => (t, i)).OrderByDescending(x => x.t.Tags.Count).ThenBy(x => x.i).Select(x => x.t).ToList();
+
+            // Sửa KTH-09: AutoCAD's own default styles only when the template uses them (or a kept style is built on them)
+            var keptDims = s.DimStyles.Where(d => CompanyStandardLogic.KeepStyle(d.Name, CompanyStandardLogic.DefaultDimStyles, usedDim, s.CurrentDimStyle)).ToList();
+            var keptMls = s.MLeaderStyles.Where(m => CompanyStandardLogic.KeepStyle(m.Name, CompanyStandardLogic.DefaultMLeaderStyles, usedMl, s.CurrentMLeaderStyle)).ToList();
+            foreach (var d in keptDims) usedText.Add(d.TextStyle);
+            foreach (var m in keptMls) usedText.Add(m.TextStyle);
+            var keptTexts = s.TextStyles.Where(t => CompanyStandardLogic.KeepStyle(t.Name, CompanyStandardLogic.DefaultTextStyles, usedText, s.CurrentTextStyle)).ToList();
+            int dropped = s.TextStyles.Count - keptTexts.Count + s.DimStyles.Count - keptDims.Count + s.MLeaderStyles.Count - keptMls.Count;
+            if (dropped > 0) s.Notes.Add($"{dropped} default AutoCAD styles (Standard / Annotative / ISO-25) not used in the template were left out: objects using them are reported as outside the company standard.");
+            s.TextStyles = keptTexts; s.DimStyles = keptDims; s.MLeaderStyles = keptMls;
         }
 
         // ------------------------------------------------------------ the copy of the template
@@ -364,12 +399,14 @@ namespace ClaudeCAD.Plugin.Drawing
                 {
                     // the copy of the template is gone: layers and text styles from what was learnt; the rest is said
                     foreach (var name in missingLayers.Concat(replaceLayers)) ApplyLayer(ctx, s.Layers.First(x => x.Name == name), notes);
+                    // Sửa KTH-14: a fixed height of the template's style is in the template's units
+                    double hk = s.MmPerUnit > 0 ? s.MmPerUnit / MmPerUnitOf(ctx, out _) : 1;
                     foreach (var name in missingText)
                     {
                         var t = s.TextStyles.First(x => x.Name == name);
                         CreateTextStyle(ctx, new Params("create_text_style", new Dictionary<string, object>
                         {
-                            ["name"] = t.Name, ["font"] = string.IsNullOrEmpty(t.Font) ? F2Numbers.Font : StandardsLogic.FontKey(t.Font), ["height"] = t.Height, ["width_factor"] = t.WidthFactor,
+                            ["name"] = t.Name, ["font"] = string.IsNullOrEmpty(t.Font) ? F2Numbers.Font : StandardsLogic.FontKey(t.Font), ["height"] = t.Height * hk, ["width_factor"] = t.WidthFactor,
                         }));
                     }
                     created = missingLayers.Count + missingText.Count;
@@ -382,7 +419,7 @@ namespace ClaudeCAD.Plugin.Drawing
             // Test & sửa H4: a template in other units (metres…) has dimension / multileader styles sized for them
             double dmm = MmPerUnitOf(ctx, out _);
             if (Math.Abs(s.MmPerUnit - dmm) > 1e-9 && s.DimStyles.Count + s.MLeaderStyles.Count > 0)
-                notes.Add($"The template is in other units ({s.MmPerUnit} mm per unit, this drawing {dmm}): its dimension / multileader styles are sized for those units (check text and arrow sizes, or set DIMSCALE); text heights were converted.");
+                notes.Add($"The template is in other units ({s.MmPerUnit} mm per unit, this drawing {dmm}): styles copied from the template keep their sizes in those units (check text and arrow sizes, or set DIMSCALE); only the text heights listed here, and the fixed heights of text styles made without the template copy, were converted.");
 
             // current styles: those current in the template, when the drawing now has them
             if (p.Bool("make_current", true))
@@ -407,10 +444,14 @@ namespace ClaudeCAD.Plugin.Drawing
             if (notes.Count > 0) result["notes"] = notes;
             if (kept.Count > 0)
             {
-                result["kept_handles"] = kept;
+                // Sửa KTH-10: one card and one call take at most 50 handles (the schema / ApprovedOverwrites limit)
+                const int perCall = 50;
+                result["kept_handles"] = kept.Take(perCall).ToList();
                 result["kept"] = keptWhat.Take(30).ToList();
+                if (kept.Count > perCall) result["kept_more"] = kept.Count - perCall;
                 result["next"] = "Layers of the drawing that differ from the company standard were kept. Ask the user: request_confirmation with kept_handles and one Vietnamese sentence naming them, " +
-                    "end the turn; after Đồng ý call setup_standards again with the same company and handles = kept_handles.";
+                    "end the turn; after Đồng ý call setup_standards again with the same company and handles = kept_handles." +
+                    (kept.Count > perCall ? $" {kept.Count} layers differ: this card covers the first {perCall}; the next call lists the rest (kept_more), ask again for them." : "");
             }
             ctx.NeedsRegen = true;
             return result;

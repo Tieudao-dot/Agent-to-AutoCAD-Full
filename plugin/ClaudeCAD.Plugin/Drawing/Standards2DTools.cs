@@ -550,7 +550,17 @@ namespace ClaudeCAD.Plugin.Drawing
                                 result["company_paper_note"] = $"The company title block was placed as on the template's {cPaper.Name} {(cPaper.Landscape ? "landscape" : "portrait")} sheet, but this sheet is {paper} {(sheet.Landscape ? "landscape" : "portrait")}: it may sit off the frame. Tell the user; use the template's paper unless they want this one.";
                         }
                         result["title_block_handle"] = Acad.H(brId);
-                        result["title_fields"] = values.ToDictionary(kv => kv.Key, kv => (object)kv.Value);
+                        if (cDef == null) result["title_fields"] = values.ToDictionary(kv => kv.Key, kv => (object)kv.Value);
+                        else
+                        {
+                            // Sửa KTH-11: the company block's own fields as written (not the Vietnamese ones it does not have)
+                            result["filled"] = atts.Where(kv => !string.IsNullOrWhiteSpace(kv.Value.TextString)).ToDictionary(kv => kv.Key, kv => (object)kv.Value.TextString);
+                            var empty = atts.Where(kv => string.IsNullOrWhiteSpace(kv.Value.TextString)).Select(kv => (object)kv.Key).ToList();
+                            if (empty.Count > 0) result["empty_fields"] = empty;
+                            var unknown = (given ?? new Dictionary<string, object>()).Keys.Where(k => !atts.ContainsKey(k)).Cast<object>().ToList();
+                            if (unknown.Count > 0) result["unknown_attributes"] = unknown;
+                            if (p.Has("fields")) result["fields_note"] = $"'fields' are the Vietnamese title block's; the company block {cTitle.Block} has its own fields ({string.Join(", ", cTitle.Tags)}): fill them with 'attributes' (tag → text).";
+                        }
                         result["viewport_handle"] = Acad.H(vpId);
                         result["scale"] = "1:" + n.ToString(CultureInfo.InvariantCulture) + (scaleGiven ? "" : " (chosen: the drawing fits)");
                         result["view_center"] = Acad.J(new Point3d(center[0], center[1], 0));
