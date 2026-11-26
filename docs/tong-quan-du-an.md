@@ -243,3 +243,6 @@ Sau đợt F + G (ước tính, đo ở thread test tổng thể đợt G; đợ
   - 19h03 phần 2 bắt đầu: H6 hạ tầng (thread đợt F2) và H7 MEP 3D (thread Test & sửa F1) cùng lúc từ `76ecfae`, làm phần không dính
     số tiêu chuẩn; số tiêu chuẩn chờ chủ dự án duyệt.
   - ~19h20 chủ dự án duyệt số tiêu chuẩn phần 2: "Dùng hết số đề xuất" ([`dot-h-so-tieu-chuan.md`](dot-h-so-tieu-chuan.md) mục "Kết quả duyệt"); đã chuyển xuống H6, H7.
+  - ~19h50 chủ dự án chốt thêm: ống thoát D60 dốc mặc định 2,5 %, D110+ 2 % (thread rà H7 phát hiện D60 2 % thấp hơn mức tối thiểu).
+  - 20h07 rà H6 xong (5 lỗi); 20h35 rà H7 xong (6 lỗi); 20h36 H8 kết cấu bắt đầu (gộp H6-test + H7-test).
+  - ~20h45 chủ dự án chốt H9: chữ vẽ vào bản vẽ giữ tiếng Việt khi chọn English (chỉ đổi giao diện và câu trả lời).
