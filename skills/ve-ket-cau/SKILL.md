@@ -30,7 +30,7 @@ Các chỗ ghi *(đối chiếu)* là số mặc định, **kỹ sư đối chi�
 | --- | --- |
 | Lớp bê tông bảo vệ | sàn 20, dầm 25, cột 25, móng có lót 40, móng không lót 70 *(đối chiếu)*; không nhỏ hơn đường kính thanh |
 | Neo / nối chồng | neo 30d; nối 40d (dầm, sàn), 35d (cột). Báo khi dưới mức tối thiểu: neo ≥ 15d và ≥ 200; nối ≥ 20d và ≥ 250 *(đối chiếu)* |
-| Móc | thép trơn (Ø ≤ 10, CB240-T): móc 180°, uốn trong 2,5d, thẳng 3d; đai: móc 135°, thẳng 6d và ≥ 75 *(đối chiếu)*; thép gân (CB400-V): bẻ L 10d khi neo (đầu thanh dầm vào gối) |
+| Móc | thép trơn (Ø ≤ 10, CB240-T): móc 180°, uốn trong 2,5d, thẳng 3d (cộng 6,25d mỗi móc vào chiều dài); đai: móc 135°, thẳng 6d và ≥ 75 *(đối chiếu)*; thép gân (CB400-V): bẻ L 10d khi neo (đầu thanh dầm vào gối) |
 | Khối lượng | 0,00617 × d² kg/m; chiều dài thanh làm tròn 10 mm; kg 2 số lẻ; cây thép 11,7 m: thanh dài hơn thì đếm mối nối và cộng đoạn nối chồng vào chiều dài, khối lượng |
 | Đường kính | 6, 8, 10, 12, 14, 16, 18, 20, 22, 25, 28, 32 |
 | Tỉ lệ | mặt cắt dầm / cột 1:20; triển khai dầm, thép sàn 1:50; mặt bằng móng 1:100 *(đối chiếu TCVN 5572)* |

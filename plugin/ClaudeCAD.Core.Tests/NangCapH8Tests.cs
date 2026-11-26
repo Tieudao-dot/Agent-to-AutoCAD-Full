@@ -67,7 +67,7 @@ namespace ClaudeCAD.Core.Tests
             Assert.Null(RebarLogic.CheckLength("anchor", 540, 18));
             Assert.Contains("under its least value 270 mm", RebarLogic.CheckLength("anchor", 200, 18)); // 15d
             Assert.Contains("least value 250 mm", RebarLogic.CheckLength("lap", 150, 8));               // 250 mm > 20d
-            Assert.Equal(Math.PI * (2.5 * 8 + 8) / 2 + 3 * 8, RebarLogic.MainHook(8), 9);
+            Assert.Equal(6.25 * 8, RebarLogic.MainHook(8), 9); // KTP-21: the usual 6.25d per 180° hook (bend 2.5d, 3d straight)
             Assert.Equal(0, RebarLogic.MainHook(16));
             Assert.Equal(75, RebarLogic.StirrupHook(6));
             Assert.Equal(75, RebarLogic.StirrupHook(10)); // max(6d, 75): 60 < 75
@@ -98,7 +98,7 @@ namespace ClaudeCAD.Core.Tests
             Assert.Equal(k[2].Count, pos.Count);
             Assert.Equal(50, pos[0], 9);
             Assert.True(pos.Zip(pos.Skip(1), (a, b) => b - a).Take(5).All(d => Math.Abs(d - 150) < 1e-9), "end zone a150");
-            Assert.Contains(pos.Zip(pos.Skip(1), (a, b) => b - a), d => Math.Abs(d - 200) < 1e-9);
+            Assert.True(pos.Zip(pos.Skip(1), (a, b) => b - a).All(d => d <= 200 + 1e-9)); // the middle shared evenly at no more than a200
             Assert.True(pos.Last() <= 4950 + 1e-9);
             // a short anchorage is warned about
             RebarLogic.BeamBars(220, 400, 5000, (2, 18), (2, 16), 6, 150, 200, 150, warn);
@@ -150,7 +150,7 @@ namespace ClaudeCAD.Core.Tests
             Assert.Equal(10, t[0].Count);
             Assert.Equal("Tổng", t[t.Count - 1][0]);
             Assert.Contains(t, l => Equals(l[1], "Cộng Ø18"));
-            Assert.Equal(rows.Count + 4, XlsxLogic.DataRows(t)); // marks + one total per diameter (4) are data, the last total is not
+            Assert.Equal(rows.Count + 4 + 2, XlsxLogic.DataRows(t)); // marks + one total per diameter (4) + per grade (2) are data, the last total is not
             Assert.Equal(Math.Round(rows.Sum(r => r.Kg), 2), (double)t[t.Count - 1][8], 9);
             Assert.False(H8Numbers.WasteColumnByDefault);
             Assert.Null(RebarLogic.WasteShare(null));
@@ -159,6 +159,41 @@ namespace ClaudeCAD.Core.Tests
             Assert.Contains("hao hụt 3%", (string)w[0][9]);
             Assert.Equal(1, RebarLogic.NextMark(new int[0]));
             Assert.Equal(8, RebarLogic.NextMark(new[] { 3, 7, 1 }));
+        }
+
+        [Fact]
+        public void Ktp_stirrups_bars_hooks_short_spans_and_grade_totals()
+        {
+            // KTP-19: the same at both ends: first stirrup 50 from each support, a150 through each quarter, the middle even
+            foreach (var span in new[] { 5000.0, 4370, 6000, 3000 })
+            {
+                var pos = RebarLogic.StirrupPositions(span, 150, 200);
+                Assert.Equal(50, pos[0], 9);
+                Assert.Equal(span - 50, pos[pos.Count - 1], 9);
+                for (int i = 0; i < pos.Count; i++) Assert.Equal(span - pos[pos.Count - 1 - i], pos[i], 6); // symmetric
+                Assert.True(pos.Zip(pos.Skip(1), (x, y) => y - x).All(d => d > 0 && d <= 200 + 1e-9), "spacings " + span);
+                Assert.Equal(pos.Count(x => x <= span / 4 + 1e-9), pos.Count(x => x >= span * 3 / 4 - 1e-9)); // as many in each end zone
+            }
+            Assert.Single(RebarLogic.StirrupPositions(80, 150, 200));
+            // KTP-20: the clear gap is at least one bar: 5Ø20 in a beam 200 wide no longer fits
+            Assert.Contains("do not fit in one row", Assert.Throws<ToolException>(() => RebarLogic.BarPositions(5, 200, 25, 6, 20)).Message);
+            Assert.Equal(3, RebarLogic.BarPositions(3, 200, 25, 6, 20).Count);
+            // KTP-21: a slab 3000 × 4000, Ø8 a200: 3000 − 2 × 20 + 2 × 6.25 × 8 = 3060
+            Assert.Equal(3060, RebarLogic.RoundLength(RebarLogic.SlabBars(3000, 4000, (8, 200), (8, 200))[0].LengthMm));
+            // KTP-31: a span under 100 mm is refused plainly
+            Assert.Contains("too short for a beam drawing", Assert.Throws<ToolException>(() => RebarLogic.BeamBars(220, 400, 50, (2, 18), (2, 16), 6, 150, 200, null, new List<string>())).Message);
+            // nghi vấn: a total per steel grade (CB240-T, CB400-V) besides the totals per diameter
+            var rows = RebarLogic.Schedule(new List<RebarMark>
+            {
+                new RebarMark { Mark = 1, Dia = 18, Shape = "thẳng", Element = "dầm", LengthMm = 6440, Count = 2 },
+                new RebarMark { Mark = 2, Dia = 6, Shape = "đai", Element = "dầm", LengthMm = 1186, Count = 30 },
+            });
+            var t = RebarLogic.ScheduleTable(rows, null);
+            Assert.Contains(t, l => Equals(l[1], "Cộng CB240-T") && Equals(l[8], rows.Single(r => r.Dia == 6).Kg));
+            Assert.Contains(t, l => Equals(l[1], "Cộng CB400-V") && Equals(l[8], rows.Single(r => r.Dia == 18).Kg));
+            // KTP-18: rib false / true reach the footing without NumbersOpt throwing on a bool
+            var src = Src("plugin", "ClaudeCAD.Plugin", "Drawing", "StructureTools.cs");
+            Assert.Contains("var rib = ribFlag.HasValue ? null : p.NumbersOpt(\"rib\");", src);
         }
 
         [Fact]

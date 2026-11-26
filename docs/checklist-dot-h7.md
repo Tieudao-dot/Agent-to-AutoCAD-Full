@@ -16,8 +16,10 @@ vẽ một khối hộp trên layer `A-BEAM-3D`.
    - ống tròn 3D trên layer `P-DRAIN-3D` (xanh lá), có **một co** ở góc;
    - ống D110, dốc 2 % về điểm cuối (đầu cuối thấp hơn đầu đầu khoảng 140 mm); Claude nói độ dốc và cao độ hai đầu;
    - xoay góc nhìn (`3DORBIT` hoặc "xem phối cảnh tây nam") thấy co nối liền hai đoạn, không hở, không chồng.
-3. "Đi ống cấp nước D25 từ (1000,0) tới (1000,-2000), cao độ 3000, nối vào ống vừa vẽ": nếu điểm đầu nằm trên ống kia,
-   Claude vẽ **tê** ở chỗ nối (khối hơi to hơn ống chính). Không nằm trên ống thì Claude báo rõ.
+3. *(sửa KTP-16)* "Đi ống thoát nước D60 từ (1000,0) tới (1000,-2000), cao độ 2780, nối vào ống vừa vẽ" (2780 = tim ống
+   chính tại x = 1000, vì ống chính dốc 2 % từ 2800): Claude vẽ **tê** ở chỗ nối (khối hơi to hơn ống chính). Cho cao độ
+   3000: Claude báo điểm đầu không nằm trên ống và nói tim ống chính ở đó cao bao nhiêu. "Đi ống **cấp** nước D25 … nối vào
+   ống thoát đó": Claude báo **khác hệ**, không vẽ.
 4. "Đi ống thoát nước độ dốc 0,5%": Claude **cảnh báo** độ dốc thấp hơn mức tối thiểu của cỡ ống. Ống thoát sàn D60 không nói
    độ dốc: dốc 2,5 %, **không** có cảnh báo.
 5. "Đi ống PCCC từ … tới …" mà **không nói cỡ**: Claude hỏi cỡ ống (không tự chọn).
@@ -38,7 +40,7 @@ vẽ một khối hộp trên layer `A-BEAM-3D`.
    dầm thấp nhất, nhờ cho cao độ nếu ống ở tầng khác.
 4. *(Test & sửa H7)* UCS nghiêng (`UCS` → X → 90), đi ống theo mặt bằng kèm cao độ: Claude nói UCS đang nghiêng, nhờ cho điểm
    x, y, z hoặc đặt lại UCS; không vẽ gì sai chỗ.
-5. *(Test & sửa H7)* "Đi ống thoát D110 qua các điểm (0,0,3000) (4000,0,2960) (4000,3000,2900)": Claude báo đoạn dốc nhất mức 1 %
+5. *(Test & sửa H7)* "Đi ống thoát D110 qua các điểm (0,0,3000) (4000,0,2960) (4000,3000,2900)": Claude báo đoạn **phẳng nhất** mức 1 %
    thấp hơn 1,2 %.
 
 ## D. Thống kê, Excel, va chạm (~6 phút)
@@ -48,8 +50,14 @@ vẽ một khối hộp trên layer `A-BEAM-3D`.
 3. "Thống kê ống có cộng hao hụt 5%": thêm cột "Chiều dài + hao hụt 5%".
 4. "Soát ống va chạm với dầm cột": Claude kể chỗ **chạm** và chỗ **sát** (dưới khoảng hở), có handle hai bên; ống của cùng
    một tuyến, hay nhánh với ống chính của nó, không bị báo. Một ống đi chéo qua phòng, xa cột: **không** bị báo "sát".
-6. *(Test & sửa H7)* Sau khi đi vài tuyến ống, "soát bản vẽ": layer `P-…-3D`, `M-DUCT-3D`, `F-SPRK-3D` **không** bị báo "ngoài chuẩn".
-5. Máy gói 2D: hỏi "đi ống cấp nước 3D" → Claude nói gói này không có lệnh 3D.
+5. *(Test & sửa H7)* Sau khi đi vài tuyến ống, "soát bản vẽ": layer `P-…-3D`, `M-DUCT-3D`, `F-SPRK-3D` **không** bị báo "ngoài chuẩn".
+6. Máy gói 2D: hỏi "đi ống cấp nước 3D" → Claude nói gói này không có lệnh 3D.
+7. *(sửa KTP-13, 14)* Ống gió 600x300 "đi dưới dầm" rồi "soát va chạm": **không** bị báo "sát" chính dầm đó (đỉnh ống cách
+   đáy dầm 100 mm). Hai tuyến nối đầu nhau (vd D110 rồi đi tiếp D90 từ điểm cuối): **không** bị báo "sát 0 mm".
+8. *(sửa KTP-27, 28)* Xuất Excel: thống kê ống ra file `…-ong-mep.xlsx` (sheet "Thống kê ống MEP"), va chạm ra file riêng
+   `…-va-cham-ong-mep.xlsx`; cột "Hệ" ghi tên tiếng Việt ("Cấp nước", "Ống gió cấp"…).
+9. *(sửa KTP-17)* Ống gió 200x500 rẽ lên đứng: co dùng bán kính 500 (cạnh cao) và Claude nói vì sao. Ống D110 với
+   "bán kính co 20": Claude báo bán kính phải lớn hơn 55.
 
 ## E. Giới hạn nói rõ với khách
 

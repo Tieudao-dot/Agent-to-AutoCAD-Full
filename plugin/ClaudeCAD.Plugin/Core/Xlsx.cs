@@ -29,7 +29,12 @@ namespace ClaudeCAD.Plugin.Core
             ["check_interference"] = "va-cham",
             ["check_drawing"] = "soat-ban-ve", // nâng cấp đợt G2
             ["compare_drawings"] = "so-sanh", // nâng cấp đợt H3
+            ["mep_report"] = "ong-mep", // KTP-27
+            [MepClashKey] = "va-cham-ong-mep", // KTP-27: the clash file of mep_report, apart from its schedule
+            ["rebar_schedule"] = "thong-ke-thep", // KTP-27 (nghi vấn): it fell back to "bang" too
         };
+        /// <summary>KTP-27: the key of mep_report's clash table (its own file name and sheet).</summary>
+        public const string MepClashKey = "mep_report_clash";
         /// <summary>Sheet names (the drawing table's title, shortened to Excel's 31 characters when needed).</summary>
         public static readonly IReadOnlyDictionary<string, string> SheetName = new Dictionary<string, string>(StringComparer.Ordinal)
         {
@@ -39,6 +44,9 @@ namespace ClaudeCAD.Plugin.Core
             ["check_interference"] = "Va chạm khối 3D",
             ["check_drawing"] = "Soát bản vẽ", // nâng cấp đợt G2
             ["compare_drawings"] = "So sánh bản vẽ", // nâng cấp đợt H3
+            ["mep_report"] = "Thống kê ống MEP", // KTP-27
+            [MepClashKey] = "Va chạm ống MEP",
+            ["rebar_schedule"] = "Thống kê thép",
         };
     }
 
@@ -322,9 +330,9 @@ namespace ClaudeCAD.Plugin.Core
         /// that does not end in .xlsx, has no name, has characters Windows refuses, is a folder or sits in a missing folder.
         /// </summary>
         public static string Resolve(string requested, string drawingDir, string drawingName, string tool,
-            Func<string, bool> dirExists, Func<string, bool> isDirectory)
+            Func<string, bool> dirExists, Func<string, bool> isDirectory, string key = null)
         {
-            string output = string.IsNullOrEmpty(requested) ? DefaultName(drawingName, tool) : requested;
+            string output = string.IsNullOrEmpty(requested) ? DefaultName(drawingName, key ?? tool) : requested;
             if (!output.EndsWith(".xlsx", StringComparison.OrdinalIgnoreCase))
                 throw ToolException.Invalid($"{tool}: the Excel file must end with .xlsx ('{output}').");
             string full;

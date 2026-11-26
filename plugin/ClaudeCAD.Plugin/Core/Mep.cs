@@ -30,6 +30,8 @@ namespace ClaudeCAD.Plugin.Core
         public const double PipeBendFactor = 1.5, DuctBendFactor = 1.0;
         /// <summary>A pipe closer than this (mm) to a beam / column / other pipe is reported as "close" (sát), not only a clash.</summary>
         public const double ClearanceMm = 50;
+        /// <summary>KTP-14: two pipe ends closer than this (mm) are one joint (a route going on from another), not a clash.</summary>
+        public const double JoinToleranceMm = 1;
         /// <summary>Lengths in the schedule: metres with this many decimals.</summary>
         public const int LengthDecimals = 2;
         /// <summary>The 3D layers of a system: its 2D layer + this ("P-DRAIN" → "P-DRAIN-3D").</summary>
@@ -104,6 +106,9 @@ namespace ClaudeCAD.Plugin.Core
             new MepSystem { Key = "duct_supply", Name = "Ống gió cấp", Layer2d = "M-DUCT", Color = 4, Rect = true },
             new MepSystem { Key = "duct_return", Name = "Ống gió hồi", Layer2d = "M-DUCT-RET", Color = 6, Rect = true },
         };
+
+        /// <summary>KTP-28: the Vietnamese name of a system key (for the Excel file; the JSON for Claude keeps the key).</summary>
+        public static string SystemName(string key) => Systems.FirstOrDefault(s => s.Key == key)?.Name ?? key;
 
         public static MepSystem SystemOf(string key, string tool = Tool)
         {
@@ -425,6 +430,102 @@ namespace ClaudeCAD.Plugin.Core
             return Math.Max(0, d - r);
         }
 
+        /// <summary>
+        /// KTP-13: how far the section of a straight pipe reaches towards direction n (unit) from its axis: a round pipe its
+        /// radius; a duct (width level, height across) |n·w|·W/2 + |n·h|·H/2, so a duct under a beam reaches up by half its
+        /// height, not half its diagonal. A vertical duct (its width axis is not kept) reaches by half its diagonal.
+        /// </summary>
+        public static double SectionReach(double[] a, double[] b, bool rect, double size1, double size2, double[] n)
+        {
+            if (!rect) return size1 / 2;
+            var d = Unit(Sub(b, a));
+            if (IsVertical(d) || n == null || Norm(n) < 1e-12) return Math.Sqrt(size1 * size1 + size2 * size2) / 2;
+            var (w, h) = Section(d);
+            var u = Unit(n);
+            return Math.Abs(Dot(u, w)) * size1 / 2 + Math.Abs(Dot(u, h)) * size2 / 2;
+        }
+
+        /// <summary>The point of the box nearest to q.</summary>
+        public static double[] NearestOnBox(double[] q, double[] min, double[] max) =>
+            new[] { Math.Max(min[0], Math.Min(max[0], q[0])), Math.Max(min[1], Math.Min(max[1], q[1])), Math.Max(min[2], Math.Min(max[2], q[2])) };
+
+        /// <summary>
+        /// KTP-13: the gap from a straight pipe / duct (axis a → b, section rect / size1 × size2, drawing units) to a box: the
+        /// shortest axis-to-box distance less the section's reach towards the box.
+        /// </summary>
+        public static double SectionBoxGap(double[] a, double[] b, bool rect, double size1, double size2, double[] min, double[] max)
+        {
+            double lo = 0, hi = 1;
+            double F(double t) => PointBox(Add(a, Mul(Sub(b, a), t)), min, max);
+            for (int i = 0; i < 80; i++)
+            {
+                double m1 = lo + (hi - lo) / 3, m2 = hi - (hi - lo) / 3;
+                if (F(m1) <= F(m2)) hi = m2; else lo = m1;
+            }
+            double tb = (lo + hi) / 2;
+            if (F(0) < F(tb)) tb = 0;
+            if (F(1) < F(tb)) tb = 1;
+            var q = Add(a, Mul(Sub(b, a), tb));
+            var n = Sub(NearestOnBox(q, min, max), q);
+            double d = Norm(n);
+            return d < 1e-12 ? 0 : Math.Max(0, d - SectionReach(a, b, rect, size1, size2, n));
+        }
+
+        /// <summary>KTP-13: the gap between two straight pipes / ducts: the shortest axis distance less each section's reach towards the other.</summary>
+        public static double SectionSectionGap(double[] a1, double[] b1, bool rect1, double s11, double s12, double[] a2, double[] b2, bool rect2, double s21, double s22)
+        {
+            var (p, q) = ClosestOfSegments(a1, b1, a2, b2);
+            var n = Sub(q, p);
+            double d = Norm(n);
+            if (d < 1e-12) return 0;
+            return Math.Max(0, d - SectionReach(a1, b1, rect1, s11, s12, n) - SectionReach(a2, b2, rect2, s21, s22, Mul(n, -1)));
+        }
+
+        /// <summary>KTP-14: two pipes meet end to end (one route going on from another, or a size change): an end of one is an end of the other.</summary>
+        public static bool EndToEnd(double[] a1, double[] b1, double[] a2, double[] b2, double tol)
+        {
+            foreach (var x in new[] { a1, b1 })
+                foreach (var y in new[] { a2, b2 })
+                    if (Dist(x, y) <= tol) return true;
+            return false;
+        }
+
+        /// <summary>
+        /// KTP-17: half the section in the plane of an elbow's bend (drawing units): the bend radius must be more, or the
+        /// inside of the bend folds over itself. A round pipe: its radius; a duct: the side across the bend (its height for a
+        /// turn up / down, its width for a turn in plan).
+        /// </summary>
+        public static double HalfInBendPlane(MepPiece e, bool rect, double size1, double size2)
+        {
+            if (!rect) return size1 / 2;
+            var across = Unit(Cross(e.StartDir, e.Axis));
+            var w = e.W != null && Norm(e.W) > 1e-9 ? Unit(e.W) : Section(e.StartDir).w;
+            var h = Unit(Cross(e.StartDir, w));
+            return Math.Abs(Dot(across, w)) * size1 / 2 + Math.Abs(Dot(across, h)) * size2 / 2;
+        }
+
+        private static (double[] p, double[] q) ClosestOfSegments(double[] a1, double[] b1, double[] a2, double[] b2)
+        {
+            var d1 = Sub(b1, a1); var d2 = Sub(b2, a2); var rr = Sub(a1, a2);
+            double a = Dot(d1, d1), e = Dot(d2, d2), f = Dot(d2, rr), s, t;
+            if (a <= 1e-12 && e <= 1e-12) return (a1, a2);
+            if (a <= 1e-12) { s = 0; t = Clamp(f / e); }
+            else
+            {
+                double c = Dot(d1, rr);
+                if (e <= 1e-12) { t = 0; s = Clamp(-c / a); }
+                else
+                {
+                    double bb = Dot(d1, d2), den = a * e - bb * bb;
+                    s = den > 1e-12 ? Clamp((bb * f - c * e) / den) : 0;
+                    t = (bb * s + f) / e;
+                    if (t < 0) { t = 0; s = Clamp(-c / a); }
+                    else if (t > 1) { t = 1; s = Clamp((bb - c) / a); }
+                }
+            }
+            return (Add(a1, Mul(d1, s)), Add(a2, Mul(d2, t)));
+        }
+
         /// <summary>The gap between two straight pipes (axes and radii): the shortest distance between the axes minus both radii.</summary>
         public static double PipePipeGap(double[] a1, double[] b1, double r1, double[] a2, double[] b2, double r2)
         {
@@ -455,7 +556,8 @@ namespace ClaudeCAD.Plugin.Core
         public static bool IsStructureLayer(string layer)
         {
             var l = (layer ?? "").ToUpperInvariant();
-            return l.Contains("BEAM") || l.Contains("COL") || l.Contains("DAM") || l.Contains("COT") || l.Contains("S-");
+            // KTP (nghi vấn): "S-" only as the prefix of a structure layer (S-BEAM, S-COL…), not inside any name ("A-WALLS-NEW")
+            return l.Contains("BEAM") || l.Contains("COL") || l.Contains("DAM") || l.Contains("COT") || l.StartsWith("S-", StringComparison.Ordinal);
         }
 
         // ------------------------------------------------------------ vectors

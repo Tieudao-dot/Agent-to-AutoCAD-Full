@@ -80,11 +80,12 @@ namespace ClaudeCAD.Plugin.Drawing
             {
                 var pts = p.Points("path_points", 2, Solid3Logic.MaxBeamSegments + 1).Select(q => new[] { q[0], q[1] }).ToList();
                 double w = Mm("width", H8Numbers.StripWidth), hs = Mm("height", H8Numbers.StripHeight);
-                var rib = p.NumbersOpt("rib");
+                // KTP-18: rib false = no rib, true = the sample rib; else [width, height]
+                var ribFlag = p.Get("rib") as bool?;
+                var rib = ribFlag.HasValue ? null : p.NumbersOpt("rib");
                 double rw = rib != null && rib.Count >= 1 ? rib[0] : H8Numbers.RibWidth, rh = rib != null && rib.Count >= 2 ? rib[1] : H8Numbers.RibHeight;
-                bool withRib = !p.Has("rib") || (rib != null && rib.Count >= 2);
-                if (rib == null) used.Add("rib");
-                if (p.Get("rib") is bool rb && !rb) withRib = false;
+                bool withRib = ribFlag ?? (!p.Has("rib") || (rib != null && rib.Count >= 2));
+                if (withRib && rib == null) used.Add("rib");
                 var closed = p.Bool("closed", false);
                 if (lean)
                 {

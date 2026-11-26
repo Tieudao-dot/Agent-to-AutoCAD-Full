@@ -80,7 +80,13 @@ namespace ClaudeCAD.Plugin.Drawing
             var (sa, sb) = MepLogic.SizeOf(sys, p.Has("diameter") ? p.Num("diameter") : (double?)null, p.Has("width") ? p.Num("width") : (double?)null,
                 p.Has("height") ? p.Num("height") : (double?)null, p.Str("use", null), tool);
             var pts = p.Points("points", 2, H7Numbers.MaxPoints);
-            bool given3d = p.Get("points") is List<object> raw && raw.All(x => x is List<object> l && l.Count >= 3);
+            var raw = p.Get("points") as List<object>;
+            bool given3d = raw != null && raw.All(x => x is List<object> l && l.Count >= 3);
+            // KTP-29: all the points in plan (x, y) or all with their height (x, y, z); a mix, or z with elevation / under_beams, is refused
+            if (!given3d && raw != null && raw.Any(x => x is List<object> l && l.Count >= 3))
+                throw ToolException.Invalid($"{tool}: some points have a height (x, y, z) and some not (x, y): give all of them as x, y, z, or all as x, y with elevation.");
+            if (given3d && (p.Has("elevation") || p.Has("under_beams")))
+                throw ToolException.Invalid($"{tool}: the points already give their heights (x, y, z): leave out elevation and under_beams, or give the points in plan (x, y).");
             var warnings = new List<string>();
 
             // heights: the points' own z, or one elevation (mm, the centre line), or under the beams; a drain falls by its slope
@@ -126,10 +132,14 @@ namespace ClaudeCAD.Plugin.Drawing
                 var me = Acad.GetEntity(ctx, connectTo, false);
                 main = ReadMep(ctx.Tr, me);
                 if (main == null || main.Mark.Kind != "pipe") throw ToolException.Invalid($"{tool}: connect_to {connectTo} is not a straight pipe drawn by draw_mep.");
+                // KTP-16: a branch joins a pipe of its own system (a supply branch never goes into a drain)
+                if (main.Mark.System != sys.Key)
+                    throw ToolException.Invalid($"{tool}: connect_to {connectTo} is a {MepLogic.SystemOf(main.Mark.System, tool).Name} pipe ({main.Mark.System}), not {sys.Name} ({sys.Key}): a branch joins a pipe of its own system.");
                 var (at, _) = MepLogic.Nearest(main.A, main.B, pts[0]);
                 double mainR = (main.Mark.Shape == "rect" ? Math.Max(main.Mark.Size1, main.Mark.Size2) : main.Mark.Size1) / 2 / f;
                 if (MepLogic.Dist(at, pts[0]) > mainR + 1e-6 * Math.Max(1, mainR))
-                    throw ToolException.Invalid($"{tool}: the first point is not on pipe {connectTo} (it is {Math.Round(MepLogic.Dist(at, pts[0]) * f)} mm from its centre line): start the route on that pipe.");
+                    throw ToolException.Invalid($"{tool}: the first point is not on pipe {connectTo} (it is {Math.Round(MepLogic.Dist(at, pts[0]) * f)} mm from its centre line; "
+                        + $"there the centre line is at x {Math.Round(at[0] * f)}, y {Math.Round(at[1] * f)}, z {Math.Round(at[2] * f)} mm, a sloping pipe is lower further on): start the route on that pipe.");
                 var dir = MepLogic.Unit(MepLogic.Sub(pts[1], at));
                 teeAt = at;
                 pts[0] = MepLogic.Add(at, MepLogic.Mul(dir, mainR)); // the branch starts at the main pipe's side
@@ -137,6 +147,17 @@ namespace ClaudeCAD.Plugin.Drawing
 
             double bend = MepLogic.BendRadius(sys, sa, f, p.Has("bend_radius") ? p.Num("bend_radius") : (double?)null);
             var pieces = MepLogic.Layout(pts, bend, tool);
+            // KTP-17: the bend radius must be more than half the section in the plane of each bend (else the inside folds over)
+            double need = pieces.Where(x => x.Kind == "elbow").Select(x => MepLogic.HalfInBendPlane(x, sys.Rect, sa / f, sb / f)).DefaultIfEmpty(0).Max();
+            if (need > 0 && bend <= need * (1 + 1e-9))
+            {
+                if (p.Has("bend_radius"))
+                    throw ToolException.Invalid($"{tool}: bend_radius {MepLogic.Num(bend * f)} mm is not more than half the section in the plane of a bend ({MepLogic.Num(need * f)} mm): give a bend_radius over {MepLogic.Num(need * f)} mm.");
+                // a duct turning up / down across its taller side: the default radius takes that side (DuctBendFactor × it)
+                bend = H7Numbers.DuctBendFactor * 2 * need;
+                warnings.Add($"The bend radius is {MepLogic.Num(bend * f)} mm (the side of the duct across the bend), not the usual {MepLogic.Num(H7Numbers.DuctBendFactor * sa)} mm (its width).");
+                pieces = MepLogic.Layout(pts, bend, tool);
+            }
             if (sys.Rect && pieces.Any(x => x.Twist))
                 warnings.Add("The duct runs in two directions round a riser: its section turns at the top of the riser (a real duct needs a transition piece there). Tell the user.");
             string layer = p.Str("layer", sys.Layer3d);
@@ -263,6 +284,15 @@ namespace ClaudeCAD.Plugin.Drawing
                 if (!ex.HasValue) continue;
                 var mn = ex.Value.MinPoint; var mx = ex.Value.MaxPoint;
                 if (mx.X < x0 || mn.X > x1 || mx.Y < y0 || mn.Y > y1) continue;
+                // KTP (nghi vấn): an L route's box holds beams that no segment passes under: only a beam over a segment counts
+                bool over = false;
+                for (int i = 1; i < plan.Count && !over; i++)
+                {
+                    double sx0 = Math.Min(plan[i - 1][0], plan[i][0]), sx1 = Math.Max(plan[i - 1][0], plan[i][0]);
+                    double sy0 = Math.Min(plan[i - 1][1], plan[i][1]), sy1 = Math.Max(plan[i - 1][1], plan[i][1]);
+                    over = !(mx.X < sx0 || mn.X > sx1 || mx.Y < sy0 || mn.Y > sy1);
+                }
+                if (!over) continue;
                 var l = (s.Layer ?? "").ToUpperInvariant();
                 if (l.Contains("BEAM") || l.Contains("DAM")) { beam = beam.HasValue ? Math.Min(beam.Value, mn.Z) : mn.Z; beamBottoms.Add(mn.Z); }
                 else if (l.Contains("SLAB") || l.Contains("SAN")) slab = slab.HasValue ? Math.Min(slab.Value, mn.Z) : mn.Z;
@@ -351,16 +381,25 @@ namespace ClaudeCAD.Plugin.Drawing
                     if (!eb.HasValue) continue;
                     double gap = MepLogic.BoxGap(P3(ea.Value.MinPoint), P3(ea.Value.MaxPoint), P3(eb.Value.MinPoint), P3(eb.Value.MaxPoint));
                     if (gap >= clearance) continue;
-                    // a straight pipe: the real gap from its axis (a slanted pipe's box is much bigger than the pipe)
+                    // KTP-14: two routes meeting end to end (one going on from the other, a size change) are joined, not close
+                    if (IsStraight(a.r) && IsStraight(b.r) && MepLogic.EndToEnd(a.r.A, a.r.B, b.r.A, b.r.B, H7Numbers.JoinToleranceMm / f)) continue;
+                    double boxGap = gap;
+                    // a straight pipe: the gap from its axis (a slanted pipe's box is much bigger than the pipe). This one gates the
+                    // solid check, so a duct reaches by half its diagonal here (it never skips a real clash)
                     if (IsStraight(a.r))
-                        gap = IsStraight(b.r)
+                        gap = Math.Max(boxGap, IsStraight(b.r)
                             ? MepLogic.PipePipeGap(a.r.A, a.r.B, Reach(a.r, f), b.r.A, b.r.B, Reach(b.r, f))
-                            : MepLogic.PipeBoxGap(a.r.A, a.r.B, Reach(a.r, f), P3(eb.Value.MinPoint), P3(eb.Value.MaxPoint));
+                            : MepLogic.PipeBoxGap(a.r.A, a.r.B, Reach(a.r, f), P3(eb.Value.MinPoint), P3(eb.Value.MaxPoint)));
                     if (gap >= clearance) continue;
                     checkedPairs++;
                     bool hit;
                     try { hit = a.s.CheckInterference(b.s); } catch (Autodesk.AutoCAD.Runtime.Exception) { hit = false; }
                     if (hit) { var v = OverlapVolume(a.s, b.s); if (!v.HasValue || v.Value <= 0) hit = false; }
+                    // KTP-13: no overlap: the gap reported is from the real section (a duct under a beam: half its height up)
+                    if (!hit && IsStraight(a.r))
+                        gap = Math.Max(boxGap, IsStraight(b.r)
+                            ? MepLogic.SectionSectionGap(a.r.A, a.r.B, a.r.Mark.Shape == "rect", a.r.Mark.Size1 / f, a.r.Mark.Size2 / f, b.r.A, b.r.B, b.r.Mark.Shape == "rect", b.r.Mark.Size1 / f, b.r.Mark.Size2 / f)
+                            : MepLogic.SectionBoxGap(a.r.A, a.r.B, a.r.Mark.Shape == "rect", a.r.Mark.Size1 / f, a.r.Mark.Size2 / f, P3(eb.Value.MinPoint), P3(eb.Value.MaxPoint)));
                     var kind = MepLogic.ClashKind(hit, gap, clearance);
                     if (kind == null) continue;
                     if (kind == "clash") clashes++; else close++;
@@ -383,9 +422,9 @@ namespace ClaudeCAD.Plugin.Drawing
                 {
                     var t = new List<List<object>> { new List<object> { "Ống", "Hệ", "Cỡ", "Với", "Layer", "Loại", "Khe hở (mm)" } };
                     foreach (Dictionary<string, object> r in found)
-                        t.Add(new List<object> { r["pipe"], r["system"], r["size"], r["with"], r["with_layer"], (string)r["kind"] == "clash" ? "Chạm" : "Sát", r["gap_mm"] });
+                        t.Add(new List<object> { r["pipe"], MepLogic.SystemName((string)r["system"]), r["size"], r["with"], r["with_layer"], (string)r["kind"] == "clash" ? "Chạm" : "Sát", r["gap_mm"] });
                     return t;
-                }, res);
+                }, res, F4Numbers.MepClashKey);
             return res;
         }
 
